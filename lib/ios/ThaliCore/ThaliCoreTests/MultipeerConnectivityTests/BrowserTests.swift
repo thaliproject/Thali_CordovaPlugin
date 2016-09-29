@@ -41,12 +41,12 @@ class BrowserTests: XCTestCase {
 
         let browser = Browser(serviceType: randomlyGeneratedServiceType,
                               foundPeer: {
-                                [weak foundPeerExpectation] _ in
-                                foundPeerExpectation?.fulfill()
-            },
+                                  [weak foundPeerExpectation] _ in
+                                  foundPeerExpectation?.fulfill()
+                              },
                               lostPeer: {
-                                _ in
-        })
+                                  _ in
+                              })
         let randomlyGeneratedPeerID = MCPeerID(displayName: PeerIdentifier().stringValue)
         let mcBrowser = MCNearbyServiceBrowser(peer: randomlyGeneratedPeerID,
                                                serviceType: randomlyGeneratedServiceType)
@@ -68,11 +68,11 @@ class BrowserTests: XCTestCase {
         let browser = Browser(serviceType: randomlyGeneratedServiceType,
                               foundPeer: {
                                 _ in
-            },
+                              },
                               lostPeer: {
                                 [weak lostPeerExpectation] _ in
                                 lostPeerExpectation?.fulfill()
-            })
+                              })
         let randomlyGeneratedPeerID = MCPeerID(displayName: PeerIdentifier().stringValue)
         let mcBrowser = MCNearbyServiceBrowser(peer: randomlyGeneratedPeerID,
                                                serviceType: randomlyGeneratedServiceType)
@@ -124,13 +124,13 @@ class BrowserTests: XCTestCase {
 
         let browser = Browser(serviceType: randomlyGeneratedServiceType,
                               foundPeer: {
-                                [weak foundPeerExpectation] foundedPeerIdentifier in
+                                  [weak foundPeerExpectation] foundedPeerIdentifier in
 
-                                foundPeerExpectation?.fulfill()
-                                XCTAssertEqual(
-                                    foundedPeerIdentifier, randomlyGeneratedPeerIdentifier
-                                )
-            },
+                                  foundPeerExpectation?.fulfill()
+                                  XCTAssertEqual(
+                                      foundedPeerIdentifier, randomlyGeneratedPeerIdentifier
+                                  )
+                              },
                               lostPeer: unexpectedLostPeerHandler)
 
         let peerIdOfPeerThatWillBeFounded =
@@ -146,7 +146,6 @@ class BrowserTests: XCTestCase {
 
         // When
         do {
-
             let _ = try
                 browser.inviteToConnectPeer(with: randomlyGeneratedPeerIdentifier,
                                             sessionConnectHandler:  unexpectedConnectHandler,

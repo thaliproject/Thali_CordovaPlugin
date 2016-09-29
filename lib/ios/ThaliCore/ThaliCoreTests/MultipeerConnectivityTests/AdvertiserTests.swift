@@ -80,15 +80,15 @@ class AdvertiserTests: XCTestCase {
                                     session.session(mcSession,
                                         peer: randomlyGeneratedPeerID,
                                         didChangeState: .NotConnected)
-            },
+                                },
                                 disconnectHandler: {
                                     [weak disconnectCalledExpectation] in
                                     disconnectCalledExpectation?.fulfill()
-            },
+                                },
                                 mcInvitationHandler: {
                                     result, session in
                                     mcSession = session
-        })
+                                })
 
         // Then
         let sessionDisconnectedTimeout = 1.0

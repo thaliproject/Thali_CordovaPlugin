@@ -189,16 +189,13 @@ class BrowserManagerTests: XCTestCase {
 
     func testIncrementAvailablePeersWhenFoundPeer() {
         // Given
-        let peerIdentifier = PeerIdentifier()
         let MPCFConnectionCreatedExpectation =
             expectationWithDescription("MPCF connection is created.")
 
-        let (advertiserManager, browserManager) =
-            createMPCFConnection(advertiserIdentifier: peerIdentifier,
-                                 completion: {
-                                    peerAvailability in
-                                    MPCFConnectionCreatedExpectation.fulfill()
-            })
+        let (advertiserManager, browserManager) = createMPCFConnectionWithCompletion {
+            peerAvailability in
+            MPCFConnectionCreatedExpectation.fulfill()
+        }
 
         // When
         let creatingMPCFSessionTimeout = 5.0
@@ -215,16 +212,13 @@ class BrowserManagerTests: XCTestCase {
 
     func testConnectToPeerIncrementsActiveRelays() {
         // Given
-        let peerIdentifier = PeerIdentifier()
         let MPCFConnectionCreatedExpectation =
             expectationWithDescription("MPCF connection is created.")
 
-        let (advertiserManager, browserManager) =
-            createMPCFConnection(advertiserIdentifier: peerIdentifier,
-                                 completion: {
-                                    peerAvailability in
-                                    MPCFConnectionCreatedExpectation.fulfill()
-            })
+        let (advertiserManager, browserManager) = createMPCFConnectionWithCompletion {
+            peerAvailability in
+            MPCFConnectionCreatedExpectation.fulfill()
+        }
 
         let creatingMPCFSessionTimeout = 5.0
         waitForExpectationsWithTimeout(creatingMPCFSessionTimeout, handler: {
@@ -263,12 +257,10 @@ class BrowserManagerTests: XCTestCase {
         var MPCFConnectionCreatedExpectation: XCTestExpectation? =
             expectationWithDescription("MPCF connection is created.")
 
-        let (advertiserManager, browserManager) =
-            createMPCFConnection(advertiserIdentifier: PeerIdentifier(),
-                                 completion: {
-                                    peerAvailability in
-                                    MPCFConnectionCreatedExpectation?.fulfill()
-            })
+        let (advertiserManager, browserManager) = createMPCFConnectionWithCompletion {
+            peerAvailability in
+            MPCFConnectionCreatedExpectation?.fulfill()
+        }
 
         let creatingMPCFSessionTimeout = 5.0
         waitForExpectationsWithTimeout(creatingMPCFSessionTimeout, handler: {
@@ -325,12 +317,10 @@ class BrowserManagerTests: XCTestCase {
         var MPCFConnectionCreatedExpectation: XCTestExpectation? =
             expectationWithDescription("MPCF connection is created.")
 
-        let (advertiserManager, browserManager) =
-            createMPCFConnection(advertiserIdentifier: PeerIdentifier(),
-                                 completion: {
-                                    peerAvailability in
-                                    MPCFConnectionCreatedExpectation?.fulfill()
-            })
+        let (advertiserManager, browserManager) = createMPCFConnectionWithCompletion {
+            peerAvailability in
+            MPCFConnectionCreatedExpectation?.fulfill()
+        }
 
         let creatingMPCFSessionTimeout = 5.0
         waitForExpectationsWithTimeout(creatingMPCFSessionTimeout, handler: {
@@ -461,12 +451,10 @@ class BrowserManagerTests: XCTestCase {
             expectationWithDescription("MPCF connection is created.")
 
         let peerIdentifier = PeerIdentifier()
-        let (advertiserManager, browserManager) =
-            createMPCFConnection(advertiserIdentifier: peerIdentifier,
-                                 completion: {
-                                    peerAvailability in
-                                    MPCFConnectionCreatedExpectation?.fulfill()
-                                 })
+        let (advertiserManager, browserManager) = createMPCFConnectionWithCompletion {
+            peerAvailability in
+            MPCFConnectionCreatedExpectation?.fulfill()
+        }
 
         let creatingMPCFSessionTimeout = 5.0
         waitForExpectationsWithTimeout(creatingMPCFSessionTimeout, handler: {

@@ -11,9 +11,8 @@ import Foundation
 import XCTest
 @testable import ThaliCore
 
-func createMPCFConnection(advertiserIdentifier identifier: PeerIdentifier,
-                                               completion: (PeerAvailability) -> Void)
-                                                -> (AdvertiserManager, BrowserManager) {
+func createMPCFConnectionWithCompletion(completion: (PeerAvailability) -> Void)
+                                        -> (AdvertiserManager, BrowserManager) {
 
     let serviceType = String.random(length: 7)
 
