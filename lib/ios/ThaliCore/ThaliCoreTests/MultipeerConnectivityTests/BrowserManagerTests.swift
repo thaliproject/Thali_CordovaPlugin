@@ -296,14 +296,14 @@ class BrowserManagerTests: XCTestCase {
                        "BrowserManager has not active Relay instances.")
 
         multiConnectResolvedCalledAfterDisconnectExpectation =
-            expectationWithDescription("connectToPeer method returns callback on disconnect.")
+            expectationWithDescription("disconnect method returns callback on disconnect.")
 
         // When
         browserManager.disconnect(peerToConnect)
 
         waitForExpectationsWithTimeout(multiConnectResolvedTimeout, handler: {
             error in
-            multiConnectResolvedCalledAfterDisconnectExpectation
+            multiConnectResolvedCalledAfterDisconnectExpectation = nil
         })
 
         // Then
@@ -312,7 +312,7 @@ class BrowserManagerTests: XCTestCase {
                        "BrowserManager still has active Relay instances.")
     }
 
-    func testDisconnectWrongPeerDoesNotDecrementAvailablePeers() {
+    func testDisconnectWrongPeerDoesNotDecrementActiveRelays() {
         // Given
         var MPCFConnectionCreatedExpectation: XCTestExpectation? =
             expectationWithDescription("MPCF connection is created.")
