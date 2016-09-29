@@ -21,7 +21,8 @@ class VirtualSocketBuilder {
 
     required init(session: Session,
                   streamReceiveTimeout: NSTimeInterval,
-                  completionHandler: ((NSInputStream, NSOutputStream)?, ErrorType?) -> Void) {
+                  completionHandler: ((inputStream: NSInputStream, outputStream: NSOutputStream)?,
+                                      ErrorType?) -> Void) {
 
         self.session = session
         self.streamReceiveTimeout = streamReceiveTimeout

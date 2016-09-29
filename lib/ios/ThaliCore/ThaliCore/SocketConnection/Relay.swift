@@ -103,9 +103,9 @@ final class Relay<Builder: VirtualSocketBuilder>: NSObject {
                     }
                 }
             } else {
-                if let inputStream = streamPair?.0, outputStream = streamPair?.1 {
-                    strongSelf.virtualSocket = VirtualSocket(with: inputStream,
-                                                             outputStream: outputStream)
+                if let streamPair = streamPair {
+                    strongSelf.virtualSocket = VirtualSocket(with: streamPair.inputStream,
+                                                             outputStream: streamPair.outputStream)
                     strongSelf.virtualSocket?.readDataFromStreamHandler =
                         strongSelf.readDataFromInputStream
                     strongSelf.virtualSocket?.open()
