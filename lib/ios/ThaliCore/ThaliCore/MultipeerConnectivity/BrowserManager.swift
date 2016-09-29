@@ -136,7 +136,7 @@ public final class BrowserManager: NSObject {
             return
         }
 
-        relay.session.disconnect()
+        relay.closeMPCFSession()
     }
 
     func lastGenerationPeerIdentifier(for identifier: PeerIdentifier) -> PeerIdentifier? {

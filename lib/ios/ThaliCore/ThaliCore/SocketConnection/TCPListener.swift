@@ -60,6 +60,7 @@ class TCPListener: NSObject {
     }
 }
 
+// MARK: - GCDAsyncSocketDelegate - Handling socket events
 extension TCPListener: GCDAsyncSocketDelegate {
 
     func socket(sock: GCDAsyncSocket, didConnectToHost host: String, port: UInt16) {

@@ -47,7 +47,7 @@ class Session: NSObject {
     }
 }
 
-// MARK: - Handling events for MCSession
+// MARK: - MCSessionDelegate - Handling events for MCSession
 extension Session: MCSessionDelegate {
 
     func session(session: MCSession, peer peerID: MCPeerID, didChangeState state: MCSessionState) {

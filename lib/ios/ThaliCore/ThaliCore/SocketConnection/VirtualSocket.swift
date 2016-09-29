@@ -24,7 +24,7 @@ public class VirtualSocket: NSObject {
         super.init()
     }
 
-    func open() {
+    func openStreams() {
         guard
             let inputStream = inputStream, outputStream = outputStream else {
             return
@@ -39,7 +39,7 @@ public class VirtualSocket: NSObject {
         outputStream.open()
     }
 
-    func close() {
+    func closeStreams() {
         guard
             let inputStream = inputStream, let outputStream = outputStream else {
             return
@@ -49,13 +49,13 @@ public class VirtualSocket: NSObject {
         inputStream.removeFromRunLoop(NSRunLoop.mainRunLoop(), forMode: NSDefaultRunLoopMode)
         self.inputStream = nil
 
-
         outputStream.close()
         outputStream.removeFromRunLoop(NSRunLoop.mainRunLoop(), forMode: NSDefaultRunLoopMode)
         self.outputStream = nil
     }
 }
 
+// MARK: - NSStreamDelegate - Handling stream events
 extension VirtualSocket: NSStreamDelegate {
 
     // MARK: - Delegate methods
@@ -65,7 +65,6 @@ extension VirtualSocket: NSStreamDelegate {
         } else if aStream == self.outputStream {
             handleEventOnOutputStream(with: eventCode)
         }
-
     }
 
     // MARK: - Private Helpers

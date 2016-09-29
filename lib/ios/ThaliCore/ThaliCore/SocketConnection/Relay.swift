@@ -13,12 +13,12 @@ import Foundation
 final class Relay<Builder: VirtualSocketBuilder>: NSObject {
 
     // MARK: - Internal state
-    internal private(set) var session: Session
     internal var listenerPort: UInt16? {
         return tcpListener?.socket?.localPort
     }
 
     // MARK: - Private state
+    private var session: Session
     private var virtualSocket: VirtualSocket?
     private var tcpListener: TCPListener?
     private let createSocketTimeout: NSTimeInterval
@@ -31,8 +31,7 @@ final class Relay<Builder: VirtualSocketBuilder>: NSObject {
     }
 
     // MARK: - Public methods
-    func createTCPListenerWithCompletionHandler(completionHandler: (port: UInt16?,
-                                                                    error: ErrorType?)
+    func createTCPListenerWithCompletionHandler(completion: (port: UInt16?, error: ErrorType?)
                                                 -> Void) {
 
         tcpListener = TCPListener()
@@ -48,10 +47,10 @@ final class Relay<Builder: VirtualSocketBuilder>: NSObject {
                 try tcpListener?.startListeningForIncomingConnections(onPort: anyAvailablePort!) {
                     port, error in
 
-                    completionHandler(port: port, error: error)
+                    completion(port: port, error: error)
                 }
             } catch let error {
-                completionHandler(port: 0, error: error)
+                completion(port: 0, error: error)
             }
 
             tcpListener?.socketFailureHandler = socketFailureHandler
@@ -60,14 +59,16 @@ final class Relay<Builder: VirtualSocketBuilder>: NSObject {
     }
 
     func closeTCPListener() {
-        tcpListener?.stopListeningForIncomingConnectionsAndCloseSocket()
         tcpListener?.acceptNewConnectionHandler = nil
+        tcpListener?.socketFailureHandler = nil
+        tcpListener?.socketReadDataHandler = nil
+        tcpListener?.stopListeningForIncomingConnectionsAndCloseSocket()
         tcpListener = nil
     }
 
-    func createTCPListenerAndConnect(to preConfiguredPort: UInt16,
-                                     withCompletion completion: (port: UInt16?, error: ErrorType?)
-        -> Void) {
+    func createSocketAndConnect(to preConfiguredPort: UInt16,
+                                withCompletion completion: (port: UInt16?, error: ErrorType?)
+                                -> Void) {
         tcpListener = TCPListener()
         tcpListener?.acceptNewConnectionHandler = {
             socket in
@@ -88,6 +89,10 @@ final class Relay<Builder: VirtualSocketBuilder>: NSObject {
         }
     }
 
+    func closeMPCFSession() {
+        self.session.disconnect()
+    }
+
     func createVirtualSocket() {
         let _ = Builder(session: self.session, streamReceiveTimeout: createSocketTimeout) {
             [weak self] streamPair, error in
@@ -99,7 +104,7 @@ final class Relay<Builder: VirtualSocketBuilder>: NSObject {
             if error != nil {
                 if let thaliCoreError = error as? ThaliCoreError {
                     if thaliCoreError == ThaliCoreError.ConnectionTimedOut {
-                        strongSelf.tcpListener?.stopListeningForIncomingConnectionsAndCloseSocket()
+                        strongSelf.closeTCPListener()
                     }
                 }
             } else {
@@ -108,19 +113,18 @@ final class Relay<Builder: VirtualSocketBuilder>: NSObject {
                                                              outputStream: streamPair.outputStream)
                     strongSelf.virtualSocket?.readDataFromStreamHandler =
                         strongSelf.readDataFromInputStream
-                    strongSelf.virtualSocket?.open()
+                    strongSelf.openAndBindVirtualSocket()
                 }
-
             }
         }
     }
 
     func openAndBindVirtualSocket() {
-        self.virtualSocket?.open()
+        self.virtualSocket?.openStreams()
     }
 
     func closeVirtualSocket() {
-        self.virtualSocket?.close()
+        self.virtualSocket?.closeStreams()
     }
 
     // MARK: - Private methods

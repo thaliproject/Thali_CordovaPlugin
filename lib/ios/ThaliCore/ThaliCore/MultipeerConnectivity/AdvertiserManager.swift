@@ -72,7 +72,7 @@ public final class AdvertiserManager: NSObject {
                                         createSocketTimeout: strongSelf.inputStreamReceiveTimeout
                                     )
                                     strongSelf.relay?.createVirtualSocket()
-                                    strongSelf.relay?.createTCPListenerAndConnect(to: 34000) {
+                                    strongSelf.relay?.createSocketAndConnect(to: 34000) {
                                         port, error in
                                     }
                                 },
