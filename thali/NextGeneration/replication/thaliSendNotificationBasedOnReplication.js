@@ -449,7 +449,9 @@ ThaliSendNotificationBasedOnReplication.prototype._setUpChangeListener =
         if (whenTimerWillRun > soonestPossibleRefresh) {
           var milliSecondsUntilNextRefresh =
             soonestPossibleRefresh - Date.now();
-          self._updateOnExpiration(milliSecondsUntilNextRefresh);
+          if (milliSecondsUntilNextRefresh >= 0) {
+            self._updateOnExpiration(milliSecondsUntilNextRefresh);
+          }
         }
       })
       .on('complete', function (info) {
@@ -474,10 +476,6 @@ ThaliSendNotificationBasedOnReplication.prototype._setUpChangeListener =
 ThaliSendNotificationBasedOnReplication.prototype._updateOnExpiration =
   function (millisecondsUntilRun) {
     var self = this;
-
-    if (millisecondsUntilRun < 0) {
-      return;
-    }
 
     if (this._transientState.beaconRefreshTimerManager) {
       this._transientState.beaconRefreshTimerManager.stop();
