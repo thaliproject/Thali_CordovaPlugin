@@ -1,6 +1,12 @@
 package io.jxcore.node;
 
+import android.util.Log;
+
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 
@@ -13,6 +19,15 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsNot.not;
 
 public class StartStopOperationTest {
+
+    String mTag = StartStopOperationTest.class.getName();
+
+    @Rule
+    public TestRule watcher = new TestWatcher() {
+        protected void starting(Description description) {
+            Log.i(mTag, "Starting test: " + description.getMethodName());
+        }
+    };
 
     @Test
     public void testCreateStartOperation() throws Exception {
@@ -135,8 +150,6 @@ public class StartStopOperationTest {
         StartStopOperation mStartStopOperation =
             StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
 
-        Thread.sleep(1000);
-
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
             is(notNullValue()));
         assertThat("getCallback should be equal to mJXcoreThaliCallback",
@@ -145,8 +158,6 @@ public class StartStopOperationTest {
         mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
         mStartStopOperation =
             StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
-
-        Thread.sleep(1000);
 
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
             is(notNullValue()));
@@ -325,25 +336,25 @@ public class StartStopOperationTest {
         JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
         StartStopOperation startStopOperation =
             StartStopOperation.createStartOperation(false, mJXcoreThaliCallback);
-        String result  = startStopOperation.toString();
+        String result = startStopOperation.toString();
 
         assertThat("Result should be Start operation: Should start/stop everything",
             result, is(equalTo("Start operation: Should start/stop everything")));
 
         startStopOperation = StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
-        result  = startStopOperation.toString();
+        result = startStopOperation.toString();
 
         assertThat("Result should be Start operation: Should affect listening to advertisements only",
             result, is(equalTo("Start operation: Should affect listening to advertisements only")));
 
         startStopOperation = StartStopOperation.createStopOperation(false, mJXcoreThaliCallback);
-        result  = startStopOperation.toString();
+        result = startStopOperation.toString();
 
         assertThat("Result should be Stop operation: Should start/stop everything",
             result, is(equalTo("Stop operation: Should start/stop everything")));
 
         startStopOperation = StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
-        result  = startStopOperation.toString();
+        result = startStopOperation.toString();
 
         assertThat("Result should be Stop operation: Should affect listening to advertisements only",
             result, is(equalTo("Stop operation: Should affect listening to advertisements only")));

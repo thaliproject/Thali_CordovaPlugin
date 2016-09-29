@@ -26,41 +26,33 @@ public final class RegisterExecuteUT {
 
     private static void FireTestedMethod(String methodName) {
         ConnectionHelperTest.mConnectionHelper = new ConnectionHelper();
-        try {
-                if(methodName.equals("onPeerLost")){
-                    Method onPeerLostMethod = ConnectionHelperTest.mConnectionHelper.getClass().getMethod(methodName, PeerProperties.class);
-                    onPeerLostMethod.invoke(ConnectionHelperTest.mConnectionHelper, new PeerProperties("11:22:33:22:11:00"));
-                }
-                if(methodName.equals("onPeerDiscovered")){
-                    Method onPeerDiscoveredMethod = ConnectionHelperTest.mConnectionHelper.getClass().getMethod(methodName, PeerProperties.class);
-                    onPeerDiscoveredMethod.invoke(ConnectionHelperTest.mConnectionHelper, new PeerProperties("33:44:55:44:33:22"));
-                }
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (NoSuchMethodException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
-            }
+
+        switch (methodName) {
+            case "onPeerLost":
+                ConnectionHelperTest.mConnectionHelper
+                    .onPeerLost(new PeerProperties("11:22:33:22:11:00"));
+                break;
+            case "onPeerDiscovered":
+                ConnectionHelperTest.mConnectionHelper
+                    .onPeerDiscovered(new PeerProperties("33:44:55:44:33:22"));
+                break;
+            default:
+                Log.e(TAG, "Method called in FireTestedMethod doesn't exists!");
+                break;
         }
+    }
 
     public static void Register() {
-        jxcore.RegisterMethod("TestNativeMethod", new jxcore.JXcoreCallback() {
+        jxcore.RegisterMethod("testNativeMethod", new jxcore.JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, final String callbackId) {
                 String methodToTest = "";
 
                 if (params.size() == 0) {
-                    Log.e(TAG, "Required parameter (toast message) missing");
+                    Log.e(TAG, "Required parameter is missing");
                 } else {
                     methodToTest = params.get(0).toString();
                     FireTestedMethod(methodToTest);
-                }
-
-                try {
-                    Thread.sleep(2000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
                 }
 
                 JSONObject jsonObject = new JSONObject();
@@ -87,18 +79,18 @@ public final class RegisterExecuteUT {
                 Boolean jsonObjectCreated = false;
                 String failures = "";
 
-                for (Failure failure: resultTest.getFailures()) {
+                for (Failure failure : resultTest.getFailures()) {
                     failures += failure.getMessage() + "\n";
                 }
 
                 try {
-                    if(!failures.equals("")){
+                    if (!failures.equals("")) {
                         jsonObject.put("failures", failures);
                     }
 
                     jsonObject.put("total", resultTest.getRunCount());
                     jsonObject.put("passed", resultTest.getRunCount() -
-                            resultTest.getFailureCount() - resultTest.getIgnoreCount());
+                        resultTest.getFailureCount() - resultTest.getIgnoreCount());
                     jsonObject.put("failed", resultTest.getFailureCount());
                     jsonObject.put("ignored", resultTest.getIgnoreCount());
                     jsonObject.put("duration", new Date(resultTest.getRunTime()).getTime());
@@ -106,7 +98,7 @@ public final class RegisterExecuteUT {
                     jsonObjectCreated = true;
                 } catch (JSONException e) {
                     Log.e(logtag, "executeNativeTests: " +
-                            "Failed to populate the JSON object: " + e.getMessage(), e);
+                        "Failed to populate the JSON object: " + e.getMessage(), e);
                 }
 
                 if (jsonObjectCreated) {
