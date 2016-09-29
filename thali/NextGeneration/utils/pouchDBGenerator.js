@@ -1,7 +1,8 @@
 'use strict';
 
-var inherits = require('inherits');
-var extend = require('js-extend').extend;
+var inherits     = require('inherits');
+var extend       = require('js-extend').extend;
+var EventEmitter = require('events').EventEmitter;
 
 
 /**
@@ -64,6 +65,13 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
 
   options = extend({}, options);
 
+  // This is a workround for #970.
+  var CustomEventEmitter = function () {
+    return EventEmitter.apply(this, arguments);
+  }
+
+  inherits(CustomEventEmitter, EventEmitter);
+
   inherits(PouchAlt, PouchDB);
 
   PouchAlt.preferredAdapters = PouchDB.preferredAdapters.slice();
@@ -73,7 +81,7 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
     }
   });
 
-  // This is a woraround for #870
+  // This is a workaround for #870.
   PouchAlt.prototype.info = function () {
     var self = this;
     return PouchAlt.super_.prototype.info.apply(this, arguments)
@@ -81,6 +89,32 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
       return { update_seq: 0 };
     });
   }
+
+  // This is a workaround for #970.
+  PouchAlt.prototype.on =
+  PouchAlt.prototype.addListener = function (type, listener) {
+    var self = this;
+    // We don't want PouchDB to catch our exception from 'listener'.
+    // We want to cancel current PouchDB action and emit 'error' with exception.
+    return PouchAlt.super_.prototype.addListener.call(this, type, function () {
+      try {
+        listener.apply(this, arguments);
+      } catch (e) {
+        self.emit('error', e);
+      }
+    });
+  }
+
+  // This is a workaround for #970.
+  // 'Changes' has an 'EventEmitter' too, but it isn't exported.
+  // We have to overwrite 'EventEmitter' methods here.
+  PouchAlt.prototype.changes = function () {
+    var changes = PouchAlt.super_.prototype.changes.apply(this, arguments);
+    // 'Changes' has its own 'addListener' method, we shouldn't overwrite it.
+    // This method is based on 'EventEmitter.prototype.on' method.
+    changes.on = PouchAlt.prototype.on.bind(changes);
+    return changes;
+  };
 
   return PouchAlt;
 }
