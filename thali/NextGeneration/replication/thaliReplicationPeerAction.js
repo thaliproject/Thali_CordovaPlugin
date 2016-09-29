@@ -241,7 +241,7 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
         remoteDB, self._ourPublicKey);
       self._replicationPromise = new Promise(function (resolve, reject) {
         self._resolve = resolve;
-        self._reject = reject;
+        self._reject  = reject;
         self._replicationTimer();
         self._cancelReplication = remoteDB.replicate.to(self._dbName, {
           live: true

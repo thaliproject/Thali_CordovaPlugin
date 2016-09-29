@@ -475,14 +475,13 @@ ThaliSendNotificationBasedOnReplication.prototype._updateOnExpiration =
   function (millisecondsUntilRun) {
     var self = this;
 
+    if (millisecondsUntilRun < 0) {
+      return;
+    }
+
     if (this._transientState.beaconRefreshTimerManager) {
       this._transientState.beaconRefreshTimerManager.stop();
       this._transientState.beaconRefreshTimerManager = null;
-    }
-
-    if (millisecondsUntilRun < 0) {
-      this._transientState.lastTimeBeaconsWereUpdated = 0;
-      return;
     }
 
     assert.notEqual(
