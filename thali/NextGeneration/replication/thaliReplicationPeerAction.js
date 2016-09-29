@@ -244,8 +244,7 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
         self._reject = reject;
         self._replicationTimer();
         self._cancelReplication = remoteDB.replicate.to(self._dbName, {
-          live: true,
-          retry: true
+          live: true
         })
         .on('paused', function (err) {
           logger.debug(
