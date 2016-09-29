@@ -67,5 +67,5 @@ module.exports = Object.defineProperties({}, {
       get: function () {
         return process.platform === _platforms.IOS;
       }
-    },
+    }
   });
