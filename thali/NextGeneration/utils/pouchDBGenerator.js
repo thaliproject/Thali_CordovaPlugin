@@ -112,7 +112,7 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
     var changes = PouchAlt.super_.prototype.changes.apply(this, arguments);
     // 'Changes' has its own 'addListener' method, we shouldn't overwrite it.
     // This method is based on 'EventEmitter.prototype.on' method.
-    changes.on  = PouchAlt.prototype.on.bind(changes);
+    changes.on = PouchAlt.prototype.on.bind(changes);
     return changes;
   };
 
