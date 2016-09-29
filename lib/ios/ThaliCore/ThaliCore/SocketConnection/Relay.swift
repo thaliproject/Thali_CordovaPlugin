@@ -1,10 +1,12 @@
 //
-//  SessionBinder.swift
-//  ThaliCore
+//  Thali CordovaPlugin
+//  Relay.swift
 //
-//  Created by Dersim Davaod on 9/21/16.
-//  Copyright © 2016 Thali. All rights reserved.
+//  Copyright (C) Microsoft. All rights reserved.
+//  Licensed under the MIT license.
+//  See LICENSE.txt file in the project root for full license information.
 //
+
 
 import Foundation
 
@@ -12,7 +14,7 @@ final class Relay<Builder: VirtualSocketBuilder>: NSObject {
 
     // MARK: - Internal state
     internal private(set) var session: Session
-    var listenerPort: UInt16? {
+    internal var listenerPort: UInt16? {
         return tcpListener?.socket?.localPort
     }
 
@@ -22,21 +24,23 @@ final class Relay<Builder: VirtualSocketBuilder>: NSObject {
     private let createSocketTimeout: NSTimeInterval
 
     // MARK: - Public methods
-    init(withSession session: Session, createSocketTimeout: NSTimeInterval) {
+    init(with session: Session, createSocketTimeout: NSTimeInterval) {
         self.session = session
         self.createSocketTimeout = createSocketTimeout
         super.init()
     }
 
     // MARK: - Public methods
-    func createTCPListener(withCompletionHandler completion:(port: UInt16?, error: ErrorType?)
-                            -> Void) {
+    func createTCPListenerWithCompletionHandler(completionHandler: (port: UInt16?,
+                                                                    error: ErrorType?)
+                                                -> Void) {
 
-        tcpListener = TCPListener(withAcceptNewConnectionHandler: {
+        tcpListener = TCPListener()
+        tcpListener?.acceptNewConnectionHandler = {
             socket in
 
             self.createVirtualSocket()
-        })
+        }
 
         if nil != tcpListener {
             do {
@@ -44,10 +48,10 @@ final class Relay<Builder: VirtualSocketBuilder>: NSObject {
                 try tcpListener?.startListeningForIncomingConnections(onPort: anyAvailablePort!) {
                     port, error in
 
-                    completion(port: port, error: error)
+                    completionHandler(port: port, error: error)
                 }
             } catch let error {
-                completion(port: 0, error: error)
+                completionHandler(port: 0, error: error)
             }
 
             tcpListener?.socketFailureHandler = socketFailureHandler
@@ -57,19 +61,19 @@ final class Relay<Builder: VirtualSocketBuilder>: NSObject {
 
     func closeTCPListener() {
         tcpListener?.stopListeningForIncomingConnectionsAndCloseSocket()
+        tcpListener?.acceptNewConnectionHandler = nil
         tcpListener = nil
     }
 
-    func createTCPListenerAndConnectTo(preConfiguredPort: UInt16,
-                                       withCompletion completion: (port: UInt16?, error: ErrorType?)
+    func createTCPListenerAndConnect(to preConfiguredPort: UInt16,
+                                     withCompletion completion: (port: UInt16?, error: ErrorType?)
         -> Void) {
-        tcpListener = TCPListener(withAcceptNewConnectionHandler: {
+        tcpListener = TCPListener()
+        tcpListener?.acceptNewConnectionHandler = {
             socket in
 
-            // read data from socket
             socket.readDataWithTimeout(-1, tag: 0)
-            //            self.start()
-        })
+        }
 
         if nil != tcpListener {
             do {
@@ -99,11 +103,14 @@ final class Relay<Builder: VirtualSocketBuilder>: NSObject {
                     }
                 }
             } else {
-                strongSelf.virtualSocket = VirtualSocket(with: streamPair!.0,
-                                                         outputStream: streamPair!.1)
-                strongSelf.virtualSocket?.readDataFromStreamHandler =
-                    strongSelf.readDataFromInputStream
-                strongSelf.virtualSocket?.open()
+                if let inputStream = streamPair?.0, outputStream = streamPair?.1 {
+                    strongSelf.virtualSocket = VirtualSocket(with: inputStream,
+                                                             outputStream: outputStream)
+                    strongSelf.virtualSocket?.readDataFromStreamHandler =
+                        strongSelf.readDataFromInputStream
+                    strongSelf.virtualSocket?.open()
+                }
+
             }
         }
     }

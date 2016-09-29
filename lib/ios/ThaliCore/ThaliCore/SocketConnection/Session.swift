@@ -13,12 +13,10 @@ import MultipeerConnectivity
 /// Class for managing MCSession: subscribing for incoming streams and creating output streams
 class Session: NSObject {
 
-    // MARK: - Public state
-    var sessionStateChangesHandler: ((MCSessionState) -> Void)?
-    var didReceiveInputStreamHandler: ((NSInputStream, String) -> Void)?
-
     // MARK: - Internal state
     internal private(set) var sessionState: Atomic<MCSessionState> = Atomic(.NotConnected)
+    internal var sessionStateChangesHandler: ((MCSessionState) -> Void)?
+    internal var didReceiveInputStreamHandler: ((NSInputStream, String) -> Void)?
 
     // MARK: - Private state
     private let session: MCSession
@@ -40,7 +38,7 @@ class Session: NSObject {
         self.session.delegate = self
     }
 
-    func createOutputStream(withName name: String) throws -> NSOutputStream {
+    func createOutputStream(with name: String) throws -> NSOutputStream {
         return try session.startStreamWithName(name, toPeer: identifier)
     }
 

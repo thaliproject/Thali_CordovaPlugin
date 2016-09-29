@@ -22,11 +22,11 @@ class AdvertiserTests: XCTestCase {
         let advertiser = startAdvertiser(with: randomlyGeneratedPeerID,
                                          receivedInvitationHandler: {
                                             _ in
-            },
+                                         },
                                          disconnectHandler: unexpectedDisconnectHandler,
                                          mcInvitationHandler: {
                                             _ in
-        })
+                                         })
         // Then
         XCTAssertTrue(advertiser.advertising)
 

@@ -11,14 +11,10 @@ import Foundation
 
 public class VirtualSocket: NSObject {
 
-    // MARK: - Public state
-    var readDataFromStreamHandler: ((NSData) -> Void)?
-
     // MARK: - Internal state
     internal private(set) var inputStream: NSInputStream?
     internal private(set) var outputStream: NSOutputStream?
-
-    // MARK: - Private state
+    internal var readDataFromStreamHandler: ((NSData) -> Void)?
 
     // MARK: - Public methods
     init(with inputStream: NSInputStream,
@@ -65,15 +61,15 @@ extension VirtualSocket: NSStreamDelegate {
     // MARK: - Delegate methods
     public func stream(aStream: NSStream, handleEvent eventCode: NSStreamEvent) {
         if aStream == self.inputStream {
-            handleEventOnInputStreamWith(eventCode)
+            handleEventOnInputStream(with: eventCode)
         } else if aStream == self.outputStream {
-            handleEventOnOutputStreamWith(eventCode)
+            handleEventOnOutputStream(with: eventCode)
         }
 
     }
 
     // MARK: - Private Helpers
-    private func handleEventOnInputStreamWith(eventCode: NSStreamEvent) {
+    private func handleEventOnInputStream(with eventCode: NSStreamEvent) {
         switch eventCode {
         case NSStreamEvent.HasBytesAvailable:
             let maxBufferLength = 1024
@@ -90,7 +86,7 @@ extension VirtualSocket: NSStreamDelegate {
         }
     }
 
-    private func handleEventOnOutputStreamWith(eventCode: NSStreamEvent) {
+    private func handleEventOnOutputStream(with eventCode: NSStreamEvent) {
         switch eventCode {
         case NSStreamEvent.HasBytesAvailable:
             break

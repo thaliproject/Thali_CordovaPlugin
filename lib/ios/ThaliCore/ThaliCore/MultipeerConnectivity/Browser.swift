@@ -12,11 +12,9 @@ import MultipeerConnectivity
 
 final class Browser: NSObject {
 
-    // MARK: - Public state
-    let invitePeerTimeout = 30
-
     // MARK: - Internal state
     internal private(set) var listening: Bool = false
+    internal let invitePeerTimeout = 30
 
     // MARK: - Private state
     private let browser: MCNearbyServiceBrowser

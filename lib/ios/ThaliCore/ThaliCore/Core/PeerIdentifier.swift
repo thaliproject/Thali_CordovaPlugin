@@ -22,12 +22,12 @@ public struct PeerIdentifier: Hashable {
     }
 
     // MARK: - Internal state
-    var stringValue: String {
+    internal var stringValue: String {
         return "\(uuid)\(PeerIdentifier.separator)\(String(generation, radix: 16))"
     }
 
     // MARK: - Private state
-    private static let separator = Character(":")
+    private static let separator: Character = ":"
 
     // MARK: - Public methods
     public init() {

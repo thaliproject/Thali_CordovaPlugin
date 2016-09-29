@@ -11,23 +11,16 @@ import Foundation
 
 class TCPListener: NSObject {
 
-    // MARK: - Public state
-    var socketFailureHandler:((socket: GCDAsyncSocket) -> Void)? = nil
-    var socketReadDataHandler:((data: NSData) -> Void)? = nil
-
     // MARK: - Internal state
     internal private(set) var socket: GCDAsyncSocket?
+    internal var socketFailureHandler:((socket: GCDAsyncSocket) -> Void)? = nil
+    internal var socketReadDataHandler:((data: NSData) -> Void)? = nil
+    internal var acceptNewConnectionHandler:((socket: GCDAsyncSocket) -> Void)?
 
     // MARK: - Private state
     private let socketQueue = dispatch_queue_create("org.thaliproject.GCDAsyncSocket.delegateQueue",
                                                     DISPATCH_QUEUE_CONCURRENT)
-
     private var activeConnections: Atomic<[GCDAsyncSocket]> = Atomic([])
-    private let acceptNewConnectionHandler:(onSocket: GCDAsyncSocket) -> Void
-
-    init(withAcceptNewConnectionHandler newConnectionHandler: (onSocket: GCDAsyncSocket) -> Void) {
-        self.acceptNewConnectionHandler = newConnectionHandler
-    }
 
     func startListeningForIncomingConnections(onPort port: UInt16,
                                               completion: (port: UInt16?, error: ErrorType?)
@@ -85,7 +78,7 @@ extension TCPListener: GCDAsyncSocketDelegate {
 
     func socket(sock: GCDAsyncSocket, didAcceptNewSocket newSocket: GCDAsyncSocket) {
         activeConnections.modify({ $0.append(newSocket) })
-        acceptNewConnectionHandler(onSocket: newSocket)
+        acceptNewConnectionHandler?(socket: newSocket)
     }
 
     func socket(sock: GCDAsyncSocket, didWriteDataWithTag tag: Int) {

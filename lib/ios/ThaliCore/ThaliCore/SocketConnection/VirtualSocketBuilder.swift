@@ -42,7 +42,7 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
         do {
             let outputStreamName = NSUUID().UUIDString
 
-            let outputStream = try session.createOutputStream(withName: outputStreamName)
+            let outputStream = try session.createOutputStream(with: outputStreamName)
             session.didReceiveInputStreamHandler = {
                 inputStream, inputStreamName in
 
@@ -85,7 +85,7 @@ final class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
             inputStream, inputStreamName in
 
             do {
-                let outputStream = try session.createOutputStream(withName: inputStreamName)
+                let outputStream = try session.createOutputStream(with: inputStreamName)
                 completionHandler((inputStream, outputStream), nil)
             } catch let error {
                 completionHandler(nil, error)

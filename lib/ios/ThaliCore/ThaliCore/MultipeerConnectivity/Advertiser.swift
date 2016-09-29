@@ -12,11 +12,9 @@ import MultipeerConnectivity
 
 final class Advertiser: NSObject {
 
-    // MARK: - Public state
-    internal private(set) var advertising: Bool = false
-
     // MARK: - Internal state
-    let peerIdentifier: PeerIdentifier
+    internal private(set) var advertising: Bool = false
+    internal let peerIdentifier: PeerIdentifier
 
     // MARK: - Private state
     private let advertiser: MCNearbyServiceAdvertiser

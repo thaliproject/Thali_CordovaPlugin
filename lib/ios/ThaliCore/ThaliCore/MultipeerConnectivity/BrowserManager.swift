@@ -92,10 +92,10 @@ public final class BrowserManager: NSObject {
                     }
 
                     let relay = strongSelf.activeRelays.withValue { $0[identifier.uuid] }
-                    relay?.createTCPListener(withCompletionHandler: {
-                        [weak self] port, error in
+                    relay?.createTCPListenerWithCompletionHandler {
+                        port, error in
                         completion(syncValue: syncValue, error: error, port: port)
-                    })
+                    }
                     relay?.createVirtualSocket()
                 },
                 sessionDisconnectHandler: {
@@ -120,7 +120,7 @@ public final class BrowserManager: NSObject {
             )
 
             let relay: Relay<BrowserVirtualSocketBuilder> =
-                Relay(withSession: session,
+                Relay(with: session,
                       createSocketTimeout: self.inputStreamReceiveTimeout)
 
             activeRelays.modify { $0[identifier.uuid] = relay }

@@ -19,7 +19,7 @@ public final class AdvertiserManager: NSObject {
 
     // MARK: - Internal state
     internal private(set) var advertisers: Atomic<[Advertiser]> = Atomic([])
-    var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
+    internal var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
 
     // MARK: - Private state
     private var currentAdvertiser: Advertiser? = nil
@@ -68,11 +68,11 @@ public final class AdvertiserManager: NSObject {
                                     }
 
                                     strongSelf.relay = Relay(
-                                        withSession: session,
+                                        with: session,
                                         createSocketTimeout: strongSelf.inputStreamReceiveTimeout
                                     )
                                     strongSelf.relay?.createVirtualSocket()
-                                    strongSelf.relay?.createTCPListenerAndConnectTo(34000) {
+                                    strongSelf.relay?.createTCPListenerAndConnect(to: 34000) {
                                         port, error in
                                     }
                                 },
