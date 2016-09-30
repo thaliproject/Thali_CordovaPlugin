@@ -62,6 +62,7 @@ extension Advertiser: MCNearbyServiceAdvertiserDelegate {
                                   securityIdentity: nil,
                                   encryptionPreference: .None)
 
+        // TODO: https://github.com/thaliproject/Thali_CordovaPlugin/issues/1040
         let session = Session(session: mcSession,
                               identifier: peerID,
                               connectHandler: {},

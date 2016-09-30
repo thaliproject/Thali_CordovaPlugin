@@ -107,8 +107,7 @@ class BrowserManagerTests: XCTestCase {
         let foundTwoAdvertisersExpectation = expectationWithDescription("found two advertisers")
 
         let advertiserManager = AdvertiserManager(serviceType: serviceType,
-                                                  disposeAdvertiserTimeout: disposeTimeout,
-                                                  inputStreamReceiveTimeout: 1)
+                                                  disposeAdvertiserTimeout: disposeTimeout)
 
         // Starting 1st generation of advertiser
         advertiserManager.startUpdateAdvertisingAndListening(onPort: port1,
@@ -161,8 +160,7 @@ class BrowserManagerTests: XCTestCase {
 
         let advertiserManager =
             AdvertiserManager(serviceType: serviceType,
-                              disposeAdvertiserTimeout: disposeAdvertiserTimeout,
-                              inputStreamReceiveTimeout: 1)
+                              disposeAdvertiserTimeout: disposeAdvertiserTimeout)
         advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
                                                              errorHandler: unexpectedErrorHandler)
         // When
@@ -371,8 +369,7 @@ class BrowserManagerTests: XCTestCase {
         var advertiserPeerAvailability: PeerAvailability? = nil
 
         let advertiserManager = AdvertiserManager(serviceType: serviceType,
-                                                  disposeAdvertiserTimeout: 2.0,
-                                                  inputStreamReceiveTimeout: 1)
+                                                  disposeAdvertiserTimeout: 2.0)
 
         let browserManager = BrowserManager(
             serviceType: serviceType,
@@ -411,8 +408,7 @@ class BrowserManagerTests: XCTestCase {
         var advertiserPeerAvailability: PeerAvailability? = nil
 
         let advertiserManager = AdvertiserManager(serviceType: serviceType,
-                                                  disposeAdvertiserTimeout: 2.0,
-                                                  inputStreamReceiveTimeout: 1)
+                                                  disposeAdvertiserTimeout: 2.0)
 
         let browserManager = BrowserManager(
             serviceType: serviceType,

@@ -10,126 +10,75 @@
 
 import Foundation
 
-final class Relay<Builder: VirtualSocketBuilder>: NSObject {
+final class Relay<SocketBuilder: VirtualSocketBuilder>: NSObject {
 
     // MARK: - Internal state
     internal var listenerPort: UInt16? {
-        return tcpListener?.socket?.localPort
+        return tcpListener.socket.localPort
     }
 
     // MARK: - Private state
-    private var session: Session
-    private var virtualSocket: VirtualSocket?
-    private var tcpListener: TCPListener?
+    private var nonTCPsession: Session
+    private var tcpListener: TCPListener
+    private var virtualNonTCPSocket: VirtualSocket?
     private let createSocketTimeout: NSTimeInterval
 
     // MARK: - Public methods
     init(with session: Session, createSocketTimeout: NSTimeInterval) {
-        self.session = session
+        self.nonTCPsession = session
         self.createSocketTimeout = createSocketTimeout
+        self.tcpListener = TCPListener()
         super.init()
     }
 
-    // MARK: - Public methods
-    func createTCPListenerWithCompletionHandler(completion: (port: UInt16?, error: ErrorType?)
-                                                -> Void) {
-
-        tcpListener = TCPListener()
-        tcpListener?.acceptNewConnectionHandler = {
-            socket in
-
-            self.createVirtualSocket()
-        }
-
-        if nil != tcpListener {
-            do {
-                let anyAvailablePort: UInt16? = 0
-                try tcpListener?.startListeningForIncomingConnections(onPort: anyAvailablePort!) {
-                    port, error in
-
-                    completion(port: port, error: error)
-                }
-            } catch let error {
-                completion(port: 0, error: error)
-            }
-
-            tcpListener?.socketFailureHandler = socketFailureHandler
-            tcpListener?.socketReadDataHandler = socketReadDataHandler
-        }
-    }
-
-    func closeTCPListener() {
-        tcpListener?.acceptNewConnectionHandler = nil
-        tcpListener?.socketFailureHandler = nil
-        tcpListener?.socketReadDataHandler = nil
-        tcpListener?.stopListeningForIncomingConnectionsAndCloseSocket()
-        tcpListener = nil
-    }
-
-    func createSocketAndConnect(to preConfiguredPort: UInt16,
-                                withCompletion completion: (port: UInt16?, error: ErrorType?)
-                                -> Void) {
-        tcpListener = TCPListener()
-        tcpListener?.acceptNewConnectionHandler = {
-            socket in
-
-            socket.readDataWithTimeout(-1, tag: 0)
-        }
-
-        if nil != tcpListener {
-            do {
-                try tcpListener?.connectToLocalhost(onPort: preConfiguredPort) {
-                    port, error in
-
-                    completion(port: port, error: error)
-                }
-            } catch let error {
-                completion(port: 0, error: error)
-            }
-        }
-    }
-
-    func closeMPCFSession() {
-        self.session.disconnect()
-    }
-
-    func createVirtualSocket() {
-        let _ = Builder(session: self.session, streamReceiveTimeout: createSocketTimeout) {
-            [weak self] streamPair, error in
+    // MARK: - Private methods
+    // MARK: Handling non-TCP socket
+    private func createNonTCPVirtualSocket() {
+        let _ = SocketBuilder(with: nonTCPsession,
+                              streamReceivedBackTimeout: createSocketTimeout) {
+            [weak self] newStreamPair, error in
 
             guard let strongSelf = self else {
                 return
             }
 
-            if error != nil {
-                if let thaliCoreError = error as? ThaliCoreError {
-                    if thaliCoreError == ThaliCoreError.ConnectionTimedOut {
-                        strongSelf.closeTCPListener()
-                    }
+            guard error == nil else {
+                strongSelf.disconnectNonTCPSession()
+                return
+            }
+
+            if let streamPair = newStreamPair {
+                strongSelf.virtualNonTCPSocket = VirtualSocket(
+                    with: streamPair.inputStream,
+                    outputStream: streamPair.outputStream
+                )
+
+                guard let virtualNonTCPSocket = strongSelf.virtualNonTCPSocket else {
+                    return
                 }
-            } else {
-                if let streamPair = streamPair {
-                    strongSelf.virtualSocket = VirtualSocket(with: streamPair.inputStream,
-                                                             outputStream: streamPair.outputStream)
-                    strongSelf.virtualSocket?.readDataFromStreamHandler =
-                        strongSelf.readDataFromInputStream
-                    strongSelf.openAndBindVirtualSocket()
-                }
+
+                virtualNonTCPSocket.readDataFromStreamHandler = strongSelf.readDataFromInputStream
+                strongSelf.openStreamsOnNonTCPVirtualSocket()
             }
         }
     }
 
-    func openAndBindVirtualSocket() {
-        self.virtualSocket?.openStreams()
+    private func openStreamsOnNonTCPVirtualSocket() {
+        self.virtualNonTCPSocket?.openStreams()
     }
 
-    func closeVirtualSocket() {
-        self.virtualSocket?.closeStreams()
+    private func closeNonTCPVirtualSocket() {
+        self.virtualNonTCPSocket?.closeStreams()
     }
 
-    // MARK: - Private methods
-    private func socketFailureHandler(socket: GCDAsyncSocket) {
-        self.session.disconnect()
+    // MARK: Handling non-TCP session
+    func disconnectNonTCPSession() {
+        self.nonTCPsession.disconnect()
+    }
+
+    // MARK: Handlers
+    private func socketDisconnectHandler(socket: GCDAsyncSocket) {
+        disconnectNonTCPSession()
     }
 
     private func socketReadDataHandler(data: NSData) {
@@ -137,7 +86,8 @@ final class Relay<Builder: VirtualSocketBuilder>: NSObject {
     }
 
     private func readDataFromInputStream(data: NSData) {
-        tcpListener?.socket?.writeData(data, withTimeout: -1, tag: 0)
+        let noTimeOut: NSTimeInterval = -1
+        tcpListener.socket.writeData(data, withTimeout: noTimeOut, tag: 0)
     }
 
     private func writeDataToOutputStream(data: NSData) {
@@ -146,8 +96,84 @@ final class Relay<Builder: VirtualSocketBuilder>: NSObject {
             UnsafeBufferPointer(start: UnsafePointer<UInt8>(data.bytes), count: dataLength)
         )
 
-        let bytesWritten = self.virtualSocket?.outputStream?.write(buffer, maxLength: dataLength)
+        let bytesWritten = self.virtualNonTCPSocket?.outputStream.write(buffer, maxLength: dataLength)
 
         if bytesWritten < 0 { }
+    }
+}
+
+extension Relay where SocketBuilder: AdvertiserVirtualSocketBuilder {
+
+    // MARK: - Public methods
+    func openRelay(on port: UInt16, completion: (port: UInt16?, error: ErrorType?) -> Void) {
+        createSocketAndConnect(to: port, with: completion)
+        createNonTCPVirtualSocket()
+    }
+
+    func closeRelay() {
+        disconnectTCPSocket()
+        closeNonTCPVirtualSocket()
+    }
+
+    // MARK: - Private methods
+    private func createSocketAndConnect(to preConfiguredPort: UInt16,
+                                        with completion: (port: UInt16?, error: ErrorType?)
+                                        -> Void) {
+        tcpListener.acceptNewConnectionHandler = {
+            socket in
+            let noTimeOut: NSTimeInterval = -1
+            socket.readDataWithTimeout(noTimeOut, tag: 0)
+        }
+
+        tcpListener.connectToLocalhost(onPort: preConfiguredPort) {
+            port, error in
+            completion(port: port, error: error)
+        }
+    }
+
+    private func disconnectTCPSocket() {
+        tcpListener.disconnectFromLocalhost()
+    }
+}
+
+extension Relay where SocketBuilder: BrowserVirtualSocketBuilder {
+
+    // MARK: - Public methods
+    func openRelay(with completion: (port: UInt16?, error: ErrorType?) -> Void) {
+        createTCPListener(with: completion)
+    }
+
+    func closeRelay() {
+        closeNonTCPVirtualSocket()
+        closeTCPListener()
+    }
+
+    // MARK: - Private methods
+    private func createTCPListener(with completion: (port: UInt16?, error: ErrorType?) -> Void) {
+        tcpListener.acceptNewConnectionHandler = {
+            [weak self] socket in
+
+            guard let strongSelf = self else {
+                return
+            }
+
+            strongSelf.createNonTCPVirtualSocket()
+        }
+
+        let anyAvailablePort: UInt16? = 0
+        tcpListener.startListeningForIncomingConnections(onPort: anyAvailablePort!) {
+            port, error in
+            completion(port: port, error: error)
+        }
+
+        tcpListener.socketDisconnectHandler = socketDisconnectHandler
+        tcpListener.socketReadDataHandler = socketReadDataHandler
+    }
+
+    private func closeTCPListener() {
+        tcpListener.acceptNewConnectionHandler = nil
+        tcpListener.socketDisconnectHandler = nil
+        tcpListener.socketReadDataHandler = nil
+        tcpListener.stopListeningForIncomingConnectionsAndCloseSocket()
     }
 }

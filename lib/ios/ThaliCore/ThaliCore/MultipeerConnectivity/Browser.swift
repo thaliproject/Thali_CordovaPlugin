@@ -14,7 +14,7 @@ final class Browser: NSObject {
 
     // MARK: - Internal state
     internal private(set) var listening: Bool = false
-    internal let invitePeerTimeout = 30
+    internal let invitePeerTimeout: NSTimeInterval = 30.0
 
     // MARK: - Private state
     private let browser: MCNearbyServiceBrowser
@@ -65,9 +65,7 @@ final class Browser: NSObject {
                                   securityIdentity: nil,
                                   encryptionPreference: .None)
 
-        let peer = availablePeers.withValue { $0[peerIdentifier] }
-
-        guard let mcPeer = peer else {
+        guard let mcPeer = availablePeers.value[peerIdentifier] else {
             throw ThaliCoreError.IllegalPeerID
         }
 
@@ -76,7 +74,10 @@ final class Browser: NSObject {
                               connectHandler: sessionConnectHandler,
                               disconnectHandler: sessionDisconnectHandler)
 
-        browser.invitePeer(mcPeer, toSession: mcSession, withContext: nil, timeout: 30)
+        browser.invitePeer(mcPeer,
+                           toSession: mcSession,
+                           withContext: nil,
+                           timeout: invitePeerTimeout)
         return session
     }
 }

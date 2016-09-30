@@ -12,84 +12,93 @@ import Foundation
 class VirtualSocketBuilder {
 
     // MARK: - Public state
-    let session: Session
+    let nonTCPsession: Session
 
     // MARK: - Private state
-    private let socketCompletionHandler: ((NSInputStream, NSOutputStream)?, ErrorType?) -> Void
-    private let streamReceiveTimeout: NSTimeInterval
+    private let streamReceivedBackTimeout: NSTimeInterval
 
+    required init(with nonTCPsession: Session,
+                       streamReceivedBackTimeout: NSTimeInterval,
+                       completion: ((inputStream: NSInputStream, outputStream: NSOutputStream)?,
+                                    ErrorType?)
+                       -> Void) {
 
-    required init(session: Session,
-                  streamReceiveTimeout: NSTimeInterval,
-                  completionHandler: ((inputStream: NSInputStream, outputStream: NSOutputStream)?,
-                                      ErrorType?) -> Void) {
-
-        self.session = session
-        self.streamReceiveTimeout = streamReceiveTimeout
-        self.socketCompletionHandler = completionHandler
+        self.nonTCPsession = nonTCPsession
+        self.streamReceivedBackTimeout = streamReceivedBackTimeout
     }
 }
 
 final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
 
-    required init(session: Session,
-                  streamReceiveTimeout: NSTimeInterval,
-                  completionHandler: ((NSInputStream, NSOutputStream)?, ErrorType?) -> Void) {
+    required init(with nonTCPsession: Session,
+                       streamReceivedBackTimeout: NSTimeInterval,
+                       completion: ((NSInputStream, NSOutputStream)?, ErrorType?) -> Void) {
 
-        super.init(session: session,
-                   streamReceiveTimeout: streamReceiveTimeout,
-                   completionHandler: completionHandler)
+        super.init(with: nonTCPsession,
+                   streamReceivedBackTimeout: streamReceivedBackTimeout,
+                   completion: completion)
 
         do {
-            let outputStreamName = NSUUID().UUIDString
+            let streamReceivedBack = Atomic(false)
 
-            let outputStream = try session.createOutputStream(with: outputStreamName)
-            session.didReceiveInputStreamHandler = {
+            let outputStreamName = NSUUID().UUIDString
+            let outputStream = try nonTCPsession.startOutputStream(with: outputStreamName)
+            nonTCPsession.didReceiveInputStreamHandler = {
                 inputStream, inputStreamName in
 
                 guard inputStreamName == outputStreamName else {
-                    completionHandler(nil, ThaliCoreError.ConnectionFailed)
+                    completion(nil, ThaliCoreError.ConnectionFailed)
                     return
                 }
-                completionHandler((inputStream, outputStream), nil)
+
+                streamReceivedBack.modify { $0 = true }
+                completion((inputStream, outputStream), nil)
             }
 
-            let delayTime = dispatch_time(DISPATCH_TIME_NOW,
-                                          Int64(streamReceiveTimeout * Double(NSEC_PER_SEC)))
-            dispatch_after(delayTime, dispatch_get_main_queue()) {
+            let streamReceivedBackTimeout = dispatch_time(
+                DISPATCH_TIME_NOW,
+                Int64(streamReceivedBackTimeout * Double(NSEC_PER_SEC))
+            )
+
+            dispatch_after(streamReceivedBackTimeout, dispatch_get_main_queue()) {
                 [weak self] in
 
                 guard let strongSelf = self else {
                     return
                 }
 
-                strongSelf.session.didReceiveInputStreamHandler = nil
-                strongSelf.session.disconnect()
-                completionHandler(nil, ThaliCoreError.ConnectionTimedOut)
+                streamReceivedBack.withValue {
+                    if $0 == false {
+                        strongSelf.nonTCPsession.didReceiveInputStreamHandler = nil
+                    }
+                }
+
+                completion(nil, ThaliCoreError.ConnectionTimedOut)
             }
         } catch let error {
-            completionHandler(nil, error)
+            completion(nil, error)
         }
     }
 }
 
 final class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
 
-    required init(session: Session,
-                  streamReceiveTimeout: NSTimeInterval,
-                  completionHandler: ((NSInputStream, NSOutputStream)?, ErrorType?) -> Void) {
-        super.init(session: session,
-                   streamReceiveTimeout: streamReceiveTimeout,
-                   completionHandler: completionHandler)
+    required init(with nonTCPsession: Session,
+                       streamReceivedBackTimeout: NSTimeInterval,
+                       completion: ((NSInputStream, NSOutputStream)?, ErrorType?) -> Void) {
 
-        self.session.didReceiveInputStreamHandler = {
+        super.init(with: nonTCPsession,
+                   streamReceivedBackTimeout: streamReceivedBackTimeout,
+                   completion: completion)
+
+        self.nonTCPsession.didReceiveInputStreamHandler = {
             inputStream, inputStreamName in
 
             do {
-                let outputStream = try session.createOutputStream(with: inputStreamName)
-                completionHandler((inputStream, outputStream), nil)
+                let outputStream = try nonTCPsession.startOutputStream(with: inputStreamName)
+                completion((inputStream, outputStream), nil)
             } catch let error {
-                completionHandler(nil, error)
+                completion(nil, error)
             }
         }
     }

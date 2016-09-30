@@ -19,8 +19,7 @@ class AdvertiserManagerTests: XCTestCase {
     override func setUp() {
         serviceType = String.random(length: 7)
         advertiserManager = AdvertiserManager(serviceType: serviceType,
-                                              disposeAdvertiserTimeout: disposeTimeout,
-                                              inputStreamReceiveTimeout: 1)
+                                              disposeAdvertiserTimeout: disposeTimeout)
     }
 
     override func tearDown() {
@@ -65,7 +64,6 @@ class AdvertiserManagerTests: XCTestCase {
         XCTAssertFalse(advertiserManager.advertising, "advertising is still active")
         XCTAssertEqual(advertiserManager.advertisers.value.count,
                        expectedAmountOfAdvertisersAfterStopMethod)
-
     }
 
     func testAdvertiserDisposedAfterTimeoutWhenSecondAdvertiserStarts() {

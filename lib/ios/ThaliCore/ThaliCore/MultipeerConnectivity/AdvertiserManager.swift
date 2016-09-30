@@ -25,36 +25,23 @@ public final class AdvertiserManager: NSObject {
     private var currentAdvertiser: Advertiser? = nil
     private let serviceType: String
     private var relay: Relay<AdvertiserVirtualSocketBuilder>? = nil
-    private let inputStreamReceiveTimeout: NSTimeInterval
     private let disposeAdvertiserTimeout: NSTimeInterval
 
-
     // MARK: - Public state
-    /**
-
-     - parameter serviceType:               The type of service to advertise
-     - parameter disposeAdvertiserTimeout:  Time in seconds after old version of advertiser will be
-     disposed
-     - parameter inputStreamReceiveTimeout: Timeout in seconds for receiving input stream
-
-     */
-    public init(serviceType: String,
-                disposeAdvertiserTimeout: NSTimeInterval,
-                inputStreamReceiveTimeout: NSTimeInterval) {
+    public init(serviceType: String, disposeAdvertiserTimeout: NSTimeInterval) {
         self.serviceType = serviceType
         self.disposeAdvertiserTimeout = disposeAdvertiserTimeout
-        self.inputStreamReceiveTimeout = inputStreamReceiveTimeout
-}
-
+        super.init()
+    }
 
     public func startUpdateAdvertisingAndListening(onPort port: UInt16,
-                                                    errorHandler: ErrorType -> Void) {
+                                                          errorHandler: ErrorType -> Void) {
 
         let advertiser: Advertiser?
         var newPeerIdentifier = PeerIdentifier()
 
         if let currentAdvertiser = currentAdvertiser {
-            disposeAdvertiserAfterTimeout(currentAdvertiser)
+            disposeAdvertiserAfterTimeoutToFinishInvites(currentAdvertiser)
             newPeerIdentifier = currentAdvertiser.peerIdentifier.nextGenerationPeer()
         }
 
@@ -67,17 +54,20 @@ public final class AdvertiserManager: NSObject {
                                         return
                                     }
 
-                                    strongSelf.relay = Relay(
-                                        with: session,
-                                        createSocketTimeout: strongSelf.inputStreamReceiveTimeout
-                                    )
-                                    strongSelf.relay?.createVirtualSocket()
-                                    strongSelf.relay?.createSocketAndConnect(to: 34000) {
+                                    strongSelf.relay = Relay(with: session, createSocketTimeout: 0)
+
+                                    strongSelf.relay?.openRelay(on: port) {
                                         port, error in
                                     }
                                 },
                                 disconnectHandler: {
-                                    // TODO: fix with #1040
+                                    [weak self] in
+
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+
+                                    strongSelf.relay?.closeRelay()
                                 })
 
         if let advertiser = advertiser {
@@ -87,10 +77,14 @@ public final class AdvertiserManager: NSObject {
 
         self.currentAdvertiser = advertiser
 
-        assert(
-            self.currentAdvertiser != nil,
-            "We should have initialized advertiser after calling this function"
-        )
+        defer {
+            assert(self.currentAdvertiser != nil,
+                   "We should have initialized advertiser after calling this function")
+        }
+
+        guard currentAdvertiser != nil else {
+            return
+        }
     }
 
     public func stopAdvertising() {
@@ -102,11 +96,7 @@ public final class AdvertiserManager: NSObject {
     }
 
     // MARK: - Private methods
-
-    // In any case when a peer starts a new MCNearbyServiceAdvertiser object
-    // it MUST keep the old object around for at least 30 seconds.
-    // This is to allow any in progress invites to finish.
-    private func disposeAdvertiserAfterTimeout(advertiserToDispose: Advertiser) {
+    private func disposeAdvertiserAfterTimeoutToFinishInvites(advertiserToDispose: Advertiser) {
         let disposeTimeout = dispatch_time(
             DISPATCH_TIME_NOW,
             Int64(self.disposeAdvertiserTimeout * Double(NSEC_PER_SEC))

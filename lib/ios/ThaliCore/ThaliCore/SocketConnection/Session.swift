@@ -38,8 +38,12 @@ class Session: NSObject {
         self.session.delegate = self
     }
 
-    func createOutputStream(with name: String) throws -> NSOutputStream {
-        return try session.startStreamWithName(name, toPeer: identifier)
+    func startOutputStream(with name: String) throws -> NSOutputStream {
+        do {
+            return try session.startStreamWithName(name, toPeer: identifier)
+        } catch _ {
+            throw ThaliCoreError.ConnectionFailed
+        }
     }
 
     func disconnect() {

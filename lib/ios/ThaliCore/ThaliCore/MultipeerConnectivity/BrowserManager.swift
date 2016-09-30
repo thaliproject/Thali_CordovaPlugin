@@ -91,12 +91,12 @@ public final class BrowserManager: NSObject {
                         return
                     }
 
-                    let relay = strongSelf.activeRelays.withValue { $0[identifier.uuid] }
-                    relay?.createTCPListenerWithCompletionHandler {
+                    let relay = strongSelf.activeRelays.value[identifier.uuid]
+
+                    relay?.openRelay {
                         port, error in
                         completion(syncValue: syncValue, error: error, port: port)
                     }
-                    relay?.createVirtualSocket()
                 },
                 sessionDisconnectHandler: {
                     [weak self] in
@@ -107,8 +107,7 @@ public final class BrowserManager: NSObject {
 
                     strongSelf.activeRelays.modify {
                         if let relay = $0[identifier.uuid] {
-                            relay.closeVirtualSocket()
-                            relay.closeTCPListener()
+                            relay.closeRelay()
                         }
                         $0[identifier.uuid] = nil
                     }
@@ -119,11 +118,12 @@ public final class BrowserManager: NSObject {
                 }
             )
 
-            let relay: Relay<BrowserVirtualSocketBuilder> =
-                Relay(with: session,
-                      createSocketTimeout: self.inputStreamReceiveTimeout)
-
-            activeRelays.modify { $0[identifier.uuid] = relay }
+            activeRelays.modify {
+                let relay: Relay<BrowserVirtualSocketBuilder> =
+                    Relay(with: session,
+                        createSocketTimeout: self.inputStreamReceiveTimeout)
+                $0[identifier.uuid] = relay
+            }
         } catch let error {
             completion(syncValue: syncValue,
                        error: error,
@@ -136,7 +136,7 @@ public final class BrowserManager: NSObject {
             return
         }
 
-        relay.closeMPCFSession()
+        relay.disconnectNonTCPSession()
     }
 
     func lastGenerationPeerIdentifier(for identifier: PeerIdentifier) -> PeerIdentifier? {

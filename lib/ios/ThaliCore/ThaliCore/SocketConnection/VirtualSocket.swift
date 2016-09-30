@@ -12,24 +12,18 @@ import Foundation
 public class VirtualSocket: NSObject {
 
     // MARK: - Internal state
-    internal private(set) var inputStream: NSInputStream?
-    internal private(set) var outputStream: NSOutputStream?
+    internal private(set) var inputStream: NSInputStream
+    internal private(set) var outputStream: NSOutputStream
     internal var readDataFromStreamHandler: ((NSData) -> Void)?
 
     // MARK: - Public methods
-    init(with inputStream: NSInputStream,
-              outputStream: NSOutputStream) {
+    init(with inputStream: NSInputStream, outputStream: NSOutputStream) {
         self.inputStream = inputStream
         self.outputStream = outputStream
         super.init()
     }
 
     func openStreams() {
-        guard
-            let inputStream = inputStream, outputStream = outputStream else {
-            return
-        }
-
         inputStream.delegate = self
         inputStream.scheduleInRunLoop(NSRunLoop.mainRunLoop(), forMode: NSDefaultRunLoopMode)
         inputStream.open()
@@ -40,18 +34,11 @@ public class VirtualSocket: NSObject {
     }
 
     func closeStreams() {
-        guard
-            let inputStream = inputStream, let outputStream = outputStream else {
-            return
-        }
-
         inputStream.close()
         inputStream.removeFromRunLoop(NSRunLoop.mainRunLoop(), forMode: NSDefaultRunLoopMode)
-        self.inputStream = nil
 
         outputStream.close()
         outputStream.removeFromRunLoop(NSRunLoop.mainRunLoop(), forMode: NSDefaultRunLoopMode)
-        self.outputStream = nil
     }
 }
 
@@ -70,11 +57,11 @@ extension VirtualSocket: NSStreamDelegate {
     // MARK: - Private Helpers
     private func handleEventOnInputStream(with eventCode: NSStreamEvent) {
         switch eventCode {
-        case NSStreamEvent.HasBytesAvailable:
+        case [.HasBytesAvailable]:
             let maxBufferLength = 1024
             var buffer = [UInt8](count: maxBufferLength, repeatedValue: 0)
 
-            let bytesReaded = self.inputStream!.read(&buffer, maxLength: maxBufferLength)
+            let bytesReaded = self.inputStream.read(&buffer, maxLength: maxBufferLength)
 
             if bytesReaded >= 0 {
                 let data = NSData(bytes: &buffer, length: bytesReaded)
@@ -87,7 +74,7 @@ extension VirtualSocket: NSStreamDelegate {
 
     private func handleEventOnOutputStream(with eventCode: NSStreamEvent) {
         switch eventCode {
-        case NSStreamEvent.HasBytesAvailable:
+        case [.HasBytesAvailable]:
             break
         default:
             break

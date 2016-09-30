@@ -12,9 +12,9 @@ import Foundation
 class TCPListener: NSObject {
 
     // MARK: - Internal state
-    internal private(set) var socket: GCDAsyncSocket?
-    internal var socketFailureHandler:((socket: GCDAsyncSocket) -> Void)? = nil
-    internal var socketReadDataHandler:((data: NSData) -> Void)? = nil
+    internal private(set) var socket: GCDAsyncSocket
+    internal var socketDisconnectHandler:((socket: GCDAsyncSocket) -> Void)?
+    internal var socketReadDataHandler:((data: NSData) -> Void)?
     internal var acceptNewConnectionHandler:((socket: GCDAsyncSocket) -> Void)?
 
     // MARK: - Private state
@@ -22,41 +22,41 @@ class TCPListener: NSObject {
                                                     DISPATCH_QUEUE_CONCURRENT)
     private var activeConnections: Atomic<[GCDAsyncSocket]> = Atomic([])
 
+    // MARK: - Public methods
+    required override init() {
+        socket = GCDAsyncSocket()
+        super.init()
+        socket.delegate = self
+        socket.delegateQueue = socketQueue
+    }
+
     func startListeningForIncomingConnections(onPort port: UInt16,
                                               completion: (port: UInt16?, error: ErrorType?)
-                                                -> Void) throws {
-
-        socket = GCDAsyncSocket(delegate: self, delegateQueue: socketQueue)
-
+                                              -> Void) {
         do {
-            try socket?.acceptOnPort(port)
+            try socket.acceptOnPort(port)
+            completion(port: socket.localPort, error: nil)
         } catch _ {
-            throw ThaliCoreError.ConnectionFailed
+            completion(port: 0, error: ThaliCoreError.ConnectionFailed)
         }
-
-        completion(port: socket?.localPort, error: nil)
     }
 
     func stopListeningForIncomingConnectionsAndCloseSocket() {
-        if nil != socket {
-            socket?.disconnect()
-            socket?.delegate = nil
-            socket = nil
-        }
+        socket.disconnect()
     }
 
     func connectToLocalhost(onPort port: UInt16,
-                            completion: (port: UInt16?, error: ErrorType?) -> Void) throws {
-
-        socket = GCDAsyncSocket(delegate: self, delegateQueue: socketQueue)
-
+                            completion: (port: UInt16?, error: ErrorType?) -> Void) {
         do {
-            try socket?.connectToHost("localhost", onPort: port)
+            try socket.connectToHost("localhost", onPort: port)
+            completion(port: port, error: nil)
         } catch _ {
-            throw ThaliCoreError.ConnectionFailed
+            completion(port: port, error: ThaliCoreError.ConnectionFailed)
         }
+    }
 
-        completion(port: port, error: nil)
+    func disconnectFromLocalhost() {
+        socket.disconnect()
     }
 }
 
@@ -68,13 +68,16 @@ extension TCPListener: GCDAsyncSocketDelegate {
     }
 
     func socketDidDisconnect(sock: GCDAsyncSocket, withError err: NSError?) {
+        // TODO: handle all kind of TCP socket error (07b9e28)
+        sock.delegate = nil
+
         activeConnections.modify {
-            if let indexOfSocket = $0.indexOf(sock) {
-                $0.removeAtIndex(indexOfSocket)
+            if let indexOfDisconnectedSocket = $0.indexOf(sock) {
+                $0.removeAtIndex(indexOfDisconnectedSocket)
             }
         }
 
-        socketFailureHandler?(socket: sock)
+        socketDisconnectHandler?(socket: sock)
     }
 
     func socket(sock: GCDAsyncSocket, didAcceptNewSocket newSocket: GCDAsyncSocket) {
