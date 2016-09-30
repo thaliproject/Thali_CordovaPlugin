@@ -233,7 +233,7 @@ SimpleThaliTape.prototype._resolveInstance = function () {
   SimpleThaliTape.instances.push(this);
 }
 
-SimpleThaliTape.begin = function (platform, version, hasRequiredHardware) {
+SimpleThaliTape.begin = function (platform, version, hasRequiredHardware, nativeUTFailed) {
   var thaliTapes = SimpleThaliTape.instances;
   SimpleThaliTape.instances = [];
 

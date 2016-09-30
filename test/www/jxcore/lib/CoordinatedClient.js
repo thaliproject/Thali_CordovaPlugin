@@ -20,7 +20,7 @@ var serverAddress = require('../server-address');
 var logger = require('./testLogger')('CoordinatedClient');
 
 
-function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware) {
+function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware, nativeUTFailed) {
   asserts.isArray(tests);
   tests.forEach(function (test) {
     asserts.isString(test.name);
@@ -59,6 +59,9 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware) 
 
   asserts.isBool(hasRequiredHardware);
   this._hasRequiredHardware = hasRequiredHardware;
+
+  asserts.isBool(nativeUTFailed);
+  this._nativeUTFailed = nativeUTFailed;
 
   this._state = CoordinatedClient.states.created;
 
@@ -131,8 +134,8 @@ CoordinatedClient.prototype._newConnection = function () {
     tests:   this._testNames,
     os:      this._platform,
     version: this._version,
-
     hasRequiredHardware: this._hasRequiredHardware,
+    nativeUTFailed: this._nativeUTFailed
   });
 }
 
@@ -175,6 +178,13 @@ CoordinatedClient.prototype._disqualify = function (data) {
 
   this._emit('disqualify_confirmed', data)
   .then(function () {
+    if (data) {
+      logger.error('device disqualified from the test server, reason: \'%s\'', data);
+      self._failed(new Error(
+        'Test client failed: \'%s\'', data
+      ));
+      return;
+    }
     logger.debug('device disqualified from the test server');
 
     return testUtils.returnsValidNetworkStatus()

@@ -82,8 +82,9 @@ Server.prototype._present = function (socket, deviceInfo) {
   socket.deviceName = device.name;
 
   logger.debug(
-    'device presented, name: \'%s\', uuid: \'%s\', platformName: \'%s\', type: \'%s\', hasRequiredHardware: \'%s\'',
-    device.name, device.uuid, device.platformName, device.type, device.hasRequiredHardware
+    'device presented, name: \'%s\', uuid: \'%s\', platformName: \'%s\', ' +
+    'type: \'%s\', hasRequiredHardware: \'%s\', nativeUTFailed: \'%s\'',
+    device.name, device.uuid, device.platformName, device.type, device.hasRequiredHardware, device.nativeUTFailed
   );
 
   this.emit('present', device);

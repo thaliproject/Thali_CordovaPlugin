@@ -52,6 +52,9 @@ TestDevice.prototype._setInfo = function (info) {
   asserts.isBool(info.hasRequiredHardware);
   this.hasRequiredHardware = info.hasRequiredHardware;
 
+  asserts.isBool(info.nativeUTFailed);
+  this.nativeUTFailed = info.nativeUTFailed;
+
   asserts.isArray(info.tests);
   assert(
     info.tests.length > 0,
@@ -91,6 +94,7 @@ TestDevice.prototype.update = function (newDevice) {
   asserts.equals(this.platformName, newDevice.platformName);
   asserts.equals(this.type, newDevice.type);
   asserts.equals(this.hasRequiredHardware, newDevice.hasRequiredHardware);
+  asserts.equals(this.nativeUTFailed, newDevice.nativeUTFailed);
 
   asserts.arrayEquals(this.tests, newDevice.tests);
   asserts.equals(this.btAddress, newDevice.btAddress);
@@ -118,8 +122,8 @@ TestDevice.prototype.complete = function () {
   return this._socket.emitData('complete');
 }
 
-TestDevice.prototype.disqualify = function () {
-  return this._socket.emitData('disqualify');
+TestDevice.prototype.disqualify = function (error) {
+  return this._socket.emitData('disqualify', error);
 }
 
 TestDevice.prototype.discard = function () {
