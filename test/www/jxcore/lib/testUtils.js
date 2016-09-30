@@ -529,8 +529,15 @@ module.exports.runTestOnAllParticipants = function (t, router,
 
       participantCount[publicKey] = -1;
 
-      var participantKeys =
-        Object.getOwnPropertyNames(participantCount);
+      var hasParticipant = Object.keys(participantCount)
+      .some(function (participantKey) {
+        return participantCount[participantKey] !== -1;
+      });
+      if (hasParticipant) {
+        return;
+      }
+
+      var participantKeys = Object.keys(participantCount);
       for (var i = 0; i < participantKeys.length; ++i) {
         if (participantCount[participantKeys[i]] !== -1) {
           return;
@@ -542,13 +549,15 @@ module.exports.runTestOnAllParticipants = function (t, router,
       resolve();
     }
 
-    function fail(publicKey, err) {
-      logger.debug('Got an err - ' + err);
-      if (completed || participantCount[publicKey] === -1) {
+    function fail(publicKey, error) {
+      logger.debug('Got an err - ', error.toString());
+      var count = participantCount[publicKey];
+      if (completed || count === -1) {
         return;
       }
-      ++participantCount[publicKey];
-      if (participantCount[publicKey] >= MAX_FAILURE) {
+      count ++;
+      participantCount[publicKey] = count;
+      if (count >= MAX_FAILURE) {
         completed = true;
         clearTimeout(timerCancel);
         reject(err);
@@ -566,29 +575,29 @@ module.exports.runTestOnAllParticipants = function (t, router,
           return;
         }
         participantTask[notificationForUs.keyId]
-          .then(function () {
-            if (!completed) {
-              participantTask[notificationForUs.keyId] =
-                testToRun(notificationForUs)
-                  .then(function () {
-                    success(notificationForUs.keyId);
-                  })
-                  .catch(function (err) {
-                    fail(notificationForUs.keyId, err);
-                    return Promise.resolve();
-                  });
-              return participantTask[notificationForUs.keyId];
-            }
-          });
+        .then(function () {
+          if (!completed) {
+            participantTask[notificationForUs.keyId] =
+              testToRun(notificationForUs)
+                .then(function () {
+                  success(notificationForUs.keyId);
+                })
+                .catch(function (err) {
+                  fail(notificationForUs.keyId, err);
+                  return Promise.resolve();
+                });
+            return participantTask[notificationForUs.keyId];
+          }
+        });
       });
 
     thaliNotificationClient.start(publicKeys);
-    return module.exports.startServerInfrastructure(thaliNotificationServer,
-                                                    publicKeys,
-                                                    ThaliMobile, router)
-      .catch(function (err) {
-        reject(err);
-      });
+    return module.exports.startServerInfrastructure(
+      thaliNotificationServer, publicKeys, ThaliMobile, router
+    )
+    .catch(function (err) {
+      reject(err);
+    });
   });
 };
 
@@ -604,9 +613,11 @@ module.exports.testTimeout = function (t, timeout, callback) {
   t.end = function () {
     // Restoring original t.end.
     t.end = oldEnd;
+
     if (typeof callback === 'function') {
       callback();
     }
+
     clearTimeout(timer);
     return oldEnd.apply(this, arguments);
   }
