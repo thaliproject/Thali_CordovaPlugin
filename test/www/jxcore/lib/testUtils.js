@@ -75,22 +75,6 @@ function isFunction(functionToCheck) {
     '[object Function]';
 }
 
-var logCallback;
-
-/**
- * Log a message to the screen - only applies when running on Mobile. It assumes
- * we are using our test framework with our Cordova WebView who is setup to
- * receive logging messages and display them.
- * @param {string} message
- */
-module.exports.logMessageToScreen = function (message) {
-  if (isFunction(logCallback)) {
-    logCallback(message);
-  } else {
-    logger.warn('logCallback not set!');
-  }
-};
-
 var myName = '';
 var myNameCallback = null;
 
@@ -217,7 +201,7 @@ module.exports.returnsValidNetworkStatus = function () {
   // report to CI that this device is ready.
   return ThaliMobile.getNetworkStatus()
   .then(function (networkStatus) {
-    module.exports.logMessageToScreen(
+    logger.debug(
       'Device did not have required hardware capabilities!'
     );
     if (networkStatus.bluetoothLowEnergy === 'on') {
