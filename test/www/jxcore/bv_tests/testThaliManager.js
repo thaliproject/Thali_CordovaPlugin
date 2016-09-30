@@ -347,9 +347,7 @@ Mocks.prototype.checkMobileStart = function(networkType) {
       {
         description: 'networkType',
         compare: function (arg) {
-          console.log(arg, networkType);
-          return typeof arg === 'string' &&
-            arg === networkType;
+          return arg === networkType;
         }
       }
     ]
@@ -426,8 +424,6 @@ Mocks.prototype.checkSalti = function(dbName) {
   );
 }
 
-var NETWORK_TYPE = global.NETWORK_TYPE || ThaliMobile.networkTypes.BOTH;
-
 test('test thali manager spies', function (t) {
   testUtils.testTimeout(t, TEST_TIMEOUT);
 
@@ -453,13 +449,13 @@ test('test thali manager spies', function (t) {
     dbName,
     ecdhForLocalDevice,
     peerPool,
-    NETWORK_TYPE
+    global.NETWORK_TYPE
   );
   mocks.checkInit(dbName, ecdhForLocalDevice, peerPool);
 
   thaliManager.start(partnerKeys)
   .then(function () {
-    mocks.checkStart(partnerKeys, NETWORK_TYPE);
+    mocks.checkStart(partnerKeys, global.NETWORK_TYPE);
   })
   .then(function () {
     return thaliManager.stop();
@@ -495,7 +491,7 @@ test('test thali manager multiple starts and stops', function (t) {
     dbName,
     ecdhForLocalDevice,
     peerPool,
-    NETWORK_TYPE
+    global.NETWORK_TYPE
   );
   mocks.checkInit(dbName, ecdhForLocalDevice, peerPool);
 
@@ -513,7 +509,7 @@ test('test thali manager multiple starts and stops', function (t) {
     return thaliManager.start(partnerKeys);
   })
   .then(function () {
-    mocks.checkStart(partnerKeys, NETWORK_TYPE);
+    mocks.checkStart(partnerKeys, global.NETWORK_TYPE);
   })
 
   // Multiple parallel stops.
@@ -562,7 +558,7 @@ test('test thali manager multiple starts and stops', function (t) {
     return thaliManager.start(partnerKeys);
   })
   .then(function () {
-    mocks.checkStart(partnerKeys, NETWORK_TYPE);
+    mocks.checkStart(partnerKeys, global.NETWORK_TYPE);
   })
   .then(function () {
     return thaliManager.stop();
