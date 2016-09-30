@@ -90,7 +90,7 @@ ThaliSendNotificationBasedOnReplication.UPDATE_WINDOWS_BACKGROUND = 10000;
  * @public
  * @type {number}
  */
-ThaliSendNotificationBasedOnReplication.MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY = 10;
+ThaliSendNotificationBasedOnReplication.MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY = 2;
 
 /**
  * Takes an ecdh public key value as a buffer and creates the doc ID to find
@@ -381,6 +381,9 @@ ThaliSendNotificationBasedOnReplication.prototype._setUpChangeListener =
           var milliSecondsUntilNextRefresh =
             soonestPossibleRefresh - Date.now();
 
+          if (milliSecondsUntilNextRefresh < 0) {
+            milliSecondsUntilNextRefresh = 0;
+          }
           self._updateOnExpiration(milliSecondsUntilNextRefresh);
         }
       })
