@@ -503,24 +503,20 @@ module.exports.runTestOnAllParticipants = function (t, router,
 
   return new Promise(function (resolve, reject) {
     var completed = false;
-    /*
-     Each participant is recorded via their public key
-     If the value is -1 then they are done
-     If the value is 0 then no test has completed
-     If the value is greater than 0 then that is how many failures there have
-     been.
-     */
-    var participantCount = {};
+    // Each participant is recorded via their public key
+    // If the value is -1 then they are done
+    // If the value is 0 then no test has completed
+    // If the value is greater than 0 then that is how many failures there have been.
 
-    publicKeys.forEach(function (participantPublicKey) {
+    var participantCount = publicKeys.reduce(function (participantCount, participantPublicKey) {
       participantCount[participantPublicKey] = 0;
-    });
+      return participantCount;
+    }, {});
 
-    var participantTask = {};
-
-    publicKeys.forEach(function (participantPublicKey) {
+    var participantTask = publicKeys.reduce(function (participantTask, participantPublicKey) {
       participantTask[participantPublicKey] = Promise.resolve();
-    });
+      return participantTask;
+    }, {});
 
     function success(publicKey) {
       if (completed) {
@@ -537,20 +533,13 @@ module.exports.runTestOnAllParticipants = function (t, router,
         return;
       }
 
-      var participantKeys = Object.keys(participantCount);
-      for (var i = 0; i < participantKeys.length; ++i) {
-        if (participantCount[participantKeys[i]] !== -1) {
-          return;
-        }
-      }
-
       completed = true;
       clearTimeout(timerCancel);
       resolve();
     }
 
     function fail(publicKey, error) {
-      logger.debug('Got an err - ', error.toString());
+      logger.error('Got an err - ', error.toString());
       var count = participantCount[publicKey];
       if (completed || count === -1) {
         return;
