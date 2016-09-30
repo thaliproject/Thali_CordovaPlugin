@@ -328,7 +328,8 @@ ThaliSendNotificationBasedOnReplication.prototype._setUpChangeListener =
         live: true,
         since: seqValue,
         timeout: false // Not sure we really need this
-      }).on('change', function () {
+      })
+      .on('change', function () {
         // This check will guarantee that the object's transient variables
         // are in a trustworthy state
         if (self._state !== stateEnum.STARTED) {
@@ -525,21 +526,24 @@ ThaliSendNotificationBasedOnReplication.prototype._updateBeacons =
   function (prioritizedPeersToNotifyOfChanges) {
     var self = this;
     var retrievedSeqValue = null;
+
     return self._findSequenceNumber()
-      .then(function (seqValue) {
-        retrievedSeqValue = seqValue;
-        return self._calculatePeersToNotify(seqValue,
-                                            prioritizedPeersToNotifyOfChanges);
-      }).then(function (peersArray) {
-        if (peersArray.length > 0) {
-          self._transientState.lastTimeBeaconsWereUpdated = Date.now();
-          self._updateOnExpiration(self._millisecondsUntilExpiration);
-        }
-        if (prioritizedPeersToNotifyOfChanges.length > 0) {
-          self._setUpChangeListener(retrievedSeqValue);
-        }
-        return self._thaliNotificationServer.start(peersArray);
-      });
+    .then(function (seqValue) {
+      retrievedSeqValue = seqValue;
+      return self._calculatePeersToNotify(
+        seqValue, prioritizedPeersToNotifyOfChanges
+      );
+    })
+    .then(function (peersArray) {
+      if (peersArray.length > 0) {
+        self._transientState.lastTimeBeaconsWereUpdated = Date.now();
+        self._updateOnExpiration(self._millisecondsUntilExpiration);
+      }
+      if (prioritizedPeersToNotifyOfChanges.length > 0) {
+        self._setUpChangeListener(retrievedSeqValue);
+      }
+      return self._thaliNotificationServer.start(peersArray);
+    })
   };
 
 /**
