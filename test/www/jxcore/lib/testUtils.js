@@ -1,18 +1,21 @@
 'use strict';
 
-var logCallback;
+var util = require('util');
+var format = util.format;
+
 var os = require('os');
 var tmp = require('tmp');
 var PouchDB = require('pouchdb');
 var LeveldownMobile = require('leveldown-mobile');
 var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var path = require('path');
-var Promise = require('lie');
+var Promise = require('bluebird');
 var https = require('https');
-var logger = require('thali/thaliLogger')('testUtils');
+var logger = require('thali/ThaliLogger')('testUtils');
 var ForeverAgent = require('forever-agent');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var expressPouchdb = require('express-pouchdb');
+var platform = require('thali/NextGeneration/utils/platform');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var notificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
@@ -28,7 +31,7 @@ var doToggle = function (toggleFunction, on) {
   if (typeof Mobile === 'undefined') {
     return Promise.resolve();
   }
-  if (jxcore.utils.OSInfo().isIOS) {
+  if (platform.isIOS) {
     return Promise.resolve();
   }
   return new Promise(function (resolve, reject) {
@@ -72,6 +75,8 @@ function isFunction(functionToCheck) {
     '[object Function]';
 }
 
+var logCallback;
+
 /**
  * Log a message to the screen - only applies when running on Mobile. It assumes
  * we are using our test framework with our Cordova WebView who is setup to
@@ -110,7 +115,7 @@ module.exports.getName = function () {
   return myName;
 };
 
-if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
+if (platform.isMobile) {
   Mobile('setLogCallback').registerAsync(function (callback) {
     logCallback = callback;
   });
@@ -138,7 +143,7 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
  */
 var tmpObject = null;
 var tmpDirectory = function () {
-  if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
+  if (platform.isMobile) {
     return os.tmpdir();
   }
 
@@ -160,7 +165,7 @@ module.exports.tmpDirectory = tmpDirectory;
  */
 module.exports.hasRequiredHardware = function () {
   return new Promise(function (resolve) {
-    if (jxcore.utils.OSInfo().isAndroid) {
+    if (platform.isAndroid) {
       var checkBleMultipleAdvertisementSupport = function () {
         Mobile('isBleMultipleAdvertisementSupported').callNative(
           function (error, result) {
@@ -228,7 +233,7 @@ module.exports.returnsValidNetworkStatus = function () {
 
 module.exports.getOSVersion = function () {
   return new Promise(function (resolve) {
-    if (!jxcore.utils.OSInfo().isMobile) {
+    if (!platform.isMobile) {
       return resolve('dummy');
     }
     Mobile('getOSVersion').callNative(function (version) {
@@ -457,7 +462,7 @@ module.exports.validateCombinedResult = function (combinedResult) {
 
 var MAX_FAILURE = 10;
 
-module.exports.turnParticipantsIntoBufferArray = function (t, devicePublicKey) {
+var turnParticipantsIntoBufferArray = function (t, devicePublicKey) {
   var publicKeys = [];
   t.participants.forEach(function (participant) {
     var publicKey = new Buffer(participant.data);
@@ -467,6 +472,7 @@ module.exports.turnParticipantsIntoBufferArray = function (t, devicePublicKey) {
   });
   return publicKeys;
 };
+module.exports.turnParticipantsIntoBufferArray = turnParticipantsIntoBufferArray;
 
 module.exports.startServerInfrastructure =
   function (thaliNotificationServer, publicKeys, ThaliMobile, router) {
@@ -492,14 +498,15 @@ module.exports.startServerInfrastructure =
       });
   };
 
-module.exports.runTestOnAllParticipants = function (t, router,
-                                                    thaliNotificationClient,
-                                                    thaliNotificationServer,
-                                                    ThaliMobile,
-                                                    devicePublicKey,
-                                                    testToRun) {
-  var publicKeys =
-    module.exports.turnParticipantsIntoBufferArray(t, devicePublicKey);
+module.exports.runTestOnAllParticipants = function (
+  t, router,
+  thaliNotificationClient,
+  thaliNotificationServer,
+  ThaliMobile,
+  devicePublicKey,
+  testToRun
+) {
+  var publicKeys = turnParticipantsIntoBufferArray(t, devicePublicKey);
 
   return new Promise(function (resolve, reject) {
     var completed = false;
@@ -566,16 +573,16 @@ module.exports.runTestOnAllParticipants = function (t, router,
         participantTask[notificationForUs.keyId]
         .then(function () {
           if (!completed) {
-            participantTask[notificationForUs.keyId] =
-              testToRun(notificationForUs)
-                .then(function () {
-                  success(notificationForUs.keyId);
-                })
-                .catch(function (err) {
-                  fail(notificationForUs.keyId, err);
-                  return Promise.resolve();
-                });
-            return participantTask[notificationForUs.keyId];
+            var task = testToRun(notificationForUs)
+            .then(function () {
+              success(notificationForUs.keyId);
+            })
+            .catch(function (err) {
+              fail(notificationForUs.keyId, err);
+              return Promise.resolve();
+            });
+            participantTask[notificationForUs.keyId] = task;
+            return task;
           }
         });
       });
