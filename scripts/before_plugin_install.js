@@ -20,27 +20,25 @@ function updateJXcoreExtensionImport(context) {
   var jxcoreExtensionPath = path.join(
     context.opts.plugin.dir, 'src', 'ios', 'JXcoreExtension.m');
   try {
-    var oldContent = fs.readFileSync(jxcoreExtensionPath, 'utf8')
-    var newContent = oldContent.replace('%PROJECT_NAME%', cfg.name())
+    var oldContent = fs.readFileSync(jxcoreExtensionPath, 'utf8');
+    var newContent = oldContent.replace('%PROJECT_NAME%', cfg.name());
     fs.writeFileSync(jxcoreExtensionPath, newContent, 'utf8');
   } catch (error) {
     console.log(error);
     console.log('Failed to rename JXcoreExtension.m import');
   }
-  return
-};
+}
 
 module.exports = function (context) {
+  var Q = context.requireCordovaModule('q');
+  var deferred = new Q.defer();
 
-    var Q = context.requireCordovaModule('q');
-    var deferred = new Q.defer();
+  // replacing PROJECT_NAME pattern with actual Cordova's project name
+  updateJXcoreExtensionImport(context);
 
-    // replacing PROJECT_NAME pattern with actual Cordova's project name
-    updateJXcoreExtensionImport(context)
-
-    // Temporary hack to run npm install on this plugin's hooks dependencies.
-    var hooksDir = path.resolve(__dirname);
-    var execCallback = function (error, stdout, stderr) {
+  // Temporary hack to run npm install on this plugin's hooks dependencies.
+  var hooksDir = path.resolve(__dirname);
+  var execCallback = function (error, stdout, stderr) {
       if (error) {
         if (stdout) { console.log('stdout: ' + stdout); }
         if (stderr) { console.log('stderr: ' + stderr); }
@@ -64,10 +62,10 @@ module.exports = function (context) {
       deferred.resolve();
     };
 
-    console.log(
-      'Installing dependencies for Thali Cordova plugin hooks in ' +
-      hooksDir);
-    exec('jx npm install --autoremove "*.gz"', { cwd: hooksDir }, execCallback);
+  console.log(
+    'Installing dependencies for Thali Cordova plugin hooks in ' +
+    hooksDir);
+  exec('jx npm install --autoremove "*.gz"', { cwd: hooksDir }, execCallback);
 
-    return deferred.promise;
-  };
+  return deferred.promise;
+};

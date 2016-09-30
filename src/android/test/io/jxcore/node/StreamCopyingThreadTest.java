@@ -34,7 +34,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 public class StreamCopyingThreadTest {
-    
+
     StreamCopyingThread mStreamCopyingThread;
     StreamCopyingThread.Listener mListener;
     Context mContext;
@@ -50,17 +50,17 @@ public class StreamCopyingThreadTest {
     boolean doThrowException = false;
     final static String mTag = "StreamCopyingThreadTest";
     static ExecutorService mExecutor;
-    
+
     public Callable<Boolean> createCheckStreamCopyingThreadIsClosed() {
-        
+
         return new Callable<Boolean>() {
             int counter = 0;
-            
+
             @Override
             public Boolean call() {
                 boolean mIsClosed = false;
                 Field fIsClosed;
-                
+
                 try {
                     fIsClosed = mStreamCopyingThread.getClass().getDeclaredField("mIsClosed");
                     fIsClosed.setAccessible(true);
@@ -68,18 +68,18 @@ public class StreamCopyingThreadTest {
                     e.printStackTrace();
                     return false;
                 }
-                
+
                 while (!mIsClosed && counter < ThaliTestRunner.counterLimit) {
                     try {
                         Thread.sleep(ThaliTestRunner.timeoutLimit);
                         counter++;
                         mIsClosed = fIsClosed.getBoolean(mStreamCopyingThread);
-                    } catch (InterruptedException|IllegalAccessException e) {
+                    } catch (InterruptedException | IllegalAccessException e) {
                         e.printStackTrace();
                         return false;
                     }
                 }
-                
+
                 if (counter < ThaliTestRunner.counterLimit) {
                     return true;
                 } else {
@@ -89,104 +89,104 @@ public class StreamCopyingThreadTest {
             }
         };
     }
-    
+
     @Rule
     public ExpectedException thrown = ExpectedException.none();
-    
+
     @Rule
     public TestRule watcher = new TestWatcher() {
-    protected void starting(Description description) {
-    Log.i(mTag, "Starting test: " + description.getMethodName());
-}
-};
+        protected void starting(Description description) {
+            Log.i(mTag, "Starting test: " + description.getMethodName());
+        }
+    };
 
-@Before
-public void setUp() throws Exception {
-mResult = "Lorem ipsum dolor sit.";
-notifications = new ArrayList<>();
+    @Before
+    public void setUp() throws Exception {
+        mResult = "Lorem ipsum dolor sit.";
+        notifications = new ArrayList<>();
 
-mContext = jxcore.activity.getBaseContext();
-mListener = new ListenerMock();
+        mContext = jxcore.activity.getBaseContext();
+        mListener = new ListenerMock();
 
-bOutputStream = new ByteArrayOutputStream();
-mInputStream = new StreamCopyingThreadInputStream(mResult);
-mOutputStream = new StreamCopyingThreadOutputStream(bOutputStream);
+        bOutputStream = new ByteArrayOutputStream();
+        mInputStream = new StreamCopyingThreadInputStream(mResult);
+        mOutputStream = new StreamCopyingThreadOutputStream(bOutputStream);
 
-mStreamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream,
-mThreadName, new ConnectionData(new PeerProperties(), false);
-mExecutor = Executors.newSingleThreadExecutor();
-}
+        mStreamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream,
+            mThreadName, new ConnectionData(new PeerProperties(), false));
+        mExecutor = Executors.newSingleThreadExecutor();
+    }
 
-@Test
-public void testSetBufferSize() throws Exception {
-Field mBufferSizeField = mStreamCopyingThread.getClass().getDeclaredField("mBufferSize");
-mBufferSizeField.setAccessible(true);
+    @Test
+    public void testSetBufferSize() throws Exception {
+        Field mBufferSizeField = mStreamCopyingThread.getClass().getDeclaredField("mBufferSize");
+        mBufferSizeField.setAccessible(true);
 
-mStreamCopyingThread.setBufferSize(512 * 8);
+        mStreamCopyingThread.setBufferSize(512 * 8);
 
-assertThat("The mBufferSize is properly set",
-mBufferSizeField.getInt(mStreamCopyingThread),
-is(512 * 8));
+        assertThat("The mBufferSize is properly set",
+            mBufferSizeField.getInt(mStreamCopyingThread),
+            is(512 * 8));
 
-thrown.expect(IllegalArgumentException.class);
-mStreamCopyingThread.setBufferSize(0);
+        thrown.expect(IllegalArgumentException.class);
+        mStreamCopyingThread.setBufferSize(0);
 
-thrown.expect(IllegalArgumentException.class);
-mStreamCopyingThread.setBufferSize(1024 * 8 + 1);
-}
+        thrown.expect(IllegalArgumentException.class);
+        mStreamCopyingThread.setBufferSize(1024 * 8 + 1);
+    }
 
-@Test
-public void testRun() throws Exception {
-mResult = "";
-bOutputStream = new ByteArrayOutputStream();
-mInputStream = new StreamCopyingThreadInputStreamInfinite(mText);
-mOutputStream = new StreamCopyingThreadOutputStreamInfinite();
-mStreamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream,
-mThreadName, new ConnectionData(new PeerProperties(), false));
+    @Test
+    public void testRun() throws Exception {
+        mResult = "";
+        bOutputStream = new ByteArrayOutputStream();
+        mInputStream = new StreamCopyingThreadInputStreamInfinite(mText);
+        mOutputStream = new StreamCopyingThreadOutputStreamInfinite();
+        mStreamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream,
+            mThreadName, new ConnectionData(new PeerProperties(), false));
 
 
-mStreamCopyingThread.start();
+        mStreamCopyingThread.start();
 
-Future<Boolean> mFuture = mExecutor.submit(createCheckStreamCopyingThreadIsClosed());
+        Future<Boolean> mFuture = mExecutor.submit(createCheckStreamCopyingThreadIsClosed());
 
-assertThat("StreamCopyingThread should be closed", mFuture.get(), is(true));
-assertThat("The content of the input stream is equal to the output stream",
-bOutputStream.toString(),
-is(mResult));
-}
+        assertThat("StreamCopyingThread should be closed", mFuture.get(), is(true));
+        assertThat("The content of the input stream is equal to the output stream",
+            bOutputStream.toString(),
+            is(mResult));
+    }
 
-@Test
-public void testRunWithException() throws Exception {
-doThrowException = true;
-StreamCopyingThread streamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream,
-mThreadName);
-Thread runner = new Thread(streamCopyingThread);
-runner.setName("thread test");
-runner.start();
-runner.join();
+    @Test
+    public void testRunWithException() throws Exception {
+        doThrowException = true;
+        StreamCopyingThread streamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream,
+            mThreadName, new ConnectionData(new PeerProperties(), false));
+        Thread runner = new Thread(streamCopyingThread);
+        runner.setName("thread test");
+        runner.start();
+        runner.join();
 
-doThrowException = false;
+        doThrowException = false;
 
-assertThat("The exception is properly handled.",
-lastExceptionMessage,
-is("Failed to write to the output stream: Test exception."));
-}
+        assertThat("The exception is properly handled.",
+            lastExceptionMessage,
+            is("Failed to write to the output stream: Test exception."));
+    }
 
-@Test
-public void testRunNotify() throws Exception {
-mStreamCopyingThread.setNotifyStreamCopyingProgress(true);
-Thread runner = new Thread(mStreamCopyingThread);
-runner.start();
-runner.join();
+    @Test
+    public void testRunNotify() throws Exception {
+        mStreamCopyingThread.setNotifyStreamCopyingProgress(true);
+        Thread runner = new Thread(mStreamCopyingThread);
+        runner.start();
+        runner.join();
 
-assertThat("The content of the input stream is equal to the output stream",
-bOutputStream.toString(),
-is(mResult));
+        assertThat("The content of the input stream is equal to the output stream",
+            bOutputStream.toString(),
+            is(mResult));
 
-assertThat("The stream copying progress notifications is properly updated",
-notifications.size() > 0,
-is(true));
-}
+        assertThat("The stream copying progress notifications is properly updated",
+            notifications.size() > 0,
+            is(true));
+    }
 
     @Test
     public void testCopyBigData() throws InterruptedException {
@@ -254,7 +254,7 @@ is(true));
         void onHalfStreamCopied();
     }
 
-class ListenerMock implements StreamCopyingThread.Listener {
+    class ListenerMock implements StreamCopyingThread.Listener {
 
         OnHalfStreamCopiedListener onHalfStreamCopiedListener;
         private int halfOfStreamData;
@@ -293,57 +293,57 @@ class ListenerMock implements StreamCopyingThread.Listener {
         }
     }
 
-class StreamCopyingThreadInputStream extends InputStream {
-    
-    ByteArrayInputStream inputStream;
-    
-    StreamCopyingThreadInputStream(String s) {
-        inputStream = new ByteArrayInputStream(s.getBytes());
-    }
+    class StreamCopyingThreadInputStream extends InputStream {
+
+        ByteArrayInputStream inputStream;
+
+        StreamCopyingThreadInputStream(String s) {
+            inputStream = new ByteArrayInputStream(s.getBytes());
+        }
 
         StreamCopyingThreadInputStream(byte[] data) {
             inputStream = new ByteArrayInputStream(data);
         }
-    
-    @Override
-    public int read() throws IOException {
-        return inputStream.read();
-    }
-    
-    @Override
-    public int read(byte[] buffer) throws IOException {
-        return inputStream.read(buffer);
-    }
-}
 
-class StreamCopyingThreadInputStreamInfinite extends InputStream {
-    
-    ByteArrayInputStream inputStream;
-    Random random = new Random();
-    
-    StreamCopyingThreadInputStreamInfinite(String s) {
-        inputStream = new ByteArrayInputStream(s.getBytes());
-        bufferLength = s.length();
-    }
-    
-    @Override
-    public int read() throws IOException {
-        inputStream.reset();
-        return inputStream.read();
-    }
-    
-    @Override
-    public int read(byte[] buffer) throws IOException {
-        inputStream.reset();
-        
-        try {
-            Thread.sleep((random.nextInt(200) + 50));
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        @Override
+        public int read() throws IOException {
+            return inputStream.read();
         }
-        return inputStream.read(buffer);
+
+        @Override
+        public int read(byte[] buffer) throws IOException {
+            return inputStream.read(buffer);
+        }
     }
-}
+
+    class StreamCopyingThreadInputStreamInfinite extends InputStream {
+
+        ByteArrayInputStream inputStream;
+        Random random = new Random();
+
+        StreamCopyingThreadInputStreamInfinite(String s) {
+            inputStream = new ByteArrayInputStream(s.getBytes());
+            bufferLength = s.length();
+        }
+
+        @Override
+        public int read() throws IOException {
+            inputStream.reset();
+            return inputStream.read();
+        }
+
+        @Override
+        public int read(byte[] buffer) throws IOException {
+            inputStream.reset();
+
+            try {
+                Thread.sleep((random.nextInt(200) + 50));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return inputStream.read(buffer);
+        }
+    }
 
     class StreamCopyingThreadOutputStream extends OutputStream {
 
@@ -375,15 +375,16 @@ class StreamCopyingThreadInputStreamInfinite extends InputStream {
         }
     }
 
-class StreamCopyingThreadOutputStreamInfinite extends OutputStream {
-    public int counter = 0;
-    @Override
-    public void write(int oneByte) throws IOException {
-        counter++;
-        if(counter % bufferLength == 0){
-            mResult += mText;
+    class StreamCopyingThreadOutputStreamInfinite extends OutputStream {
+        public int counter = 0;
+
+        @Override
+        public void write(int oneByte) throws IOException {
+            counter++;
+            if (counter % bufferLength == 0) {
+                mResult += mText;
+            }
+            bOutputStream.write(oneByte);
         }
-        bOutputStream.write(oneByte);
     }
-}
 }

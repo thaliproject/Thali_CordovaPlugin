@@ -22,7 +22,8 @@ var Promise = require('bluebird');
 var utResult = false;
 
 if (process.platform === 'android' || process.platform === 'ios') {
-  logger.debug('Running unit tests');
+  Mobile('executeNativeTests').callNative(function (result) {
+    logger.debug('Running unit tests');
     if (result) {
       if (!result.executed) {
         console.log('*Native tests were not executed*');
@@ -47,7 +48,7 @@ if (process.platform === 'android' || process.platform === 'ios') {
   });
 
   if (!utResult) {
-    console.log("Failed to execute UT.");
+    console.log('Failed to execute UT.');
     global.nativeUTFailed = true;
 
   }

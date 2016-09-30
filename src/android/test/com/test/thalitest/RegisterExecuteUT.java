@@ -29,16 +29,17 @@ public final class RegisterExecuteUT {
         switch (methodName) {
             case "onPeerLost":
                 ConnectionHelperTest.mConnectionHelper
-                        .onPeerLost(new PeerProperties("11:22:33:22:11:00"));
+                    .onPeerLost(new PeerProperties("11:22:33:22:11:00"));
                 break;
             case "onPeerDiscovered":
                 ConnectionHelperTest.mConnectionHelper
-                        .onPeerDiscovered(new PeerProperties("33:44:55:44:33:22"));
+                    .onPeerDiscovered(new PeerProperties("33:44:55:44:33:22"));
                 break;
-            default :
+            default:
                 Log.e(TAG, "Method called in FireTestedMethod doesn't exists!");
                 break;
         }
+    }
 
     public static void Register() {
         jxcore.RegisterMethod("testNativeMethod", new jxcore.JXcoreCallback() {
