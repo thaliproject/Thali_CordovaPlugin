@@ -590,12 +590,12 @@ ThaliSendNotificationBasedOnReplication.prototype._calculatePeersToNotify =
 
     return Promise.all(promises)
     .then(function (results) {
-      return results
-      .filter(Boolean)
-      .slice(
-        0,
-        ThaliSendNotificationBasedOnReplication.MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY
+      results = results.filter(Boolean);
+      assert(
+        results.length <= ThaliSendNotificationBasedOnReplication.MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY,
+        'MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY limit should be enough for peers'
       );
+      return results;
     });
   };
 
