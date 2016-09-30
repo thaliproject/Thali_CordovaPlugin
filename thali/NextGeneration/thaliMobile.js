@@ -497,15 +497,15 @@ module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
 
 var getPeerHostInfoStarategies = {};
 getPeerHostInfoStarategies[connectionTypes.BLUETOOTH] =
-  getBluetoothPeerPortInfo;
+  getBluetoothPeerHostInfo;
 getPeerHostInfoStarategies[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] =
-  getMPCFPeerPortInfo;
+  getMPCFPeerHostInfo;
 getPeerHostInfoStarategies[connectionTypes.TCP_NATIVE] =
-  getWifiPeerPortInfo;
+  getWifiPeerHostInfo;
 
 var LOCALHOST = '127.0.0.1';
 
-var getBluetoothPeerPortInfo = function (peer) {
+var getBluetoothPeerHostInfo = function (peer) {
   var portInfo = new PeerHostInfo({
     hostAddress: LOCALHOST,
     portNumber: peer.portNumber,
@@ -514,7 +514,7 @@ var getBluetoothPeerPortInfo = function (peer) {
   return Promise.resolve(portInfo);
 };
 
-var getMPCFPeerPortInfo = function (peer) {
+var getMPCFPeerHostInfo = function (peer) {
   return ThaliMobileNativeWrapper
     ._multiConnect(peer.peerIdentifier)
     .then(function (portNumber) {
@@ -527,7 +527,7 @@ var getMPCFPeerPortInfo = function (peer) {
     });
 };
 
-var getWifiPeerPortInfo = function (peer) {
+var getWifiPeerHostInfo = function (peer) {
   var portInfo = new PeerHostInfo({
     hostAddress: peer.hostAddress,
     portNumber: peer.portNumber,
