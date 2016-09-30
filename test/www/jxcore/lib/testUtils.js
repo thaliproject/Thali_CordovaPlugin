@@ -100,10 +100,6 @@ module.exports.getName = function () {
 };
 
 if (platform.isMobile) {
-  Mobile('setLogCallback').registerAsync(function (callback) {
-    logCallback = callback;
-  });
-
   Mobile('setMyNameCallback').registerAsync(function (callback) {
     myNameCallback = callback;
     // If the name is already set, pass it to the callback
@@ -112,10 +108,6 @@ if (platform.isMobile) {
       myNameCallback(myName);
     }
   });
-} else {
-  logCallback = function (message) {
-    console.log(message);
-  };
 }
 
 /**
