@@ -1,5 +1,6 @@
 package io.jxcore.node;
 
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.test.thalitest.ThaliTestRunner;
@@ -19,9 +20,11 @@ import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.net.ServerSocket;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -33,26 +36,19 @@ public class OutgoingSocketThreadTest {
 
     static String mTag = OutgoingSocketThreadTest.class.getName();
     private ByteArrayOutputStream outgoingOutputStream;
-    private ListenerMock mListenerMockOutgoing;
-    private InputStreamMock mInputStreamMockOutgoing;
-    private OutputStreamMockOutgoing mOutputStreamMockOutgoing;
     private OutgoingSocketThreadMock mOutgoingSocketThread;
     private String textOutgoing = "Nullam in massa. Vivamus elit odio, in neque ut congue quis, " +
         "venenatis placerat, nulla ornare suscipit, erat urna, pellentesque dapibus vel, " +
         "lorem. Sed egestas non, dolor. Aliquam hendrerit sollicitudin sed.";
 
-    final int testPortNumber = 57775;
-
     private ByteArrayOutputStream incomingOutputStream;
-    private ListenerMock mListenerMockIncoming;
-    private InputStreamMock mInputStreamMockIncoming;
-    private OutputStreamMockIncoming mOutputStreamMockIncoming;
     private IncomingSocketThreadMock mIncomingSocketThread;
-    private String textIncoming = "Lorem ipsum dolor sit amet elit nibh, imperdiet dignissim, " +
-        "imperdiet wisi. Morbi vel risus. Nunc molestie placerat, nulla mi, id nulla ornare " +
-        "risus. Sed lacinia, urna eros lacus, elementum eu.";
+//    private String textIncoming = "Lorem ipsum dolor sit amet elit nibh, imperdiet dignissim, " +
+//        "imperdiet wisi. Morbi vel risus. Nunc molestie placerat, nulla mi, id nulla ornare " +
+//        "risus. Sed lacinia, urna eros lacus, elementum eu.";
 
-    ExecutorService mExecutor;
+    private ExecutorService mExecutor;
+    private CountDownLatch copyingFinishedLatch;
 
     @Rule
     public TestRule watcher = new TestWatcher() {
@@ -65,22 +61,30 @@ public class OutgoingSocketThreadTest {
     public void setUp() throws Exception {
         outgoingOutputStream = new ByteArrayOutputStream();
         incomingOutputStream = new ByteArrayOutputStream();
-
-        mInputStreamMockOutgoing = new InputStreamMock(textOutgoing);
-        mOutputStreamMockOutgoing = new OutputStreamMockOutgoing();
-        mListenerMockOutgoing = new ListenerMock();
-        mOutgoingSocketThread =
-            new OutgoingSocketThreadMock(null, mListenerMockOutgoing, mInputStreamMockOutgoing,
-                mOutputStreamMockOutgoing);
-
-        mInputStreamMockIncoming = new InputStreamMock(textIncoming);
-        mOutputStreamMockIncoming = new OutputStreamMockIncoming();
-        mListenerMockIncoming = new ListenerMock();
-        mIncomingSocketThread =
-            new IncomingSocketThreadMock(null, mListenerMockIncoming, mInputStreamMockIncoming,
-                mOutputStreamMockIncoming);
+        // See comment in IncomingSocketThreadTest setUp
+        copyingFinishedLatch = new CountDownLatch(2);
+        initOutgiongSocketThread();
+        initIncomingSocketThread();
 
         mExecutor = Executors.newSingleThreadExecutor();
+    }
+
+    private void initOutgiongSocketThread() throws IOException {
+        InputStream inputStreamMockOutgoing = new InputStreamMock(textOutgoing);
+        OutputStreamMock outputStreamMockOutgoing = new OutputStreamMock(outgoingOutputStream);
+        ListenerMock mListenerMockOutgoing = new ListenerMock();
+        mOutgoingSocketThread =
+            new OutgoingSocketThreadMock(null, mListenerMockOutgoing, inputStreamMockOutgoing,
+                outputStreamMockOutgoing);
+    }
+
+    private void initIncomingSocketThread() throws IOException {
+        InputStream inputStreamMockIncoming = new EmptyInputStreamMock();
+        OutputStreamMock outputStreamMockIncoming = new OutputStreamMock(incomingOutputStream);
+        ListenerMock mListenerMockIncoming = new ListenerMock();
+        mIncomingSocketThread =
+            new IncomingSocketThreadMock(null, mListenerMockIncoming, inputStreamMockIncoming,
+                outputStreamMockIncoming);
     }
 
     public Callable<Boolean> createCheckOutgoingSocketThreadStart() {
@@ -158,73 +162,82 @@ public class OutgoingSocketThreadTest {
 
     @Test
     public void testRun() throws Exception {
+        int testPortNumber = 57775;
         mOutgoingSocketThread.setPort(testPortNumber);
         mIncomingSocketThread.setPort(testPortNumber);
 
-        mOutgoingSocketThread.start();
-
-        Future<Boolean> mFuture = mExecutor.submit(createCheckOutgoingSocketThreadStart());
-
-        assertThat("OutgoingSocketThread started", mFuture.get(), is(true));
-
-        Field fServerSocket = mOutgoingSocketThread.getClass().getDeclaredField("mServerSocket");
-        Field fListeningOnPortNumber = mOutgoingSocketThread.getClass().getDeclaredField("mListeningOnPortNumber");
-
-        fServerSocket.setAccessible(true);
-        fListeningOnPortNumber.setAccessible(true);
-
-        ServerSocket mServerSocket = (ServerSocket) fServerSocket.get(mOutgoingSocketThread);
-        int mListeningOnPortNumber = fListeningOnPortNumber.getInt(mOutgoingSocketThread);
-
-        assertThat("mServerSocket should not be null", mServerSocket, is(notNullValue()));
-        assertThat("mListeningOnPortNumber should be equal to mServerSocket.getLocalPort()",
-            mListeningOnPortNumber, is(equalTo(mServerSocket.getLocalPort())));
-        assertThat("mServerSocket.isBound should return true", mServerSocket.isBound(), is(true));
-
-        mIncomingSocketThread.start(); //Simulate incoming connection
-
-        mFuture = mExecutor.submit(createCheckIncomingSocketThreadStart());
-
-        assertThat("IncomingSocketThread started", mFuture.get(), is(true));
-        assertThat("localStreamsCreatedSuccessfully should be true",
-            mOutgoingSocketThread.localStreamsCreatedSuccessfully,
-            is(true));
-
-        assertThat("tempInputStream should be equal to mLocalInputStream",
-            mOutgoingSocketThread.tempInputStream,
-            is(equalTo(mOutgoingSocketThread.mLocalInputStream)));
-
-        assertThat("tempOutputStream should be equal to mLocalOutputStream",
-            mOutgoingSocketThread.tempOutputStream,
-            is(equalTo(mOutgoingSocketThread.mLocalOutputStream)));
-
-        assertThat("mLocalhostSocket port should be equal to " + testPortNumber,
-            mOutgoingSocketThread.mLocalhostSocket.getLocalPort(),
-            is(equalTo(testPortNumber)));
-
-        assertThat("OutgoingSocketThread should get inputStream from IncomingSocketThread and " +
-                "copy it to local outgoingOutputStream", outgoingOutputStream.toString(),
-            is(equalTo(textIncoming)));
-
-        assertThat("IncomingSocketThread should get inputStream from OutgoingSocketThread and " +
-                "copy it to local incomingOutputStream", incomingOutputStream.toString(),
-            is(equalTo(textOutgoing)));
-
         try {
-            mOutgoingSocketThread.mServerSocket.close();
+            mOutgoingSocketThread.start();
+            Future<Boolean> mFuture = mExecutor.submit(createCheckOutgoingSocketThreadStart());
+
+            assertThat("OutgoingSocketThread started", mFuture.get(), is(true));
+
+            Field fServerSocket = mOutgoingSocketThread.getClass().getDeclaredField("mServerSocket");
+            Field fListeningOnPortNumber = mOutgoingSocketThread.getClass().getDeclaredField("mListeningOnPortNumber");
+
+            fServerSocket.setAccessible(true);
+            fListeningOnPortNumber.setAccessible(true);
+
+            ServerSocket mServerSocket = (ServerSocket) fServerSocket.get(mOutgoingSocketThread);
+            int mListeningOnPortNumber = fListeningOnPortNumber.getInt(mOutgoingSocketThread);
+
+            assertThat("mServerSocket should not be null", mServerSocket, is(notNullValue()));
+            assertThat("mListeningOnPortNumber should be equal to mServerSocket.getLocalPort()",
+                mListeningOnPortNumber, is(equalTo(mServerSocket.getLocalPort())));
+            assertThat("mServerSocket.isBound should return true", mServerSocket.isBound(), is(true));
+
+            mIncomingSocketThread.start(); //Simulate incoming connection
+
+            mFuture = mExecutor.submit(createCheckIncomingSocketThreadStart());
+
+            assertThat("IncomingSocketThread started", mFuture.get(), is(true));
+            assertThat("localStreamsCreatedSuccessfully should be true",
+                mOutgoingSocketThread.localStreamsCreatedSuccessfully,
+                is(true));
+
+            assertThat("tempInputStream should be equal to mLocalInputStream",
+                mOutgoingSocketThread.tempInputStream,
+                is(equalTo(mOutgoingSocketThread.mLocalInputStream)));
+
+            assertThat("tempOutputStream should be equal to mLocalOutputStream",
+                mOutgoingSocketThread.tempOutputStream,
+                is(equalTo(mOutgoingSocketThread.mLocalOutputStream)));
+
+            assertThat("mLocalhostSocket port should be equal to " + testPortNumber,
+                mOutgoingSocketThread.mLocalhostSocket.getLocalPort(),
+                is(equalTo(testPortNumber)));
+
+            copyingFinishedLatch.await(5000L, TimeUnit.MILLISECONDS);
+
+            //See the comment in IncomingSocketThread testRun
+//            assertThat("OutgoingSocketThread should get inputStream from IncomingSocketThread and " +
+//                    "copy it to local outgoingOutputStream", outgoingOutputStream.toString(),
+//                is(equalTo(textIncoming)));
+
+            assertThat("IncomingSocketThread should get inputStream from OutgoingSocketThread and " +
+                    "copy it to local incomingOutputStream", incomingOutputStream.toString(),
+                is(equalTo(textOutgoing)));
+        } finally {
+            if (mOutgoingSocketThread.mServerSocket != null) {
+                mOutgoingSocketThread.mServerSocket.close();
+            }
             mIncomingSocketThread.close();
             mOutgoingSocketThread.close();
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 
-    class OutputStreamMockOutgoing extends OutputStream {
+    private class OutputStreamMock extends OutputStream {
         public boolean isClosed = false;
+
+        private OutputStream outputStream;
+
+        OutputStreamMock(OutputStream outputStream) {
+            this.outputStream = outputStream;
+        }
 
         @Override
         public void write(int oneByte) throws IOException {
-            outgoingOutputStream.write(oneByte);
+            outputStream.write(oneByte);
         }
 
         @Override
@@ -233,21 +246,7 @@ public class OutgoingSocketThreadTest {
         }
     }
 
-    class OutputStreamMockIncoming extends OutputStream {
-        public boolean isClosed = false;
-
-        @Override
-        public void write(int oneByte) throws IOException {
-            incomingOutputStream.write(oneByte);
-        }
-
-        @Override
-        public void close() throws IOException {
-            isClosed = true;
-        }
-    }
-
-    class InputStreamMock extends InputStream {
+    private class InputStreamMock extends InputStream {
         public boolean isClosed = false;
 
         ByteArrayInputStream inputStream;
@@ -260,10 +259,14 @@ public class OutgoingSocketThreadTest {
         public int read() throws IOException {
             return inputStream.read();
         }
+    }
+
+    private class EmptyInputStreamMock extends InputStream {
 
         @Override
-        public int read(byte[] buffer) throws IOException {
-            return inputStream.read(buffer);
+        public int read() throws IOException {
+            return 0;
         }
+
     }
 }

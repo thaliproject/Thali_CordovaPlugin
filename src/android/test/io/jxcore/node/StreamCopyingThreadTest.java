@@ -251,7 +251,6 @@ public class StreamCopyingThreadTest {
         assertThat("Closing input stream closes output stream",
             ((StreamCopyingThreadOutputStream) outputStream).isCloseCalled,
             is(true));
-
     }
 
     interface OnHalfStreamCopiedListener {
