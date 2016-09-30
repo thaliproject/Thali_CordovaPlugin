@@ -1,6 +1,6 @@
 'use strict';
 
-var logger = require('../../thaliLogger')('localSeqManager');
+var logger = require('../../ThaliLogger')('localSeqManager');
 var Promise = require('lie');
 var assert = require('assert');
 var urlSafeBase64 = require('urlsafe-base64');
@@ -86,10 +86,10 @@ LocalSeqManager.prototype._doImmediateSeqUpdate = function (seq) {
         return Promise.reject(error);
       }
       return self._remotePouchDB.put({
-          _id: self._localId,
-          _rev: rev,
-          lastSyncedSequenceNumber: seq
-        });
+        _id: self._localId,
+        _rev: rev,
+        lastSyncedSequenceNumber: seq
+      });
     })
     .then(function (putResponse) {
       self._seqDocRev = putResponse.rev;

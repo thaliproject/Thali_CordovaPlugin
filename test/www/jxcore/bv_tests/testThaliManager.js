@@ -7,7 +7,7 @@ var fs = require('fs-extra-promise');
 var extend = require('js-extend').extend;
 var path = require('path');
 var crypto = require('crypto');
-var Promise = require('lie');
+var Promise = require('bluebird');
 var PouchDB = require('pouchdb');
 var express = require('express');
 var expressPouchDB = require('express-pouchdb');
@@ -140,8 +140,8 @@ Mocks.prototype.checkInit = function(dbName, ecdh, peerPool) {
   this.checkReplication(dbName, peerPool, ecdh);
   this.checkSalti(dbName);
 }
-Mocks.prototype.checkStart = function(partnerKeys) {
-  this.checkMobileStart();
+Mocks.prototype.checkStart = function(partnerKeys, networkType) {
+  this.checkMobileStart(networkType);
   this.checkMobileStartLA();
   this.checkMobileStartUAA();
   this.checkNotificationStart(partnerKeys);
@@ -308,7 +308,7 @@ Mocks.prototype.checkNotificationStop = function() {
   );
 }
 
-Mocks.prototype.checkMobileStart = function() {
+Mocks.prototype.checkMobileStart = function(networkType) {
   var self = this;
   testUtils.checkArgs(
     this.t, this.MobileStart, 'ThaliMobile.start',
@@ -327,6 +327,12 @@ Mocks.prototype.checkMobileStart = function() {
         compare: function (arg) {
           return typeof arg === 'function' &&
             arg.toString() === ThaliNotificationServer.prototype.getPskIdToSecret().toString();
+        }
+      },
+      {
+        description: 'networkType',
+        compare: function (arg) {
+          return arg === networkType;
         }
       }
     ]
@@ -427,13 +433,14 @@ test('test thali manager spies', function (t) {
     mocks.LevelDownPouchDB,
     dbName,
     ecdhForLocalDevice,
-    peerPool
+    peerPool,
+    global.NETWORK_TYPE
   );
   mocks.checkInit(dbName, ecdhForLocalDevice, peerPool);
 
   thaliManager.start(partnerKeys)
   .then(function () {
-    mocks.checkStart(partnerKeys);
+    mocks.checkStart(partnerKeys, global.NETWORK_TYPE);
   })
   .then(function () {
     return thaliManager.stop();
@@ -468,7 +475,8 @@ test('test thali manager multiple starts and stops', function (t) {
     mocks.LevelDownPouchDB,
     dbName,
     ecdhForLocalDevice,
-    peerPool
+    peerPool,
+    global.NETWORK_TYPE
   );
   mocks.checkInit(dbName, ecdhForLocalDevice, peerPool);
 
@@ -486,7 +494,7 @@ test('test thali manager multiple starts and stops', function (t) {
     return thaliManager.start(partnerKeys);
   })
   .then(function () {
-    mocks.checkStart(partnerKeys);
+    mocks.checkStart(partnerKeys, global.NETWORK_TYPE);
   })
 
   // Multiple parallel stops.
@@ -535,7 +543,7 @@ test('test thali manager multiple starts and stops', function (t) {
     return thaliManager.start(partnerKeys);
   })
   .then(function () {
-    mocks.checkStart(partnerKeys);
+    mocks.checkStart(partnerKeys, global.NETWORK_TYPE);
   })
   .then(function () {
     return thaliManager.stop();

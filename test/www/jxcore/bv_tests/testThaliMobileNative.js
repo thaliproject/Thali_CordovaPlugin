@@ -1,12 +1,20 @@
 'use strict';
 
+// Issue #419
+var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
+  return;
+}
+
 var net = require('net');
 var randomstring = require('randomstring');
 var tape = require('../lib/thaliTape');
+var platform = require('thali/NextGeneration/utils/platform');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-var logger = require('thali/thaliLogger')('testThaliMobileNative');
 var Promise = require('lie');
 var assert = require('assert');
+
+var logger = require('../lib/testLogger')('testThaliMobileNative');
 
 // jshint -W064
 
@@ -196,13 +204,18 @@ function connectToPeer(peer, retries, successCb, failureCb, quitSignal) {
   retries--;
   Mobile('connect').callNative(peer.peerIdentifier, function (err, connection) {
     if (quitSignal && quitSignal.raised) {
-      successCb(null, null);
+      successCb(null, null, peer);
     }
     if (err == null) {
       // Connected successfully..
-      successCb(err, connection);
+      successCb(err, connection, peer);
     } else {
       logger.info('Connect returned an error: ' + err);
+
+      if (err === 'Already connect(ing/ed)') {
+        failureCb(err, connection, peer);
+        return;
+      }
 
       // Retry a failed connection..
       if (retries > 0) {
@@ -216,7 +229,7 @@ function connectToPeer(peer, retries, successCb, failureCb, quitSignal) {
         if (failureCb) {
           logger.warn('Too many connect retries!');
           // Exceeded retries..
-          failureCb(err, connection);
+          failureCb(err, connection, peer);
         }
       }
     }
@@ -508,7 +521,7 @@ test('Connect port dies if not connected to in time', function (t) {
 
   This test should not be ran on Android until #714 is solved (implemented).
    */
-  if (jxcore.utils.OSInfo().isAndroid) {
+  if (platform.isAndroid) {
     t.ok(true, 'This test is not ran on Android, since it lacks the timeout implementation');
     t.end();
   } else {
@@ -699,7 +712,7 @@ function killSkeleton(t, createServerWriteSuccessHandler,
   pretendLocalMux = makeIntoCloseAllServer(pretendLocalMux);
   serverToBeClosed = pretendLocalMux;
 
-  function onConnectSuccess(err, connection) {
+  function onConnectSuccess(err, connection, peer) {
     connection = JSON.parse(connection);
     var gotCloseMessage = false;
     if (connection.listeningPort === 0) {
@@ -727,7 +740,7 @@ function killSkeleton(t, createServerWriteSuccessHandler,
     connectToListeningPort.on('close', function () {
       t.ok(gotCloseMessage, 'We got the close message and we are closed');
       connectToListeningPortCloseHandler(connection, testMessage,
-                                          closeMessage);
+                                          closeMessage, peer);
     });
   }
 
@@ -751,7 +764,7 @@ function killRemote(t, end) {
       socket[end ? 'end' : 'destroy']();
     },
     function () {},
-    function (connection) {
+    function (connection, testMessage, closeMessage, peer) {
       // Confirm that nobody is listening on the port
       var secondConnectionToListeningPort =
         net.connect(connection.listeningPort, function () {
@@ -760,7 +773,16 @@ function killRemote(t, end) {
         });
       secondConnectionToListeningPort.on('error', function (err) {
         t.ok(err, 'We got an error which is what we wanted');
-        t.end();
+        connectToPeer(
+          peer, 1,
+          function (err) {
+            t.notOk(err, 'We should be able to reconnect');
+            t.end();
+          },
+          function (err) {
+            t.fail('We should be able to reconnect ' + err);
+          }
+        );
       });
     });
 }
@@ -786,7 +808,7 @@ function killLocal(t, end) {
     function (connectToListeningPort) {
       connectToListeningPort[end ? 'end' : 'destroy']();
     },
-    function (connection, testMessage, closeMessage) {
+    function (connection, testMessage, closeMessage, peer) {
       // Confirm that nobody is listening on the port
       var secondConnectionToListeningPort =
         net.connect(connection.listeningPort, function () {
@@ -801,11 +823,30 @@ function killLocal(t, end) {
               t.end();
             });
         });
-      secondConnectionToListeningPort.on('error', function (err) {
-        t.ok(err, 'We got an error which is what we wanted');
-      });
-      secondConnectionToListeningPort.on('close', function () {
+
+      new Promise(function (resolve, reject) {
+        secondConnectionToListeningPort.on('error', function (err) {
+          t.ok(err, 'We got an error which is what we wanted');
+          connectToPeer(
+            peer, 1,
+            function (err) {
+              resolve(err);
+            },
+            function (err) {
+              reject(err);
+            }
+          );
+        });
+        secondConnectionToListeningPort.on('close', function () {
+          resolve();
+        });
+      })
+      .then(function (err) {
+        t.notOk(err, 'We should be able to reconnect');
         t.end();
+      })
+      .catch(function (err) {
+        t.fail("We should be able to reconnect" + err);
       });
     });
 }
@@ -1056,7 +1097,9 @@ function clientSuccessConnect(t, roundNumber, connection, peersWeSucceededWith)
               return reject(error);
             }
             case validateResponse.OK: {
-              peersWeSucceededWith.push(parsedMessage.uuid);
+              // 'parsedMessage.uuid' may be already in 'peersWeSucceededWith'.
+              // We are just ignoring this case.
+              peersWeSucceededWith[parsedMessage.uuid] = true;
               resolve();
               logger.debug('Response validated, calling connection.end');
               connection.end();
@@ -1080,13 +1123,25 @@ function clientSuccessConnect(t, roundNumber, connection, peersWeSucceededWith)
   });
 }
 
+// We want to know whether all remote participants are sitting in `hashTable`.
+function verifyPeers(t, hashTable) {
+  var notFoundParticipants = t.participants.filter(function (participant) {
+    return !hashTable[participant.uuid];
+  });
+  // Current local participant should be ignored.
+  return (
+    notFoundParticipants.length === 1 &&
+    notFoundParticipants[0].uuid === tape.uuid
+  );
+}
+
 function clientRound(t, roundNumber, boundListener, quitSignal) {
   var peersWeAreOrHaveResolved = {};
-  var peersWeSucceededWith = [];
+  var peersWeSucceededWith = {};
   return new Promise(function (resolve, reject) {
     boundListener.listener = function (peers) {
-      if (peersWeSucceededWith.length === t.participants.length - 1) {
-        return;
+      if (verifyPeers(t, peersWeSucceededWith)) {
+        return
       }
 
       var peerPromises = [];
@@ -1129,7 +1184,7 @@ function clientRound(t, roundNumber, boundListener, quitSignal) {
       });
       Promise.all(peerPromises)
         .then(function () {
-          if (peersWeSucceededWith.length === t.participants.length - 1) {
+          if (verifyPeers(t, peersWeSucceededWith)) {
             quitSignal.raiseSignal();
             resolve();
           }

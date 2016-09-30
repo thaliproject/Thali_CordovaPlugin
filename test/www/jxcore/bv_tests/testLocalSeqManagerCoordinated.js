@@ -13,6 +13,7 @@ var ThaliNotificationClient = require('thali/NextGeneration/notification/thaliNo
 var ThaliPeerPoolDefault = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 var httpTester = require('../lib/httpTester');
 var Promise = require('lie');
+var Platform = require('thali/NextGeneration/utils/platform');
 
 var thaliNotificationServer = null;
 var thaliNotificationClient = null;
@@ -69,76 +70,81 @@ var test = tape({
   }
 });
 
-
-test('Coordinated seq test', function (t) {
-  var dbName = 'seqTest';
-  testUtils.runTestOnAllParticipants(t, router, thaliNotificationClient,
-    thaliNotificationServer, ThaliMobile, devicePublicKey,
-    function (notificationForUs) {
-      var localSeqManager;
-      var lastSyncedSequenceNumber = null;
-      return httpTester.getSeqDoc(dbName, notificationForUs.portNumber,
-                           notificationForUs.pskIdentifyField,
-                           notificationForUs.psk, devicePublicKey,
-                           notificationForUs.hostAddress)
-        .then(function (parsedJsonResponse) {
-          lastSyncedSequenceNumber =
-            parsedJsonResponse.lastSyncedSequenceNumber;
-        })
-        .catch(function (err) {
-          if (err.statusCode === 404) {
-            lastSyncedSequenceNumber = 0;
-          } else {
-            return Promise.reject('Failed with ' + err);
-          }
-        })
-        .then(function () {
-          var remotePouchDB =
-            testUtils.createPskPouchDBRemote(
-              notificationForUs.portNumber,
-              dbName,
-              notificationForUs.pskIdentifyField,
-              notificationForUs.psk,
-              notificationForUs.hostAddress);
-          localSeqManager =
-            new LocalSeqManager(1000, remotePouchDB, devicePublicKey);
-          ++lastSyncedSequenceNumber;
-          return localSeqManager.update(lastSyncedSequenceNumber);
-        })
-        .then(function () {
-          ++lastSyncedSequenceNumber;
-          var firstCall = localSeqManager.update(lastSyncedSequenceNumber);
-          ++lastSyncedSequenceNumber;
-          var secondCall = localSeqManager.update(lastSyncedSequenceNumber);
-          return firstCall
-            .then(function () {
-              return secondCall;
-            });
-        })
-        .then(function () {
-          return httpTester
-            .validateSeqNumber(t, dbName, notificationForUs.portNumber,
-                               lastSyncedSequenceNumber,
-                               notificationForUs.pskIdentifyField,
-                               notificationForUs.psk, devicePublicKey,
-                               notificationForUs.hostAddress);
-        })
-        .catch(function (err) {
-          localSeqManager.stop();
-          return localSeqManager.waitUntilStopped()
-          .then(function () {
-            return Promise.reject(err);
-          });
-        })
-        .then(function () {
-          localSeqManager.stop();
-          return localSeqManager.waitUntilStopped();
-        });
-    })
-    .catch(function (err) {
-      t.fail('We failed - ' + err);
-    })
-    .then(function () {
-      t.end();
-    });
+test('Coordinated seq test',
+  function () {
+    // issue #1182
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI &&
+            Platform.isAndroid;
+  },
+  function (t) {
+   var dbName = 'seqTest';
+   testUtils.runTestOnAllParticipants(t, router, thaliNotificationClient,
+     thaliNotificationServer, ThaliMobile, devicePublicKey,
+     function (notificationForUs) {
+       var localSeqManager;
+       var lastSyncedSequenceNumber = null;
+       return httpTester.getSeqDoc(dbName, notificationForUs.portNumber,
+                            notificationForUs.pskIdentifyField,
+                            notificationForUs.psk, devicePublicKey,
+                            notificationForUs.hostAddress)
+         .then(function (parsedJsonResponse) {
+           lastSyncedSequenceNumber =
+             parsedJsonResponse.lastSyncedSequenceNumber;
+         })
+         .catch(function (err) {
+           if (err.statusCode === 404) {
+             lastSyncedSequenceNumber = 0;
+           } else {
+             return Promise.reject('Failed with ' + err);
+           }
+         })
+         .then(function () {
+           var remotePouchDB =
+             testUtils.createPskPouchDBRemote(
+               notificationForUs.portNumber,
+               dbName,
+               notificationForUs.pskIdentifyField,
+               notificationForUs.psk,
+               notificationForUs.hostAddress);
+           localSeqManager =
+             new LocalSeqManager(1000, remotePouchDB, devicePublicKey);
+           ++lastSyncedSequenceNumber;
+           return localSeqManager.update(lastSyncedSequenceNumber);
+         })
+         .then(function () {
+           ++lastSyncedSequenceNumber;
+           var firstCall = localSeqManager.update(lastSyncedSequenceNumber);
+           ++lastSyncedSequenceNumber;
+           var secondCall = localSeqManager.update(lastSyncedSequenceNumber);
+           return firstCall
+             .then(function () {
+               return secondCall;
+             });
+         })
+         .then(function () {
+           return httpTester
+             .validateSeqNumber(t, dbName, notificationForUs.portNumber,
+                                lastSyncedSequenceNumber,
+                                notificationForUs.pskIdentifyField,
+                                notificationForUs.psk, devicePublicKey,
+                                notificationForUs.hostAddress);
+         })
+         .catch(function (err) {
+           localSeqManager.stop();
+           return localSeqManager.waitUntilStopped()
+           .then(function () {
+             return Promise.reject(err);
+           });
+         })
+         .then(function () {
+           localSeqManager.stop();
+           return localSeqManager.waitUntilStopped();
+         });
+     })
+     .catch(function (err) {
+       t.fail('We failed - ' + err);
+     })
+     .then(function () {
+       t.end();
+     });
 });
