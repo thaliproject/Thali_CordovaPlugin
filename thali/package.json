@@ -31,7 +31,7 @@
     },
     "btconnectorlib2": "0.3.4-alpha2",
     "jxcore-cordova": "0.1.4",
-    "jxcore-cordova-url": "http://jxcore.azureedge.net/jxcore-cordova/0.1.4/release/io.jxcore.node.jx"
+    "jxcore-cordova-url": "http://jxcore.azureedge.net/jxcore-cordova/0.1.4-v8/release/io.jxcore.node.jx"
   },
   "scripts": {
     "prepublish": "jx install/prePublishThaliCordovaPlugin.js",

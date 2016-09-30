@@ -72,9 +72,9 @@ var test = tape({
 
 test('Coordinated seq test',
   function () {
-    // issue #1182
+    // issue #1165
     return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI &&
-            Platform.isAndroid;
+      Platform.isAndroid;
   },
   function (t) {
    var dbName = 'seqTest';
