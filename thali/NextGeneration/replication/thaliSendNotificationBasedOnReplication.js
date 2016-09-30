@@ -381,9 +381,10 @@ ThaliSendNotificationBasedOnReplication.prototype._setUpChangeListener =
           var milliSecondsUntilNextRefresh =
             soonestPossibleRefresh - Date.now();
 
-          if (milliSecondsUntilNextRefresh >= 0) {
-            self._updateOnExpiration(milliSecondsUntilNextRefresh);
+          if (milliSecondsUntilNextRefresh < 0) {
+            milliSecondsUntilNextRefresh = 0;
           }
+          self._updateOnExpiration(milliSecondsUntilNextRefresh);
         }
       })
       .on('complete', function (info) {
