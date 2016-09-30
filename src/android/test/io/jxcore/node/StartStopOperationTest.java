@@ -1,6 +1,12 @@
 package io.jxcore.node;
 
+import android.util.Log;
+
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 
@@ -13,6 +19,15 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsNot.not;
 
 public class StartStopOperationTest {
+
+    String mTag = StartStopOperationTest.class.getName();
+
+    @Rule
+    public TestRule watcher = new TestWatcher() {
+        protected void starting(Description description) {
+            Log.i(mTag, "Starting test: " + description.getMethodName());
+        }
+    };
 
     @Test
     public void testCreateStartOperation() throws Exception {

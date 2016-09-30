@@ -1,16 +1,16 @@
 //
+//  Thali CordovaPlugin
 //  TestRunner.swift
-//  ThaliCore
 //
-//  Created by Ilya Laryionau on 7/28/16.
-//  Copyright © 2016 Thali. All rights reserved.
+//  Copyright (C) Microsoft. All rights reserved.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root for full license
+//  information.
 //
 
 import Foundation
 import XCTest
 
-@objc
-final class TestRunner: NSObject {
+public final class TestRunner: NSObject {
     struct RunResult {
         let executedCount: Int
         let succeededCount: Int
@@ -20,15 +20,19 @@ final class TestRunner: NSObject {
     }
 
     private let testSuite: XCTestSuite
-    
+
     private init(testSuite: XCTestSuite) {
         self.testSuite = testSuite
     }
 
-    static let `default`: TestRunner = TestRunner.createDefaultRunner()
+    public static let `default`: TestRunner = TestRunner.createDefaultRunner()
 
     private static func createDefaultRunner() -> TestRunner {
         return TestRunner(testSuite: XCTestSuite.defaultTestSuite())
+    }
+
+    public var resultDescription: String? {
+        return runResult.jsonString
     }
 
     var runResult: RunResult {
@@ -68,16 +72,18 @@ final class TestRunner: NSObject {
         )
     }
 
-    func runTest() {
-        // Tests must only be run on the main thread.
-        //
-        // Please note that it's important not using GCD here.
-        // XCTest.framework uses NSRunLoop for async testing
-        // so async testing won't work as expected
-        // in case of running tests in CGD main queue
-
-        testSuite.performSelectorOnMainThread(#selector(runTest), withObject: nil, waitUntilDone: true)
+    @objc public func runTest() {
+        // Test must only be run on the main thread.
+        // Please note that it's important not using GCD, because XCTest.framework doesn't use GCD
+        if !NSThread.currentThread().isMainThread {
+            performSelectorOnMainThread(#selector(runTest), withObject: nil, waitUntilDone: true)
+            return
+        }
+        XCTestObservationCenter.sharedTestObservationCenter().addTestObserver(self)
+        testSuite.runTest()
+        XCTestObservationCenter.sharedTestObservationCenter().removeTestObserver(self)
     }
+
 }
 
 // MARK:
@@ -100,5 +106,12 @@ extension TestRunner.RunResult {
         } catch _ as NSError {
             return nil
         }
+    }
+}
+
+// MARK: XCTestObservation
+extension TestRunner: XCTestObservation {
+    public func testCase(testCase: XCTestCase, didFailWithDescription description: String, inFile filePath: String?, atLine lineNumber: UInt) {
+        print("\(description) in file: \(filePath), line: \(lineNumber)")
     }
 }

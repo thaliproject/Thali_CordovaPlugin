@@ -1,6 +1,6 @@
 #!/bin/sh
 
-### START - JXcore Test Server --------....................
+### START - JXcore Test Server --------.................
 ### Testing environment prepares separate packages for each node.
 ### Package builder calls this script with each node's IP address
 ### Make sure multiple calls to this script file compiles the application file
@@ -55,6 +55,16 @@ cordova -v;ERROR_ABORT
 # Run first the tests that can be run on desktop
 thali/install/setUpDesktop.sh;ERROR_ABORT
 cd test/www/jxcore/;ERROR_ABORT
+
+# Check if build is running in CI Test Mode
+CI_TEST_MODE=false;
+
+if [ $CI_TEST_MODE == true ]
+then
+  LOG $GREEN_COLOR "Running in CI test mode"
+  node CITestMode.js;ERROR_ABORT
+fi
+
 jx npm test;ERROR_ABORT
 jx npm run test-meta;ERROR_ABORT
 jx npm run test-coordinated;ERROR_ABORT
