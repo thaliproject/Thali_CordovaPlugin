@@ -197,8 +197,10 @@ CoordinatedClient.prototype._disqualify = function (data) {
     });
   });
 
-  // We are waiting for 'disconnect' event.
-  self._state = CoordinatedClient.states.completed;
+  if (!data) {
+    // We are waiting for 'disconnect' event.
+    self._state = CoordinatedClient.states.completed;
+  }
 }
 
 CoordinatedClient.prototype._disconnect = function () {
