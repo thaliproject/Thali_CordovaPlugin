@@ -200,7 +200,8 @@ test('test write', function (t) {
       PouchDB,
       DB_NAME,
       ecdhForLocalDevice,
-      new ThaliPeerPoolDefault()
+      new ThaliPeerPoolDefault(),
+      global.NETWORK_TYPE
     );
     return thaliManager.start(partnerKeys);
   })
