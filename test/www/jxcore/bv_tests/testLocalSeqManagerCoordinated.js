@@ -71,6 +71,11 @@ var test = tape({
 });
 
 test('Coordinated seq test',
+  function () {
+    // issue #1165
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI &&
+      Platform.isAndroid;
+  },
   function (t) {
    var dbName = 'seqTest';
    testUtils.runTestOnAllParticipants(t, router, thaliNotificationClient,
