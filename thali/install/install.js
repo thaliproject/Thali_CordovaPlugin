@@ -250,6 +250,7 @@ function copyDevelopmentThaliCordovaPluginToProject(appRootDirectory,
                                                     thaliDontCheckIn);
   var sourceDirectory = path.join(
     appRootDirectory, '..', 'Thali_CordovaPlugin');
+
   return new Promise(function (resolve, reject) {
     fs.remove(targetDirectory, function (err) {
       if (err) {
@@ -302,8 +303,6 @@ module.exports = function (callback, appRootDirectory) {
   appRootDirectory = appRootDirectory ||
                      path.join(__dirname, '..', '..', '..', '..', '..');
   var thaliDontCheckIn = path.join(appRootDirectory, 'thaliDontCheckIn' );
-  var appScriptsFolder =
-    path.join(appRootDirectory, 'plugins', 'org.thaliproject.p2p', 'scripts');
 
   var thaliProjectName, thaliDepotName, thaliBranchName, btconnectorlib2;
 
@@ -349,6 +348,7 @@ module.exports = function (callback, appRootDirectory) {
     .then(function (thaliCordovaPluginUnZipResult) {
       if (thaliCordovaPluginUnZipResult.directoryUpdated) {
         var weAddedPluginsFile = path.join(thaliDontCheckIn, 'weAddedPlugins');
+
         return uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory)
           .then(function () {
             console.log('Adding Thali Cordova plugin from: ' +
@@ -357,19 +357,6 @@ module.exports = function (callback, appRootDirectory) {
             return spawn('cordova plugins add ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory,
               { cwd: appRootDirectory });
-          })
-          .then(function () {
-            // The step below is required, because the Android after prepare
-            // Cordova hook depends on external node modules that need to be
-            // installed.
-            console.log('Running npm install in: ' + appScriptsFolder);
-
-            return spawn('npm install --no-optional --production',
-              { cwd: appScriptsFolder });
-          })
-          .then(function () {
-            return spawn('find . -name "*.gz" -delete',
-              { cwd: appScriptsFolder });
           })
           .then(function () {
             return fs.writeFileAsync(weAddedPluginsFile, 'yes');
