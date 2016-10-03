@@ -4,8 +4,7 @@
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var platform = require('thali/NextGeneration/utils/platform');
 // Issue #419
-if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI 
-    && platform.isAndroid) {
+if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
   return;
 }
 
