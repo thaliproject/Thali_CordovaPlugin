@@ -41,11 +41,26 @@ configuration before finally completing and tearing down it's resources.
 
 ## Usage
 
+### Installing software
+To build Thali you need a fairly large collection of software. The most important
+piece of software being Thali itself, so please start by cloning
+https://github.com/thaliproject/thali_cordovaplugin/
+to your machine.
+
+In terms of operating system we assume you are running on OS/X. In theory we can
+run successfully on Linux or Windows but we really don't test there very often
+so things are likely to break.
+
+From there you need to install in OS/X a fairly large mountain of software. For
+now you can see the list [here](https://github.com/thaliproject/Thali_CordovaPlugin/blob/1df36b74ee93f1ece85579857ed90a0e05a0cdd1/thali/install/validateBuildEnvironment.js#L16).
+You need to install the listed software at the listed version. Two of the entries
+are about Sinopia. Details on that is in the next section.
+
 ### Running your own NPM registry
 From time to time we run into bugs in PouchDB and Express-PouchDB that we can't
 get fixed and into the public NPM repo fast enough to not block our development.
 So we have written a script (installCustomPouchDB.js) that handles installing a
-custom verison of those packages if and when we need them. To make this work we
+custom version of those packages if and when we need them. To make this work we
 depend on the developer running a local copy of a program called sinopia
 (although any private NPM repository server will do) and using that as a place
 to stage our custom releases. This requires the following manual steps:
