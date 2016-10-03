@@ -179,9 +179,10 @@ CoordinatedClient.prototype._disqualify = function (data) {
   this._emit('disqualify_confirmed', data)
   .then(function () {
     if (data) {
-      logger.error('device disqualified from the test server, reason: \'%s\'', data);
+      var errorText = CoordinatedClient.getData(data);
+      logger.error('device disqualified from the test server, reason: \'%s\'', errorText);
       self._failed(new Error(
-        'Test client failed: ' + data
+        'Test client failed: ' + errorText
       ));
       return;
     }

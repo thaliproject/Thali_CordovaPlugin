@@ -233,6 +233,8 @@ SimpleThaliTape.prototype._resolveInstance = function () {
   SimpleThaliTape.instances.push(this);
 }
 
+// Note that version, hasRequiredHardware and nativeUTFailed fields are not used and are added
+// here for consistency with CoordinatedTape
 SimpleThaliTape.begin = function (platform, version, hasRequiredHardware, nativeUTFailed) {
   var thaliTapes = SimpleThaliTape.instances;
   SimpleThaliTape.instances = [];

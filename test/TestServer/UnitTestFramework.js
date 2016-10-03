@@ -86,8 +86,12 @@ UnitTestFramework.prototype.startTests = function (platformName) {
     );
     return Promise.all(
       devices.map(function (device) {
-        return device.error(error)
+        return device.error(error.toString())
           .catch(function (error) {
+            logger.error(
+              'unexpected error: \'%s\', stack: \'%s\'',
+              error.toString(), error.stack
+            );
           });
       })
     );
