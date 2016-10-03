@@ -9,14 +9,14 @@ var format = util.format;
 require('./utils/process');
 var logger = require('./utils/ThaliLogger')('TestServer');
 
-var HttpServer        = require('./HttpServer');
+var Server            = require('./Server');
 var TestDevice        = require('./TestDevice');
 var UnitTestFramework = require('./UnitTestFramework');
 
 
 var WAITING_FOR_DEVICES_TIMEOUT = 5 * 60 * 1000;
 
-var httpServer = new HttpServer({
+var server = new Server({
   port: 3000,
   transports: ['websocket']
 });
@@ -27,7 +27,7 @@ if (options) {
 }
 var unitTestManager = new UnitTestFramework(options);
 
-httpServer
+server
 .on('present', function (device) {
   switch (device.type) {
     case 'unittest': {
