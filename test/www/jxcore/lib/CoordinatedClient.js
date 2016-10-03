@@ -4,19 +4,18 @@ var util     = require('util');
 var format   = util.format;
 var inherits = util.inherits;
 
-var net          = require('net');
-var objectAssign = require('object-assign');
-var uuidValidate = require('uuid-validate');
-var assert       = require('assert');
-var tape         = require('tape-catch');
-var EventEmitter = require('events').EventEmitter;
+var objectAssign   = require('object-assign');
+var uuidValidate   = require('uuid-validate');
+var assert         = require('assert');
+var tape           = require('tape-catch');
+var SocketIOClient = require('socket.io-client');
+var EventEmitter   = require('events').EventEmitter;
 
 var asserts = require('./utils/asserts');
 var Promise = require('./utils/Promise');
 
 var testUtils     = require('./testUtils');
 var serverAddress = require('../server-address');
-var ServerClient  = require('./ServerClient');
 
 var logger = require('./testLogger')('CoordinatedClient');
 
@@ -38,6 +37,11 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware, 
     tests.length > 0,
     'we should have at least one test'
   );
+  // We will use emit retry options from first test as default.
+  this._defaults = {
+    emitRetryCount:   tests[0].options.emitRetryCount,
+    emitRetryTimeout: tests[0].options.emitRetryTimeout
+  };
 
   this._tests = tests.slice();
   this._testNames = this._tests.map(function (test) {
@@ -61,11 +65,20 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware, 
 
   this._state = CoordinatedClient.states.created;
 
-  this._serverClient = new ServerClient(serverAddress, 3000, {
-    reconnectionAttempts: 15,
-    reconnectionDelay:    200,
-    emitTimeout:          2 * 60 * 1000
-  });
+  this._io = SocketIOClient(
+    'http://' + serverAddress + ':' + 3000 + '/',
+    {
+      reconnection: true,
+      reconnectionAttempts: 15,
+      reconnectionDelay: 200,
+      reconnectionDelayMax: 1000,
+      randomizationFactor: 0,
+
+      transports: ['websocket'],
+      rejectUnauthorized: null
+    }
+  );
+
   this._bind();
 }
 
@@ -78,16 +91,35 @@ CoordinatedClient.states = {
 };
 
 CoordinatedClient.prototype._bind = function () {
-  this._serverClient
-  .on('connect', this._connect.bind(this))
-  .on('error',   this._error.bind(this))
-  .connect();
+  this._io
+  .on  ('connect',           this._connect.bind(this))
+  .on  ('connect_timeout',   logger.debug.bind(logger))
+  .on  ('connect_error',     logger.error.bind(logger))
+  .on  ('reconnect',         this._reconnect.bind(this))
+  .on  ('reconnect_error',   logger.error.bind(logger))
+  .on  ('reconnect_failed',  this._error.bind(this))
+  .once('schedule',          this._schedule.bind(this))
+  .on  ('discard',           this._discard.bind(this))
+  .on  ('disqualify',        this._disqualify.bind(this))
+  .on  ('disconnect',        this._disconnect.bind(this))
+  .on  ('error',             this._error.bind(this))
+  .once('complete',          this._complete.bind(this));
 }
 
-// Both 'connect' and 'reconnect' will be here.
+// We are having similar logic in both connect reconnect
+// events, because socket.io seems to behave so that sometimes
+// we get the connect event even if we have been connected before
+// (and sometimes the reconnect event).
 CoordinatedClient.prototype._connect = function () {
   logger.debug('connected to the test server');
+  this._newConnection();
+}
+CoordinatedClient.prototype._reconnect = function () {
+  logger.debug('reconnected to the test server');
+  this._newConnection();
+}
 
+CoordinatedClient.prototype._newConnection = function () {
   assert(
     this._state === CoordinatedClient.states.created ||
     this._state === CoordinatedClient.states.connected,
@@ -95,7 +127,7 @@ CoordinatedClient.prototype._connect = function () {
   );
   this._state = CoordinatedClient.states.connected;
 
-  this._serverClient.emitData('present', {
+  this._emit('present', {
     name:    testUtils.getName(),
     uuid:    this._uuid,
     type:    'unittest',
@@ -204,14 +236,55 @@ CoordinatedClient.prototype._complete = function (data) {
 
 CoordinatedClient.prototype._succeed = function () {
   logger.debug('test client succeed');
-  // this._io.close();
+  this._io.close();
   this.emit('finished');
 }
 
 CoordinatedClient.prototype._failed = function (error) {
   logger.debug('test client failed');
-  // this._io.close();
+  this._io.close();
   this.emit('finished', error);
+}
+
+// Emitting message to 'connected' socket without confirmation.
+// We will just check that socket is 'connected'.
+CoordinatedClient.prototype._emit = function (event, data, externalOptions) {
+  var self = this;
+
+  var options = objectAssign({}, this._defaults, externalOptions);
+  var timeout;
+  var retryIndex = 0;
+  data = data || '';
+
+  return new Promise(function (resolve, reject) {
+    function emit() {
+      if (retryIndex >= options.emitRetryCount) {
+        reject(new Error(
+          'retry count exceed'
+        ));
+        return;
+      }
+      retryIndex ++;
+
+      if (self._io.connected) {
+        self._io.emit(event, data);
+        resolve();
+        return;
+      }
+      timeout = setTimeout(emit, options.emitRetryTimeout);
+    }
+    emit();
+  })
+  .catch(function (error) {
+    logger.error(
+      'unexpected error: \'%s\', stack: \'%s\'',
+      error.toString(), error.stack
+    );
+    return Promise.reject(error);
+  })
+  .finally(function () {
+    clearTimeout(timeout);
+  });
 }
 
 CoordinatedClient.prototype._scheduleTest = function (test) {

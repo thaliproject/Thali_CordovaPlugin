@@ -3,27 +3,37 @@
 var util     = require('util');
 var inherits = util.inherits;
 
-var net          = require('net');
+var http         = require('http');
+var socketIO     = require('socket.io');
 var objectAssign = require('object-assign');
 var EventEmitter = require('events').EventEmitter;
 
 var asserts = require('./utils/asserts');
-var logger  = require('./utils/ThaliLogger')('Server');
+var logger  = require('./utils/ThaliLogger')('HttpServer');
 
 var TestDevice = require('./TestDevice');
 
 
 function Server (options) {
+  var self = this;
+
   this._setOptions(options);
 
-  this._remoteEvents = new EventEmitter();
+  var server = http.createServer();
+  this._io = socketIO(server, {
+    transports: this._options.transports
+  });
+  server.listen(this._options.port, function () {
+    logger.info('listening on *:' + self._options.port);
+  });
+
   this._bind();
 }
 
 inherits(Server, EventEmitter);
 
 Server.prototype.defaults = {
-  port: 3000
+  transports: ['websocket']
 };
 
 Server.prototype._setOptions = function (options) {
@@ -31,54 +41,57 @@ Server.prototype._setOptions = function (options) {
   this._options = objectAssign({}, this.defaults, options);
 
   asserts.isNumber(this._options.port);
+  asserts.isArray(this._options.transports);
+  this._options.transports.forEach(function (transport) {
+    asserts.isString(transport);
+  });
 }
 
 Server.prototype._bind = function () {
-  var self = this;
-
-  this._server = net.createServer(this._connect.bind(this));
   process.once('exit', this._exit.bind(this));
-  this._server.listen(this._options.port);
-
-  logger.info('listening on *:' + this._options.port);
-
-  this._remoteEvents
-  .on('present', this._present.bind(this));
+  this._io.on('connect', this._connect.bind(this));
 }
 
 Server.prototype._connect = function (socket) {
   asserts.exists(socket);
+  socket.deviceName = 'device that was not presented yet';
 
   socket
-  .on('error', this._error.bind(this))
-  .on('data',  this._data.bind(this, socket));
+  .on('disconnect', this._disconnect.bind(this, socket))
+  .on('error',      this._error.bind(this, socket))
+  .on('present',    this._present.bind(this, socket));
 }
 
-Server.prototype._exit = function () {
-  this._server.close();
+Server.prototype._disconnect = function (socket, reason) {
+  logger.info(
+    'Socket to device name: \'%s\' disconnected, reason: \'%s\'',
+    socket.deviceName, reason
+  );
 }
 
 Server.prototype._error = function (socket, error) {
-  var error = format('unexpected server error: \'%s\'', error);
-  logger.error(error);
-  throw new Error(error);
-}
-
-Server.prototype._data = function (socket, resultBuffer) {
-  var result = JSON.parse(resultBuffer.toString('utf8'));
-  asserts.isString(result.event);
-  asserts.exists(result.data);
-  this._remoteEvents.emit(result.event, socket, result.data);
+  logger.error(
+    'unexpected server error: \'%s\'',
+    error.content
+  );
+  throw new Error(error.content);
 }
 
 Server.prototype._present = function (socket, deviceInfo) {
   var device = new TestDevice(socket, deviceInfo);
+  socket.deviceName = device.name;
+
   logger.debug(
     'device presented, name: \'%s\', uuid: \'%s\', platformName: \'%s\', ' +
     'type: \'%s\', hasRequiredHardware: \'%s\', nativeUTFailed: \'%s\'',
     device.name, device.uuid, device.platformName, device.type, device.hasRequiredHardware, device.nativeUTFailed
   );
+
   this.emit('present', device);
+}
+
+Server.prototype._exit = function () {
+  this._io.close();
 }
 
 module.exports = Server;
