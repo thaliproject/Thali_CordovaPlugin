@@ -3,6 +3,7 @@
 var util   = require('util');
 var format = util.format;
 
+var assert       = require('assert');
 var fs           = require('fs-extra-promise');
 var path         = require('path');
 var randomString = require('randomstring');
@@ -30,36 +31,61 @@ if (typeof Mobile === 'undefined') {
   global.Mobile = require('./lib/wifiBasedNativeMock.js')();
 }
 
-var hasJavaScriptSuffix = function (path) {
-  return path.indexOf('.js', path.length - 3) !== -1;
-};
+var DEFAULT_TESTS_DIRECTORY = 'bv_tests';
 
-var loadFile = function (filePath) {
-  logger.info('Test runner loading file:', filePath);
-  try {
-    require(filePath);
-  } catch (error) {
-    error = format(
-      'test load failed, filePath: \'%s\', error: \'%s\', stack: \'%s\'',
-      filePath, error.toString(), error.stack
-    );
-    logger.error(error);
-    throw new Error(error);
-  }
-};
+// 'fileName' should start with 'test' and end with '.js'.
+function isFileNameValid (fileName) {
+  return /^test.*?\.js$/i.test(fileName);
+}
 
-var testsToRun = process.argv.length > 2 ? process.argv[2] : 'bv_tests';
+function getTestFromFile (directory, fileName) {
+  assert(isFileNameValid(fileName), 'file name should be valid');
+  var filePath = path.resolve(path.join(directory, fileName));
+  assert(fs.existsSync(filePath), 'test file should exist');
+  return filePath;
+}
 
-if (hasJavaScriptSuffix(testsToRun)) {
-  loadFile(path.join(__dirname, testsToRun));
-} else {
-  fs.readdirSync(path.join(__dirname, testsToRun))
-  .forEach(function (fileName) {
-    if (fileName.indexOf('test') === 0 && hasJavaScriptSuffix(fileName)) {
-      var filePath = path.join(__dirname, testsToRun, fileName);
-      loadFile(filePath);
-    }
+function getTestsFromDirectory (directory) {
+  var tests = fs.readdirSync(directory)
+  .filter(function (fileName) {
+    return isFileNameValid(fileName);
+  })
+  .map(function (fileName) {
+    return path.resolve(path.join(directory, fileName));
   });
+  tests.forEach(function (filePath) {
+    assert(fs.existsSync(filePath), 'test file should exist');
+  });
+  assert(tests.length > 0, 'we should have at least one test');
+  return tests;
+}
+
+function getTestsFromPath (testPath) {
+  if (fs.isDirectorySync(testPath)) {
+    return getTestsFromDirectory(testPath);
+  } else {
+    return [getTestFromFile(
+      path.dirname (testPath),
+      path.basename(testPath)
+    )];
+  }
+}
+
+var tests;
+if (process.argv.length < 3) {
+  tests = getTestsFromDirectory(DEFAULT_TESTS_DIRECTORY);
+} else if (process.argv.length === 3) {
+  tests = getTestsFromPath(process.argv[2]);
+} else {
+  logger.warn(
+    'arguments won\'t be used:',
+    process.argv.slice(3)
+    .map(function (argument) {
+      return '\'' + argument + '\'';
+    })
+    .join(', ')
+  );
+  tests = getTestsFromPath(process.argv[2]);
 }
 
 var currentPlatform = platform.name;
@@ -73,8 +99,12 @@ testUtils.hasRequiredHardware()
 .then(function (hasRequiredHardware) {
   return testUtils.getOSVersion()
   .then(function (version) {
-    return thaliTape.begin(currentPlatform, version, hasRequiredHardware);
-  })
+    return thaliTape.begin(tests, {
+      platform:            currentPlatform,
+      version:             version,
+      hasRequiredHardware: hasRequiredHardware
+    });
+  });
 })
 .then(function () {
   process.exit(0);
