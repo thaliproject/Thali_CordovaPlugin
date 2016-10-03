@@ -1,15 +1,17 @@
 'use strict';
 
-// Issue #419
+
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
-if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
+var platform = require('thali/NextGeneration/utils/platform');
+// Issue #419
+if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI 
+    && platform.isAndroid) {
   return;
 }
 
 var net = require('net');
 var randomstring = require('randomstring');
 var tape = require('../lib/thaliTape');
-var platform = require('thali/NextGeneration/utils/platform');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var Promise = require('lie');
 var assert = require('assert');
@@ -123,13 +125,34 @@ test('Can call stopUpdateAdvertisingAndListening twice without start and ' +
   });
 });
 
-test('cannot call connect when start listening for advertisements is not ' +
-  'active', function (t) {
-  Mobile('connect').callNative('foo', function (err) {
+function multiconnectSupported() {
+  return platform.isIOS
+}
+
+test('cannot call connect/multiConnect when start listening for' +
+     'advertisements is not active', function (t) {
+  function checkError(err) {
     t.equal(err, 'startListeningForAdvertisements is not active',
       'got right error');
     t.end();
-  });
+  } 
+  if (multiconnectSupported) {
+    var peerId = 'fc21d27f-0086-4d5c-a619-290be1037e9f:0'
+    Mobile('multiConnectResolved')
+        .registerToNative(function (params) {
+          checkError(params.error)  
+        });
+    Mobile('multiConnect').callNative(peerId, 'syncValue', function (err) {
+      if (err) {
+        t.fail(!err);
+        t.end();    
+      } 
+    });
+  } else {
+    Mobile('connect').callNative('foo', function (err) {
+      checkError(err)
+    });
+  }  
 });
 
 if (!tape.coordinated) {
@@ -151,8 +174,6 @@ test('peerAvailabilityChange is called', function (t) {
 
       t.ok(peers[0].hasOwnProperty('peerAvailable'),
         'peer must have peerAvailable');
-      t.ok(peers[0].hasOwnProperty('pleaseConnect'),
-        'peer must have pleaseConnect');
 
       complete = true;
       t.end();
@@ -790,7 +811,7 @@ function killRemote(t, end) {
 test('#startUpdateAdvertisingAndListening - ending remote peers connection ' +
   'kills the local connection', function (t) {
     killRemote(t, true);
-  });
+});
 
 test('#startUpdateAdvertisingAndListening - destroying remote peers ' +
   'connection kills the local connection', function (t) {
