@@ -62,7 +62,11 @@ function runBadImmediateSeqUpdateTest(t, serverPort, validateErrFunc) {
     })
     .catch(validateErrFunc)
     .then(function () {
-      t.end();
+      pouchDB.close().then(function () {
+        t.end();
+      }).catch(function (closeError) {
+        t.end(closeError);
+      });
     });
 }
 
@@ -305,6 +309,11 @@ test('#_doImmediateSeqUpdate - stop after get but before put fails right',
         });
     }, function (app) {
       app.use(function (req, res, next) {
+        // Ignore database destroying when test ends
+        if (req.method === 'DELETE') {
+          next();
+          return;
+        }
         localSeqManager.stop();
         localSeqManager.waitUntilStopped()
         .then(function () {

@@ -6,6 +6,7 @@ var format = util.format;
 var fs           = require('fs-extra-promise');
 var path         = require('path');
 var randomString = require('randomstring');
+var Promise      = require('bluebird');
 
 
 // Before including anything serious from thali we want to ensure
@@ -74,8 +75,20 @@ testUtils.hasRequiredHardware()
   return testUtils.getOSVersion()
   .then(function (version) {
     return thaliTape.begin(currentPlatform, version, hasRequiredHardware, global.nativeUTFailed);
-  })
+  });
 })
+//.then(function () {
+//    return new Promise(function (res, rej) {
+//      var child = require('child_process').spawn('lsof', [
+//         '-a',
+//         '-c', 'jx',
+//         '+D', '/tmp'
+//      ]);
+//      child.stdout.pipe(process.stdout);
+//      child.on('close', res);
+//      child.on('error', rej);
+//    });
+//})
 .then(function () {
   process.exit(0);
 })

@@ -229,10 +229,14 @@ module.exports.verifyCombinedResultSuccess =
 
 function levelDownPouchDBGenerator(defaultDirectory) {
   // Shamelessly stolen from https://github.com/pouchdb/pouchdb/blob/fb77927d2f14911478032884f1576b770815bcab/packages/pouchdb-core/src/setup.js#L108-L137
+
   function PouchAlt(name, opts, callback) {
     if (!(this instanceof PouchAlt)) {
       return new PouchAlt(name, opts, callback);
     }
+
+    //console.log('opened new db ' + name + ' in ' + defaultDirectory);
+    //console.trace();
 
     if (typeof opts === 'function' || typeof opts === 'undefined') {
       callback = opts;
@@ -548,14 +552,24 @@ module.exports.setUpServer = function (testBody, appConfig) {
       key: thaliConfig.BOGUS_KEY_PEM,
       cert: thaliConfig.BOGUS_CERT_PEM
     }, app));
+
+  var remotePouchDB = null;
   testCloseAllServer.listen(0, function () {
     var serverPort = testCloseAllServer.address().port;
     var randomDBName = randomString.generate(30);
-    var remotePouchDB =
+    remotePouchDB =
       module.exports.createPskPouchDBRemote(serverPort, randomDBName, pskId,
                                             pskKey);
     testBody(serverPort, randomDBName, remotePouchDB);
   });
+
+  var originalClose = testCloseAllServer.closeAllPromise;
+  testCloseAllServer.closeAllPromise = function () {
+    var self = this;
+    return remotePouchDB.destroy().then(function () {
+      return originalClose.call(self);
+    });
+  };
   return testCloseAllServer;
 };
 

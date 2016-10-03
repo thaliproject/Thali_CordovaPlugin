@@ -264,7 +264,7 @@ test('Make sure docs replicate',
        t.fail('failed with ' + err);
      })
      .then(function () {
-       t.end();
+       localPouchDB.close(t.end);
      });
     });
   });
@@ -379,7 +379,7 @@ test('Do something and make sure we time out', function (t) {
       })
       .then(function () {
         ThaliReplicationPeerAction.maxIdlePeriodSeconds = originalTimeout;
-        t.end();
+        localPouchDB.close(t.end);
       });
   });
 });
@@ -388,6 +388,10 @@ test('Start replicating and then catch error when server goes', function (t) {
   var requestCount = 0;
   function killServer(app) {
     app.use('*', function (req, res, next) {
+      if (req.method !== 'PUT' && req.method !== 'POST') {
+        next();
+        return;
+      }
       requestCount += 1;
       if (requestCount > 5) {
         return res.connection.destroy();

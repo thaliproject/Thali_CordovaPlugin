@@ -107,6 +107,14 @@ function testScaffold(t, pouchDbInitFunction, mockInitFunction,
 
   var spyTimers = [];
 
+  function endTest (err) {
+    pouchDB.close().then(function () {
+      t.end(err);
+    }).catch(function (closingError) {
+      t.end(closingError);
+    });
+  }
+
   pouchDbInitFunction(pouchDB)
     .then(function () {
       var MockThaliNotificationServer =
@@ -147,7 +155,7 @@ function testScaffold(t, pouchDbInitFunction, mockInitFunction,
         new ThaliSendNotificationBasedOnReplicationProxyquired(router,
           ecdhForLocalDevice, millisecondsUntilExpiration, pouchDB);
 
-      runTestFunction(thaliSendNotificationBasedOnReplication, pouchDB)
+      return runTestFunction(thaliSendNotificationBasedOnReplication, pouchDB)
         .then(function () {
           t.doesNotThrow(function () {
             mockThaliNotificationServer.verify();
@@ -159,8 +167,13 @@ function testScaffold(t, pouchDbInitFunction, mockInitFunction,
               millisecondsUntilExpiration),
           'constructor called with right args');
           mockInitValidationFunction && mockInitValidationFunction();
-          t.end();
         });
+    })
+    .then(function () {
+      endTest();
+    })
+    .catch(function (err) {
+      endTest(err);
     });
 }
 
