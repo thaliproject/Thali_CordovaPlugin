@@ -30,7 +30,7 @@ function ServerClient(host, port, options) {
   this._options = objectAssign({}, this.defaults, options);
 
   this._connect = this.connect.bind(this);
-  this._reconnectionIndex = 0;
+  this._reconnectionIndex = -1;
 }
 
 inherits(ServerClient, EventEmitter);
@@ -44,8 +44,12 @@ ServerClient.prototype.defaults = {
 ServerClient.prototype.connect = function () {
   var self = this;
 
+  this._reconnectionIndex = 0;
+
   var socket = new net.Socket()
+  .on('data',  this._data  .bind(this))
   .on('error', this._error .bind(this))
+  .on('end',   this._end   .bind(this))
   .on('close', this._closed.bind(this));
 
   logger.debug('connecting to \'%s:%d\'', this._host, this._port);
@@ -58,9 +62,32 @@ ServerClient.prototype._connected = function (socket) {
   this.emit('connect');
 }
 
+ServerClient.prototype._data = function (resultBuffer) {
+  var self = this;
+  function parse (data) {
+    var result = JSON.parse(data);
+    asserts.isString(result.event);
+    asserts.exists(result.data);
+    self.emit(result.event, result.data);
+  }
+
+  var data = resultBuffer.toString('utf8');
+
+  var index;
+  // This is possible only with multiple json objects in buffer.
+  while((index = data.indexOf("}{")) !== -1) {
+    var jsonData = data.slice(0, index + 1);
+    data = data.slice(index + 1);
+    parse(jsonData);
+  }
+  parse(data);
+}
+
 ServerClient.prototype._closed = function () {
-  delete this._socket;
-  if (this._reconnectionIndex > this._options.reconnectionAttempts) {
+  this._socket = null;
+  if (this._reconnectionIndex === -1) {
+    return;
+  } else if (this._reconnectionIndex > this._options.reconnectionAttempts) {
     var error = 'socket closed, reconnection limit exceeded';
     logger.error(error);
     this.emit('error', new Error(error));
@@ -72,8 +99,12 @@ ServerClient.prototype._closed = function () {
 }
 
 ServerClient.prototype._error = function (error) {
-  delete this._socket;
+  this._socket = null;
   this.emit('error', error);
+}
+
+ServerClient.prototype._end = function () {
+  this._socket = null;
 }
 
 // Emitting message to socket without confirmation.
@@ -111,6 +142,14 @@ ServerClient.prototype.emitData = function (event, data) {
     this._options.emitTimeout,
     'timeout exceeded while trying to write data into socket'
   );
+}
+
+ServerClient.prototype.disconnect =
+ServerClient.prototype.close = function () {
+  this._reconnectionIndex = -1;
+  if (this._socket) {
+    this._socket.end();
+  }
 }
 
 module.exports = ServerClient;

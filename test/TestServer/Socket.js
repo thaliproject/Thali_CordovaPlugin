@@ -162,7 +162,7 @@ Socket.prototype.emitData = function (event, data) {
       if (emitter) {
         emitter.unbind();
       }
-      emitter = self._apply('emit', event, data);
+      emitter = self._apply('emitData', event, data);
 
       timer = setTimeout(emit, self._options.retryTimeout);
     }

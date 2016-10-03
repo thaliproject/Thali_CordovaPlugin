@@ -76,7 +76,7 @@ CoordinatedThaliTape.begin = function (platform, version, hasRequiredHardware, n
   );
 
   // Only used for testing purposes.
-  CoordinatedThaliTape._testServer = _testClient._io;
+  CoordinatedThaliTape._testServer = _testClient._serverClient;
 
   return new Promise(function (resolve, reject) {
     _testClient.once('finished', function (error) {

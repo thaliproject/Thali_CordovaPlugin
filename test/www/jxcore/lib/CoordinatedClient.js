@@ -81,6 +81,14 @@ CoordinatedClient.prototype._bind = function () {
   this._serverClient
   .on('connect', this._connect.bind(this))
   .on('error',   this._error.bind(this))
+
+  .once('schedule',   this._schedule.bind(this))		
+  .on  ('discard',    this._discard.bind(this))		
+  .on  ('disqualify', this._disqualify.bind(this))		
+  .on  ('disconnect', this._disconnect.bind(this))		
+  .on  ('error',      this._error.bind(this))		
+  .once('complete',   this._complete.bind(this))
+
   .connect();
 }
 
@@ -113,7 +121,7 @@ CoordinatedClient.prototype._schedule = function (data) {
   var testNames = CoordinatedClient.getData(data);
   asserts.arrayEquals(testNames, this._testNames);
 
-  this._emit('schedule_confirmed', data)
+  this._serverClient.emitData('schedule_confirmed', data)
   .then(function () {
     var promises = self._tests.map(function (test) {
       return self._scheduleTest(test);
@@ -132,7 +140,7 @@ CoordinatedClient.prototype._schedule = function (data) {
 CoordinatedClient.prototype._discard = function (data) {
   var self = this;
 
-  this._emit('discard_confirmed', data)
+  this._serverClient.emitData('discard_confirmed', data)
   .then(function () {
     logger.debug('device discarded as surplus from the test server');
   });
@@ -144,7 +152,7 @@ CoordinatedClient.prototype._discard = function (data) {
 CoordinatedClient.prototype._disqualify = function (data) {
   var self = this;
 
-  this._emit('disqualify_confirmed', data)
+  this._serverClient.emitData('disqualify_confirmed', data)
   .then(function () {
     if (data) {
       var errorText = CoordinatedClient.getData(data);
@@ -193,9 +201,10 @@ CoordinatedClient.prototype._error = function (error) {
 CoordinatedClient.prototype._complete = function (data) {
   var self = this;
 
-  this._emit('complete_confirmed', data)
+  this._serverClient.emitData('complete_confirmed', data)
   .then(function () {
     logger.debug('all tests completed');
+    self._serverClient.close();
   });
 
   // We are waiting for 'disconnect' event.
@@ -204,13 +213,13 @@ CoordinatedClient.prototype._complete = function (data) {
 
 CoordinatedClient.prototype._succeed = function () {
   logger.debug('test client succeed');
-  // this._io.close();
+  this._serverClient.close();
   this.emit('finished');
 }
 
 CoordinatedClient.prototype._failed = function (error) {
   logger.debug('test client failed');
-  // this._io.close();
+  this._serverClient.close();
   this.emit('finished', error);
 }
 
@@ -219,8 +228,8 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
 
   function runEvent (event) {
     return new Promise(function (resolve, reject) {
-      self._io.once(event, function (data) {
-        self._emit(event + '_confirmed', data, test.options)
+      self._serverClient.once(event, function (data) {
+        self._serverClient.emitData(event + '_confirmed', data, test.options)
         .then(function () {
           resolve(CoordinatedClient.getData(data));
         })
@@ -234,7 +243,7 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
     .then(function () {
       return new Promise(function (resolve, reject) {
         tape.once('end', function () {
-          self._emit(event + '_skipped', undefined, test.options)
+          self._serverClient.emitData(event + '_skipped', undefined, test.options)
           .then(resolve)
           .catch(reject);
         });
@@ -275,7 +284,7 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
           resultHandler = null;
           endHandler    = null;
 
-          self._emit(
+          self._serverClient.emitData(
             event + '_finished',
             {
               success: success,
@@ -325,7 +334,7 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
     }
     var callerId = getCaller(3);
 
-    return self._emit('sync', callerId, test.options)
+    return self._serverClient.emitData('sync', callerId, test.options)
     .then(function () {
       return runEvent('syncFinished');
     })
