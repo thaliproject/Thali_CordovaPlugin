@@ -5,6 +5,7 @@
   "main": "install.js",
   "dependencies": {
     "bluebird": "3.4.6",
+    "child-process-promise": "1.1.0",
     "end-with": "1.0.2",
     "findit": "2.0.0",
     "randomstring": "1.1.5",

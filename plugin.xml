@@ -15,12 +15,16 @@
 
     <!-- Android -->
     <platform name="android">
+      <hook type="before_plugin_install" src="scripts/before_plugin_install.js" />
+      <hook type="after_plugin_install" src="scripts/android/after_plugin_install.js" />
+
         <config-file target="AndroidManifest.xml" parent="/*">
             <uses-permission android:name="android.permission.INTERNET" />
             <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
             <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
             <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
         </config-file>
+
         <framework src="src/android/JXcore.gradle" custom="true" type="gradleReference" />
         <source-file src="src/android/java/io/jxcore/node/ConnectionData.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/ConnectionHelper.java" target-dir="src/io/jxcore/node/" />
@@ -48,8 +52,6 @@
             <clobbers target="window.ThaliPermissions" />
         </js-module>
         <source-file src="src/android/java/org/thaliproject/p2p/ThaliPermissions.java" target-dir="src/org/thaliproject/p2p/" />
-
-        <hook type="before_compile" src="scripts/androidBeforeCompile.js" />
     </platform>
 
     <!-- iOS -->
