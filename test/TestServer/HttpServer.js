@@ -72,9 +72,9 @@ Server.prototype._disconnect = function (socket, reason) {
 Server.prototype._error = function (socket, error) {
   logger.error(
     'unexpected server error: \'%s\'',
-    error.toString()
+    error.content
   );
-  throw new Error(error);
+  throw new Error(error.content);
 }
 
 Server.prototype._present = function (socket, deviceInfo) {
@@ -82,8 +82,9 @@ Server.prototype._present = function (socket, deviceInfo) {
   socket.deviceName = device.name;
 
   logger.debug(
-    'device presented, name: \'%s\', uuid: \'%s\', platformName: \'%s\', type: \'%s\', hasRequiredHardware: \'%s\'',
-    device.name, device.uuid, device.platformName, device.type, device.hasRequiredHardware
+    'device presented, name: \'%s\', uuid: \'%s\', platformName: \'%s\', ' +
+    'type: \'%s\', hasRequiredHardware: \'%s\', nativeUTFailed: \'%s\'',
+    device.name, device.uuid, device.platformName, device.type, device.hasRequiredHardware, device.nativeUTFailed
   );
 
   this.emit('present', device);

@@ -73,7 +73,7 @@ testUtils.hasRequiredHardware()
 .then(function (hasRequiredHardware) {
   return testUtils.getOSVersion()
   .then(function (version) {
-    return thaliTape.begin(currentPlatform, version, hasRequiredHardware);
+    return thaliTape.begin(currentPlatform, version, hasRequiredHardware, global.nativeUTFailed);
   })
 })
 .then(function () {
