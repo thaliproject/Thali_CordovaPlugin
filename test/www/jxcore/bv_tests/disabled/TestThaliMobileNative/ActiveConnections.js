@@ -106,12 +106,11 @@ ActiveConnections.prototype._bind_connection = function (data) {
   }
 
   // We are going to check whether connection dies in expected way.
-  var errorFired = false;
-  var endFired = false;
+  var errorFired  = false;
+  var endFired    = false;
   var closedFired = false;
 
   new Promise(function (resolve, reject) {
-    // TODO jxcore bug. Promise couldn't catch errors in these events.
     data.connection
     .on('error', function (error) {
       try {

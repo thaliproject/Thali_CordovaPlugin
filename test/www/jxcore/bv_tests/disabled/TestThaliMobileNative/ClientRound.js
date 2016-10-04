@@ -22,6 +22,8 @@ function ClientRound(tapeTest, roundNumber, quitSignal, options) {
   this._quitSignal = quitSignal;
 
   this._state = ClientRound.states.CREATED;
+
+  this._connectedPeers = {};
   this._validPeerIds = {};
 
   this.options = extend({}, ClientRound.defaults, options);
@@ -54,7 +56,9 @@ ClientRound.prototype.setRoundNumber = function (roundNumber) {
   );
   this._state = ClientRound.states.CREATED;
 
+  this._connectedPeers = {};
   this._validPeerIds = {};
+
   this.roundNumber = roundNumber;
   this._activeConnections.reset();
 }
@@ -92,6 +96,7 @@ ClientRound.prototype._peerAvailabilityChanged = function (peers) {
         'we got an unavailable peer, peerIdentifier: %s',
         peer.peerIdentifier
       );
+      delete self._connectedPeers[peer.peerIdentifier];
       return;
     }
 
@@ -162,8 +167,15 @@ ClientRound.prototype._connectToPeer = function (peer) {
         return;
       }
 
-      var data = ClientRound._connectToPeer(peer);
-      self._activeConnections.add(data);
+      // It is possible for client trying to connect multiple times.
+      // We can just bypass current connection data if peer is connected.
+      // Note that 'data.promise' can be already resolved, rejected or in progress.
+      var data = self._connectedPeers[peer.peerIdentifier];
+      if (!data) {
+        data = ClientRound._connectToPeer(peer);
+        self._connectedPeers[peer.peerIdentifier] = data;
+        self._activeConnections.add(data);
+      }
 
       data.promise
       .then(function (connectionData) {
