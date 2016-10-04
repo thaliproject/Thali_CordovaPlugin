@@ -76,10 +76,6 @@ ServerClient.prototype.emitData = function (event, data) {
   var self = this;
 
   return new Promise(function (resolve, reject) {
-    if (!self._socket.connected) {
-      reject(new Error('socket is not connected'));
-      return;
-    }
     self._socket.send(event, data, resolve);
   })
   .catch(function (error) {

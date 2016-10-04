@@ -105,7 +105,10 @@ Socket.prototype._apply = function (method, event, data) {
   var args = Array.prototype.slice.call(arguments, 1);
 
   function updatedHandler () {
-    self._rawSocket[method].apply(self._rawSocket, args);
+    self._rawSocket[method].apply(self._rawSocket, args)
+    .catch(function (error) {
+      logger.debug('ignoring error from dead socket, error: \'%s\'', error);
+    });
   }
   this.on('updated', updatedHandler);
   updatedHandler();

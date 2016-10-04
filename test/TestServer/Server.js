@@ -92,10 +92,6 @@ Server.prototype._present = function (remoteEvents, deviceInfo) {
 Server.prototype._emitData = function (socket, event, data) {
   var self = this;
 
-  if (!socket.connected) {
-    return;
-  }
-
   return new Promise(function (resolve, reject) {
     socket.send(event, data, resolve);
   })

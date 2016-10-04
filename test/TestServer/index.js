@@ -41,7 +41,7 @@ server
   }
 })
 .on('error', function (error) {
-  throw new Error(error);
+  // throw new Error(error);
 });
 
 var timer = setTimeout(function () {
