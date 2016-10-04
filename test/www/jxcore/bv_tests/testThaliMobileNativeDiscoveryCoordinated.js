@@ -98,8 +98,8 @@ var testTimeout = function (t) {
   t.end = function () {
     clearTimeout(timer);
     return oldEnd.apply(this, arguments);
-  }
-}
+  };
+};
 
 var server;
 
@@ -115,7 +115,8 @@ test('initial peer discovery', function (t) {
   });
   server = makeIntoCloseAllServer(server);
 
-  var currentPeers = latestPeers = {};
+  var currentPeers = {};
+  latestPeers = {};
   function newPeersHandler(peers) {
     peers.forEach(function (peer) {
       if (peer.peerAvailable) {
@@ -127,7 +128,6 @@ test('initial peer discovery', function (t) {
 
   // Listening on random port.
   server.listen(0, function () {
-
     Mobile('startUpdateAdvertisingAndListening')
     .callNative(server.address().port, function (error) {
       t.notOk(error, 'Called startUpdateAdvertisingAndListening without error');
@@ -164,7 +164,8 @@ test('initial peer discovery', function (t) {
   test('update peer discovery ' + (testIndex + 1), function (t) {
     testTimeout(t);
 
-    var currentPeers = latestPeers = {};
+    var currentPeers = {};
+    latestPeers = {};
 
     function newPeersHandler(peers) {
       peers.forEach(function (peer) {
