@@ -13,7 +13,7 @@ var express = require('express');
 var validations = require('../validations');
 var thaliConfig = require('./thaliConfig');
 var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
-var logger = require('../thaliLogger')('thaliWifiInfrastructure');
+var logger = require('../ThaliLogger')('thaliWifiInfrastructure');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var PromiseQueue = require('./promiseQueue');
 var USN = require('./utils/usn');
@@ -720,7 +720,7 @@ function (skipPromiseQueue, changeTarget) {
  * module:thaliMobileNativeWrapper~networkChangedNonTCP}.
  *
  * The WiFi layer MUST NOT emit this event unless we are running on Linux,
- * OS/X or Windows. In the case that we are running on those platforms then If
+ * macOS or Windows. In the case that we are running on those platforms then If
  * we are running on those platforms then bluetoothLowEnergy and bluetooth MUST
  * both return radioState set to `doNotCare`. Also note that these platforms
  * don't generally support a push based way to detect WiFi state (at least not

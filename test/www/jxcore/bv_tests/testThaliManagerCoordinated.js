@@ -11,7 +11,7 @@ var extend = require('js-extend').extend;
 var fs = require('fs-extra-promise');
 var path = require('path');
 var crypto = require('crypto');
-var Promise = require('lie');
+var Promise = require('bluebird');
 var PouchDB = require('pouchdb');
 var ExpressPouchDB = require('express-pouchdb');
 var LeveldownMobile = require('leveldown-mobile');
@@ -200,7 +200,8 @@ test('test write', function (t) {
       PouchDB,
       DB_NAME,
       ecdhForLocalDevice,
-      new ThaliPeerPoolDefault()
+      new ThaliPeerPoolDefault(),
+      global.NETWORK_TYPE
     );
     return thaliManager.start(partnerKeys);
   })

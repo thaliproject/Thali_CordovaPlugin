@@ -1,13 +1,14 @@
 'use strict';
 
-var Promise = require('lie');
+var Promise = require('bluebird');
 var EventEmitter = require('events').EventEmitter;
 var uuid = require('node-uuid');
 var express = require('express');
 var assert = require('assert');
 var net = require('net');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-var logger = require('thali/thaliLogger')('wifiBasedNativeMock');
+
+var logger = require('./testLogger')('wifiBasedNativeMock');
 
 var proxyquire = require('proxyquire');
 proxyquire.noPreserveCache();

@@ -16,6 +16,7 @@ var sinon = require('sinon');
 var randomstring = require('randomstring');
 var Promise = require('bluebird');
 
+var platform = require('thali/NextGeneration/utils/platform');
 var ThaliWifiInfrastructure = require('thali/NextGeneration/thaliWifiInfrastructure');
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
@@ -592,7 +593,7 @@ test('does not get peer changes from self', function (t) {
 
 // From here onwards, tests only work on mocked up desktop
 // environment where network changes can be simulated.
-if (jxcore.utils.OSInfo().isMobile) {
+if (platform.isMobile) {
   return;
 }
 

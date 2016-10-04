@@ -8,6 +8,7 @@
 
 var testUtils = require('./lib/testUtils');
 var TestFrameworkClient = require('./perf_tests/PerfTestFrameworkClient');
+var platform = require('thali/NextGeneration/utils/platform');
 
 /*------------------------------------------------------------------------------
  code for connecting to the coordinator server
@@ -18,7 +19,7 @@ function getDeviceCharacteristics(cb) {
   if (typeof jxcore === 'undefined') {
     cb('PERF_TEST-' + Math.random(), null);
   }
-  else if (jxcore.utils.OSInfo().isAndroid) {
+  else if (platform.isAndroid) {
     Mobile('GetBluetoothAddress').callNative(
       function (bluetoothAddressError, bluetoothAddress) {
       Mobile('GetBluetoothName').callNative(

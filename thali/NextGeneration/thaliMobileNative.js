@@ -55,17 +55,18 @@
  * wait until it gets a response before firing off another `connect` for the
  * same peerID.
  *
- * On `multiConnect`/`disconnect` platforms (iOS) it is legal to call `connect`
- * and `disconnect` at any time and to have multiple `multiConnect` and
- * `disconnect` methods outstanding at the same time. However the Node layer
- * MUST NOT have multiple outstanding `multiConnect` or `disconnect` methods
- * for the same peerID at the same time. In other words if there is either a
- * `multiConnect` or `disconnect` method outstanding for a peerID then the
- * Node layer MUST NOT issue a `multiConnect` or `disconnect` for that peerID
- * until it gets a response to the previous request. For example, if the Node
- * layer fires off a `multiConnect` for a PeerID foo and then changes its
- * mind and wants to fire off a `disconnect`, it cannot issue the `disconnect`
- * for the peerID until the `multiConnect` for that peerID has returned.
+ * On `multiConnect`/`disconnect` platforms (iOS) it is legal to call
+ * `multiConnect` and `disconnect` at any time and to have multiple
+ * `multiConnect` and `disconnect` methods outstanding at the same time.
+ * However the Node layer  MUST NOT have multiple outstanding `multiConnect` or
+ * `disconnect` methods for the same peerID at the same time. In other words if
+ * there is either a `multiConnect` or `disconnect` method outstanding for a
+ * peerID then the Node layer MUST NOT issue a `multiConnect` or `disconnect`
+ * for that peerID until it gets a response to the previous request.
+ * For example, if the Node layer fires off a `multiConnect` for a PeerID foo
+ * and then changes its mind and wants to fire off a `disconnect`, it cannot
+ * issue the `disconnect` for the peerID until the `multiConnect` for that
+ * peerID has returned.
  *
  * In both the `multiConnect`\`disconnect` and `connect` cases the restriction
  * on having multiple outstanding methods is intended to provide a simpler
