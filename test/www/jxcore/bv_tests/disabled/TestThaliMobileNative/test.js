@@ -16,40 +16,19 @@ var ServerRound = require('./ServerRound');
 var ClientRound = require('./ClientRound');
 
 
-var autostop = {};
 var test = tape({
   setup: function (t) {
-    autostop = {
-      serverQuitSignal: null,
-      serverRound: null
-    };
     t.end();
   },
   teardown: function (t) {
-    if (autostop.serverRound) {
-      assert(
-        autostop.serverQuitSignal,
-        '\'autostop.serverQuitSignal\' should exist'
-      );
-      autostop.serverQuitSignal.raise();
-      autostop.serverRound.stop()
-      .catch(function (error) {
-        // Ignoring any error
-        logger.error('teardown error %s', error);
-      })
-      .then(function () {
-        t.end();
-      });
-    } else {
-      t.end();
-    }
+    t.end();
   }
 });
 
-var TEST_TIMEOUT = 1 * 60 * 1000;
-var CONNECT_TIMEOUT = 3 * 1000;
+var TEST_TIMEOUT          = 1 * 60 * 1000;
+var CONNECT_TIMEOUT       = 3 * 1000;
 var CONNECT_RETRY_TIMEOUT = 3.5 * 1000;
-var CONNECT_RETRIES = 10;
+var CONNECT_RETRIES       = 10;
 
 test('Simple test with single round', function (t) {
   var serverQuitSignal = new QuitSignal();
@@ -69,9 +48,6 @@ test('Simple test with single round', function (t) {
     connectTimeout: CONNECT_TIMEOUT
   });
 
-  autostop.serverQuitSignal = serverQuitSignal;
-  autostop.serverRound = serverRound;
-
   serverRound.once('finished', function () {
     // We should have server up and running.
     // serverRound.stop();
@@ -86,6 +62,18 @@ test('Simple test with single round', function (t) {
       // serverRound.waitUntilStopped(),
       clientRound.waitUntilStopped()
     ]);
+  })
+  .catch(function (error) {
+    t.fail('Got error: ' + error);
+  })
+
+  .then(function () {
+    return t.sync();
+  })
+  .then(function () {
+    serverQuitSignal.raise();
+    clientQuitSignal.raise();
+    return serverRound.stop();
   })
   .catch(function (error) {
     t.fail('Got error: ' + error);
@@ -113,9 +101,6 @@ test('Complex test with two rounds', function (t) {
     connectTimeout: CONNECT_TIMEOUT
   });
 
-  autostop.serverQuitSignal = serverQuitSignal;
-  autostop.serverRound = serverRound;
-
   serverRound.on('finished', function () {
     // We should have server up and running.
     // serverRound.stop();
@@ -142,6 +127,18 @@ test('Complex test with two rounds', function (t) {
       // serverRound.waitUntilStopped(),
       clientRound.waitUntilStopped()
     ]);
+  })
+  .catch(function (error) {
+    t.fail('Got error: ' + error);
+  })
+
+  .then(function () {
+    return t.sync();
+  })
+  .then(function () {
+    serverQuitSignal.raise();
+    clientQuitSignal.raise();
+    return serverRound.stop();
   })
   .catch(function (error) {
     t.fail('Got error: ' + error);

@@ -1,6 +1,10 @@
 'use strict';
 
-var inherits = require('util').inherits;
+var util     = require('util');
+var format   = util.format;
+var inherits = util.inherits;
+
+
 var net = require('net');
 var assert = require('assert');
 var Promise = require('lie');
@@ -23,7 +27,13 @@ function ClientRound(tapeTest, roundNumber, quitSignal, options) {
 
   this._state = ClientRound.states.CREATED;
 
+  // Valid peer ids will be local for each round.
+  // { peerIdentifier: undefined/true/false }, ...
   this._validPeerIds = {};
+
+  // Connected peer ids will be common for all rounds.
+  // { peerIdentifier: undefined/roundNumber }, ...
+  this._connectedPeerIds = {};
 
   this.options = extend({}, ClientRound.defaults, options);
 
@@ -94,10 +104,33 @@ ClientRound.prototype._peerAvailabilityChanged = function (peers) {
         'we got an unavailable peer, peerIdentifier: %s',
         peer.peerIdentifier
       );
+      delete self._connectedPeerIds[peer.peerIdentifier];
       return;
     }
 
+    // We have connected with this peer in 'roundNumber'.
+    // But we have no information about it in current round.
+    var roundNumber = self._connectedPeerIds[peer.peerIdentifier];
+    if (roundNumber !== undefined) {
+      if (roundNumber != self.roundNumber) {
+        // This peer is from another round, we can ignore it.
+        logger.debug(
+          'we have peer: \'%s\' connected, it\'s status was validated in %d round',
+          peer.peerIdentifier, roundNumber
+        );
+      } else {
+        // This should not be possible.
+        throw new Error(format(
+          'we have peer: \'%s\' connected, it\'s status wasn\'t validated in current %d round',
+          peer.peerIdentifier, roundNumber
+        ));
+      }
+      return;
+    }
+    self._connectedPeerIds[peer.peerIdentifier] = self.roundNumber;
+
     // This peer is doing it's validation now.
+    // We will assume that peer will fail with validation.
     // This will block other connection attempts to this peer for now.
     self._validPeerIds[peer.peerIdentifier] = false;
 
@@ -115,7 +148,7 @@ ClientRound.prototype._peerAvailabilityChanged = function (peers) {
       return self._processTestMessage(connectionData);
     })
     .then(function () {
-      // Peer succeed with it's validation.
+      // Peer succeed with validation.
       self._validPeerIds[peer.peerIdentifier] = true;
     })
     .catch(function (error) {
@@ -123,6 +156,7 @@ ClientRound.prototype._peerAvailabilityChanged = function (peers) {
       // We couldn't connect to the peer or it failed with validation.
       // We are waiting until this peer will be available again.
       delete self._validPeerIds[peer.peerIdentifier];
+      delete self._connectedPeerIds[peer.peerIdentifier];
     });
   });
 
