@@ -140,46 +140,45 @@ module.exports.tmpDirectory = function () {
  * always resolves with true.
  */
 module.exports.hasRequiredHardware = function () {
+  if (!platform.isAndroid) {
+    return Promise.resolve(true);
+  }
   return new Promise(function (resolve) {
-    if (platform.isAndroid) {
-      var checkBleMultipleAdvertisementSupport = function () {
-        Mobile('isBleMultipleAdvertisementSupported').callNative(
-          function (error, result) {
-            if (error) {
-              logger.warn('BLE multiple advertisement error: ' + error);
-              resolve(false);
-              return;
+    var checkBleMultipleAdvertisementSupport = function () {
+      Mobile('isBleMultipleAdvertisementSupported').callNative(
+        function (error, result) {
+          if (error) {
+            logger.warn('BLE multiple advertisement error: ' + error);
+            resolve(false);
+            return;
+          }
+          switch (result) {
+            case 'Not resolved': {
+              logger.info(
+                'BLE multiple advertisement support not yet resolved'
+              );
+              setTimeout(checkBleMultipleAdvertisementSupport, 5000);
+              break;
             }
-            switch (result) {
-              case 'Not resolved': {
-                logger.info(
-                  'BLE multiple advertisement support not yet resolved'
-                );
-                setTimeout(checkBleMultipleAdvertisementSupport, 5000);
-                break;
-              }
-              case 'Supported': {
-                logger.info('BLE multiple advertisement supported');
-                resolve(true);
-                break;
-              }
-              case 'Not supported': {
-                logger.info('BLE multiple advertisement not supported');
-                resolve(false);
-                break;
-              }
-              default: {
-                logger.warn('BLE multiple advertisement issue: ' + result);
-                resolve(false);
-              }
+            case 'Supported': {
+              logger.info('BLE multiple advertisement supported');
+              resolve(true);
+              break;
+            }
+            case 'Not supported': {
+              logger.info('BLE multiple advertisement not supported');
+              resolve(false);
+              break;
+            }
+            default: {
+              logger.warn('BLE multiple advertisement issue: ' + result);
+              resolve(false);
             }
           }
-        );
-      };
-      checkBleMultipleAdvertisementSupport();
-    } else {
-      resolve(true);
-    }
+        }
+      );
+    };
+    checkBleMultipleAdvertisementSupport();
   });
 };
 
@@ -713,8 +712,8 @@ module.exports.testTimeout = function (t, timeout, callback) {
 
     clearTimeout(timer);
     return oldEnd.apply(this, arguments);
-  }
-}
+  };
+};
 
 module.exports.checkArgs = function (t, spy, description, args) {
   t.ok(spy.calledOnce, description + ' was called once');
@@ -730,4 +729,4 @@ module.exports.checkArgs = function (t, spy, description, args) {
       arg.description + '\' as ' + (index + 1) + '-st argument';
     t.ok(arg.compare(currentArgs[index]), argDescription);
   });
-}
+};
