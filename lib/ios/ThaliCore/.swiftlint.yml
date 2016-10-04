@@ -1,0 +1,111 @@
+disabled_rules: # rule identifiers to exclude from running
+
+opt_in_rules: # some rules are only opt-in
+  - conditional_returns_on_newline
+  - cyclomatic_complexity
+  - force_unwrapping: warning
+  - function_parameter_count
+  - missing_docs
+
+included: # paths to include during linting. `--path` is ignored if present.
+  - ThaliCore
+  - ThaliCoreTests
+  - ThaliCoreWithTests
+  - ../../../src/ios
+
+excluded: # paths to ignore during linting. Takes precedence over `included`.
+  - build
+  - Externals
+  - Carthage
+  - Pods
+
+# configurable rules can be customized from this configuration file
+
+closing_brace: error
+colon: error
+comma: error
+control_statement: error
+empty_count: warning
+file_length:
+  warning: 500
+  error: 1000
+force_cast: warning
+force_try: warning
+function_body_length:
+  warning: 100
+  error: 150
+leading_whitespace: error
+legacy_cggeometry_functions: error
+legacy_constant: error
+legacy_constructor: error
+legacy_nsgeometry_functions: error
+line_length:
+  warning: 100
+  error: 120
+mark: warning
+nesting: warning
+opening_brace: error
+operator_whitespace: error
+private_outlet: warning
+return_arrow_whitespace: error
+statement_position:
+  severity: error
+todo: warning
+trailing_newline: error
+trailing_semicolon: error
+trailing_whitespace:
+  ignores_empty_lines: false
+  severity: error
+type_body_length:
+  warning: 200
+  error: 350
+type_name:
+  min_length:
+    warning: 3
+  max_length:
+    warning: 45
+    error: 60
+valid_docs: warning
+variable_name:
+  min_length:
+    warning: 3
+  max_length:
+    warning: 45
+    error: 60
+  excluded:
+     - lhs
+     - rhs
+     - uuid
+vertical_whitespace: warning
+
+custom_rules:
+  comments_space:
+    name: "Space After Comment"
+    regex: "(^ *//\w+)"
+    message: "There should be a space after //"
+    severity: error
+  empty_first_line:
+    name: "Empty First Line"
+    regex: "(^[ a-zA-Z ]*(?:protocol|extension|class|struct|enum) (?!(?:var|let))[ a-zA-Z:]*\{\n *\S+)"
+    message: "There should be an empty line after a declaration"
+    severity: error
+  empty_line_after_guard:
+    name: "Empty Line After Guard"
+    regex: "(^ *guard[ a-zA-Z0-9=?.\(\),><!]*\{[ a-zA-Z0-9=?.\(\),><!]*\}\n *(?!(?:return|guard))\S+)"
+    message: "There should be an empty line after a guard"
+    severity: error
+  multiple_empty_lines:
+    name: "Multiple Empty Lines"
+    regex: "((?:\s*\n){4,})"
+    message: "There are too many line breaks"
+    severity: warning
+  unnecessary_type:
+    name: "Unnecessary Type"
+    regex: "[ a-zA-Z0-9]*(?:let|var) [ a-zA-Z0-9]*: ([a-zA-Z0-9]*)[\? ]*= \1"
+    message: "Type Definition Not Needed"
+    severity: error
+  closure_void_syntax:
+    name: "Closure Void Syntax"
+    regex: "(->\s*\n*\(\s*\))"
+    message: "We should use following syntax: \"(A, B, C) -> Void\" in case of empty result and \"() -> Void\" in case of empty parameters."
+    severity: warning

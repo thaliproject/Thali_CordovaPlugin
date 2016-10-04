@@ -356,8 +356,9 @@ ThaliSendNotificationBasedOnReplication.prototype._setUpChangeListener =
           return self._updateOnExpiration(0);
         }
 
-        assert(self._transientState.beaconRefreshTimerManager, 'If beacons were' +
-          'previously updated then there has to be a refresh timer for them.');
+        assert(self._transientState.beaconRefreshTimerManager, 'If beacons ' +
+          'were previously updated then there has to be a refresh timer for ' +
+          'them.');
 
         var soonestPossibleRefresh =
           self._transientState.lastTimeBeaconsWereUpdated +
@@ -543,7 +544,7 @@ ThaliSendNotificationBasedOnReplication.prototype._updateBeacons =
         self._setUpChangeListener(retrievedSeqValue);
       }
       return self._thaliNotificationServer.start(peersArray);
-    })
+    });
   };
 
 /**

@@ -4,6 +4,7 @@
   "description": "Used to handle installing the Thali NPM package correctly into Cordova",
   "main": "install.js",
   "dependencies": {
+    "child-process-promise": "^1.1.0",
     "bluebird": "3.4.6",
     "end-with": "1.0.2",
     "findit": "2.0.0",
@@ -11,9 +12,10 @@
     "node-uuid": "1.4.7",
     "fs-extra-promise": "0.2.0",
     "jxc": "1.0.14",
-    "lie": "3.0.4",
-    "request": "2.64.0",
-    "unzip": "0.1.11"
+    "lie": "3.1.0",
+    "request": "2.74.0",
+    "unzip": "0.1.11",
+    "xcode": "0.8.9"
   },
   "scripts": {
     "setupUnit": "./setUpTests.sh UnitTest_app.js",

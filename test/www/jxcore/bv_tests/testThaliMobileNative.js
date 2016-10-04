@@ -2,17 +2,20 @@
 
 // Issue #419
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+var Platform = require('thali/NextGeneration/utils/platform');
 if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
   return;
 }
 
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
 var net = require('net');
 var randomstring = require('randomstring');
 var tape = require('../lib/thaliTape');
-var platform = require('thali/NextGeneration/utils/platform');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var Promise = require('lie');
 var assert = require('assert');
+var ThaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils');
 
 var logger = require('../lib/testLogger')('testThaliMobileNative');
 
@@ -123,15 +126,6 @@ test('Can call stopUpdateAdvertisingAndListening twice without start and ' +
   });
 });
 
-test('cannot call connect when start listening for advertisements is not ' +
-  'active', function (t) {
-  Mobile('connect').callNative('foo', function (err) {
-    t.equal(err, 'startListeningForAdvertisements is not active',
-      'got right error');
-    t.end();
-  });
-});
-
 if (!tape.coordinated) {
   return;
 }
@@ -149,10 +143,12 @@ test('peerAvailabilityChange is called', function (t) {
       t.ok(typeof peers[0].peerIdentifier === 'string',
         'peerIdentifier must be a string');
 
+      t.ok(peers[0].hasOwnProperty('generation'), 'peer must have generation');
+      t.ok(typeof peers[0].generation === 'number', 'generation must be a ' +
+        'number');
+
       t.ok(peers[0].hasOwnProperty('peerAvailable'),
         'peer must have peerAvailable');
-      t.ok(peers[0].hasOwnProperty('pleaseConnect'),
-        'peer must have pleaseConnect');
 
       complete = true;
       t.end();
@@ -167,78 +163,9 @@ test('peerAvailabilityChange is called', function (t) {
   });
 });
 
-function getMessageByLength(socket, lengthOfMessage) {
-  return new Promise(function (resolve, reject) {
-    var readData = new Buffer(0);
-    var dataHandlerFunc = function (data) {
-      readData = Buffer.concat([readData, data]);
-      if (readData.length >= lengthOfMessage) {
-        socket.removeListener('data', dataHandlerFunc);
-        if (readData.length === lengthOfMessage) {
-          resolve(readData);
-        } else {
-          reject(new Error('data is too long - ' + readData.length + ', ' +
-            'expected - ' + lengthOfMessage));
-        }
-      }
-    };
-    socket.on('data', dataHandlerFunc);
-  });
-}
-
-function getMessageAndThen(t, socket, messageToReceive, cb) {
-  return getMessageByLength(socket, messageToReceive.length)
-    .then(function (data) {
-      t.ok(Buffer.compare(messageToReceive, data) === 0, 'Data matches');
-      return cb();
-    })
-    .catch(function (err) {
-      t.fail(err);
-      t.end();
-    });
-}
-
-function connectToPeer(peer, retries, successCb, failureCb, quitSignal) {
-  var TIME_BETWEEN_RETRIES = 3000;
-
-  retries--;
-  Mobile('connect').callNative(peer.peerIdentifier, function (err, connection) {
-    if (quitSignal && quitSignal.raised) {
-      successCb(null, null, peer);
-    }
-    if (err == null) {
-      // Connected successfully..
-      successCb(err, connection, peer);
-    } else {
-      logger.info('Connect returned an error: ' + err);
-
-      if (err === 'Already connect(ing/ed)') {
-        failureCb(err, connection, peer);
-        return;
-      }
-
-      // Retry a failed connection..
-      if (retries > 0) {
-        logger.info('Scheduling a connect retry - retries left: ' + retries);
-        var timeoutCancel = setTimeout(function () {
-          quitSignal && quitSignal.removeTimeout(timeoutCancel);
-          connectToPeer(peer, retries, successCb, failureCb);
-        }, TIME_BETWEEN_RETRIES);
-        quitSignal && quitSignal.addTimeout(timeoutCancel, successCb);
-      } else {
-        if (failureCb) {
-          logger.warn('Too many connect retries!');
-          // Exceeded retries..
-          failureCb(err, connection, peer);
-        }
-      }
-    }
-  });
-}
-
 function connectToPeerPromise(peer, retries, quitSignal) {
   return new Promise(function (resolve, reject) {
-    connectToPeer(peer, retries, function (err, connection) {
+    ThaliMobileNativeTestUtils.connectToPeer(peer, retries, function (err, connection) {
       resolve(connection);
     }, function (err) {
       reject(err);
@@ -282,7 +209,7 @@ function connectToListenerSendMessageGetResponseLength(t, port, request,
     var dataResult = null;
     var connection = net.connect(port, function () {
       connection.write(request);
-      getMessageByLength(connection, responseLength)
+      ThaliMobileNativeTestUtils.getMessageByLength(connection, responseLength)
         .then(function (data) {
           dataResult = data;
         })
@@ -316,42 +243,6 @@ function connectToListenerSendMessageGetResponseLength(t, port, request,
   });
 }
 
-function startAndListen(t, server, peerAvailabilityChangedHandler) {
-  server.listen(0, function () {
-
-    var applicationPort = server.address().port;
-
-    Mobile('peerAvailabilityChanged')
-      .registerToNative(peerAvailabilityChangedHandler);
-
-    Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort,
-      function (err) {
-        t.notOk(err,
-          'Can call startUpdateAdvertisingAndListening without error');
-        Mobile('startListeningForAdvertisements').callNative(function (err) {
-          t.notOk(err,
-            'Can call startListeningForAdvertisements without error');
-        });
-      });
-  });
-}
-
-function startAndGetConnection(t, server, onConnectSuccess, onConnectFailure) {
-  var connecting = false;
-  startAndListen(t, server, function (peers) {
-    logger.info('Received peerAvailabilityChanged with peers: ' +
-      JSON.stringify(peers)
-    );
-    peers.forEach(function (peer) {
-      if (peer.peerAvailable && !connecting) {
-        connecting = true;
-        var RETRIES = 10;
-        connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
-      }
-    });
-  });
-}
-
 test('Can connect to a remote peer', function (t) {
   var connecting = false;
 
@@ -362,41 +253,13 @@ test('Can connect to a remote peer', function (t) {
   serverToBeClosed = echoServer;
 
   function onConnectSuccess(err, connection) {
-
     // Called if we successfully connect to to a peer
-    connection = JSON.parse(connection);
     logger.info(connection);
 
     t.ok(connection.hasOwnProperty('listeningPort'),
       'Must have listeningPort');
     t.ok(typeof connection.listeningPort === 'number',
       'listeningPort must be a number');
-    t.ok(connection.hasOwnProperty('clientPort'),
-      'Connection must have clientPort');
-    t.ok(typeof connection.clientPort === 'number',
-      'clientPort must be a number');
-    t.ok(connection.hasOwnProperty('serverPort'),
-      'Connection must have serverPort');
-    t.ok(typeof connection.serverPort === 'number',
-      'serverPort must be a number');
-
-    if (connection.listeningPort !== 0)
-    {
-      // Forward connection
-      t.ok(connection.clientPort === 0,
-        'forward connection must have clientPort == 0');
-      t.ok(connection.serverPort === 0,
-        'forward connection must have serverPort == 0');
-    }
-    else
-    {
-      // Reverse connection
-      t.ok(connection.clientPort !== 0,
-        'reverse connection must have clientPort != 0');
-      t.ok(connection.serverPort !== 0,
-        'reverse connection must have serverPort != 0');
-    }
-
     t.end();
   }
 
@@ -406,7 +269,6 @@ test('Can connect to a remote peer', function (t) {
   }
 
   echoServer.listen(0, function () {
-
     var applicationPort = echoServer.address().port;
 
     Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
@@ -417,7 +279,7 @@ test('Can connect to a remote peer', function (t) {
         if (peer.peerAvailable && !connecting) {
           connecting = true;
           var RETRIES = 10;
-          connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
+          ThaliMobileNativeTestUtils.connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
         }
       });
     });
@@ -449,12 +311,6 @@ function getConnectionToOnePeerAndTest(t, connectTest) {
     var RETRIES = 10;
     connectToPeerPromise(currentTestPeer, RETRIES)
       .then(function (connectionCallback) {
-        connectionCallback = JSON.parse(connectionCallback);
-        if (connectionCallback.listeningPort === 0) {
-          runningTest = false;
-          return;
-        }
-
         connectTest(connectionCallback.listeningPort, currentTestPeer);
       })
       .catch(function () {
@@ -468,7 +324,7 @@ function getConnectionToOnePeerAndTest(t, connectTest) {
       });
   }
 
-  startAndListen(t, echoServer, function (peers) {
+  ThaliMobileNativeTestUtils.startAndListen(t, echoServer, function (peers) {
     if (runningTest) {
       return;
     }
@@ -483,23 +339,76 @@ function getConnectionToOnePeerAndTest(t, connectTest) {
   });
 }
 
-test('Get error when trying to double connect to a peer', function (t) {
+function androidBadConnect(t, peerIdentifier, cleanUpFn) {
+  Mobile('connect').callNative(peerIdentifier,
+    function (err, connection) {
+      t.equal(err, 'Already connect(ing/ed)', 'Expected error');
+      t.notOk(connection, 'Null connection as expected');
+      cleanUpFn();
+    });
+}
+
+function multiConnectResolvedEmitter () {
+  var self = this;
+  EventEmitter.call(self);
+  Mobile('multiConnectResolved').registerToNative(function (callback) {
+    self.emit('multiConnectResolved', callback);
+  });
+}
+
+inherits(multiConnectResolvedEmitter, EventEmitter);
+
+var multiConnectResolvedEmitterObject = null;
+
+function iOSBadConnect(t, peerIdentifier, listeningPort, cleanUpFn) {
+  if (!multiConnectResolvedEmitterObject) {
+    multiConnectResolvedEmitterObject = new multiConnectResolvedEmitter();
+  }
+
+  var syncValue = randomstring.generate();
+
+  multiConnectResolvedEmitterObject.on('multiConnectResolved',
+    function (callback) {
+      if (callback.syncValue === syncValue) {
+        t.equal(callback.error, null, 'No error');
+        t.equal(callback.listeningPort, listeningPort, 'Ports equal');
+        cleanUpFn();
+      }
+    });
+
+  Mobile('multiConnect').callNative(peerIdentifier, syncValue, function (err) {
+    t.equal(err, null, 'Got null as expected');
+  });
+}
+
+test('Get error when trying to double connect to a peer on Android',
+  function (t) {
   /*
   We call connect twice in a row synchronously and one should connect and
   the other should get an error
    */
-  var successfulFailures = 0;
+  var completedBadConnectCalls = 0;
   getConnectionToOnePeerAndTest(t, function (listeningPort, currentTestPeer) {
+    function cleanUpFn() {
+      ++completedBadConnectCalls;
+      if (completedBadConnectCalls === 2) {
+        t.end();
+      }
+    }
     function badConnect() {
-      Mobile('connect').callNative(currentTestPeer.peerIdentifier,
-        function (err, connection) {
-          t.equal(err, 'Already connect(ing/ed)', 'Expected error');
-          t.notOk(connection, 'Null connection as expected');
-          ++successfulFailures;
-          if (successfulFailures === 2) {
-            t.end();
-          }
-        });
+      if (Platform.isAndroid) {
+        androidBadConnect(t, currentTestPeer.peerIdentifier, cleanUpFn);
+        return;
+      }
+
+      if (Platform.isIOS) {
+        iOSBadConnect(t, currentTestPeer.peerIdentifier, listeningPort,
+          cleanUpFn);
+        return;
+      }
+
+      t.fail('What the heck platform are we on?');
+      cleanUpFn();
     }
 
     var connection = net.connect(listeningPort,
@@ -514,17 +423,18 @@ test('Get error when trying to double connect to a peer', function (t) {
   });
 });
 
-test('Connect port dies if not connected to in time', function (t) {
-  /*
-  If we don't connect to the port returned by the connect call in time
-  then it should close down and we should get a connection error.
-
-  This test should not be ran on Android until #714 is solved (implemented).
-   */
-  if (platform.isAndroid) {
-    t.ok(true, 'This test is not ran on Android, since it lacks the timeout implementation');
-    t.end();
-  } else {
+test('Connect port dies if not connected to in time',
+  function() {
+    /*
+     This test should not be ran on Android until #714 is solved (implemented).
+     */
+    return true;
+  },
+  function (t) {
+    /*
+    If we don't connect to the port returned by the connect call in time
+    then it should close down and we should get a connection error.
+     */
     getConnectionToOnePeerAndTest(t, function (listeningPort) {
       setTimeout(function () {
         var connection = net.connect(listeningPort,
@@ -538,8 +448,7 @@ test('Connect port dies if not connected to in time', function (t) {
         });
       }, 3000);
     });
-  }
-});
+  });
 
 test('Can shift large amounts of data', function (t) {
   var connecting = false;
@@ -562,7 +471,7 @@ test('Can shift large amounts of data', function (t) {
   var dataSize = 4096;
   var toSend = randomstring.generate(dataSize);
 
-  function shiftData(sock, reverseConnection) {
+  function shiftData(sock) {
 
     sock.on('error', function (error) {
       logger.warn('Error on client socket: ' + error);
@@ -571,95 +480,47 @@ test('Can shift large amounts of data', function (t) {
 
     var toRecv = '';
 
-    if (reverseConnection) {
-      // Since this is a reverse connection, the socket we've been handed has
-      // already been accepted by our server and there's a client on the other
-      // end already sending data.
-      // Without multiplex support we can't both talk at the same time so
-      // wait for the other side to finish before sending our data.
+    var done = false;
+    sock.on('data', function (data) {
 
-      var totalRecvd = 0;
-      sock.on('data', function (data) {
+      logger.info('forwardData');
 
-        logger.info('reverseData');
-        totalRecvd += data.length;
+      var remaining = dataSize - toRecv.length;
 
-        if (totalRecvd === dataSize) {
-          logger.info('reverseSend');
-          // We've seen all the remote's data, send our own
-          sock.write(toSend);
-        }
+      if (remaining >= data.length) {
+        toRecv += data.toString();
+        data = data.slice(0, 0);
+      }
+      else {
+        toRecv += data.toString('utf8', 0, remaining);
+        data = data.slice(remaining);
+      }
 
-        if (totalRecvd > dataSize) {
-          // This should now be our own data echoing back
-          toRecv += data.toString();
-        }
-
-        if (toRecv.length === dataSize) {
-          // Should have an exact copy of what we sent
-          t.ok(toRecv === toSend, 'received should match sent reverse');
+      if (toRecv.length === dataSize) {
+        if (!done) {
+          done = true;
+          t.ok(toSend === toRecv, 'received should match sent forward');
           t.end();
         }
-      });
-    }
-    else {
-
-      // This one's more straightforward.. we're going to send first,
-      // read back our echo and then echo out any extra data
-
-      var done = false;
-      sock.on('data', function (data) {
-
-        logger.info('forwardData');
-
-        var remaining = dataSize - toRecv.length;
-
-        if (remaining >= data.length) {
-          toRecv += data.toString();
-          data = data.slice(0, 0);
+        if (data.length) {
+          sock.write(data);
         }
-        else {
-          toRecv += data.toString('utf8', 0, remaining);
-          data = data.slice(remaining);
-        }
+      }
+    });
 
-        if (toRecv.length === dataSize) {
-          if (!done) {
-            done = true;
-            t.ok(toSend === toRecv, 'received should match sent forward');
-            t.end();
-          }
-          if (data.length) {
-            sock.write(data);
-          }
-        }
-      });
-
-      logger.info('forwardSend');
-      sock.write(toSend);
-    }
+    logger.info('forwardSend');
+    sock.write(toSend);
   }
 
   function onConnectSuccess(err, connection) {
-
     var client = null;
 
     // We're happy here if we make a connection to anyone
-    connection = JSON.parse(connection);
     logger.info(connection);
 
-    if (connection.listeningPort) {
-      logger.info('Forward connection');
-      // We made a forward connection
-      client = net.connect(connection.listeningPort, function () {
-        shiftData(client, false);
-      });
-    } else {
-      logger.info('Reverse connection');
-      // We made a reverse connection
-      client = sockets[connection.clientPort];
-      shiftData(client, true);
-    }
+    client = net.connect(connection.listeningPort, function () {
+      shiftData(client);
+    });
   }
 
   function onConnectFailure() {
@@ -672,7 +533,7 @@ test('Can shift large amounts of data', function (t) {
       if (peer.peerAvailable && !connecting) {
         connecting = true;
         var RETRIES = 10;
-        connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
+        ThaliMobileNativeTestUtils.connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
       }
     });
   });
@@ -689,176 +550,6 @@ test('Can shift large amounts of data', function (t) {
       });
     });
   });
-});
-
-function killSkeleton(t, createServerWriteSuccessHandler,
-                      getMessageAndThenHandler,
-                      connectToListeningPortCloseHandler) {
-  var testMessage = new Buffer('I am a test message!');
-  var closeMessage = new Buffer('I am closing down now!');
-
-  var pretendLocalMux = net.createServer(function (socket) {
-    getMessageAndThen(t, socket, testMessage, function () {
-      socket.write(closeMessage, function () {
-        createServerWriteSuccessHandler(socket);
-      });
-    });
-  });
-
-  pretendLocalMux.on('error', function (err) {
-    logger.debug('got error on pretendLocalMux ' + err);
-  });
-
-  pretendLocalMux = makeIntoCloseAllServer(pretendLocalMux);
-  serverToBeClosed = pretendLocalMux;
-
-  function onConnectSuccess(err, connection, peer) {
-    connection = JSON.parse(connection);
-    var gotCloseMessage = false;
-    if (connection.listeningPort === 0) {
-      // This is a reverse connection, we aren't testing that
-      return t.end();
-    }
-
-    logger.info('connection ' + JSON.stringify(connection));
-
-    var connectToListeningPort = net.connect(connection.listeningPort,
-      function () {
-        logger.info('connection to listening port is made');
-        connectToListeningPort.write(testMessage);
-      });
-
-    getMessageAndThen(t, connectToListeningPort, closeMessage, function () {
-      gotCloseMessage = true;
-      getMessageAndThenHandler(connectToListeningPort);
-    });
-
-    connectToListeningPort.on('error', function (err) {
-      t.ok(err, 'We got an error, it can happen ' + err);
-    });
-
-    connectToListeningPort.on('close', function () {
-      t.ok(gotCloseMessage, 'We got the close message and we are closed');
-      connectToListeningPortCloseHandler(connection, testMessage,
-                                          closeMessage, peer);
-    });
-  }
-
-  function onConnectFailure() {
-    t.fail('Connect failed');
-    t.end();
-  }
-
-  startAndGetConnection(t, pretendLocalMux, onConnectSuccess,
-    onConnectFailure);
-}
-
-function killRemote(t, end) {
-  // pretendLocalMux ---> listeningPort ---> remoteServerNativeListener --->
-  //   other side's pretendLocalMux
-  // We want to show that killing the connection between listeningPort
-  // and remoteServerNativeListener will cause the connection between
-  // pretendLocalMux and listeningPort to be terminated.
-  killSkeleton(t,
-    function (socket) {
-      socket[end ? 'end' : 'destroy']();
-    },
-    function () {},
-    function (connection, testMessage, closeMessage, peer) {
-      // Confirm that nobody is listening on the port
-      var secondConnectionToListeningPort =
-        net.connect(connection.listeningPort, function () {
-          t.fail('The port should be closed');
-          t.end();
-        });
-      secondConnectionToListeningPort.on('error', function (err) {
-        t.ok(err, 'We got an error which is what we wanted');
-        connectToPeer(
-          peer, 1,
-          function (err) {
-            t.notOk(err, 'We should be able to reconnect');
-            t.end();
-          },
-          function (err) {
-            t.fail('We should be able to reconnect ' + err);
-          }
-        );
-      });
-    });
-}
-
-test('#startUpdateAdvertisingAndListening - ending remote peers connection ' +
-  'kills the local connection', function (t) {
-    killRemote(t, true);
-  });
-
-test('#startUpdateAdvertisingAndListening - destroying remote peers ' +
-  'connection kills the local connection', function (t) {
-  killRemote(t, false);
-});
-
-function killLocal(t, end) {
-  // pretendLocalMux ---> listeningPort ---> remoteServerNativeListener --->
-  //   other side's pretendLocalMux
-  // We want to show that killing the connection between pretendLocalMux
-  // and listeningPort will cause the connection between
-  // listeningPort and remoteServerNativeListener to be terminated.
-  killSkeleton(t,
-    function () {},
-    function (connectToListeningPort) {
-      connectToListeningPort[end ? 'end' : 'destroy']();
-    },
-    function (connection, testMessage, closeMessage, peer) {
-      // Confirm that nobody is listening on the port
-      var secondConnectionToListeningPort =
-        net.connect(connection.listeningPort, function () {
-          // In this test there is a race condition where it's possible for us
-          // to connect before the listener host doesn't know it should be
-          // dead yet. If that happens then we shouldn't be able to send
-          // any data.
-          secondConnectionToListeningPort.write(testMessage);
-          getMessageAndThen(t, secondConnectionToListeningPort, closeMessage,
-            function () {
-              t.fail('We should never have gotten the second message');
-              t.end();
-            });
-        });
-
-      new Promise(function (resolve, reject) {
-        secondConnectionToListeningPort.on('error', function (err) {
-          t.ok(err, 'We got an error which is what we wanted');
-          connectToPeer(
-            peer, 1,
-            function (err) {
-              resolve(err);
-            },
-            function (err) {
-              reject(err);
-            }
-          );
-        });
-        secondConnectionToListeningPort.on('close', function () {
-          resolve();
-        });
-      })
-      .then(function (err) {
-        t.notOk(err, 'We should be able to reconnect');
-        t.end();
-      })
-      .catch(function (err) {
-        t.fail("We should be able to reconnect" + err);
-      });
-    });
-}
-
-test('#startUpdateAdvertisingAndListening - destroying the local connection ' +
-  'kills the connection to the remote peer', function (t) {
-  killLocal(t, false);
-});
-
-test('#startUpdateAdvertisingAndListening - ending the local connection ' +
-  'kills the connection to the remote peer', function (t) {
-  killLocal(t, true);
 });
 
 function findSmallestParticipant(participants) {
@@ -1071,16 +762,7 @@ function validateServerResponse(t, serverResponse) {
 function clientSuccessConnect(t, roundNumber, connection, peersWeSucceededWith)
 {
   return new Promise(function (resolve, reject) {
-    connection = JSON.parse(connection);
     var error = null;
-
-    if (connection.listeningPort === 0) {
-      // We couldn't connect but that could be a transient error
-      // or this could be iOS in which case we have a problem
-      error = new Error('ListeningPort is 0');
-      error.fatal = false;
-      return reject(error);
-    }
 
     var clientMessage = createMessage(roundNumber.toString());
 
@@ -1141,7 +823,7 @@ function clientRound(t, roundNumber, boundListener, quitSignal) {
   return new Promise(function (resolve, reject) {
     boundListener.listener = function (peers) {
       if (verifyPeers(t, peersWeSucceededWith)) {
-        return
+        return;
       }
 
       var peerPromises = [];
@@ -1226,7 +908,7 @@ function serverRound(t, roundNumber, pretendLocalMux, quitSignal) {
     });
     var connectionListener = function (socket) {
       connectionDiesClean(t, socket);
-      getMessageByLength(socket, messageLength())
+      ThaliMobileNativeTestUtils.getMessageByLength(socket, messageLength())
         .then(function (dataBuffer) {
           var parsedMessage = parseMessage(dataBuffer);
           var validationResult =
@@ -1332,7 +1014,7 @@ test('Test updating advertising and parallel data transfer', function (t) {
     t.end();
   });
 
-  startAndListen(t, pretendLocalMux, function (peers) {
+  ThaliMobileNativeTestUtils.startAndListen(t, pretendLocalMux, function (peers) {
     boundListener.listener(peers);
   });
 });
