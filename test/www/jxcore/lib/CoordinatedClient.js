@@ -225,7 +225,9 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
 
   function runEvent (event) {
     return new Promise(function (resolve, reject) {
+      logger.debug('we are waiting for event: \'%s\'', event);
       self._serverClient.once(event, function (data) {
+        logger.debug('we are emitting data for event: \'%s\', data: \'%s\'', event, JSON.stringify(data));
         self._serverClient.emitData(event + '_confirmed', data, test.options)
         .then(function () {
           resolve(CoordinatedClient.getData(data));
@@ -240,6 +242,7 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
     .then(function () {
       return new Promise(function (resolve, reject) {
         tape.once('end', function () {
+          logger.debug('we are emitting data for event: \'%s\', data: \'%s\'', event + '_skipped', undefined);
           self._serverClient.emitData(event + '_skipped', undefined, test.options)
           .then(resolve)
           .catch(reject);
@@ -281,6 +284,10 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
           resultHandler = null;
           endHandler    = null;
 
+          logger.debug('we are emitting data for event: \'%s\', data: \'%s\'', event + '_finished', JSON.stringify({
+            success: success,
+            data:    tape.data
+          }));
           self._serverClient.emitData(
             event + '_finished',
             {
@@ -331,6 +338,7 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
     }
     var callerId = getCaller(3);
 
+    logger.debug('we are emitting data for event: \'%s\', data: \'%s\'', 'sync', callerId);
     return self._serverClient.emitData('sync', callerId, test.options)
     .then(function () {
       return runEvent('syncFinished');

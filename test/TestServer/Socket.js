@@ -67,6 +67,8 @@ Socket.prototype.update = function (socket) {
 Socket.prototype._bind = function (method, event, handler) {
   var self = this;
 
+  logger.debug('we are waiting for event: \'%s\'', event);
+
   var prevSocket;
   function bind(socket) {
     // We should remove listener from previous socket and add listener to new one.
@@ -95,8 +97,11 @@ Socket.prototype._bind = function (method, event, handler) {
 // We need to apply this 'emit' method on current socket.
 // We want this method to be applied to any new socket.
 // We want to be able to unbind this auto-apply function.
-Socket.prototype._apply = function (method) {
+Socket.prototype._apply = function (method, event, data) {
   var self = this;
+
+  logger.debug('we are emitting data for event: \'%s\', data: \'%s\'', event, JSON.stringify(data));
+
   var args = Array.prototype.slice.call(arguments, 1);
 
   function updatedHandler () {
