@@ -62,17 +62,18 @@ saved that file.
 jx npm init
 ```
 
-If you don't already have a package.json, this will create one for you. If you
-already have a package.json then you can skip the previous command.
+We are still inside of FooBar/www/jxcore and now we are dealing with creating a
+package.json. If you don't already have a package.json, this will create one for
+you. If you already have a package.json then you can skip the previous command.
 
 ```
 jx npm install ../../../Thali_CordovaPlugin/thali/ --save --no-optional --autoremove "*.gz"
 ```
 
-This is the command that actually installs Thali_CordovaPlugin. This command
-does a dizzying variety of things including setting up the Cordova environment
-with Thali's specific extensions as well as setting up the www/jxcore node
-app with all of Thali's dependencies.
+This is the command, still in FooBar/www/jxcore, that actually installs
+Thali_CordovaPlugin. This command does a dizzying variety of things including
+setting up the Cordova environment with Thali's specific extensions as well as
+setting up the www/jxcore node app with all of Thali's dependencies.
 
 ```
 jx npm install --no-optional --autoremove "*.gz"

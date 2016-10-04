@@ -47,11 +47,11 @@ piece of software being Thali itself, so please start by cloning
 https://github.com/thaliproject/thali_cordovaplugin/
 to your machine.
 
-In terms of operating system we assume you are running on OS/X. In theory we can
+In terms of operating system we assume you are running on macOS. In theory we can
 run successfully on Linux or Windows but we really don't test there very often
 so things are likely to break.
 
-From there you need to install in OS/X a fairly large mountain of software. For
+From there you need to install in macOS a fairly large mountain of software. For
 now you can see the list [here](https://github.com/thaliproject/Thali_CordovaPlugin/blob/1df36b74ee93f1ece85579857ed90a0e05a0cdd1/thali/install/validateBuildEnvironment.js#L16).
 You need to install the listed software at the listed version. Two of the entries
 are about Sinopia. Details on that is in the next section.
@@ -152,7 +152,7 @@ To set up your desktop environment for development go to
 Thali_CordovaPlugin/thali/install and run `jx npm run setupDesktop`.
 
 Sudo might be needed because this script installs a symbolic link into your global NPM directory. But if you can get 
-away without using it you will be much happier as using sudo for this (especially on OS/X) seems to cause permission 
+away without using it you will be much happier as using sudo for this (especially on macOS) seems to cause permission 
 nightmares.
 
 You can run all the tests by going to Thali_CordovaPlugin/test/www/jxcore and issuing one of the following:
