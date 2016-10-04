@@ -82,11 +82,11 @@ CoordinatedClient.prototype._bind = function () {
   .on('connect', this._connect.bind(this))
   .on('error',   this._error.bind(this))
 
-  .once('schedule',   this._schedule.bind(this))		
-  .on  ('discard',    this._discard.bind(this))		
-  .on  ('disqualify', this._disqualify.bind(this))		
-  .on  ('disconnect', this._disconnect.bind(this))		
-  .on  ('error',      this._error.bind(this))		
+  .once('schedule',   this._schedule.bind(this))
+  .on  ('discard',    this._discard.bind(this))
+  .on  ('disqualify', this._disqualify.bind(this))
+  .on  ('close',      this._disconnect.bind(this))
+  .on  ('error',      this._error.bind(this))
   .once('complete',   this._complete.bind(this))
 
   .connect();
@@ -174,10 +174,8 @@ CoordinatedClient.prototype._disqualify = function (data) {
     });
   });
 
-  if (!data) {
-    // We are waiting for 'disconnect' event.
-    self._state = CoordinatedClient.states.completed;
-  }
+  // We are waiting for 'disconnect' event.
+  self._state = CoordinatedClient.states.completed;
 }
 
 CoordinatedClient.prototype._disconnect = function () {
@@ -204,7 +202,6 @@ CoordinatedClient.prototype._complete = function (data) {
   this._serverClient.emitData('complete_confirmed', data)
   .then(function () {
     logger.debug('all tests completed');
-    self._serverClient.close();
   });
 
   // We are waiting for 'disconnect' event.

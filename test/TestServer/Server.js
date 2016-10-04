@@ -4,8 +4,10 @@ var util     = require('util');
 var format   = util.format;
 var inherits = util.inherits;
 
-var net          = require('net');
+var nssocket     = require('nssocket');
+var assert       = require('assert');
 var objectAssign = require('object-assign');
+var Promise      = require('bluebird');
 var EventEmitter = require('events').EventEmitter;
 
 var asserts = require('./utils/asserts');
@@ -15,102 +17,110 @@ var TestDevice = require('./TestDevice');
 
 
 function Server (options) {
-  this._setOptions(options);
+  if (options) {
+    asserts.isObject(options);
+  }
+  this._options = objectAssign({}, this.defaults, options);
+  asserts.isNumber(this._options.port);
 
+  this._sockets = [];
   this._bind();
 }
 
 inherits(Server, EventEmitter);
 
 Server.prototype.defaults = {
-  port: 3000
+  port: 3000,
+  sendTimeout: 2 * 60 * 1000
 };
-
-Server.prototype._setOptions = function (options) {
-  asserts.isObject(options);
-  this._options = objectAssign({}, this.defaults, options);
-
-  asserts.isNumber(this._options.port);
-}
 
 Server.prototype._bind = function () {
   var self = this;
 
-  this._server = net.createServer(this._connect.bind(this));
-  process.once('exit', this._exit.bind(this));
+  this._server = nssocket.createServer(this._connect.bind(this));
   this._server.listen(this._options.port);
 
   logger.info('listening on *:' + this._options.port);
 }
 
 Server.prototype._connect = function (socket) {
+  var self = this;
+
   asserts.exists(socket);
 
   var remoteEvents = new EventEmitter();
-  remoteEvents._socket = socket;
+  remoteEvents.emitData = this._emitData.bind(this, socket);
 
-  socket
-  .on('error', this._error.bind(this))
-  .on('data',  this._data.bind(this, remoteEvents))
-  .on('end close', function () {
-    remoteEvents._socket = null;
+  socket.data('*', this._data.bind(this, socket, remoteEvents));
+  remoteEvents.on('present', this._present.bind(this, remoteEvents));
+
+  socket.on('error', this.emit.bind(this, 'error'));
+
+  this._sockets.push(socket);
+  socket.once('close', function () {
+    var socketIndex = self._sockets.indexOf(socket);
+    assert(socketIndex !== -1, 'socket should exist');
+    self._sockets.splice(socketIndex, 1);
   });
 
-  remoteEvents
-  .once('present', this._present.bind(this))
-  remoteEvents.emitData = this._writeData.bind(this, remoteEvents);
+  logger.debug('client connected');
 }
 
-Server.prototype._exit = function () {
-  this._server.close();
+Server.prototype._data = function (socket, remoteEvents, data) {
+  asserts.isArray(socket.event);
+  assert(
+    socket.event.length === 2,
+    'we should receive \'data\' and \'event\' name'
+  );
+  asserts.equals(socket.event[0], 'data');
+  var event = socket.event[1];
+  asserts.isString(event);
+
+  remoteEvents.emit(event, data);
 }
 
-Server.prototype._error = function (error) {
-  var error = format('unexpected server error: \'%s\'', error);
-  logger.error(error);
-  throw new Error(error);
-}
-
-Server.prototype._data = function (remoteEvents, resultBuffer) {
-  var self = this;
-  function parse (data) {
-    var result = JSON.parse(data);
-    asserts.isString(result.event);
-    asserts.exists(result.data);
-    remoteEvents.emit(result.event, result.data, remoteEvents);
-  }
-
-  var data = resultBuffer.toString('utf8');
-
-  var index;
-  // This is possible only with multiple json objects in buffer.
-  while((index = data.indexOf("}{")) !== -1) {
-    var jsonData = data.slice(0, index + 1);
-    data = data.slice(index + 1);
-    parse(jsonData);
-  }
-  parse(data);
-}
-
-Server.prototype._writeData = function (remoteEvents, event, data) {
-  if (!remoteEvents._socket) {
-    return;
-  }
-  data = {
-    event: event,
-    data:  data || ''
-  };
-  remoteEvents._socket.write(JSON.stringify(data), 'utf8');
-}
-
-Server.prototype._present = function (deviceInfo, remoteEvents) {
+Server.prototype._present = function (remoteEvents, deviceInfo) {
   var device = new TestDevice(remoteEvents, deviceInfo);
   logger.debug(
     'device presented, name: \'%s\', uuid: \'%s\', platformName: \'%s\', ' +
     'type: \'%s\', hasRequiredHardware: \'%s\', nativeUTFailed: \'%s\'',
     device.name, device.uuid, device.platformName, device.type, device.hasRequiredHardware, device.nativeUTFailed
   );
-  this.emit('present', device);
+  this.emit('presented', device);
+}
+
+Server.prototype._emitData = function (socket, event, data) {
+  var self = this;
+
+  return new Promise(function (resolve, reject) {
+    socket.send(event, data, resolve);
+  })
+  .catch(function (error) {
+    logger.error(
+      'unexpected error: \'%s\', stack: \'%s\'',
+      error.toString(), error.stack
+    );
+    return Promise.reject(error);
+  })
+  .timeout(
+    this._options.sendTimeout,
+    'timeout exceeded while trying to write data into socket'
+  );
+}
+
+Server.prototype.shutdown = function () {
+  var self = this;
+
+  var promises = this._sockets.map(function (socket) {
+    return new Promise(function (resolve) {
+      socket.once('close', resolve);
+      socket.end();
+    });
+  });
+  return Promise.all(promises)
+  .then(function () {
+    self._server.close();
+  });
 }
 
 module.exports = Server;

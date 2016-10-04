@@ -66,7 +66,7 @@ CoordinatedThaliTape.begin = function (platform, version, hasRequiredHardware, n
   }, []);
   CoordinatedThaliTape.instances = [];
 
-  var _testClient = new CoordinatedClient(
+  var testClient = new CoordinatedClient(
     tests,
     CoordinatedThaliTape.uuid,
     platform,
@@ -76,10 +76,10 @@ CoordinatedThaliTape.begin = function (platform, version, hasRequiredHardware, n
   );
 
   // Only used for testing purposes.
-  CoordinatedThaliTape._testServer = _testClient._serverClient;
+  CoordinatedThaliTape._testServer = testClient._serverClient;
 
   return new Promise(function (resolve, reject) {
-    _testClient.once('finished', function (error) {
+    testClient.once('finished', function (error) {
       if (error) {
         reject(error);
       } else {

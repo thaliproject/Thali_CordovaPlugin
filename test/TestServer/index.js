@@ -17,8 +17,7 @@ var UnitTestFramework = require('./UnitTestFramework');
 var WAITING_FOR_DEVICES_TIMEOUT = 5 * 60 * 1000;
 
 var server = new Server({
-  port: 3000,
-  transports: ['websocket']
+  port: 3000
 });
 
 var options = process.argv[2];
@@ -28,7 +27,7 @@ if (options) {
 var unitTestManager = new UnitTestFramework(options);
 
 server
-.on('present', function (device) {
+.on('presented', function (device) {
   switch (device.type) {
     case 'unittest': {
       unitTestManager.addDevice(device);
@@ -40,6 +39,9 @@ server
       );
     }
   }
+})
+.on('error', function (error) {
+  throw new Error(error);
 });
 
 var timer = setTimeout(function () {
@@ -56,9 +58,12 @@ unitTestManager
   var isSuccess = results.every(function (result) {
     return result;
   });
-  if (isSuccess) {
-    process.exit(0);
-  } else {
-    process.exit(1);
-  }
+  server.shutdown()
+  .then(function () {
+    if (isSuccess) {
+      process.exit(0);
+    } else {
+      process.exit(1);
+    }
+  });
 });
