@@ -84,17 +84,19 @@ UnitTestFramework.prototype.startTests = function (platformName) {
       'failed to run unit tests, platformName: \'%s\', error: \'%s\', stack: \'%s\'',
       platformName, error.toString(), error.stack
     );
+    /*
     return Promise.all(
       devices.map(function (device) {
         return device.error(error.toString())
-          .catch(function (error) {
-            logger.error(
-              'unexpected error: \'%s\', stack: \'%s\'',
-              error.toString(), error.stack
-            );
-          });
+        .catch(function (error) {
+          logger.error(
+            'unexpected error: \'%s\', stack: \'%s\'',
+            error.toString(), error.stack
+          );
+        });
       })
     );
+    */
   })
   .finally(function () {
     self.unbindSync(devices);
