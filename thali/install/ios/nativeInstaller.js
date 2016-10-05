@@ -50,85 +50,85 @@ function addFramework(
 
         xcodeProject.parse(function (error) {
 
-            // If we couldn't parse the project, bail out.
-            if (error) {
-              var message =
-                'Cannot parse Xcode project: ' + JSON.stringify(error);
-              reject(new Error(message));
-              return;
-            }
+          // If we couldn't parse the project, bail out.
+          if (error) {
+            var message =
+              'Cannot parse Xcode project: ' + JSON.stringify(error);
+            reject(new Error(message));
+            return;
+          }
 
-            // Project should not have more that one target.
-            var targetUUID = xcodeProject.getFirstTarget().uuid;
+          // Project should not have more that one target.
+          var targetUUID = xcodeProject.getFirstTarget().uuid;
 
-            console.log('Adding Build Properties');
+          console.log('Adding Build Properties');
 
-            // Tell to Xcode project that we use Swift in our framework
-            // I believe that this line of code will be removed in the future
-            xcodeProject.removeBuildProperty(
-              'EMBEDDED_CONTENT_CONTAINS_SWIFT');
-            xcodeProject.addBuildProperty(
-              'EMBEDDED_CONTENT_CONTAINS_SWIFT', 'YES');
+          // Tell to Xcode project that we use Swift in our framework
+          // I believe that this line of code will be removed in the future
+          xcodeProject.removeBuildProperty(
+            'EMBEDDED_CONTENT_CONTAINS_SWIFT');
+          xcodeProject.addBuildProperty(
+            'EMBEDDED_CONTENT_CONTAINS_SWIFT', 'YES');
 
-            xcodeProject.removeBuildProperty(
-              'OTHER_SWIFT_FLAGS');
-            xcodeProject.addBuildProperty('OTHER_SWIFT_FLAGS', '\"-DTEST\"');
+          xcodeProject.removeBuildProperty(
+            'OTHER_SWIFT_FLAGS');
+          xcodeProject.addBuildProperty('OTHER_SWIFT_FLAGS', '\"-DTEST\"');
 
-            xcodeProject.removeBuildProperty('GCC_PREPROCESSOR_DEFINITIONS');
-            xcodeProject.updateBuildProperty(
-              'GCC_PREPROCESSOR_DEFINITIONS',
-              ['\"$(inherited)\"', '\"TEST=1\"']);
+          xcodeProject.removeBuildProperty('GCC_PREPROCESSOR_DEFINITIONS');
+          xcodeProject.updateBuildProperty(
+            'GCC_PREPROCESSOR_DEFINITIONS',
+            ['\"$(inherited)\"', '\"TEST=1\"']);
 
-            // First check to see if the Embed Framework node exists, if not, add it.
-            // This is all we need to do as they are added to the embedded section by default.
-            if (!xcodeProject.pbxEmbedFrameworksBuildPhaseObj(targetUUID)) {
-                var buildPhaseResult = xcodeProject.addBuildPhase(
-                  [],
-                  'PBXCopyFilesBuildPhase',
-                  'Embed Frameworks',
-                  targetUUID,
-                  'framework');
-                // No idea why,
-                // but "Framework" (value 10) is not available in node-xcode,
-                // set it here manually so libraries
-                // embed correctly.
-                // If we don't set it, the folder type defaults to "Shared Frameworks".
-                buildPhaseResult.buildPhase.dstSubfolderSpec = 10;
-                console.log('Adding Embedded Build Phase');
-            } else {
-                console.log('Embedded Build Phase already added');
-            }
+          // First check to see if the Embed Framework node exists, if not, add it.
+          // This is all we need to do as they are added to the embedded section by default.
+          if (!xcodeProject.pbxEmbedFrameworksBuildPhaseObj(targetUUID)) {
+            var buildPhaseResult = xcodeProject.addBuildPhase(
+              [],
+              'PBXCopyFilesBuildPhase',
+              'Embed Frameworks',
+              targetUUID,
+              'framework');
+            // No idea why,
+            // but "Framework" (value 10) is not available in node-xcode,
+            // set it here manually so libraries
+            // embed correctly.
+            // If we don't set it, the folder type defaults to "Shared Frameworks".
+            buildPhaseResult.buildPhase.dstSubfolderSpec = 10;
+            console.log('Adding Embedded Build Phase');
+          } else {
+            console.log('Embedded Build Phase already added');
+          }
 
-            // This is critical to include,
-            // otherwise the library loader cannot find libs at runtime
-            // on a device.
-            xcodeProject.addBuildProperty(
-              'LD_RUNPATH_SEARCH_PATHS', '\"$(inherited) @executable_path/Frameworks\"', 'Debug');
-            xcodeProject.addBuildProperty(
-              'LD_RUNPATH_SEARCH_PATHS', '\"$(inherited) @executable_path/Frameworks\"', 'Release');
+          // This is critical to include,
+          // otherwise the library loader cannot find libs at runtime
+          // on a device.
+          xcodeProject.addBuildProperty(
+            'LD_RUNPATH_SEARCH_PATHS', '\"$(inherited) @executable_path/Frameworks\"', 'Debug');
+          xcodeProject.addBuildProperty(
+            'LD_RUNPATH_SEARCH_PATHS', '\"$(inherited) @executable_path/Frameworks\"', 'Release');
 
-            // Add the frameworks again.
-            // This time they will have the code-sign option set
-            // so they get code signed when being deployed to devices.
-            console.log('Adding ThaliCore.framework');
+          // Add the frameworks again.
+          // This time they will have the code-sign option set
+          // so they get code signed when being deployed to devices.
+          console.log('Adding ThaliCore.framework');
+          xcodeProject.addFramework(
+            path.join(frameworkOutputDir, 'ThaliCore.framework'),
+            {customFramework: true, embed: true, link: true, sign: true});
+
+          // Add the frameworks again.
+          // This time they will have the code-sign option set
+          // so they get code signed when being deployed to devices.
+          if (buildWithTests) {
+            console.log('Adding XCTest.framework');
+            var xcTestFrameworkPath = '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework';
+            // var xcTestFrameworkPath = '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest.framework';
             xcodeProject.addFramework(
-              path.join(frameworkOutputDir, 'ThaliCore.framework'),
+              xcTestFrameworkPath,
               {customFramework: true, embed: true, link: true, sign: true});
+          }
 
-            // Add the frameworks again.
-            // This time they will have the code-sign option set
-            // so they get code signed when being deployed to devices.
-            if (buildWithTests) {
-              console.log('Adding XCTest.framework');
-              var xcTestFrameworkPath = '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework';
-              // var xcTestFrameworkPath = '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest.framework';
-              xcodeProject.addFramework(
-                xcTestFrameworkPath,
-                {customFramework: true, embed: true, link: true, sign: true});
-            }
-
-            resolve(xcodeProject);
-          });
+          resolve(xcodeProject);
+        });
       })
       .then(function (xcodeProject) {
         // Save the project file back to disk.
@@ -178,7 +178,7 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
       var frameworkOutputDir = path.join(
         outputDir, projectName + '.framework');
 
-        return fs.copy(frameworkBuildDir, frameworkOutputDir, { clobber: false });
+      return fs.copy(frameworkBuildDir, frameworkOutputDir, { clobber: false });
     });
 };
 

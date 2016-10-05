@@ -26,25 +26,21 @@ var Promise = require('lie');
 function makeIntoCloseAllServer(server, eatNotRunning) {
   var connections = [];
 
-  server.on('connection', function (socket) {
+  var _connectionHandler = function (socket) {
     // Add to the list of connections.
     connections.push(socket);
     // Remove from list of connections in case
     // socket is closed.
-    socket.on('close', function () {
-      var index = -1;
-      for (var i = 0; i < connections.length; i++) {
-        if (connections[i] === socket) {
-          index = i;
-          break;
-        }
-      }
+    socket.once('close', function () {
+      var index = connections.indexOf(socket);
       if (index === -1) {
         assert('socket not found from the list of connections');
       }
-      connections = connections.splice(index, 1);
+      connections.splice(index, 1);
     });
-  });
+  }
+  .bind(this);
+  server.on('connection', _connectionHandler);
 
   /**
    * Closes the server and then closes all incoming connections to the server.
@@ -92,6 +88,16 @@ function makeIntoCloseAllServer(server, eatNotRunning) {
       });
     });
   };
+
+  var _removeAllListeners = server.removeAllListeners;
+  server.removeAllListeners = function (eventName) {
+    var result = _removeAllListeners.apply(this, arguments);
+    if (eventName === 'connection') {
+      // We can protect out connection handler
+      server.on('connection', _connectionHandler);
+    }
+    return result;
+  }
 
   return server;
 }

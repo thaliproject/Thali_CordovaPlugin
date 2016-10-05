@@ -281,7 +281,7 @@ public class StartStopOperationHandlerTest {
         fCurrentOperation.set(mStartStopOperationHandler,
                               StartStopOperation.createStartOperation(isBLESupported, mJXcoreThaliCallback));
 
-        mStartStopOperationHandler.checkCurrentOperationStatus();
+        mStartStopOperationHandler.processCurrentOperationStatus();
 
         Method executeCurrentOperation = mStartStopOperationHandler.getClass()
         .getDeclaredMethod("executeCurrentOperation");
@@ -303,7 +303,7 @@ public class StartStopOperationHandlerTest {
                        is(notNullValue()));
 
             Thread.sleep(mOperationTimeout);
-            mStartStopOperationHandler.checkCurrentOperationStatus();
+            mStartStopOperationHandler.processCurrentOperationStatus();
 
             mCurrentOperation =
             (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);

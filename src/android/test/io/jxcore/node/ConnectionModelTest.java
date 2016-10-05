@@ -35,6 +35,7 @@ public class ConnectionModelTest {
 
     @Before
     public void setUp() throws Exception {
+
         mConnectionModel = new ConnectionModel();
         mInputStreamMock = new InputStreamMock();
         mOutputStreamMock = new OutputStreamMock();

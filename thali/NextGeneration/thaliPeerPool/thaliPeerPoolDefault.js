@@ -4,6 +4,8 @@ var util = require('util');
 var ThaliPeerPoolInterface = require('./thaliPeerPoolInterface');
 var thaliConfig = require('../thaliConfig');
 var ForeverAgent = require('forever-agent');
+var logger = require('../../ThaliLogger')('thaliPeerPoolDefault');
+var Utils = require('../utils/common.js');
 
 /** @module thaliPeerPoolDefault */
 
@@ -63,20 +65,23 @@ var ForeverAgent = require('forever-agent');
  */
 function ThaliPeerPoolDefault() {
   ThaliPeerPoolDefault.super_.call(this);
+  this._stopped = true;
 }
 
 util.inherits(ThaliPeerPoolDefault, ThaliPeerPoolInterface);
+ThaliPeerPoolDefault.ERRORS = ThaliPeerPoolInterface.ERRORS;
+
+ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED = 'We are stopped';
 
 ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
-  // Right now we will just allow everything to run parallel
-
-  var enqueueResult =
-    ThaliPeerPoolDefault.super_.prototype
-      .enqueue.call(this, peerAction);
-
-  if (enqueueResult) {
-    return enqueueResult;
+  if (this._stopped) {
+    throw new Error(ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED);
   }
+
+  // Right now we will just allow everything to run parallel.
+
+  var result =
+    ThaliPeerPoolDefault.super_.prototype.enqueue.apply(this, arguments);
 
   var actionAgent = new ForeverAgent.SSL({
     keepAlive: true,
@@ -91,12 +96,35 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
   // We hook our clean up code to kill and it is always legal to call
   // kill, even if it has already been called. So this ensures that our
   // cleanup code gets called regardless of how the action ended.
-  peerAction.start(actionAgent).then(function () {
-    peerAction.kill();
-  });
+  peerAction.start(actionAgent)
+    .catch(function (err) {
+      logger.debug('Got err ', Utils.serializePouchError(err));
+    })
+    .then(function () {
+      peerAction.kill();
+    });
 
-  return null;
+  return result;
 };
 
+ThaliPeerPoolDefault.prototype.start = function () {
+  var self = this;
+  this._stopped = false;
+
+  return ThaliPeerPoolDefault.super_.prototype.start.apply(this, arguments);
+}
+
+/**
+ * This function is used primarily for cleaning up after tests and will
+ * kill any actions that this pool has started that haven't already been
+ * killed. It will also return errors if any further attempts are made
+ * to enqueue.
+ */
+ThaliPeerPoolDefault.prototype.stop = function () {
+  var self = this;
+  this._stopped = true;
+
+  return ThaliPeerPoolDefault.super_.prototype.stop.apply(this, arguments);
+};
 
 module.exports = ThaliPeerPoolDefault;

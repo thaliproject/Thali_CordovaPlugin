@@ -2,20 +2,22 @@
 
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
+var https = require('https');
+var url = require('url');
+
+var Promise = require('lie');
 var nodessdp = require('node-ssdp');
 var ip = require('ip');
-var uuid = require('node-uuid');
-var url = require('url');
+var uuid = require('uuid');
 var express = require('express');
 var validations = require('../validations');
 var thaliConfig = require('./thaliConfig');
 var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
-var logger = require('../thalilogger')('thaliWifiInfrastructure');
+var logger = require('../ThaliLogger')('thaliWifiInfrastructure');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
-var https = require('https');
-
-var Promise = require('lie');
 var PromiseQueue = require('./promiseQueue');
+var USN = require('./utils/usn');
+
 var promiseQueue = new PromiseQueue();
 
 var promiseResultSuccessOrFailure = function (promise) {
@@ -46,6 +48,7 @@ var promiseResultSuccessOrFailure = function (promise) {
  * times in a row without causing a state change.
  */
 
+
 /**
  * This creates an object to manage a WiFi instance. During production we will
  * have exactly one instance running but for testing purposes it's very useful
@@ -62,8 +65,10 @@ var promiseResultSuccessOrFailure = function (promise) {
  */
 function ThaliWifiInfrastructure () {
   EventEmitter.call(this);
-  this.usn = null;
-  this.previousUsn = null;
+  this.peer = null;
+  // Store previously used own peerIdentifiers so ssdp client can ignore some
+  // delayed ssdp messages after our server has changed uuid part of usn
+  this._ownPeerIdentifiersHistory = [];
   // Can be used in tests to override the port
   // advertised in SSDP messages.
   this.advertisedPortOverride = null;
@@ -179,16 +184,13 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
   }
 
   var usn = data.USN;
+  var peer = null;
   try {
-    validations.ensureNonNullOrEmptyString(usn);
+    peer = USN.parse(usn);
   } catch (error) {
-    logger.warn('Received an invalid USN value: %s', data.USN);
+    logger.warn(error.message);
     return false;
   }
-
-  var peer = {
-    peerIdentifier: usn
-  };
 
   // We expect location only in alive messages.
   if (available === true) {
@@ -197,7 +199,8 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
     try {
       validations.ensureValidPort(portNumber);
     } catch (error) {
-      logger.warn('Failed to parse a valid port number from location: %s', data.LOCATION);
+      logger.warn('Failed to parse a valid port number from location: %s',
+        data.LOCATION);
       return false;
     }
     peer.hostAddress = parsedLocation.hostname;
@@ -213,16 +216,17 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
 // Function used to filter out SSDP messages that are not
 // relevant for Thali.
 ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
-  // First check if the data contains the Thali-specific NT.
-  if (data.NT === thaliConfig.SSDP_NT) {
-    // Filtering out messages from ourselves.
-    if (data.USN === this.usn || data.USN === this.previousUsn) {
-      return true;
-    } else {
-      return false;
-    }
+  var isUnknownNt = (data.NT !== thaliConfig.SSDP_NT);
+  return isUnknownNt || this._isOwnMessage(data);
+};
+
+ThaliWifiInfrastructure.prototype._isOwnMessage = function (data) {
+  try {
+    var peerIdentifier = USN.parse(data.USN).peerIdentifier;
+    return (this._ownPeerIdentifiersHistory.indexOf(peerIdentifier) !== -1);
+  } catch (err) {
+    return false;
   }
-  return true;
 };
 
 ThaliWifiInfrastructure.prototype._rejectPerWifiState = function (reject) {
@@ -271,7 +275,7 @@ ThaliWifiInfrastructure.prototype._updateStatus = function () {
  * express-pouchdb is a router object) that the caller wants the WiFi
  * connections to be terminated with. This code will put that router at '/' so
  * make sure your paths are set up appropriately.
- * @param {module:thaliMobileNativeWrapper~pskIdToSecret pskIdToSecret} pskIdToSecret
+ * @param {module:thaliMobileNativeWrapper~pskIdToSecret} pskIdToSecret
  * @returns {Promise<?Error>}
  */
 // jscs:enable jsDoc
@@ -335,6 +339,7 @@ ThaliWifiInfrastructure.prototype.stop = function () {
   });
 };
 
+// jscs:disable maximumLineLength
 /**
  * This will start the local Wi-Fi Infrastructure Mode discovery mechanism
  * (currently SSDP). Calling this method will trigger {@link
@@ -354,6 +359,7 @@ ThaliWifiInfrastructure.prototype.stop = function () {
  *
  * @returns {Promise<?Error>}
  */
+// jscs:enable maximumLineLength
 ThaliWifiInfrastructure.prototype.startListeningForAdvertisements =
 function () {
   var self = this;
@@ -407,7 +413,7 @@ function (skipPromiseQueue, changeTarget) {
   if (changeTarget) {
     self.states.listening.target = false;
   }
-  var action = function (resolve, reject) {
+  var action = function (resolve) {
     if (!self.states.listening.current) {
       return resolve();
     }
@@ -424,13 +430,14 @@ function (skipPromiseQueue, changeTarget) {
   }
 };
 
+// jscs:disable maximumLineLength
 /**
  * This method will start advertising the peer's presence over the local Wi-Fi
  * Infrastructure Mode discovery mechanism (currently SSDP). When creating the
  * UDP socket for SSDP the socket MUST be "udp4". When socket.bind is called to
  * bind the socket the SSDP multicast address 239.255.255.250 and port 1900 MUST
  * be chosen as they are the reserved address and port for SSDP.
- * 
+ *
  * __OPEN ISSUE:__ What happens on Android or iOS or the desktop OS's for that
  * matter if multiple apps all try to bind to the same UDP multicast address?
  * It should be fine. But it's important to find out so that other apps can't
@@ -464,9 +471,16 @@ function (skipPromiseQueue, changeTarget) {
  * retrieve. No details will be provided about the peer on who the changes are
  * for. All that is provided is a flag just indicating that something has
  * changed. It is up to other peer to connect and retrieve details on what has
- * changed if they are interested.
+ * changed if they are interested. The way this flag MUST be implemented is by
+ * creating a UUID the first time startUpdateAdvertisingAndListening is called
+ * and maintaining that UUID until stopAdvertisingAndListening is called. When
+ * the UUID is created a generation counter MUST be set to 0. Every subsequent
+ * call to startUpdateAdvertisingAndListening until the counter is reset MUST
+ * increment the counter by 1. The USN set by a call to
+ * startUpdateAdvertisingAndListening MUST be of the form `data:` + uuid.v4() +
+ * `:` + generation.
  *
- * * By design this method is intended to be called multiple times without
+ * By design this method is intended to be called multiple times without
  * calling stop as each call causes the currently notification flag to change.
  *
  * | Error String | Description |
@@ -479,6 +493,7 @@ function (skipPromiseQueue, changeTarget) {
  *
  * @returns {Promise<?Error>}
  */
+// jscs:enable maximumLineLength
 ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening =
 function () {
   var self = this;
@@ -492,12 +507,10 @@ function () {
 
     self.states.advertising.target = true;
 
-    // Store previous USN value so that we can filter byebye messages
-    // from the previously used USN.
-    self.previousUsn = self.usn;
-    // Generate a new USN value to flag that something has changed
-    // in this peer.
-    self.usn = 'urn:uuid:' + uuid.v4();
+
+    self._updateOwnPeer();
+
+    var usn = USN.stringify(self.peer);
 
     if (self.states.networkState.wifi !== 'on') {
       return self._rejectPerWifiState(reject);
@@ -508,7 +521,7 @@ function () {
       // so that a byebye is issued for the old USN and and alive
       // message for the new one.
       self._server.stop(function () {
-        self._server.setUSN(self.usn);
+        self._server.setUSN(usn);
         self._server.start(function () {
           return resolve();
         });
@@ -537,7 +550,9 @@ function () {
       };
       var listeningHandler = function () {
         self.routerServerPort = self.routerServer.address().port;
-        self._server.setUSN(self.usn);
+        logger.debug('listening', self.routerServerPort);
+
+        self._server.setUSN(usn);
         // We need to update the location string, because the port
         // may have changed when we re-start the router server.
         self._setLocation();
@@ -568,6 +583,25 @@ function () {
   });
 };
 
+ThaliWifiInfrastructure.prototype._updateOwnPeer = function () {
+  if (!this.peer) {
+    this.peer = {
+      peerIdentifier: uuid.v4(),
+      generation: 0
+    };
+
+    // Update own peers history
+    var history = this._ownPeerIdentifiersHistory;
+    history.push(this.peer.peerIdentifier);
+    if (history.length > thaliConfig.SSDP_OWN_PEERS_HISTORY_SIZE) {
+      var overflow = history.length - thaliConfig.SSDP_OWN_PEERS_HISTORY_SIZE;
+      history.splice(0, overflow);
+    }
+  } else {
+    this.peer.generation++;
+  }
+};
+
 /**
  * This method MUST stop advertising the peer's presence over the local Wi-Fi
  * Infrastructure Mode discovery mechanism (currently SSDP). This method MUST
@@ -593,11 +627,12 @@ function (skipPromiseQueue, changeTarget) {
   if (changeTarget) {
     self.states.advertising.target = false;
   }
-  var action = function (resolve, reject) {
+  var action = function (resolve) {
     if (!self.states.advertising.current) {
       return resolve();
     }
     self._server.stop(function () {
+      self.peer = null;
       self.routerServer.closeAll(function () {
         // The port needs to be reset, because
         // otherwise there is no guarantee that
@@ -644,13 +679,15 @@ function (skipPromiseQueue, changeTarget) {
  * @event wifiPeerAvailabilityChanged
  * @public
  * @type {Object}
- * @property {string} peerIdentifier This is the USN value
- * @property {string} hostAddress This can be either an IP address or a DNS
+ * @property {string} peerIdentifier This is the UUID part of the USN value.
+ * @property {number} generation This is the generation part of the USN value
+ * @property {?string} hostAddress This can be either an IP address or a DNS
  * address encoded as a string
- * @property {number} portNumber The port on the hostAddress to use to connect
+ * @property {?number} portNumber The port on the hostAddress to use to connect
  * to the peer
  */
 
+// jscs:disable maximumLineLength
 /**
  * For the definition of this event please see {@link
  * module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateEvent}
@@ -674,6 +711,7 @@ function (skipPromiseQueue, changeTarget) {
  * @type {Object}
  * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
  */
+// jscs:enable maximumLineLength
 
 /**
  * [NOT IMPLEMENTED]
@@ -682,7 +720,7 @@ function (skipPromiseQueue, changeTarget) {
  * module:thaliMobileNativeWrapper~networkChangedNonTCP}.
  *
  * The WiFi layer MUST NOT emit this event unless we are running on Linux,
- * OS/X or Windows. In the case that we are running on those platforms then If
+ * macOS or Windows. In the case that we are running on those platforms then If
  * we are running on those platforms then bluetoothLowEnergy and bluetooth MUST
  * both return radioState set to `doNotCare`. Also note that these platforms
  * don't generally support a push based way to detect WiFi state (at least not

@@ -1,25 +1,38 @@
 'use strict';
 
-var logCallback;
+var util = require('util');
+var format = util.format;
+
 var os = require('os');
 var tmp = require('tmp');
 var PouchDB = require('pouchdb');
 var path = require('path');
 var randomString = require('randomstring');
-var Promise = require('lie');
+var Promise = require('bluebird');
 var https = require('https');
-var logger = require('thali/thalilogger')('testUtils');
+var logger = require('thali/ThaliLogger')('testUtils');
 var ForeverAgent = require('forever-agent');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
-
+var expressPouchdb = require('express-pouchdb');
+var platform = require('thali/NextGeneration/utils/platform');
+var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var notificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
+var express = require('express');
+var fs = require('fs-extra-promise');
+var extend = require('js-extend').extend;
+var inherits = require('inherits');
+
+var pskId = 'yo ho ho';
+var pskKey = new Buffer('Nothing going on here');
+
+var isMobile = platform.isMobile;
 
 var doToggle = function (toggleFunction, on) {
   if (typeof Mobile === 'undefined') {
     return Promise.resolve();
   }
-  if (jxcore.utils.OSInfo().isIOS) {
+  if (platform.isIOS) {
     return Promise.resolve();
   }
   return new Promise(function (resolve, reject) {
@@ -63,20 +76,6 @@ function isFunction(functionToCheck) {
     '[object Function]';
 }
 
-/**
- * Log a message to the screen - only applies when running on Mobile. It assumes
- * we are using our test framework with our Cordova WebView who is setup to
- * receive logging messages and display them.
- * @param {string} message
- */
-module.exports.logMessageToScreen = function (message) {
-  if (isFunction(logCallback)) {
-    logCallback(message);
-  } else {
-    logger.warn('logCallback not set!');
-  }
-};
-
 var myName = '';
 var myNameCallback = null;
 
@@ -101,11 +100,7 @@ module.exports.getName = function () {
   return myName;
 };
 
-if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
-  Mobile('setLogCallback').registerAsync(function (callback) {
-    logCallback = callback;
-  });
-
+if (isMobile) {
   Mobile('setMyNameCallback').registerAsync(function (callback) {
     myNameCallback = callback;
     // If the name is already set, pass it to the callback
@@ -114,10 +109,6 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
       myNameCallback(myName);
     }
   });
-} else {
-  logCallback = function (message) {
-    console.log(message);
-  };
 }
 
 /**
@@ -125,14 +116,16 @@ if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
  * to store temporary data.
  * On desktop, returns a directory that does not persist between app restarts
  * and is removed when the process exits.
+ * @returns {string}
  */
 var tmpObject = null;
 module.exports.tmpDirectory = function () {
-  if (typeof jxcore !== 'undefined' && jxcore.utils.OSInfo().isMobile) {
+  if (isMobile) {
     return os.tmpdir();
   }
+
+  tmp.setGracefulCleanup();
   if (tmpObject === null) {
-    tmp.setGracefulCleanup();
     tmpObject = tmp.dirSync({
       unsafeCleanup: true
     });
@@ -148,7 +141,7 @@ module.exports.tmpDirectory = function () {
  */
 module.exports.hasRequiredHardware = function () {
   return new Promise(function (resolve) {
-    if (jxcore.utils.OSInfo().isAndroid) {
+    if (platform.isAndroid) {
       var checkBleMultipleAdvertisementSupport = function () {
         Mobile('isBleMultipleAdvertisementSupported').callNative(
           function (error, result) {
@@ -200,7 +193,7 @@ module.exports.returnsValidNetworkStatus = function () {
   // report to CI that this device is ready.
   return ThaliMobile.getNetworkStatus()
   .then(function (networkStatus) {
-    module.exports.logMessageToScreen(
+    logger.debug(
       'Device did not have required hardware capabilities!'
     );
     if (networkStatus.bluetoothLowEnergy === 'on') {
@@ -216,7 +209,7 @@ module.exports.returnsValidNetworkStatus = function () {
 
 module.exports.getOSVersion = function () {
   return new Promise(function (resolve) {
-    if (!jxcore.utils.OSInfo().isMobile) {
+    if (!isMobile) {
       return resolve('dummy');
     }
     Mobile('getOSVersion').callNative(function (version) {
@@ -225,27 +218,95 @@ module.exports.getOSVersion = function () {
   });
 };
 
+
+module.exports.verifyCombinedResultSuccess =
+  function (t, combinedResult, message) {
+    t.equal(combinedResult.wifiResult, null,
+      message || 'error should be null');
+    t.equal(combinedResult.nativeResult, null,
+      message || 'error should be null');
+  };
+
+function levelDownPouchDBGenerator(defaultDirectory) {
+  // Shamelessly stolen from https://github.com/pouchdb/pouchdb/blob/fb77927d2f14911478032884f1576b770815bcab/packages/pouchdb-core/src/setup.js#L108-L137
+  function PouchAlt(name, opts, callback) {
+    if (!(this instanceof PouchAlt)) {
+      return new PouchAlt(name, opts, callback);
+    }
+
+    if (typeof opts === 'function' || typeof opts === 'undefined') {
+      callback = opts;
+      opts = {};
+    }
+
+    if (name && typeof name === 'object') {
+      opts = name;
+      name = undefined;
+    }
+
+    opts = extend({}, opts);
+
+    if (name !== undefined && name.indexOf('http') !== 0) {
+      if (!opts.db) {
+        opts.db = require('leveldown-mobile');
+      }
+
+      if (!opts.prefix) {
+        opts.prefix = defaultDirectory;
+      }
+    }
+
+    PouchDB.call(this, name, opts, callback);
+  }
+
+  inherits(PouchAlt, PouchDB);
+
+  PouchAlt.preferredAdapters = PouchDB.preferredAdapters.slice();
+  Object.keys(PouchDB).forEach(function (key) {
+    if (!(key in PouchAlt)) {
+      PouchAlt[key] = PouchDB[key];
+    }
+  });
+
+  return PouchAlt;
+}
+
 // Use a folder specific to this test so that the database content
 // will not interfere with any other databases that might be created
 // during other tests.
 var dbPath = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
-var LevelDownPouchDB = PouchDB.defaults({
-  db: require('leveldown-mobile'),
-  prefix: dbPath
-});
+fs.ensureDirSync(dbPath);
+module.exports.getPouchDBTestDirectory = function () {
+  return dbPath;
+}
 
-module.exports.getTestPouchDBInstance = function (name) {
-  return new LevelDownPouchDB(name);
+var LevelDownPouchDB = levelDownPouchDBGenerator(dbPath);
+
+module.exports.getLevelDownPouchDb = function () {
+  return LevelDownPouchDB;
 };
 
-module.exports.getRandomlyNamedTestPouchDBInstance = function () {
-  var randomPouchDBName = randomString.generate({
+var getRandomName = function () {
+  return randomString.generate({
     length: 40,
     charset: 'alphabetic'
   });
-  return module.exports.getTestPouchDBInstance(randomPouchDBName);
+};
+module.exports.getRandomPouchDBName = getRandomName;
+module.exports.getUniqueRandomName  = getRandomName;
+
+module.exports.getRandomlyNamedTestPouchDBInstance = function () {
+  return new LevelDownPouchDB(module.exports.getRandomPouchDBName());
 };
 
+module.exports.getPouchDBFactoryInRandomDirectory = function () {
+  var directory = path.join(dbPath, randomString.generate({
+    length: 20,
+    charset: 'alphabetic'
+  }));
+  fs.ensureDirSync(directory);
+  return levelDownPouchDBGenerator(directory);
+};
 
 var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
   notificationBeacons.EXPIRATION_SIZE;
@@ -437,3 +498,236 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
       nonTCPAvailableHandler);
   });
 };
+
+module.exports.createPskPouchDBRemote = function (serverPort, dbName,
+                                                 pskId, pskKey, host) {
+  var serverUrl = 'https://' + (host ? host : '127.0.0.1') + ':' + serverPort +
+    thaliConfig.BASE_DB_PATH + '/' + dbName;
+
+  /**
+   * See the notes in thaliReplicationPeerAction.start for why the below
+   * is here and why it's wrong and should use agent instead but can't.
+   */
+  return new LevelDownPouchDB(serverUrl,
+    {
+      ajax: {
+        agentClass: ForeverAgent.SSL,
+        agentOptions: {
+          keepAlive: true,
+          keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
+          maxSockets: Infinity,
+          maxFreeSockets: 256,
+          ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+          pskIdentity: pskId,
+          pskKey: pskKey,
+          secureOptions: pskId + serverUrl
+        }
+      }
+    });
+};
+
+module.exports.validateCombinedResult = function (combinedResult) {
+  if (combinedResult.wifiResult !== null ||
+    combinedResult.nativeResult !== null) {
+    return Promise.reject(new Error('Had a failure in ThaliMobile.start - ' +
+      JSON.stringify(combinedResult)));
+  }
+  return Promise.resolve();
+};
+
+module.exports.setUpServer = function (testBody, appConfig) {
+  var app = express();
+  appConfig && appConfig(app);
+  app.use(thaliConfig.BASE_DB_PATH, expressPouchdb(LevelDownPouchDB, {mode: 'minimumForPouchDB'}));
+  var testCloseAllServer = makeIntoCloseAllServer(https.createServer(
+    {
+      ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+      pskCallback : function (id) {
+        return id === pskId ? pskKey : null;
+      },
+      key: thaliConfig.BOGUS_KEY_PEM,
+      cert: thaliConfig.BOGUS_CERT_PEM
+    }, app));
+  testCloseAllServer.listen(0, function () {
+    var serverPort = testCloseAllServer.address().port;
+    var randomDBName = randomString.generate(30);
+    var remotePouchDB =
+      module.exports.createPskPouchDBRemote(serverPort, randomDBName, pskId,
+                                            pskKey);
+    testBody(serverPort, randomDBName, remotePouchDB);
+  });
+  return testCloseAllServer;
+};
+
+var MAX_FAILURE = 10;
+
+function turnParticipantsIntoBufferArray (t, devicePublicKey) {
+  var publicKeys = [];
+  t.participants.forEach(function (participant) {
+    var publicKey = new Buffer(participant.data);
+    if (Buffer.compare(publicKey, devicePublicKey) !== 0) {
+      publicKeys.push(publicKey);
+    }
+  });
+  return publicKeys;
+};
+module.exports.turnParticipantsIntoBufferArray = turnParticipantsIntoBufferArray;
+
+module.exports.startServerInfrastructure =
+  function (thaliNotificationServer, publicKeys, ThaliMobile, router) {
+    return thaliNotificationServer.start(publicKeys)
+      .then(function () {
+        return ThaliMobile.start(router,
+          thaliNotificationServer.getPskIdToSecret());
+      })
+      .then(function (combinedResult) {
+        return module.exports.validateCombinedResult(combinedResult);
+      })
+      .then(function () {
+        return ThaliMobile.startListeningForAdvertisements();
+      })
+      .then(function (combinedResult) {
+        return module.exports.validateCombinedResult(combinedResult);
+      })
+      .then(function () {
+        return ThaliMobile.startUpdateAdvertisingAndListening();
+      })
+      .then(function (combinedResult) {
+        return module.exports.validateCombinedResult(combinedResult);
+      });
+  };
+
+module.exports.runTestOnAllParticipants = function (
+  t, router,
+  thaliNotificationClient,
+  thaliNotificationServer,
+  ThaliMobile,
+  devicePublicKey,
+  testToRun
+) {
+  var publicKeys = turnParticipantsIntoBufferArray(t, devicePublicKey);
+  return new Promise(function (resolve, reject) {
+    var completed = false;
+    // Each participant is recorded via their public key
+    // If the value is -1 then they are done
+    // If the value is 0 then no test has completed
+    // If the value is greater than 0 then that is how many failures there have been.
+    var participantCount = publicKeys.reduce(function (participantCount, participantPublicKey) {
+      participantCount[participantPublicKey] = 0;
+      return participantCount;
+    }, {});
+
+    var participantTask = publicKeys.reduce(function (participantTask, participantPublicKey) {
+      participantTask[participantPublicKey] = Promise.resolve();
+      return participantTask;
+    }, {});
+
+    function success(publicKey) {
+      if (completed) {
+        return;
+      }
+
+      participantCount[publicKey] = -1;
+
+      var hasParticipant= Object.keys(participantCount)
+      .some(function (participantKey) {
+        return participantCount[participantKey] !== -1;
+      });
+      if (hasParticipant) {
+        return;
+      }
+
+      completed = true;
+      clearTimeout(timerCancel);
+      resolve();
+    }
+
+    function fail(publicKey, error) {
+      logger.error('Got an err - ', error.toString());
+      var count = participantCount[publicKey];
+      if (completed || count === -1) {
+        return;
+      }
+      count ++;
+      participantCount[publicKey] = count;
+      if (count >= MAX_FAILURE) {
+        completed = true;
+        clearTimeout(timerCancel);
+        reject(err);
+      }
+    }
+
+    var timerCancel = setTimeout(function () {
+      reject(new Error('Test timed out'));
+    }, 5 * 60 * 1000);
+
+    thaliNotificationClient.on(
+      thaliNotificationClient.Events.PeerAdvertisesDataForUs,
+      function (notificationForUs) {
+        if (completed) {
+          return;
+        }
+        participantTask[notificationForUs.keyId]
+        .then(function () {
+          if (!completed) {
+            var task = testToRun(notificationForUs)
+            .then(function () {
+              success(notificationForUs.keyId);
+            })
+            .catch(function (error) {
+              fail(notificationForUs.keyId, error);
+              return Promise.resolve(error);
+            });
+            participantTask[notificationForUs.keyId] = task;
+            return task;
+          }
+        });
+      });
+
+    thaliNotificationClient.start(publicKeys);
+    return module.exports.startServerInfrastructure(
+      thaliNotificationServer, publicKeys, ThaliMobile, router
+    )
+    .catch(function (err) {
+      reject(err);
+    });
+  });
+};
+
+// We doesn't want our test to run infinite time.
+// We will replace t.end with custom exit function.
+module.exports.testTimeout = function (t, timeout, callback) {
+  var timer = setTimeout(function () {
+    t.fail('test timeout');
+    t.end();
+  }, timeout);
+
+  var oldEnd = t.end;
+  t.end = function () {
+    // Restoring original t.end.
+    t.end = oldEnd;
+
+    if (typeof callback === 'function') {
+      callback();
+    }
+
+    clearTimeout(timer);
+    return oldEnd.apply(this, arguments);
+  }
+}
+
+module.exports.checkArgs = function (t, spy, description, args) {
+  t.ok(spy.calledOnce, description + ' was called once');
+
+  var currentArgs = spy.getCalls()[0].args;
+  t.equals(
+    args.length, currentArgs.length,
+    description + ' was called with ' + currentArgs.length + ' arguments'
+  );
+
+  args.forEach(function (arg, index) {
+    var argDescription = description + ' was called with \'' +
+      arg.description + '\' as ' + (index + 1) + '-st argument';
+    t.ok(arg.compare(currentArgs[index]), argDescription);
+  });
+}

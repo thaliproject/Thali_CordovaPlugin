@@ -38,6 +38,7 @@ public class LifeCycleMonitorTest {
 
     @Before
     public void setUp() throws Exception {
+
         mContext = jxcore.activity.getBaseContext();
         mListener = new LifeCycleMonitorListenerMock();
         mLifeCycleMonitor = new LifeCycleMonitor(mListener);

@@ -24,8 +24,10 @@ cd ../../thali
 jx npm install --no-optional
 jx npm link
 cd install
-jx npm install
+jx npm install --no-optional
 node validateBuildEnvironment.js
 cd ../../test/www/jxcore
 jx npm link thali
+jx installCustomPouchDB.js
 jx npm install --no-optional
+

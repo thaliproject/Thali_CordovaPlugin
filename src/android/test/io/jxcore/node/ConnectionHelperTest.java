@@ -193,6 +193,7 @@ public class ConnectionHelperTest {
         }
 
         mConnectionHelper.dispose();
+        Thread.sleep(5000); //Wait for connectionHelper to dispose
 
         future = mExecutor.submit(createCheckDiscoveryManagerNotRunningCallable());
         assertThat("DiscoveryManager should not be running",

@@ -41,6 +41,43 @@ configuration before finally completing and tearing down it's resources.
 
 ## Usage
 
+### Installing software
+To build Thali you need a fairly large collection of software. The most important
+piece of software being Thali itself, so please start by cloning
+https://github.com/thaliproject/thali_cordovaplugin/
+to your machine.
+
+In terms of operating system we assume you are running on macOS. In theory we can
+run successfully on Linux or Windows but we really don't test there very often
+so things are likely to break.
+
+From there you need to install in macOS a fairly large mountain of software. For
+now you can see the list [here](https://github.com/thaliproject/Thali_CordovaPlugin/blob/1df36b74ee93f1ece85579857ed90a0e05a0cdd1/thali/install/validateBuildEnvironment.js#L16).
+You need to install the listed software at the listed version. Two of the entries
+are about Sinopia. Details on that is in the next section.
+
+### Running your own NPM registry
+From time to time we run into bugs in PouchDB and Express-PouchDB that we can't
+get fixed and into the public NPM repo fast enough to not block our development.
+So we have written a script (installCustomPouchDB.js) that handles installing a
+custom version of those packages if and when we need them. To make this work we
+depend on the developer running a local copy of a program called sinopia
+(although any private NPM repository server will do) and using that as a place
+to stage our custom releases. This requires the following manual steps:
+
+1. `npm install -g sinopia`. If you get errors, try to install via
+`npm install -g sinopia --no-optional --no-shrinkwrap`
+2. Run the 'sinopia' command in a terminal window and leave it running, forever.
+3. `npm set registry http://localhost:4873` or whatever the address of the
+NPM registry server is. 
+4. `jx npm get registry`. There should be http://localhost:4873 or the other address from the previous point.
+Otherwise run `jx npm set registry http://localhost:4873`
+5. `npm adduser --registry http://localhost:4873` this last command will require
+you to make up a name and password.
+
+These steps really only have to be done once. Our code will detect the registry
+and use it correctly.
+
 ### Mobile
 
 To run either unit or performance tests on mobile devices one first has to build a Cordova project and then launch
@@ -58,7 +95,7 @@ Android and iOS. This assumes you are running on a Mac with all the right tools.
 3. Go to Thali_CordovaPlugin/test/TestServer
 4. Examine Config_PerfTest.json or Config_UnitTest.json (depending on the test type you are running) and make sure it
 is configured properly.
-5. Run `jx index.js \{\"devices\":\{\"ios\":2,\"android\":2}}` in that directory on your local PC to start the 
+5. Run `jx index.js \{\"devices\":\{\"ios\":2,\"android\":2\}\}` in that directory on your local PC to start the 
 coordination server. Obviously edit the device counts passed on the command line to reflect the actual test
 environment.
 6. Deploy and run the tests on your two Android or two iPhone devices.
@@ -111,11 +148,11 @@ will de-activate themselves when run on the desktop. What is especially nice abo
 one can develop and debug directly in the Thali_CordovaPlugin directory. There is no need to do the kind of 
 copying and pasting that Cordova development normally requires.
 
-To set up your desktop environment for development go to Thali_CordovaPlugin/thali/install and run 
-`jx npm run setupDesktop`.
+To set up your desktop environment for development go to 
+Thali_CordovaPlugin/thali/install and run `jx npm run setupDesktop`.
 
 Sudo might be needed because this script installs a symbolic link into your global NPM directory. But if you can get 
-away without using it you will be much happier as using sudo for this (especially on OS/X) seems to cause permission 
+away without using it you will be much happier as using sudo for this (especially on macOS) seems to cause permission 
 nightmares.
 
 You can run all the tests by going to Thali_CordovaPlugin/test/www/jxcore and issuing one of the following:
@@ -138,8 +175,14 @@ the test definition, for example:
 +test.only('basic', function (t) {
 ```
 
-It is also possible to run one test file through the coordinator instead of
-all of the files using `jx runCoordinatedTests.js --filter bv_tests/testThaliMobileNativeWrapper.js`
+It is possible to run one test file (rather than just a single test) through the coordinator instead of
+all of the files using `jx runCoordinatedTests.js --filter bv_tests/testThaliMobileNativeWrapper.js`.
+
+It is also possible to debug one of the participants in a coordinated test by
+starting the coordinated test from the command line but passing in the parameter
+`--waitForInstance`. The coordinator will then start one less instance when
+it runs with the assumption that one will then run `jx UnitTest_app.js` from
+inside an IDE to debug.
 
 ### Writing Unit Tests
 The Unit Tests are kept in Thali_CordovaPlugin/test/www/jxcore/bv_tests. So please put new tests there.

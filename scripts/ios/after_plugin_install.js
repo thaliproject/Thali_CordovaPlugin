@@ -36,52 +36,52 @@ function loadIsTestEnvironment() {
 
 module.exports = function (context) {
 
-    var isTestEnvironment = loadIsTestEnvironment();
+  var isTestEnvironment = loadIsTestEnvironment();
 
-    // Need a promise so that
-    // the install waits for us to complete our project modifications
-    // before the plugin gets installed.
-    var Q = context.requireCordovaModule('q');
-    var deferred = new Q.defer();
+  // Need a promise so that
+  // the install waits for us to complete our project modifications
+  // before the plugin gets installed.
+  var Q = context.requireCordovaModule('q');
+  var deferred = new Q.defer();
 
-    // Only bother if we're on macOS
-    if (process.platform !== 'darwin') {
-      deferred.resolve();
-      return deferred.promise;
-    }
+  // Only bother if we're on macOS
+  if (process.platform !== 'darwin') {
+    deferred.resolve();
+    return deferred.promise;
+  }
 
-    var platforms = context.opts.cordova.platforms;
+  var platforms = context.opts.cordova.platforms;
 
-    // We can bail out if the iOS platform isn't present.
-    if (platforms.indexOf('ios') === -1) {
-      deferred.resolve();
-      return deferred.promise;
-    }
+  // We can bail out if the iOS platform isn't present.
+  if (platforms.indexOf('ios') === -1) {
+    deferred.resolve();
+    return deferred.promise;
+  }
 
-    // We need to build ThaliCore.framework before embedding it into the project
+  // We need to build ThaliCore.framework before embedding it into the project
 
-    var thaliCoreProjectFolder = path.join(
-      context.opts.plugin.dir, 'lib', 'ios', 'ThaliCore');
-    var thaliCoreOutputFolder = path.join(
-      context.opts.plugin.dir, 'lib', 'ios');
+  var thaliCoreProjectFolder = path.join(
+    context.opts.plugin.dir, 'lib', 'ios', 'ThaliCore');
+  var thaliCoreOutputFolder = path.join(
+    context.opts.plugin.dir, 'lib', 'ios');
 
-    // We need to embded frameworks to the project here.
-    // They need to be embedded binaries and cordova does not yet support that.
-    // We will use node-xcode directy to add them since that library has
-    // been upgraded to support embedded binaries.
+  // We need to embded frameworks to the project here.
+  // They need to be embedded binaries and cordova does not yet support that.
+  // We will use node-xcode directy to add them since that library has
+  // been upgraded to support embedded binaries.
 
-    // Cordova libs to get the project path and project name
-    // so we can locate the xcode project file.
-    var cordova_util = context.requireCordovaModule('cordova-lib/src/cordova/util'),
-        ConfigParser = context.requireCordovaModule('cordova-lib').configparser,
-        appRoot = context.opts.projectRoot,
-        projectRoot = cordova_util.isCordova(),
-        xml = cordova_util.projectConfig(projectRoot),
-        cfg = new ConfigParser(xml);
+  // Cordova libs to get the project path and project name
+  // so we can locate the xcode project file.
+  var cordova_util = context.requireCordovaModule('cordova-lib/src/cordova/util'),
+      ConfigParser = context.requireCordovaModule('cordova-lib').configparser,
+      appRoot = context.opts.projectRoot,
+      projectRoot = cordova_util.isCordova(),
+      xml = cordova_util.projectConfig(projectRoot),
+      cfg = new ConfigParser(xml);
 
-    var projectPath = path.join(
-      projectRoot, 'platforms', 'ios', cfg.name() + '.xcodeproj');
+  var projectPath = path.join(
+    projectRoot, 'platforms', 'ios', cfg.name() + '.xcodeproj');
 
-    return nativeInstaller.addFramework(
-      projectPath, thaliCoreProjectFolder, thaliCoreOutputFolder, isTestEnvironment);
-  };
+  return nativeInstaller.addFramework(
+    projectPath, thaliCoreProjectFolder, thaliCoreOutputFolder, isTestEnvironment);
+};

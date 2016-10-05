@@ -1,6 +1,6 @@
 #!/bin/sh
 
-### START - JXcore Test Server --------........................
+### START - JXcore Test Server --------.................
 ### Testing environment prepares separate packages for each node.
 ### Package builder calls this script with each node's IP address
 ### Make sure multiple calls to this script file compiles the application file
@@ -10,6 +10,8 @@ set -euo pipefail
 
 NORMAL_COLOR='\033[0m'
 RED_COLOR='\033[0;31m'
+GREEN_COLOR='\033[0;32m'
+GRAY_COLOR='\033[0;37m'
 
 OUTPUT() {
   echo -e "${RED_COLOR}$BASH_COMMAND FAILED - build.sh failure${NORMAL_COLOR}"
@@ -50,9 +52,19 @@ cordova -v
 # Run first the tests that can be run on desktop
 thali/install/setUpDesktop.sh
 cd test/www/jxcore/
-# jx npm test
-# jx npm run test-meta
-# jx npm run test-coordinated
+
+# Check if build is running in CI Test Mode
+CI_TEST_MODE=false;
+
+if [ $CI_TEST_MODE == true ]
+then
+  echo -e "${GREEN_COLOR} Running in CI test mode ${NORMAL_COLOR}"
+  node CITestMode.js
+fi
+
+jx npm test
+jx npm run test-meta
+jx npm run test-coordinated
 
 # Verify that docs can be generated
 #cd $WORKING_DIR/thali/

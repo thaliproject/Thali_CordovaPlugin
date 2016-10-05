@@ -2,10 +2,10 @@
 
 if (process.platform === 'android' || process.platform === 'ios') {
 
-  var tape = require('../lib/thaliTape');
-  var thaliMobileNativeWrapper = require('../node_modules/thali/NextGeneration/thaliMobileNativeWrapper');
+    var tape = require('../lib/thaliTape');
+    var thaliMobileNativeWrapper = require('../node_modules/thali/NextGeneration/thaliMobileNativeWrapper');
 
-  var callbackPeer;
+    var callbackPeer;
   var timeout;
 
   var test = tape({

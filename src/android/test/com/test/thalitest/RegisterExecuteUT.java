@@ -5,7 +5,10 @@ import android.util.Log;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.runner.Result;
+import org.junit.runner.notification.Failure;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -26,13 +29,13 @@ public final class RegisterExecuteUT {
         switch (methodName) {
             case "onPeerLost":
                 ConnectionHelperTest.mConnectionHelper
-                        .onPeerLost(new PeerProperties("11:22:33:22:11:00"));
+                    .onPeerLost(new PeerProperties("11:22:33:22:11:00"));
                 break;
             case "onPeerDiscovered":
                 ConnectionHelperTest.mConnectionHelper
-                        .onPeerDiscovered(new PeerProperties("33:44:55:44:33:22"));
+                    .onPeerDiscovered(new PeerProperties("33:44:55:44:33:22"));
                 break;
-            default :
+            default:
                 Log.e(TAG, "Method called in FireTestedMethod doesn't exists!");
                 break;
         }
@@ -73,8 +76,17 @@ public final class RegisterExecuteUT {
 
                 JSONObject jsonObject = new JSONObject();
                 Boolean jsonObjectCreated = false;
+                String failures = "";
+
+                for (Failure failure: resultTest.getFailures()) {
+                    failures += failure.getMessage() + "\n";
+                }
 
                 try {
+                    if(!failures.equals("")){
+                        jsonObject.put("failures", failures);
+                    }
+
                     jsonObject.put("total", resultTest.getRunCount());
                     jsonObject.put("passed", resultTest.getRunCount() -
                             resultTest.getFailureCount() - resultTest.getIgnoreCount());

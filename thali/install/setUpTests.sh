@@ -47,7 +47,7 @@ prepare_project()
   echo "Preparing ${TEST_PROJECT_NAME} Cordova project"
 
   cd $REPO_ROOT_DIR/test/TestServer
-  jx npm install
+  jx npm install --no-optional
   jx generateServerAddress.js $IPADDRESS
   cd $REPO_ROOT_DIR/..
   cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME
@@ -69,6 +69,7 @@ install_thali()
   echo "Installing Thali into ${TEST_PROJECT_NAME}"
 
   cd $TEST_PROJECT_ROOT_DIR/www/jxcore
+jx installCustomPouchDB.js
   jx npm install $REPO_ROOT_DIR/thali --save --no-optional --autoremove "*.gz"
 
   if [ $IS_MINIGW_PLATFORM == true ]; then
@@ -92,7 +93,7 @@ install_thali()
   cp -v $1 app.js
 
   cd $REPO_ROOT_DIR/thali/install
-  jx npm install
+  jx npm install --no-optional
   cd $TEST_PROJECT_ROOT_DIR/thaliDontCheckIn
   jx $REPO_ROOT_DIR/thali/install/setUpThaliTestIds.js
 }
