@@ -55,17 +55,18 @@
  * wait until it gets a response before firing off another `connect` for the
  * same peerID.
  *
- * On `multiConnect`/`disconnect` platforms (iOS) it is legal to call `connect`
- * and `disconnect` at any time and to have multiple `multiConnect` and
- * `disconnect` methods outstanding at the same time. However the Node layer
- * MUST NOT have multiple outstanding `multiConnect` or `disconnect` methods
- * for the same peerID at the same time. In other words if there is either a
- * `multiConnect` or `disconnect` method outstanding for a peerID then the
- * Node layer MUST NOT issue a `multiConnect` or `disconnect` for that peerID
- * until it gets a response to the previous request. For example, if the Node
- * layer fires off a `multiConnect` for a PeerID foo and then changes its
- * mind and wants to fire off a `disconnect`, it cannot issue the `disconnect`
- * for the peerID until the `multiConnect` for that peerID has returned.
+ * On `multiConnect`/`disconnect` platforms (iOS) it is legal to call
+ * `multiConnect` and `disconnect` at any time and to have multiple
+ * `multiConnect` and `disconnect` methods outstanding at the same time.
+ * However the Node layer  MUST NOT have multiple outstanding `multiConnect` or
+ * `disconnect` methods for the same peerID at the same time. In other words if
+ * there is either a `multiConnect` or `disconnect` method outstanding for a
+ * peerID then the Node layer MUST NOT issue a `multiConnect` or `disconnect`
+ * for that peerID until it gets a response to the previous request.
+ * For example, if the Node layer fires off a `multiConnect` for a PeerID foo
+ * and then changes its mind and wants to fire off a `disconnect`, it cannot
+ * issue the `disconnect` for the peerID until the `multiConnect` for that
+ * peerID has returned.
  *
  * In both the `multiConnect`\`disconnect` and `connect` cases the restriction
  * on having multiple outstanding methods is intended to provide a simpler
@@ -261,7 +262,7 @@
  * | Illegal peerID | The peerID has a format that could not have been returned by the local platform |
  * | startListeningForAdvertisements is not active | Go start it! |
  * | Connection could not be established | The attempt to connect to the peerID failed. This could be because the peer is gone, no longer accepting connections or the radio stack is just horked. |
- * | Connection wait timed out | This is for the case where we are a lexically smaller peer and the lexically larger peer doesn't establish a connection within a reasonable period of time. |
+ * | Connection wait timed out | This is for the case where connection isn't established within a reasonable period of time. |
  * | Max connections reached | The native layers have practical limits on how many connections they can handle at once. If that limit has been reached then this error is returned. The only action to take is to wait for an existing connection to be closed before retrying.  |
  * | No Native Non-TCP Support | There are no non-TCP radios on this platform. |
  * | No available TCP ports | There are no TCP ports available to listen on. |
@@ -291,18 +292,16 @@
  * TCP listener can handle exactly one connection at a time and therefore need
  * to use a multiplex layer in Node.
  *
- * This method MUST return an error if called while start listening for
- * advertisements is not active.
- *
  * The node layer is responsible for making sure there is not more than a single
  * outstanding `connect` or 'disconnect' method call at a time for any given
  * peerID. If that restriction is violated then the system enters an unknown
  * state.
  *
  * A call to `multiConnect` will immediately return with no information other
- * than a confirmation that the request was received. A separate {@link
- * multiConnectResolve} asynchronous callback will be fired with the actual
- * result of the method call.
+ * than a confirmation that the request was received or an error if this is not
+ * a `multiConnect` platform. A separate {@link multiConnectResolve}
+ * asynchronous callback will be fired with the actual result of the method
+ * call.
  *
  * The submitted peerIdentifier only contains a value mapped to the UUID part
  * of the remote peer's MCPeerID.
@@ -348,8 +347,10 @@
  * on the correlated {@link multiConnectResolved} callback for the result of
  * this particular method call.
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback The err value
- * MUST be null. Any real errors will be returned in the {@link
- * multiConnectResolved} callback.
+ * MUST be null unless this is not a platform that supports multiconnect in
+ * which case an error object MUST be returned with the value "Platform does not
+ * support multiConnect". Other than the platform not supported error any other
+ * errors will be returned in the {@link multiConnectResolved} callback.
  */
 // jscs:enable maximumLineLength
 
@@ -445,7 +446,6 @@
  * | No available TCP ports | There are no TCP ports available to listen on. |
  * | Radio Turned Off | The radio(s) needed for this method are not turned on. |
  * | Unspecified Error with Radio infrastructure | Something went wrong with the radios. Check the logs. |
- * | Platform does not support multiConnect | The platform doesn't support the `multiConnect` method. |
  *
  * @public
  * @callback multiConnectResolvedCallback

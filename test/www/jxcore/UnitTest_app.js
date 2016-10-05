@@ -10,36 +10,60 @@ if (typeof Mobile === 'undefined') {
   global.Mobile = require('./lib/wifiBasedNativeMock.js')();
 }
 
+var config = require('./config.json');
+var objectAssign = require('object-assign');
+process.env = objectAssign(process.env, config.env);
+
+var logger = require('./lib/testLogger')('UnitTest_app');
 var testUtils = require('./lib/testUtils');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
-var Promise = require('lie');
+var Promise = require('bluebird');
+
 var utResult = false;
 
 if (process.platform === 'android' || process.platform === 'ios') {
-  console.log('Running unit tests');
-  Mobile('ExecuteNativeTests').callNative(function (result) {
-    utResult = true;
-    if (result && result.executed) {
+  Mobile('executeNativeTests').callNative(function (result) {
+    logger.debug('Running unit tests');
+    if (result) {
+      if (!result.executed) {
+        console.log('*Native tests were not executed*');
+
+        utResult = false;
+      } else {
+        console.log('*Native tests were executed*');
+
+        utResult = result.failed <= 0;
+      }
+
       console.log('Total number of executed tests: ', result.total);
       console.log('Number of passed tests: ', result.passed);
       console.log('Number of failed tests: ', result.failed);
       console.log('Number of ignored tests: ', result.ignored);
       console.log('Total duration: ', result.duration);
-      if (result.failed > 0) {
-        console.log('Failures: \n', result.failures);
-        utResult = false;
-      }
+    } else {
+      console.log('*Native tests results are empty*');
+
+      utResult = false;
     }
   });
+
+  if (!utResult) {
+    console.log('Failed to execute UT.');
+    global.nativeUTFailed = true;
+
+  }
 } else {
   // We aren't on a device so we can't run those tests anyway
   utResult = true;
 }
 
 if (!utResult) {
-  console.log('Failed to execute UT.');
+  logger.debug('Failed to execute UT.');
   global.nativeUTFailed = true;
 }
+
+// Issue #914
+var networkTypes = [ThaliMobile.networkTypes.WIFI];
 
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {
@@ -53,15 +77,22 @@ ThaliMobile.getNetworkStatus()
   Promise.all(promiseList)
   .then(function () {
     Mobile('GetDeviceName').callNative(function (name) {
-      console.log('My device name is: %s', name);
+      logger.debug('My device name is: %s', name);
       testUtils.setName(name);
-      // The setImmediate is to avoid this issue:
-      // https://github.com/thaliproject/Thali_CordovaPlugin/issues/563
-      setImmediate(function () {
-        require('./runTests.js');
+
+      networkTypes.reduce(function (sequence, networkType) {
+        return sequence
+          .then(function () {
+            logger.debug('Running for ' + networkType + ' network type');
+            global.NETWORK_TYPE = networkType;
+            require('./runTests.js');
+          });
+      }, Promise.resolve())
+      .catch(function (error) {
+        logger.error(error.message + '\n' + error.stack);
       });
     });
   });
 });
 
-console.log('Unit Test app is loaded');
+logger.debug('Unit Test app is loaded');

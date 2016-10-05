@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
+import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 
 public class OutgoingSocketThreadMock extends OutgoingSocketThread {
     Long threadId = 1234L;
@@ -82,7 +83,7 @@ public class OutgoingSocketThreadMock extends OutgoingSocketThread {
                 mLocalInputStream = tempInputStream;
                 mLocalOutputStream = tempOutputStream;
 
-                startStreamCopyingThreads();
+                startStreamCopyingThreads(new ConnectionData(new PeerProperties(), false));
             }
         }
     }
