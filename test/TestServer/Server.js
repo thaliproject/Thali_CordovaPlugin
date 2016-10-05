@@ -54,6 +54,7 @@ Server.prototype._connect = function (socket) {
   socket.data('*', this._data.bind(this, socket, remoteEvents));
   remoteEvents.on('present', this._present.bind(this, remoteEvents));
 
+  socket.on('error', function () {});
   // socket.on('error', remoteEvents.emit.bind(remoteEvents, 'error'));
 
   this._sockets.push(socket);

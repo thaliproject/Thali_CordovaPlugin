@@ -46,9 +46,9 @@ ServerClient.prototype.connect = function () {
   });
 
   this._socket.data('*', this._data.bind(this));
-  this._socket
-  .on('close', this.emit.bind(this, 'close'));
-  // .on('error', this.emit.bind(this, 'error'));
+  this._socket.on('close', this.emit.bind(this, 'close'));
+  this._socket.on('error', function () {});
+  // this._socket.on('error', this.emit.bind(this, 'error'));
 
   logger.debug('connecting to \'%s:%d\'', this._host, this._port);
   this._socket.connect(this._port, this._host, this._connected.bind(this));
