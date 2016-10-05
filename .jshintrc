@@ -11,7 +11,7 @@
   "futurehostile": true,
   "expr": true,
   "nonew": true,
-  "singleGroups": true,
+  "singleGroups": false,
   "latedef": true,
   "freeze": true,
   "maxdepth": 3,
