@@ -1,4 +1,4 @@
 package io.jxcore.node;
 
-public class JXcoreThaliCallbackMock extends JXcoreThaliCallback {
+public class JXcoreThaliCallbackMock extends JXcoreThaliCallback{
 }

@@ -9,7 +9,7 @@ import java.io.OutputStream;
 public class SocketThreadBaseMock extends SocketThreadBase {
     public SocketThreadBaseMock(BluetoothSocket bluetoothSocket, Listener listener,
                                 InputStream inputStream, OutputStream outputStream)
-        throws IOException {
+            throws IOException {
         super(bluetoothSocket, listener, inputStream, outputStream);
 
     }
