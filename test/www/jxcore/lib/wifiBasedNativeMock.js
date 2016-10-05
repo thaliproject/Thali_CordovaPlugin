@@ -119,52 +119,12 @@ proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
  * TCP/IP mechanism. Where as a remote peer can trigger the closure of the
  * the single TCP/IP connection by closing its relayed connection.
  *
- * So what we need is an explicit way to model MCSessions in the mock when we
- * are emulating iOS. We had thought of using the mux layer for this, in other
- * words we could put the iOS code on top of the TCPServersManager code
- * which would then run on top of the WiFiMock which would then run on top of
- * the real WiFi code. This is workable but it's so complex it made our heads
- * hurt. So we decided to go with a simple solution.
- *
- * When a multiConnect method is received we will connect to the advertised
- * port and address that came over WiFi originally and we will connect to
- * an express endpoint we will add to the router called /inviteToSession. We
- * will support a POST request to that endpoint with a query argument on the
- * URL that contains a UUID to identify the session the remote peer is being
- * invited to. Remember that we will need to create an ACL for this (and the
- * other end points mentioned here) with a pre-defined secret since we
- * require all connections to run over PSK. Right now the response to
- * /inviteToSession will always be 200 OK. This is because we don't yet have
- * the functionality to allow peers to reject incoming session requests other
- * than for DOS reasons. So once the requesting peer gets 200 OK it can treat
- * the MCSession as established and continue with the multiConnect request.
- *
- * We will add a second endpoint under the same ACL called /endSession. This
- * endpoint also takes a query argument that contains a UUID. This identifies
- * the MCSession ID that is being closed. Either peer can send this to the
- * other. This enables us to simulate MCSession failures due both to the peer
- * who created the session and the peer who is a member of the session. A call
- * to this endpoint on the peer who initiated the session (so we have to track
- * which IDs we initiated) MUST cause a multiConnectConnectionFailureCallback
- * event to be fired to tell Node that the session is gone. The TCP listener
- * associated with the original multiConnect that created the session MUST also
- * be closed and all existing connections terminated.
- *
- * If a peer who was invited to a session (e.g. received an /inviteToSession
- * request) then receives a /endSession request with the same ID then this
- * signals that the TCP/IP listener that is handling WiFi requests to be
- * relayed to that peer's local router is to be shut down and all client
- * connections to that router shut down. The most common reason for this to
- * happens is that the initiating peer called the native disconnect method.
- *
- * In the case that peer A initiated a session with peer B and now peer B
- * wants to terminate that session (e.g. the test code on peer B called the
- * killConnections method which would kill everything) then this could trigger
- * a call to the /endSession endpoint on peer A. The result is very similar to
- * what would have happened had peer A called disconnect on the session. That
- * is, the TCP listener waiting for node requests to relay across WiFi would
- * be closed down. Existing connections would be closed and the
- * multiConnectConnectionFailureCallback would be called.
+ * However for now we only support closing sessions we initiated, there is no
+ * way for the remote peer to terminate from the node layer a session it was
+ * invited to. This is obviously a bug and we'll eventually need to fix it but
+ * for now that's that. So when we get a multiConnect call we just need to
+ * have our listener and when we get a disconnect for that multiConnect then
+ * we just shut down the listener and all incomning and outgoing connections.
  */
 
 /**
