@@ -49,23 +49,39 @@ function makeIntoCloseAllServer(server, eatNotRunning) {
    */
   server.closeAll = function (callback) {
     var forceCallback = false;
+
+    console.log('server is closing');
+
     // By closing the server first we prevent any new incoming connections
     // to the server.
     // Also note that the callback won't be called until all the connections
     // are destroyed because the destroy calls are synchronous.
     try {
       server.close(callback);
+      console.log('server was closed without error');
     } catch(err){
-      if (!eatNotRunning || !(err instanceof Error) ||
-        (err && err.message !== 'Not running')) {
+      console.log('server was closed with error: \'%s\'', err.toString());
+      if (
+        !eatNotRunning ||
+        !(err instanceof Error) ||
+        (err && err.message !== 'Not running')
+      ) {
+        console.log('server throws error: \'%s\'', err.toString());
         throw err;
       }
       forceCallback = true;
     }
 
-    connections.forEach(function (connection) {
-      connection.destroy();
-    });
+    console.log('server is closing connections');
+    try {
+      connections.forEach(function (connection) {
+        connection.destroy();
+      });
+      console.log('server was closed connections without error');
+    } catch (e) {
+      console.log('server was closed connections with error: \'%s\'', err.toString());
+      throw e;
+    }
 
     if (forceCallback && callback) {
       callback();

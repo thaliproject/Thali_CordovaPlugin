@@ -32,17 +32,23 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
+    logger.debug('server is closing');
     serverToBeClosed.closeAll(function () {
+      logger.debug('server was closed');
+      logger.debug('start stopListeningForAdvertisements');
       Mobile('stopListeningForAdvertisements').callNative(function (err) {
         t.notOk(
           err,
           'Should be able to call stopListeningForAdvertisements in teardown'
         );
+        logger.debug('finish stopListeningForAdvertisements');
+        logger.debug('start stopAdvertisingAndListening');
         Mobile('stopAdvertisingAndListening').callNative(function (err) {
           t.notOk(
             err,
             'Should be able to call stopAdvertisingAndListening in teardown'
           );
+          logger.debug('finish stopAdvertisingAndListening');
           t.end();
         });
       });
