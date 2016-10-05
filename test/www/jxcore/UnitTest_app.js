@@ -18,24 +18,40 @@ var logger = require('./lib/testLogger')('UnitTest_app');
 var testUtils = require('./lib/testUtils');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('bluebird');
+
 var utResult = false;
 
 if (process.platform === 'android' || process.platform === 'ios') {
-  logger.debug('Running unit tests');
   Mobile('executeNativeTests').callNative(function (result) {
-    utResult = true;
-    if (result && result.executed) {
-      logger.debug('Total number of executed tests: ', result.total);
-      logger.debug('Number of passed tests: ', result.passed);
-      logger.debug('Number of failed tests: ', result.failed);
-      logger.debug('Number of ignored tests: ', result.ignored);
-      logger.debug('Total duration: ', result.duration);
-      if (result.failed > 0) {
-        logger.debug('Failures: \n', result.failures);
+    logger.debug('Running unit tests');
+    if (result) {
+      if (!result.executed) {
+        console.log('*Native tests were not executed*');
+
         utResult = false;
+      } else {
+        console.log('*Native tests were executed*');
+
+        utResult = result.failed <= 0;
       }
+
+      console.log('Total number of executed tests: ', result.total);
+      console.log('Number of passed tests: ', result.passed);
+      console.log('Number of failed tests: ', result.failed);
+      console.log('Number of ignored tests: ', result.ignored);
+      console.log('Total duration: ', result.duration);
+    } else {
+      console.log('*Native tests results are empty*');
+
+      utResult = false;
     }
   });
+
+  if (!utResult) {
+    console.log('Failed to execute UT.');
+    global.nativeUTFailed = true;
+
+  }
 } else {
   // We aren't on a device so we can't run those tests anyway
   utResult = true;
@@ -45,10 +61,6 @@ if (!utResult) {
   logger.debug('Failed to execute UT.');
   global.nativeUTFailed = true;
 }
-
-// TODO finish testing here (the node part will be omitted)
-// console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-// return;
 
 // Issue #914
 var networkTypes = [ThaliMobile.networkTypes.WIFI];
