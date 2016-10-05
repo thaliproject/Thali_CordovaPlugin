@@ -3,6 +3,7 @@
 var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils');
 var sinon = require('sinon');
+var randomString = require('randomstring');
 
 var fs = require('fs-extra-promise');
 var PouchDB = require('pouchdb')
@@ -39,7 +40,11 @@ var test = tape({
 });
 
 var Doc = function () {
-  this._id = Date.now().toString()
+  var prefix = randomString.generate({
+    length: 4,
+    charset: 'alphabetic'
+  });
+  this._id = prefix + '-' + Date.now();
 };
 
 test('Call of onCheckpointReached handler on a single db change', function (t) {
