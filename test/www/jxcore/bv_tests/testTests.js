@@ -52,7 +52,7 @@ if (!platform.isMobile) {
     var RECONNECT_TIMEOUT = 50;
     var RECONNECT_ATTEMPTS = 10;
 
-    t.timeoutAfter(2 * RECONNECT_TIMEOUT * RECONNECT_ATTEMPTS + 2000);
+    t.timeoutAfter(2 * RECONNECT_TIMEOUT * RECONNECT_ATTEMPTS + 5000);
 
     var reconnectedTimes = 0;
     tape._testServer.on('connect', function () {
