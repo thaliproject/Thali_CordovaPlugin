@@ -6,6 +6,7 @@ import android.util.Log;
 import com.test.thalitest.ThaliTestRunner;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -160,8 +161,8 @@ public class OutgoingSocketThreadTest {
         assertThat("mServerSocket should be null", mServerSocket, is(nullValue()));
     }
 
-    //#1214
-   // @Test
+    @Ignore("#1214")
+    @Test
     public void testRun() throws Exception {
         int testPortNumber = 57775;
         mOutgoingSocketThread.setPort(testPortNumber);

@@ -181,6 +181,7 @@ public class IncomingSocketThreadTest {
         }
     }
 
+    @Ignore("#1214")
     @Test
     public void testRun() throws Exception {
         Future<Boolean> future;
