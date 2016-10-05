@@ -16,12 +16,13 @@ process.env = objectAssign(process.env, config.env);
 
 var logger = require('./lib/testLogger')('UnitTest_app');
 var testUtils = require('./lib/testUtils');
+var platform = require('thali/NextGeneration/utils/platform');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('bluebird');
 
 var utResult = false;
 
-if (process.platform === 'android' || process.platform === 'ios') {
+if (platform._isRealMobile) {
   Mobile('executeNativeTests').callNative(function (result) {
     logger.debug('Running unit tests');
     if (result) {

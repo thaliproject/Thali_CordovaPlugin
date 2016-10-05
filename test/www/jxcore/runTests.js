@@ -65,7 +65,7 @@ if (hasJavaScriptSuffix(testsToRun)) {
 var currentPlatform = platform.name;
 // Our current platform can be 'darwin', 'linux', 'windows', etc.
 // Our 'thaliTape' expects all these platforms will be named as 'desktop'.
-if (!platform.isMobile) {
+if (!platform._isRealMobile) {
   currentPlatform = 'desktop';
 }
 
@@ -77,8 +77,10 @@ testUtils.hasRequiredHardware()
   })
 })
 .then(function () {
+  logger.info('Finished');
   process.exit(0);
 })
-.catch(function () {
+.catch(function (error) {
+  logger.error(error.message + '\n' + error.stack);
   process.exit(1);
 });
