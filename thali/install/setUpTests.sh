@@ -43,8 +43,9 @@ prepare_project()
   echo "Preparing ${TEST_PROJECT_NAME} Cordova project"
 
   cd $REPO_ROOT_DIR/test/TestServer
-  jx npm install --no-optional
-  jx generateServerAddress.js $2
+  npm install --no-optional
+  node generateServerAddress.js $2
+
   cd $REPO_ROOT_DIR/..
   cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME;ERROR_ABORT
   mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev;ERROR_ABORT
