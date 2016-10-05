@@ -81,16 +81,18 @@ ThaliMobile.getNetworkStatus()
       logger.debug('My device name is: %s', name);
       testUtils.setName(name);
 
-      networkTypes.reduce(function (sequence, networkType) {
+      return networkTypes.reduce(function (sequence, networkType) {
         return sequence
           .then(function () {
             logger.debug('Running for ' + networkType + ' network type');
             global.NETWORK_TYPE = networkType;
             require('./runTests.js');
+            return null;
           });
       }, Promise.resolve())
       .catch(function (error) {
         logger.error(error.message + '\n' + error.stack);
+        return null;
       });
     });
   });

@@ -11,7 +11,6 @@ var ThaliPullReplicationFromNotification =
 
 var express = require('express');
 var salti = require('salti');
-var path = require('path');
 var Promise = require('lie');
 var assert = require('assert');
 
@@ -186,7 +185,8 @@ ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
 
   .then(function () {
     logger.debug('starting thaliSendNotificationBasedOnReplication');
-    return self._thaliSendNotificationBasedOnReplication.start(arrayOfRemoteKeys);
+    return self._thaliSendNotificationBasedOnReplication
+              .start(arrayOfRemoteKeys);
   })
 
   .then(function () {
@@ -265,64 +265,67 @@ ThaliManager.prototype.stop = function () {
 /**
  * This is connection filter. What role we can assign to request.connection?
  * @private
- * @param {object} request
- * @param {object} response
+ * @param {Object} request
+ * @param {Object} response
  * @param {Function} nextHandler
  * @returns {boolean}
  */
-ThaliManager.prototype._connectionFilter = function (request, response, nextHandler) {
-  logger.debug(
-    'connected pskIdentity', request.connection.pskIdentity,
-    'for path', request.path
-  );
+ThaliManager.prototype._connectionFilter =
+  function (request, response, nextHandler) {
+    logger.debug(
+      'connected pskIdentity', request.connection.pskIdentity,
+      'for path', request.path
+    );
 
-  // We need to let connections passing through the connection filter
-  // in starting, started and stopping state in order to let peer actions be
-  // properly started and stopped.
-  assert(
-    this.state === ThaliManager.STATES.STARTING ||
-    this.state === ThaliManager.STATES.STARTED ||
-    this.state === ThaliManager.STATES.STOPPING,
-    'ThaliManager is not ready to accept any connection when state is ' + this.state
-  );
+    // We need to let connections passing through the connection filter
+    // in starting, started and stopping state in order to let peer actions be
+    // properly started and stopped.
+    assert(
+      this.state === ThaliManager.STATES.STARTING ||
+      this.state === ThaliManager.STATES.STARTED ||
+      this.state === ThaliManager.STATES.STOPPING,
+      'ThaliManager is not ready to accept any connection when state is ' +
+        this.state
+    );
 
-  if (request.connection.authorized) {
-    var secret = this._getPskIdToSecret(request.connection.pskIdentity);
-    if (secret === thaliConfig.BEACON_KEY) {
-      /*
-        * When folks want to access the beacon they need to connect via TLS with a
-        * predefined PSK. So we need to check for the magic PSK and if used then the
-        * caller will only be allowed to make a GET request to the beacon path and
-        * nothing else.
-        * The current magic PSK identity value is 'beacons' and the secret is a binary
-        * array consisting of 16 zero bytes in a row.
-        */
-      request.connection.pskRole = 'beacon';
-    } else if (secret) {
-      /*
-        * In this role the user connected over TLS using a PSK that we can associate
-        * with an identity (this is generated as part of beacon generation). We would
-        * then surface the public key for the identity to the router who would check
-        * that the path for the request is from our white list. The white list will
-        * contain Express-Pouch DB paths and methods that the caller can get to. These
-        * will include paths/methods needed for pull replication as well as the ability
-        * to get to _Local.
-        */
-      request.connection.pskRole = 'replication';
+    if (request.connection.authorized) {
+      var secret = this._getPskIdToSecret(request.connection.pskIdentity);
+      if (secret === thaliConfig.BEACON_KEY) {
+        /*
+          * When folks want to access the beacon they need to connect via TLS
+          * with a predefined PSK. So we need to check for the magic PSK and if
+          * used then the caller will only be allowed to make a GET request to
+          * the beacon path and nothing else. The current magic PSK identity
+          * value is 'beacons' and the secret is a binary array consisting of 16
+          * zero bytes in a row.
+          */
+        request.connection.pskRole = 'beacon';
+      } else if (secret) {
+        /*
+          * In this role the user connected over TLS using a PSK that we can
+          * associate with an identity (this is generated as part of beacon
+          * generation). We would then surface the public key for the identity
+          * to the router who would check that the path for the request is from
+          * our white list. The white list will contain Express-Pouch DB paths
+          * and methods that the caller can get to. These will include
+          * paths/methods needed for pull replication as well as the ability to
+          * get to _Local.
+          */
+        request.connection.pskRole = 'replication';
+      } else {
+        // Default role. It is usually unused.
+        request.connection.pskRole = 'public';
+      }
     } else {
-      // Default role. It is usually unused.
-      request.connection.pskRole = 'public';
+      logger.debug('connected pskIdentity is not authorized');
+      return response.status(401).send({
+        success: false,
+        message: 'Unauthorized'
+      });
     }
-  } else {
-    logger.debug('connected pskIdentity is not authorized');
-    return response.status(401).send({
-      success: false,
-      message: 'Unauthorized'
-    });
-  }
 
-  nextHandler();
-}
+    nextHandler();
+  };
 
 /**
  * This is thali id callback. Is thali id valid?
@@ -333,21 +336,22 @@ ThaliManager.prototype._connectionFilter = function (request, response, nextHand
  */
 ThaliManager.prototype._resolveThaliId = function (thaliId, request) {
   // In the case of an id that begins with the string [LOCAL_SEQ_POINT_PREFIX]
-  // we MUST enforce that the value of the :id EXACTLY matches the hashed
-  // public key of the caller as generated by thaliNotificationBeacons.createPublicKeyHash.
+  // we MUST enforce that the value of the :id EXACTLY matches the hashed public
+  // key of the caller as generated by
+  // thaliNotificationBeacons.createPublicKeyHash.
 
   var publicKey = this._getPskIdToPublicKey(request.connection.pskIdentity);
   assert(Buffer.isBuffer(publicKey), 'publicKey should be a buffer');
   return Buffer.compare(new Buffer(thaliId, 'base64'), publicKey) === 0;
-}
+};
 
 /**
- * This method will provide the actual state of ThaliManager
+ * This method will provide the actual state of ThaliManager.
  * @public
  */
 ThaliManager.prototype.getState = function () {
   return this.state;
-}
+};
 
 /**
  * ACL data for roles.
