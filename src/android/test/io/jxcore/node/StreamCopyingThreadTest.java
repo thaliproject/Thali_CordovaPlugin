@@ -3,16 +3,11 @@ package io.jxcore.node;
 import android.content.Context;
 import android.util.Log;
 
-import com.test.thalitest.ThaliTestRunner;
-
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.junit.rules.TestRule;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 
 import java.io.ByteArrayInputStream;
@@ -25,10 +20,6 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.Arrays;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -43,65 +34,20 @@ public class StreamCopyingThreadTest {
     String mThreadName = "My test thread name";
     String mResult;
     String mText = "TestingText";
-    String lastExceptionMessage = "";
+    int counter = 0;
     int bufferLength = 0;
     ByteArrayOutputStream bOutputStream;
-    static ArrayList<Integer> notifications;
+    ArrayList<Integer> notifications;
     boolean doThrowException = false;
-    final static String mTag = "StreamCopyingThreadTest";
-    static ExecutorService mExecutor;
+    String lastExceptionMessage = "";
 
-    public Callable<Boolean> createCheckStreamCopyingThreadIsClosed() {
-
-        return new Callable<Boolean>() {
-            int counter = 0;
-
-            @Override
-            public Boolean call() {
-                boolean mIsClosed = false;
-                Field fIsClosed;
-
-                try {
-                    fIsClosed = mStreamCopyingThread.getClass().getDeclaredField("mIsClosed");
-                    fIsClosed.setAccessible(true);
-                } catch (NoSuchFieldException e) {
-                    e.printStackTrace();
-                    return false;
-                }
-
-                while (!mIsClosed && counter < ThaliTestRunner.counterLimit) {
-                    try {
-                        Thread.sleep(ThaliTestRunner.timeoutLimit);
-                        counter++;
-                        mIsClosed = fIsClosed.getBoolean(mStreamCopyingThread);
-                    } catch (InterruptedException | IllegalAccessException e) {
-                        e.printStackTrace();
-                        return false;
-                    }
-                }
-
-                if (counter < ThaliTestRunner.counterLimit) {
-                    return true;
-                } else {
-                    Log.e(mTag, "StreamCopyingThread didn't close after 5s!");
-                    return false;
-                }
-            }
-        };
-    }
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
-    @Rule
-    public TestRule watcher = new TestWatcher() {
-        protected void starting(Description description) {
-            Log.i(mTag, "Starting test: " + description.getMethodName());
-        }
-    };
-
     @Before
     public void setUp() throws Exception {
+
         mResult = "Lorem ipsum dolor sit.";
         notifications = new ArrayList<Integer>();
 
@@ -114,7 +60,6 @@ public class StreamCopyingThreadTest {
 
         mStreamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream,
             mThreadName, new ConnectionData(new PeerProperties(), false));
-        mExecutor = Executors.newSingleThreadExecutor();
     }
 
     @Test
@@ -125,8 +70,8 @@ public class StreamCopyingThreadTest {
         mStreamCopyingThread.setBufferSize(512 * 8);
 
         assertThat("The mBufferSize is properly set",
-            mBufferSizeField.getInt(mStreamCopyingThread),
-            is(512 * 8));
+                mBufferSizeField.getInt(mStreamCopyingThread),
+                is(512 * 8));
 
         thrown.expect(IllegalArgumentException.class);
         mStreamCopyingThread.setBufferSize(0);
@@ -144,16 +89,15 @@ public class StreamCopyingThreadTest {
         mStreamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream, mThreadName,
             new ConnectionData(new PeerProperties(), false));
 
-        mStreamCopyingThread.setNotifyStreamCopyingProgress(true);
-
         mStreamCopyingThread.start();
 
-        Future<Boolean> mFuture = mExecutor.submit(createCheckStreamCopyingThreadIsClosed());
+        Thread.sleep(2000);
 
-        assertThat("StreamCopyingThread should be closed", mFuture.get(), is(true));
+        mStreamCopyingThread.close();
+
         assertThat("The content of the input stream is equal to the output stream",
-            bOutputStream.toString(),
-            is(mResult));
+                bOutputStream.toString(),
+                is(mResult));
     }
 
     @Test
@@ -161,7 +105,7 @@ public class StreamCopyingThreadTest {
 
         doThrowException = true;
         StreamCopyingThread streamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream,
-            mThreadName, new ConnectionData(new PeerProperties(), false));
+                mThreadName, new ConnectionData(new PeerProperties(), false));
         Thread runner = new Thread(streamCopyingThread);
         runner.setName("thread test");
         runner.start();
@@ -170,8 +114,8 @@ public class StreamCopyingThreadTest {
         doThrowException = false;
 
         assertThat("The exception is properly handled.",
-            lastExceptionMessage,
-            is("Failed to write to the output stream: Test exception."));
+                lastExceptionMessage,
+                is("Failed to write to the output stream: Test exception."));
     }
 
     @Test
@@ -182,8 +126,8 @@ public class StreamCopyingThreadTest {
         runner.join();
 
         assertThat("The content of the input stream is equal to the output stream",
-            bOutputStream.toString(),
-            is(mResult));
+                bOutputStream.toString(),
+                is(mResult));
 
         assertThat("The stream copying progress notifications is properly updated",
             notifications.size() > 0,
@@ -251,6 +195,7 @@ public class StreamCopyingThreadTest {
         assertThat("Closing input stream closes output stream",
             ((StreamCopyingThreadOutputStream) outputStream).isCloseCalled,
             is(true));
+
     }
 
     interface OnHalfStreamCopiedListener {
@@ -287,12 +232,6 @@ public class StreamCopyingThreadTest {
                     onHalfStreamCopiedListener.onHalfStreamCopied();
                     halfCopiedCalled = true;
                 }
-            }
-
-            notifications.add(numberOfBytes);
-
-            if (notifications.size() > 10) {
-                mStreamCopyingThread.close();
             }
         }
 
@@ -386,12 +325,10 @@ public class StreamCopyingThreadTest {
 
     class StreamCopyingThreadOutputStreamInfinite extends OutputStream {
 
-        public int counter = 0;
-
         @Override
         public void write(int oneByte) throws IOException {
             counter++;
-            if (counter % bufferLength == 0) {
+            if(counter % bufferLength == 0){
                 mResult += mText;
             }
             bOutputStream.write(oneByte);
