@@ -1,7 +1,13 @@
 package io.jxcore.node;
 
+import android.util.Log;
+
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 
 import java.lang.reflect.Field;
@@ -18,37 +24,44 @@ public class SocketThreadBaseTest {
     InputStreamMock mInputStreamMock;
     OutputStreamMock mOutputStreamMock;
     SocketThreadBaseMock mSocketThreadBaseMock;
+    String mTag = SocketThreadBaseTest.class.getName();
+
+    @Rule
+    public TestRule watcher = new TestWatcher() {
+        protected void starting(Description description) {
+            Log.i(mTag, "Starting test: " + description.getMethodName());
+        }
+    };
 
     @Before
     public void setUp() throws Exception {
-
         mInputStreamMock = new InputStreamMock();
         mOutputStreamMock = new OutputStreamMock();
         mListenerMock = new ListenerMock();
         mSocketThreadBaseMock =
-                new SocketThreadBaseMock(null, mListenerMock, mInputStreamMock, mOutputStreamMock);
+            new SocketThreadBaseMock(null, mListenerMock, mInputStreamMock, mOutputStreamMock);
     }
 
     @Test
     public void testGetListener() throws Exception {
         assertThat("getListener() returns equal listener to mListenerMock",
-                mSocketThreadBaseMock.getListener(),
-                is(equalTo((SocketThreadBase.Listener) mListenerMock)));
+            mSocketThreadBaseMock.getListener(),
+            is(equalTo((SocketThreadBase.Listener) mListenerMock)));
     }
 
     @Test
     public void testGetPeerProperties() throws Exception {
         assertThat("getProperties() should return null", mSocketThreadBaseMock.getPeerProperties(),
-                is(nullValue()));
+            is(nullValue()));
 
         PeerProperties pp = new PeerProperties("00:11:22:33:44:55");
         Field fPeerProperties = mSocketThreadBaseMock.getClass().getSuperclass()
-                .getDeclaredField("mPeerProperties");
+            .getDeclaredField("mPeerProperties");
         fPeerProperties.setAccessible(true);
         fPeerProperties.set(mSocketThreadBaseMock, pp);
 
         assertThat("getProperties() should return PeerProperties equal to pp",
-                mSocketThreadBaseMock.getPeerProperties(), is(equalTo(pp)));
+            mSocketThreadBaseMock.getPeerProperties(), is(equalTo(pp)));
     }
 
     @Test
@@ -58,30 +71,30 @@ public class SocketThreadBaseTest {
 
         mSocketThreadBaseMock.setPeerProperties(mPeerProperties1);
         assertThat("getProperties should be equal to mPeerProperties1",
-                mSocketThreadBaseMock.getPeerProperties(), is(equalTo(mPeerProperties1)));
+            mSocketThreadBaseMock.getPeerProperties(), is(equalTo(mPeerProperties1)));
 
         mSocketThreadBaseMock.setPeerProperties(mPeerProperties2);
         assertThat("getProperties should be equal to mPeerProperties2",
-                mSocketThreadBaseMock.getPeerProperties(), is(equalTo(mPeerProperties2)));
+            mSocketThreadBaseMock.getPeerProperties(), is(equalTo(mPeerProperties2)));
     }
 
     @Test
     public void testGetLocalHostAddressAsString() throws Exception {
         Field fLocalhostSocket = mSocketThreadBaseMock.getClass().getSuperclass()
-                .getDeclaredField("mLocalhostSocket");
+            .getDeclaredField("mLocalhostSocket");
         fLocalhostSocket.setAccessible(true);
         Socket mLocalhostSocket = (Socket) fLocalhostSocket.get(mSocketThreadBaseMock);
 
         if (mLocalhostSocket == null || mLocalhostSocket.getInetAddress() == null) {
             assertThat("getLocalHostAddressAsString should return null value if mLocalhostSocket" +
                     " or mLocalhostSocket.getInetAddress return null",
-                    mSocketThreadBaseMock.getLocalHostAddressAsString(),
-                    is(nullValue()));
+                mSocketThreadBaseMock.getLocalHostAddressAsString(),
+                is(nullValue()));
         } else {
             assertThat("getLocalHostAddressAsAstring should return value equal to " +
-                            "mLocalhostSocket.getInetAddress.toString()",
-                    mSocketThreadBaseMock.getLocalHostAddressAsString(),
-                    is(equalTo(mLocalhostSocket.getInetAddress().toString())));
+                    "mLocalhostSocket.getInetAddress.toString()",
+                mSocketThreadBaseMock.getLocalHostAddressAsString(),
+                is(equalTo(mLocalhostSocket.getInetAddress().toString())));
         }
     }
 
@@ -90,36 +103,36 @@ public class SocketThreadBaseTest {
         mSocketThreadBaseMock.close();
 
         assertThat("mReceivingThread is null", mSocketThreadBaseMock.mReceivingThread,
-                is(nullValue()));
+            is(nullValue()));
         assertThat("mSendingThread is null", mSocketThreadBaseMock.mSendingThread,
-                is(nullValue()));
+            is(nullValue()));
         assertThat("mLocalInputStream is null", mSocketThreadBaseMock.mLocalInputStream,
-                is(nullValue()));
+            is(nullValue()));
         assertThat("mLocalOutputStream is null", mSocketThreadBaseMock.mLocalOutputStream,
-                is(nullValue()));
+            is(nullValue()));
         assertThat("mLocalhostSocket is null", mSocketThreadBaseMock.mLocalhostSocket,
-                is(nullValue()));
+            is(nullValue()));
     }
 
     @Test
     public void testEquals() throws Exception {
         SocketThreadBaseMock mSocketThreadBaseMock1 =
-                new SocketThreadBaseMock(null, mListenerMock, mInputStreamMock, mOutputStreamMock);
+            new SocketThreadBaseMock(null, mListenerMock, mInputStreamMock, mOutputStreamMock);
         SocketThreadBaseMock mSocketThreadBaseMock2 =
-                new SocketThreadBaseMock(null, mListenerMock, mInputStreamMock, mOutputStreamMock);
+            new SocketThreadBaseMock(null, mListenerMock, mInputStreamMock, mOutputStreamMock);
         SocketThreadBaseMock mSocketThreadBaseMock3 =
-                new SocketThreadBaseMock(null, mListenerMock, mInputStreamMock, mOutputStreamMock);
+            new SocketThreadBaseMock(null, mListenerMock, mInputStreamMock, mOutputStreamMock);
 
         mSocketThreadBaseMock1.setPeerProperties(new PeerProperties("00:11:22:33:44:55"));
         mSocketThreadBaseMock2.setPeerProperties(new PeerProperties("11:11:22:33:44:55"));
         mSocketThreadBaseMock3.setPeerProperties(new PeerProperties("00:11:22:33:44:55"));
 
         assertThat("mSocketThreadBaseMock1 not equal to mSocketThreadBaseMock2",
-                mSocketThreadBaseMock1.equals(mSocketThreadBaseMock2), is(false));
+            mSocketThreadBaseMock1.equals(mSocketThreadBaseMock2), is(false));
         assertThat("mSocketThreadBaseMock3 not equal to mSocketThreadBaseMock2",
-                mSocketThreadBaseMock3.equals(mSocketThreadBaseMock2), is(false));
+            mSocketThreadBaseMock3.equals(mSocketThreadBaseMock2), is(false));
         assertThat("mSocketThreadBaseMock1 equal to mSocketThreadBaseMock3",
-                mSocketThreadBaseMock1.equals(mSocketThreadBaseMock3), is(true));
+            mSocketThreadBaseMock1.equals(mSocketThreadBaseMock3), is(true));
     }
 
     @Test
@@ -127,12 +140,12 @@ public class SocketThreadBaseTest {
         mSocketThreadBaseMock.mLocalhostSocket = new Socket();
 
         assertThat("mLocalhostSocket is not null", mSocketThreadBaseMock.mLocalhostSocket,
-                is(notNullValue()));
+            is(notNullValue()));
 
         mSocketThreadBaseMock.close();
 
         assertThat("mLocalhostSocket is null", mSocketThreadBaseMock.mLocalhostSocket,
-                is(nullValue()));
+            is(nullValue()));
     }
 
 

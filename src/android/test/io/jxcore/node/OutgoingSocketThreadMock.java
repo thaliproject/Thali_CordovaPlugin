@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
+
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 
 public class OutgoingSocketThreadMock extends OutgoingSocketThread {
@@ -21,11 +22,11 @@ public class OutgoingSocketThreadMock extends OutgoingSocketThread {
 
     public OutgoingSocketThreadMock(BluetoothSocket bluetoothSocket, Listener listener,
                                     InputStream inputStream, OutputStream outputStream)
-            throws IOException {
+        throws IOException {
         super(bluetoothSocket, listener, inputStream, outputStream);
     }
 
-    public void setPort(int _port){
+    public void setPort(int _port) {
         port = _port;
     }
 
@@ -50,7 +51,7 @@ public class OutgoingSocketThreadMock extends OutgoingSocketThread {
             Log.e(mTag, "Failed to create a server socket instance: " + e.getMessage(), e);
             mServerSocket = null;
             mListener.onDisconnected(this, "Failed to create a server socket instance: " +
-                    e.getMessage());
+                e.getMessage());
         }
 
         if (mServerSocket != null) {
@@ -65,14 +66,14 @@ public class OutgoingSocketThreadMock extends OutgoingSocketThread {
                 mLocalhostSocket = mServerSocket.accept(); // Blocking call
 
                 Log.i(mTag, "Incoming data from address: " + getLocalHostAddressAsString()
-                        + ", port: " + mServerSocket.getLocalPort());
+                    + ", port: " + mServerSocket.getLocalPort());
 
                 tempInputStream = mLocalhostSocket.getInputStream();
                 tempOutputStream = mLocalhostSocket.getOutputStream();
                 localStreamsCreatedSuccessfully = true;
             } catch (IOException e) {
                 if (!mIsClosing) {
-                    String errorMessage =  "Failed to create local streams: " + e.getMessage();
+                    String errorMessage = "Failed to create local streams: " + e.getMessage();
                     Log.e(mTag, errorMessage, e);
                     mListener.onDisconnected(this, errorMessage);
                 }
