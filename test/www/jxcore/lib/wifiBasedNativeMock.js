@@ -785,7 +785,7 @@ var setupListeners = function (thaliWifiInfrastructure) {
       peerAvailabilityChangedCallback([{
         peerIdentifier: wifiPeer.peerIdentifier,
         peerAvailable: peerAvailable,
-        pleaseConnect: false
+        generation: wifiPeer.generation
       }]);
     }
   );

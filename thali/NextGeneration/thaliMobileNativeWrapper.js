@@ -14,6 +14,11 @@ var states = {
   started: false
 };
 
+// We have to keep track of discovered peers to make sure
+// 'listenerRecreatedAfterFailureHandler' event uses the same generation after
+// connection was recreated
+var peerGenerations = {};
+
 var gPromiseQueue = new PromiseQueue();
 var gRouterObject = null;
 var gRouterExpress = null;
@@ -91,7 +96,13 @@ function failedConnectionHandler(failedConnection) {
     portNumber: null
   };
   handlePeerAvailabilityChanged(peer);
-  module.exports.emitter.emit('failedConnection', failedConnection);
+
+  var event = {
+    error: failedConnection.error,
+    peerIdentifier: failedConnection.peerIdentifier,
+    connectionType: connectionTypes.BLUETOOTH
+  };
+  module.exports.emitter.emit('failedNativeConnection', event);
 }
 
 function routerPortConnectionFailedHandler(failedRouterPort) {
@@ -136,9 +147,11 @@ function listenerRecreatedAfterFailureHandler(recreateAnnouncement) {
     return;
   }
 
+  var generation = peerGenerations[recreateAnnouncement.peerIdentifier];
   module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
     peerIdentifier: recreateAnnouncement.peerIdentifier,
-    portNumber: recreateAnnouncement.portNumber
+    portNumber: recreateAnnouncement.portNumber,
+    generation: generation
   });
 }
 
@@ -408,6 +421,7 @@ module.exports.stopListeningForAdvertisements = function () {
       if (error) {
         return reject(new Error(error));
       }
+      peerGenerations = {};
       resolve();
     });
   });
@@ -819,8 +833,10 @@ var handlePeerAvailabilityChanged = function (peer) {
       // for that?
       module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
         peerIdentifier: peer.peerIdentifier,
-        portNumber: null
+        portNumber: null,
+        generation: null
       });
+      delete peerGenerations[peer.peerIdentifier];
       resolve();
     };
     if (peer.peerAvailable) {
@@ -829,8 +845,10 @@ var handlePeerAvailabilityChanged = function (peer) {
       .then(function (portNumber) {
         module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
           peerIdentifier: peer.peerIdentifier,
-          portNumber: portNumber
+          portNumber: portNumber,
+          generation: peer.generation
         });
+        peerGenerations[peer.peerIdentifier] = peer.generation;
         resolve();
       })
       .catch(function (error) {

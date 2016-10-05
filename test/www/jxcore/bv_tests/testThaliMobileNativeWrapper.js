@@ -1,6 +1,6 @@
 'use strict';
 
-// Issue #419
+// Issue #914
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
   return;
@@ -399,7 +399,7 @@ test('thaliMobileNativeWrapper is stopped when routerPortConnectionFailed ' +
   }
 );
 
-test('We repeat failedConnection event when we get it from ' +
+test('We fire failedNativeConnection event when we get failedConnection from ' +
   'thaliTcpServersManager',
   function (t) {
     thaliMobileNativeWrapper.start(express.Router())
@@ -407,12 +407,16 @@ test('We repeat failedConnection event when we get it from ' +
       var peerIdentifier = 'some-identifier';
       var errorDescription = 'Dummy Error';
       thaliMobileNativeWrapper.emitter.once(
-        'failedConnection',
+        'failedNativeConnection',
         function (failedConnection) {
           t.equals(failedConnection.peerIdentifier, peerIdentifier,
             'peerIdentifier matches');
           t.equals(failedConnection.error.message, errorDescription,
             'error description matches');
+          t.equals(
+            failedConnection.connectionType,
+            thaliMobileNativeWrapper.connectionTypes.BLUETOOTH,
+            'connection type is tcp');
           t.end();
         }
       );
@@ -456,7 +460,7 @@ if (!platform.isMobile) {
           dummyPeers.push({
             peerIdentifier: i + '',
             peerAvailable: peerAvailable,
-            pleaseConnect: false
+            generation: 0
           });
         }
         return dummyPeers;
@@ -738,3 +742,81 @@ test('We provide notification when a listener dies and we recreate it',
       }
     });
   });
+
+test('We fire nonTCPPeerAvailabilityChangedEvent with the same ' +
+  'generation and different port when listener is recreated',
+  function (t) {
+    trivialEndToEndTest(t, false, function (peerId) {
+      var beforeRecreatePeer = null;
+      var afterRecreatePeer = null;
+      var isKilled = false;
+      var serversManager = thaliMobileNativeWrapper._getServersManager();
+      var smEmitSpy = sinon.spy(serversManager, 'emit');
+
+      function finishTest() {
+        t.ok(isKilled, 'mux must be destroyed');
+        t.ok(beforeRecreatePeer, 'peer tracked before recreating');
+        t.ok(afterRecreatePeer, 'peer tracked after recreating');
+        t.equal(typeof beforeRecreatePeer.generation, 'number');
+        t.equal(typeof afterRecreatePeer.generation, 'number');
+        t.equal(
+          beforeRecreatePeer.generation,
+          afterRecreatePeer.generation,
+          'the same generation before and after listener recreating'
+        );
+
+        var emittedRecreateEventForCurrentPeer =
+          smEmitSpy.args.some(function (callArgs) {
+            var eventName = callArgs[0];
+            var announcement = callArgs[1];
+            return (
+              eventName === 'listenerRecreatedAfterFailure' &&
+              announcement.peerIdentifier === peerId
+            );
+          });
+
+        t.ok(smEmitSpy.callCount, 'servers manager emitted at least one event');
+        t.ok(
+          emittedRecreateEventForCurrentPeer,
+          'servers manager emitted recreate event for our peer'
+        );
+
+        thaliMobileNativeWrapper.emitter.removeListener(
+          'nonTCPPeerAvailabilityChangedEvent',
+          nonTCPAvailableHandler
+        );
+        smEmitSpy.restore();
+        t.end();
+      }
+
+      function killMux() {
+        if (isKilled) {
+          return;
+        }
+        isKilled = true;
+        try {
+            serversManager._peerServers[peerId].server._mux.destroy();
+        } catch (err) {
+          t.fail('destroy failed with - ' + err);
+          finishTest();
+        }
+      }
+
+      function nonTCPAvailableHandler(peer) {
+        if (peer.peerIdentifier !== peerId || peer.portNumber === null) {
+          return;
+        }
+        if (!isKilled) {
+          beforeRecreatePeer = peer;
+          killMux();
+        } else {
+          afterRecreatePeer = peer;
+          finishTest();
+        }
+      }
+
+      thaliMobileNativeWrapper.emitter
+        .on('nonTCPPeerAvailabilityChangedEvent', nonTCPAvailableHandler);
+    });
+  }
+);
