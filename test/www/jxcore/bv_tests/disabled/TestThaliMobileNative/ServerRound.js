@@ -295,6 +295,9 @@ ServerRound.prototype._validateMessage = function (message) {
     return Message.codes.WRONG_ME;
   }
 
+  // 'message.code' is a client's roundNumber.
+  // 'this.roundNumber' is a server's roundNumber.
+  // Client can be in less round that server.
   if (message.code > this.roundNumber) {
     logger.error('this client is from bad round');
     return Message.codes.WRONG_GEN;

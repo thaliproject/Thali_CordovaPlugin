@@ -31,9 +31,8 @@ function ClientRound(tapeTest, roundNumber, quitSignal, options) {
   // { peerIdentifier: undefined/true/false }, ...
   this._validPeerIds = {};
 
-  // Connected peer ids will be common for all rounds.
-  // { peerIdentifier: undefined/roundNumber }, ...
-  this._connectedPeerIds = {};
+  // Connected peers will be shared between rounds.
+  this._connectedPeers = {};
 
   this.options = extend({}, ClientRound.defaults, options);
 
@@ -104,30 +103,9 @@ ClientRound.prototype._peerAvailabilityChanged = function (peers) {
         'we got an unavailable peer, peerIdentifier: %s',
         peer.peerIdentifier
       );
-      delete self._connectedPeerIds[peer.peerIdentifier];
+      delete self._connectedPeers[peer.peerIdentifier];
       return;
     }
-
-    // We have connected with this peer in 'roundNumber'.
-    // But we have no information about it in current round.
-    var roundNumber = self._connectedPeerIds[peer.peerIdentifier];
-    if (roundNumber !== undefined) {
-      if (roundNumber != self.roundNumber) {
-        // This peer is from another round, we can ignore it.
-        logger.debug(
-          'we have peer: \'%s\' connected, it\'s status was validated in %d round',
-          peer.peerIdentifier, roundNumber
-        );
-      } else {
-        // This should not be possible.
-        throw new Error(format(
-          'we have peer: \'%s\' connected, it\'s status wasn\'t validated in current %d round',
-          peer.peerIdentifier, roundNumber
-        ));
-      }
-      return;
-    }
-    self._connectedPeerIds[peer.peerIdentifier] = self.roundNumber;
 
     // This peer is doing it's validation now.
     // We will assume that peer will fail with validation.
@@ -139,7 +117,20 @@ ClientRound.prototype._peerAvailabilityChanged = function (peers) {
       peer.peerIdentifier
     );
 
-    return self._connectToPeer(peer)
+    // We could connect to this peer in the previous round.
+    var promise;
+    var connectionData = self._connectedPeers[peer.peerIdentifier];
+    if (connectionData) {
+      promise = Promise.resolve(connectionData);
+    } else {
+      promise = self._connectToPeer(peer)
+      .then(function (connectionData) {
+        self._connectedPeers[peer.peerIdentifier] = connectionData;
+        return connectionData;
+      });
+    }
+
+    return promise
     .then(function (connectionData) {
       logger.debug(
         'peer is connected, peerIdentifier: %s, connection: %s',
@@ -156,7 +147,7 @@ ClientRound.prototype._peerAvailabilityChanged = function (peers) {
       // We couldn't connect to the peer or it failed with validation.
       // We are waiting until this peer will be available again.
       delete self._validPeerIds[peer.peerIdentifier];
-      delete self._connectedPeerIds[peer.peerIdentifier];
+      delete self._connectedPeers[peer.peerIdentifier];
     });
   });
 
@@ -275,12 +266,14 @@ ClientRound.prototype._processTestMessage = function (connectionData) {
           'received peer response with code: %s',
           responseMessage.code
         );
-        self._validateMessage(responseMessage);
-        resolve();
+        try {
+          self._validateMessage(responseMessage);
+        } catch (e) {
+          reject(e);
+        }
       })
-      .catch(function (error) {
-        reject(error);
-      })
+      .then(resolve)
+      .catch(reject);
     });
     data.connection = connection;
   });

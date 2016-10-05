@@ -211,10 +211,6 @@ ActiveConnections.prototype._kill = function () {
     return this._killPromise;
   }
 
-  this._connections.forEach(function (data) {
-    data.reject(new Error('killing connection'));
-  });
-
   this._killPromise = Promise.all(
     this._connections.map(function (data) {
       return data.promise;
@@ -232,6 +228,10 @@ ActiveConnections.prototype._kill = function () {
       'we should have empty list'
     );
     delete self._killPromise;
+  });
+
+  this._connections.forEach(function (data) {
+    data.reject(new Error('killing connection'));
   });
 
   return this._killPromise;
