@@ -93,6 +93,7 @@ module.exports._isStarted = function () {
 function failedConnectionHandler(failedConnection) {
   var peer = {
     peerIdentifier: failedConnection.peerIdentifier,
+    generation: failedConnection.generation,
     portNumber: null
   };
   handlePeerAvailabilityChanged(peer);
