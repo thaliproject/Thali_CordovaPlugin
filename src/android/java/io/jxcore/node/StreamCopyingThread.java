@@ -246,4 +246,9 @@ class StreamCopyingThread extends Thread {
             Log.v(TAG, "closeStreams: Already closed");
         }
     }
+
+    @Override
+    public String toString() {
+        return "Thread " + getId() + " " + mThreadName;
+    }
 }

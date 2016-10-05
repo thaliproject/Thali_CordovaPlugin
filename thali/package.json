@@ -12,7 +12,7 @@
     "lie": "3.0.4",
     "long": "3.0.3",
     "multiplex": "6.7.0",
-    "node-ssdp": "thaliproject/node-ssdp#fcc5d403f6cc5e667572fba059332908c3cc822e",
+    "node-ssdp": "git://github.com/thaliproject/node-ssdp#fcc5d403f6cc5e667572fba059332908c3cc822e",
     "request": "2.64.0",
     "salti": "https://github.com/thaliproject/salti.git#master",
     "urlsafe-base64": "1.0.0",
