@@ -8,7 +8,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Inet4Address;
 import java.net.Socket;
-
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 
 public class IncomingSocketThreadMock extends IncomingSocketThread {
@@ -21,11 +20,11 @@ public class IncomingSocketThreadMock extends IncomingSocketThread {
 
     public IncomingSocketThreadMock(BluetoothSocket bluetoothSocket, Listener listener,
                                     InputStream inputStream, OutputStream outputStream)
-        throws IOException {
+            throws IOException {
         super(bluetoothSocket, listener, inputStream, outputStream);
     }
 
-    public void setPort(int _port) {
+    public void setPort(int _port){
         port = _port;
     }
 
@@ -48,7 +47,7 @@ public class IncomingSocketThreadMock extends IncomingSocketThread {
             mLocalhostSocket = new Socket(mLocalHostAddress, port);
 
             Log.i(mTag, "Local host address: " + getLocalHostAddressAsString() + ", port: " +
-                getLocalHostPort());
+                    getLocalHostPort());
 
             tempInputStream = mLocalhostSocket.getInputStream();
             tempOutputStream = mLocalhostSocket.getOutputStream();

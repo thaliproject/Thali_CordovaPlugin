@@ -2,15 +2,11 @@ package io.jxcore.node;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.util.Log;
 
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.junit.rules.TestRule;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
 
 import java.lang.reflect.Field;
 
@@ -24,20 +20,13 @@ public class LifeCycleMonitorTest {
     LifeCycleMonitor.LifeCycleMonitorListener mListener;
     Context mContext;
     LifeCycleMonitor.ActivityLifeCycleEvent lastEvent;
-    String mTag = LifeCycleMonitorTest.class.getName();
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
-    @Rule
-    public TestRule watcher = new TestWatcher() {
-        protected void starting(Description description) {
-            Log.i(mTag, "Starting test: " + description.getMethodName());
-        }
-    };
-
     @Before
     public void setUp() throws Exception {
+
         mContext = jxcore.activity.getBaseContext();
         mListener = new LifeCycleMonitorListenerMock();
         mLifeCycleMonitor = new LifeCycleMonitor(mListener);
@@ -47,7 +36,9 @@ public class LifeCycleMonitorTest {
     public void constructor() throws Exception {
         LifeCycleMonitor lcm = new LifeCycleMonitor(new LifeCycleMonitorListenerMock());
 
-        assertThat("The object is properly created", lcm, is(notNullValue()));
+        assertThat("The object is properly created",
+                lcm,
+                is(notNullValue()));
 
         thrown.expect(NullPointerException.class);
         lcm = new LifeCycleMonitor(null); //Throws NullPointerException
@@ -61,14 +52,14 @@ public class LifeCycleMonitorTest {
         mLifeCycleMonitor.start();
 
         assertThat("The mIsStarted flag is properly set",
-            mIsStartedField.getBoolean(mLifeCycleMonitor),
-            is(true));
+                mIsStartedField.getBoolean(mLifeCycleMonitor),
+                is(true));
 
         mLifeCycleMonitor.stop();
 
         assertThat("The mIsStarted flag is properly set",
-            mIsStartedField.getBoolean(mLifeCycleMonitor),
-            is(false));
+                mIsStartedField.getBoolean(mLifeCycleMonitor),
+                is(false));
     }
 
     @Test
@@ -76,8 +67,8 @@ public class LifeCycleMonitorTest {
         mLifeCycleMonitor.onActivityCreated(jxcore.activity, new Bundle());
 
         assertThat("The proper event is called on onActivityCreated",
-            lastEvent,
-            is(LifeCycleMonitor.ActivityLifeCycleEvent.CREATED));
+                lastEvent,
+                is(LifeCycleMonitor.ActivityLifeCycleEvent.CREATED));
     }
 
     @Test
@@ -85,8 +76,8 @@ public class LifeCycleMonitorTest {
         mLifeCycleMonitor.onActivityStarted(jxcore.activity);
 
         assertThat("The proper event is called on onActivityStarted",
-            lastEvent,
-            is(LifeCycleMonitor.ActivityLifeCycleEvent.STARTED));
+                lastEvent,
+                is(LifeCycleMonitor.ActivityLifeCycleEvent.STARTED));
     }
 
     @Test
@@ -94,8 +85,8 @@ public class LifeCycleMonitorTest {
         mLifeCycleMonitor.onActivityResumed(jxcore.activity);
 
         assertThat("The proper event is called on onActivityResumed",
-            lastEvent,
-            is(LifeCycleMonitor.ActivityLifeCycleEvent.RESUMED));
+                lastEvent,
+                is(LifeCycleMonitor.ActivityLifeCycleEvent.RESUMED));
     }
 
     @Test
@@ -103,8 +94,8 @@ public class LifeCycleMonitorTest {
         mLifeCycleMonitor.onActivityPaused(jxcore.activity);
 
         assertThat("The proper event is called on onActivityPaused",
-            lastEvent,
-            is(LifeCycleMonitor.ActivityLifeCycleEvent.PAUSED));
+                lastEvent,
+                is(LifeCycleMonitor.ActivityLifeCycleEvent.PAUSED));
     }
 
     @Test
@@ -112,8 +103,8 @@ public class LifeCycleMonitorTest {
         mLifeCycleMonitor.onActivityStopped(jxcore.activity);
 
         assertThat("The proper event is called on onActivityStopped",
-            lastEvent,
-            is(LifeCycleMonitor.ActivityLifeCycleEvent.STOPPED));
+                lastEvent,
+                is(LifeCycleMonitor.ActivityLifeCycleEvent.STOPPED));
     }
 
     @Test
@@ -121,8 +112,8 @@ public class LifeCycleMonitorTest {
         mLifeCycleMonitor.onActivitySaveInstanceState(jxcore.activity, new Bundle());
 
         assertThat("The proper event is called on onActivitySaveInstanceState",
-            lastEvent,
-            is(LifeCycleMonitor.ActivityLifeCycleEvent.SAVE_INSTANCE_STATE));
+                lastEvent,
+                is(LifeCycleMonitor.ActivityLifeCycleEvent.SAVE_INSTANCE_STATE));
     }
 
     @Test
@@ -130,14 +121,14 @@ public class LifeCycleMonitorTest {
         mLifeCycleMonitor.onActivityDestroyed(jxcore.activity);
 
         assertThat("The proper event is called on onActivityDestroyed",
-            lastEvent,
-            is(LifeCycleMonitor.ActivityLifeCycleEvent.DESTROYED));
+                lastEvent,
+                is(LifeCycleMonitor.ActivityLifeCycleEvent.DESTROYED));
     }
 
     class LifeCycleMonitorListenerMock implements LifeCycleMonitor.LifeCycleMonitorListener {
         @Override
         public void onActivityLifeCycleEvent(LifeCycleMonitor.ActivityLifeCycleEvent
-                                                 activityLifeCycleEvent) {
+                                                             activityLifeCycleEvent) {
             lastEvent = activityLifeCycleEvent;
         }
     }
