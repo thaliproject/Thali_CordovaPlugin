@@ -76,7 +76,15 @@ ServerClient.prototype.emitData = function (event, data) {
   var self = this;
 
   return new Promise(function (resolve, reject) {
-    self._socket.send(event, data, resolve);
+    function send () {
+      try {
+        self._socket.send(event, data, resolve);
+      } catch (e) {
+        logger.debug('ignoring error from dead socket, error: \'%s\'', e);
+        self.once('connect', send);
+      }
+    }
+    send();
   })
   .catch(function (error) {
     logger.error(
