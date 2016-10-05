@@ -73,7 +73,6 @@ inherits(CoordinatedClient, EventEmitter);
 
 CoordinatedClient.states = {
   created:   'created',
-  connected: 'connected',
   completed: 'completed'
 };
 
@@ -95,13 +94,6 @@ CoordinatedClient.prototype._bind = function () {
 // Both 'connect' and 'reconnect' will be here.
 CoordinatedClient.prototype._connect = function () {
   logger.debug('connected to the test server');
-
-  assert(
-    this._state === CoordinatedClient.states.created ||
-    this._state === CoordinatedClient.states.connected,
-    'we should be in created or connected state'
-  );
-  this._state = CoordinatedClient.states.connected;
 
   this._serverClient.emitData('present', {
     name:    testUtils.getName(),
