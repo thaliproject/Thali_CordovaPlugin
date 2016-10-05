@@ -161,8 +161,8 @@ public class OutgoingSocketThreadTest {
         assertThat("mServerSocket should be null", mServerSocket, is(nullValue()));
     }
 
-    @Ignore("#1214")
-    @Test
+    //@Ignore("#1214")
+    //@Test
     public void testRun() throws Exception {
         int testPortNumber = 57775;
         mOutgoingSocketThread.setPort(testPortNumber);
