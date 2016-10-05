@@ -561,7 +561,7 @@ module.exports.setUpServer = function (testBody, appConfig) {
 
 var MAX_FAILURE = 10;
 
-module.exports.turnParticipantsIntoBufferArray = function (t, devicePublicKey) {
+function turnParticipantsIntoBufferArray (t, devicePublicKey) {
   var publicKeys = [];
   t.participants.forEach(function (participant) {
     var publicKey = new Buffer(participant.data);
@@ -571,6 +571,7 @@ module.exports.turnParticipantsIntoBufferArray = function (t, devicePublicKey) {
   });
   return publicKeys;
 };
+module.exports.turnParticipantsIntoBufferArray = turnParticipantsIntoBufferArray;
 
 module.exports.startServerInfrastructure =
   function (thaliNotificationServer, publicKeys, ThaliMobile, router) {
@@ -596,35 +597,30 @@ module.exports.startServerInfrastructure =
       });
   };
 
-module.exports.runTestOnAllParticipants = function (t, router,
-                                                    thaliNotificationClient,
-                                                    thaliNotificationServer,
-                                                    ThaliMobile,
-                                                    devicePublicKey,
-                                                    testToRun) {
-  var publicKeys =
-    module.exports.turnParticipantsIntoBufferArray(t, devicePublicKey);
-
+module.exports.runTestOnAllParticipants = function (
+  t, router,
+  thaliNotificationClient,
+  thaliNotificationServer,
+  ThaliMobile,
+  devicePublicKey,
+  testToRun
+) {
+  var publicKeys = turnParticipantsIntoBufferArray(t, devicePublicKey);
   return new Promise(function (resolve, reject) {
     var completed = false;
-    /*
-     Each participant is recorded via their public key
-     If the value is -1 then they are done
-     If the value is 0 then no test has completed
-     If the value is greater than 0 then that is how many failures there have
-     been.
-     */
-    var participantCount = {};
-
-    publicKeys.forEach(function (participantPublicKey) {
+    // Each participant is recorded via their public key
+    // If the value is -1 then they are done
+    // If the value is 0 then no test has completed
+    // If the value is greater than 0 then that is how many failures there have been.
+    var participantCount = publicKeys.reduce(function (participantCount, participantPublicKey) {
       participantCount[participantPublicKey] = 0;
-    });
+      return participantCount;
+    }, {});
 
-    var participantTask = {};
-
-    publicKeys.forEach(function (participantPublicKey) {
+    var participantTask = publicKeys.reduce(function (participantTask, participantPublicKey) {
       participantTask[participantPublicKey] = Promise.resolve();
-    });
+      return participantTask;
+    }, {});
 
     function success(publicKey) {
       if (completed) {
@@ -633,12 +629,12 @@ module.exports.runTestOnAllParticipants = function (t, router,
 
       participantCount[publicKey] = -1;
 
-      var participantKeys =
-        Object.getOwnPropertyNames(participantCount);
-      for (var i = 0; i < participantKeys.length; ++i) {
-        if (participantCount[participantKeys[i]] !== -1) {
-          return;
-        }
+      var hasParticipant= Object.keys(participantCount)
+      .some(function (participantKey) {
+        return participantCount[participantKey] !== -1;
+      });
+      if (hasParticipant) {
+        return;
       }
 
       completed = true;
@@ -646,13 +642,15 @@ module.exports.runTestOnAllParticipants = function (t, router,
       resolve();
     }
 
-    function fail(publicKey, err) {
-      logger.debug('Got an err - ' + err);
-      if (completed || participantCount[publicKey] === -1) {
+    function fail(publicKey, error) {
+      logger.error('Got an err - ', error.toString());
+      var count = participantCount[publicKey];
+      if (completed || count === -1) {
         return;
       }
-      ++participantCount[publicKey];
-      if (participantCount[publicKey] >= MAX_FAILURE) {
+      count ++;
+      participantCount[publicKey] = count;
+      if (count >= MAX_FAILURE) {
         completed = true;
         clearTimeout(timerCancel);
         reject(err);
@@ -670,29 +668,29 @@ module.exports.runTestOnAllParticipants = function (t, router,
           return;
         }
         participantTask[notificationForUs.keyId]
-          .then(function () {
-            if (!completed) {
-              participantTask[notificationForUs.keyId] =
-                testToRun(notificationForUs)
-                  .then(function () {
-                    success(notificationForUs.keyId);
-                  })
-                  .catch(function (err) {
-                    fail(notificationForUs.keyId, err);
-                    return Promise.resolve();
-                  });
-              return participantTask[notificationForUs.keyId];
-            }
-          });
+        .then(function () {
+          if (!completed) {
+            var task = testToRun(notificationForUs)
+            .then(function () {
+              success(notificationForUs.keyId);
+            })
+            .catch(function (error) {
+              fail(notificationForUs.keyId, error);
+              return Promise.resolve(error);
+            });
+            participantTask[notificationForUs.keyId] = task;
+            return task;
+          }
+        });
       });
 
     thaliNotificationClient.start(publicKeys);
-    return module.exports.startServerInfrastructure(thaliNotificationServer,
-                                                    publicKeys,
-                                                    ThaliMobile, router)
-      .catch(function (err) {
-        reject(err);
-      });
+    return module.exports.startServerInfrastructure(
+      thaliNotificationServer, publicKeys, ThaliMobile, router
+    )
+    .catch(function (err) {
+      reject(err);
+    });
   });
 };
 

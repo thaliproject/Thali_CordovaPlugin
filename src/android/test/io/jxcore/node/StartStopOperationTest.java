@@ -1,6 +1,12 @@
 package io.jxcore.node;
 
+import android.util.Log;
+
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
 import org.thaliproject.p2p.btconnectorlib.DiscoveryManager;
 
@@ -14,17 +20,26 @@ import static org.hamcrest.core.IsNot.not;
 
 public class StartStopOperationTest {
 
+    String mTag = StartStopOperationTest.class.getName();
+
+    @Rule
+    public TestRule watcher = new TestWatcher() {
+        protected void starting(Description description) {
+            Log.i(mTag, "Starting test: " + description.getMethodName());
+        }
+    };
+
     @Test
     public void testCreateStartOperation() throws Exception {
         JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
         StartStopOperation mStartStopOperation =
-                StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
+            StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
 
         Field fCallback = mStartStopOperation.getClass().getDeclaredField("mCallback");
         Field fIsStartOperation = mStartStopOperation.getClass()
-                .getDeclaredField("mIsStartOperation");
+            .getDeclaredField("mIsStartOperation");
         Field fShouldStartOrStopListeningToAdvertisementsOnly = mStartStopOperation.getClass()
-                .getDeclaredField("mShouldStartOrStopListeningToAdvertisementsOnly");
+            .getDeclaredField("mShouldAffectListeningToAdvertisementsOnly");
 
         fCallback.setAccessible(true);
         fIsStartOperation.setAccessible(true);
@@ -32,56 +47,56 @@ public class StartStopOperationTest {
 
         JXcoreThaliCallback mCallback = (JXcoreThaliCallback) fCallback.get(mStartStopOperation);
         boolean mIsStartOperation = fIsStartOperation.getBoolean(mStartStopOperation);
-        boolean mShouldStartOrStopListeningToAdvertisementsOnly =
-                fShouldStartOrStopListeningToAdvertisementsOnly.getBoolean(mStartStopOperation);
+        boolean mShouldAffectListeningToAdvertisementsOnly =
+            fShouldStartOrStopListeningToAdvertisementsOnly.getBoolean(mStartStopOperation);
 
         assertThat("mJXcoreThaliCallback should not be null", mJXcoreThaliCallback,
-                is(notNullValue()));
+            is(notNullValue()));
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
-                is(notNullValue()));
+            is(notNullValue()));
         assertThat("mCallback should not be null", mCallback, is(notNullValue()));
         assertThat("mCallback should be equal to mJXcoreThaliCallback", mCallback,
-                is(equalTo(mJXcoreThaliCallback)));
+            is(equalTo(mJXcoreThaliCallback)));
         assertThat("mIsStartOperation should not be null", mIsStartOperation, is(notNullValue()));
         assertThat("mIsStartOperation should be true", mIsStartOperation, is(true));
         assertThat("mIsStartOperation should not be false", mIsStartOperation, is(not(false)));
-        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should not be null",
-                mShouldStartOrStopListeningToAdvertisementsOnly, is(notNullValue()));
-        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should be true",
-                mShouldStartOrStopListeningToAdvertisementsOnly, is(true));
-        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should not be false",
-                mShouldStartOrStopListeningToAdvertisementsOnly, is(not(false)));
+        assertThat("mShouldAffectListeningToAdvertisementsOnly should not be null",
+            mShouldAffectListeningToAdvertisementsOnly, is(notNullValue()));
+        assertThat("mShouldAffectListeningToAdvertisementsOnly should be true",
+            mShouldAffectListeningToAdvertisementsOnly, is(true));
+        assertThat("mShouldAffectListeningToAdvertisementsOnly should not be false",
+            mShouldAffectListeningToAdvertisementsOnly, is(not(false)));
 
         mStartStopOperation =
-                StartStopOperation.createStartOperation(false, mJXcoreThaliCallback);
+            StartStopOperation.createStartOperation(false, mJXcoreThaliCallback);
         mIsStartOperation = (Boolean) fIsStartOperation.get(mStartStopOperation);
-        mShouldStartOrStopListeningToAdvertisementsOnly =
-                (Boolean) fShouldStartOrStopListeningToAdvertisementsOnly.get(mStartStopOperation);
+        mShouldAffectListeningToAdvertisementsOnly =
+            (Boolean) fShouldStartOrStopListeningToAdvertisementsOnly.get(mStartStopOperation);
 
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
-                is(notNullValue()));
+            is(notNullValue()));
         assertThat("mIsStartOperation should not be null", mIsStartOperation, is(notNullValue()));
         assertThat("mIsStartOperation should be true", mIsStartOperation, is(true));
         assertThat("mIsStartOperation should not be false", mIsStartOperation, is(not(false)));
-        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should not be null",
-                mShouldStartOrStopListeningToAdvertisementsOnly, is(notNullValue()));
-        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should be false",
-                mShouldStartOrStopListeningToAdvertisementsOnly, is(false));
-        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should not be true",
-                mShouldStartOrStopListeningToAdvertisementsOnly, is(not(true)));
+        assertThat("mShouldAffectListeningToAdvertisementsOnly should not be null",
+            mShouldAffectListeningToAdvertisementsOnly, is(notNullValue()));
+        assertThat("mShouldAffectListeningToAdvertisementsOnly should be false",
+            mShouldAffectListeningToAdvertisementsOnly, is(false));
+        assertThat("mShouldAffectListeningToAdvertisementsOnly should not be true",
+            mShouldAffectListeningToAdvertisementsOnly, is(not(true)));
     }
 
     @Test
     public void testCreateStopOperation() throws Exception {
         JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
         StartStopOperation mStartStopOperation =
-                StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
+            StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
 
         Field fCallback = mStartStopOperation.getClass().getDeclaredField("mCallback");
         Field fIsStartOperation = mStartStopOperation.getClass()
-                .getDeclaredField("mIsStartOperation");
+            .getDeclaredField("mIsStartOperation");
         Field fShouldStartOrStopListeningToAdvertisementsOnly = mStartStopOperation.getClass()
-                .getDeclaredField("mShouldStartOrStopListeningToAdvertisementsOnly");
+            .getDeclaredField("mShouldAffectListeningToAdvertisementsOnly");
 
         fCallback.setAccessible(true);
         fIsStartOperation.setAccessible(true);
@@ -89,147 +104,147 @@ public class StartStopOperationTest {
 
         JXcoreThaliCallback mCallback = (JXcoreThaliCallback) fCallback.get(mStartStopOperation);
         boolean mIsStartOperation = (Boolean) fIsStartOperation.get(mStartStopOperation);
-        boolean mShouldStartOrStopListeningToAdvertisementsOnly =
-                (Boolean) fShouldStartOrStopListeningToAdvertisementsOnly.get(mStartStopOperation);
+        boolean mShouldAffectListeningToAdvertisementsOnly =
+            (Boolean) fShouldStartOrStopListeningToAdvertisementsOnly.get(mStartStopOperation);
 
         assertThat("mJXcoreThaliCallback should not be null", mJXcoreThaliCallback,
-                is(notNullValue()));
+            is(notNullValue()));
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
-                is(notNullValue()));
+            is(notNullValue()));
         assertThat("mCallback should not be null", mCallback, is(notNullValue()));
         assertThat("mCallback shoulb be equal to mJXcoreThaliCallback", mCallback,
-                is(equalTo(mJXcoreThaliCallback)));
+            is(equalTo(mJXcoreThaliCallback)));
         assertThat("mIsStartOperation should not be null", mIsStartOperation, is(notNullValue()));
         assertThat("mIsStartOperation should be false", mIsStartOperation, is(false));
         assertThat("mIsStartOperation should not be true", mIsStartOperation, is(not(true)));
-        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should not be null",
-                mShouldStartOrStopListeningToAdvertisementsOnly, is(notNullValue()));
-        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should be true",
-                mShouldStartOrStopListeningToAdvertisementsOnly, is(true));
-        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should not be false",
-                mShouldStartOrStopListeningToAdvertisementsOnly, is(not(false)));
+        assertThat("mShouldAffectListeningToAdvertisementsOnly should not be null",
+            mShouldAffectListeningToAdvertisementsOnly, is(notNullValue()));
+        assertThat("mShouldAffectListeningToAdvertisementsOnly should be true",
+            mShouldAffectListeningToAdvertisementsOnly, is(true));
+        assertThat("mShouldAffectListeningToAdvertisementsOnly should not be false",
+            mShouldAffectListeningToAdvertisementsOnly, is(not(false)));
 
         mStartStopOperation =
-                StartStopOperation.createStopOperation(false, mJXcoreThaliCallback);
+            StartStopOperation.createStopOperation(false, mJXcoreThaliCallback);
         mIsStartOperation = (Boolean) fIsStartOperation.get(mStartStopOperation);
-        mShouldStartOrStopListeningToAdvertisementsOnly =
-                (Boolean) fShouldStartOrStopListeningToAdvertisementsOnly.get(mStartStopOperation);
+        mShouldAffectListeningToAdvertisementsOnly =
+            (Boolean) fShouldStartOrStopListeningToAdvertisementsOnly.get(mStartStopOperation);
 
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
-                is(notNullValue()));
+            is(notNullValue()));
         assertThat("mIsStartOperation should not be null", mIsStartOperation,
-                is(notNullValue()));
+            is(notNullValue()));
         assertThat("mIsStartOperation should be false", mIsStartOperation, is(false));
         assertThat("mIsStartOperation should not be true", mIsStartOperation, is(not(true)));
-        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should not be null",
-                mShouldStartOrStopListeningToAdvertisementsOnly, is(notNullValue()));
-        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should be false",
-                mShouldStartOrStopListeningToAdvertisementsOnly, is(false));
-        assertThat("mShouldStartOrStopListeningToAdvertisementsOnly should not be true",
-                mShouldStartOrStopListeningToAdvertisementsOnly, is(not(true)));
+        assertThat("mShouldAffectListeningToAdvertisementsOnly should not be null",
+            mShouldAffectListeningToAdvertisementsOnly, is(notNullValue()));
+        assertThat("mShouldAffectListeningToAdvertisementsOnly should be false",
+            mShouldAffectListeningToAdvertisementsOnly, is(false));
+        assertThat("mShouldAffectListeningToAdvertisementsOnly should not be true",
+            mShouldAffectListeningToAdvertisementsOnly, is(not(true)));
     }
 
     @Test
     public void testGetCallback() throws Exception {
         JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
         StartStopOperation mStartStopOperation =
-                StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
+            StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
 
         Thread.sleep(1000);
 
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
-                is(notNullValue()));
+            is(notNullValue()));
         assertThat("getCallback should be equal to mJXcoreThaliCallback",
-                mStartStopOperation.getCallback(), is(equalTo(mJXcoreThaliCallback)));
+            mStartStopOperation.getCallback(), is(equalTo(mJXcoreThaliCallback)));
 
         mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
         mStartStopOperation =
-                StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
+            StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
 
         Thread.sleep(1000);
 
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
-                is(notNullValue()));
+            is(notNullValue()));
         assertThat("getCallback return should be equal to mJXcoreThaliCallback",
-                mStartStopOperation.getCallback(), is(equalTo(mJXcoreThaliCallback)));
+            mStartStopOperation.getCallback(), is(equalTo(mJXcoreThaliCallback)));
     }
 
     @Test
     public void testIsStartOperation() throws Exception {
         JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
         StartStopOperation mStartStopOperation =
-                StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
+            StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
 
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
-                is(notNullValue()));
+            is(notNullValue()));
         assertThat("isStartOperation should return true",
-                mStartStopOperation.isStartOperation(), is(true));
+            mStartStopOperation.isStartOperation(), is(true));
 
         mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
         mStartStopOperation =
-                StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
+            StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
 
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
-                is(notNullValue()));
+            is(notNullValue()));
         assertThat("isStartOperation should return false",
-                mStartStopOperation.isStartOperation(), is(false));
+            mStartStopOperation.isStartOperation(), is(false));
     }
 
     @Test
     public void testGetShouldStartOrStopListeningToAdvertisementsOnly() throws Exception {
         JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
         StartStopOperation mStartStopOperation =
-                StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
+            StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
 
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
-                is(notNullValue()));
-        assertThat("getShouldStartOrStopListeningToAdvertisementsOnly should return true",
-                mStartStopOperation.getShouldStartOrStopListeningToAdvertisementsOnly(), is(true));
+            is(notNullValue()));
+        assertThat("shouldAffectListeningToAdvertisementsOnly should return true",
+            mStartStopOperation.shouldAffectListeningToAdvertisementsOnly(), is(true));
 
         mStartStopOperation =
-                StartStopOperation.createStartOperation(false, mJXcoreThaliCallback);
+            StartStopOperation.createStartOperation(false, mJXcoreThaliCallback);
 
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
-                is(notNullValue()));
-        assertThat("getShouldStartOrStopListeningToAdvertisementsOnly should return false",
-                mStartStopOperation.getShouldStartOrStopListeningToAdvertisementsOnly(), is(false));
+            is(notNullValue()));
+        assertThat("shouldAffectListeningToAdvertisementsOnly should return false",
+            mStartStopOperation.shouldAffectListeningToAdvertisementsOnly(), is(false));
 
         mStartStopOperation =
-                StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
+            StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
 
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
-                is(notNullValue()));
-        assertThat("getShouldStartOrStopListeningToAdvertisementsOnly should return true",
-                mStartStopOperation.getShouldStartOrStopListeningToAdvertisementsOnly(), is(true));
+            is(notNullValue()));
+        assertThat("shouldAffectListeningToAdvertisementsOnly should return true",
+            mStartStopOperation.shouldAffectListeningToAdvertisementsOnly(), is(true));
 
         mStartStopOperation =
-                StartStopOperation.createStopOperation(false, mJXcoreThaliCallback);
+            StartStopOperation.createStopOperation(false, mJXcoreThaliCallback);
 
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
-                is(notNullValue()));
-        assertThat("getShouldStartOrStopListeningToAdvertisementsOnly should return false",
-                mStartStopOperation.getShouldStartOrStopListeningToAdvertisementsOnly(), is(false));
+            is(notNullValue()));
+        assertThat("shouldAffectListeningToAdvertisementsOnly should return false",
+            mStartStopOperation.shouldAffectListeningToAdvertisementsOnly(), is(false));
     }
 
     @Test
     public void testGetOperationExecutedTime() throws Exception {
         JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
         StartStopOperation mStartStopOperation =
-                StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
+            StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
 
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
-                is(notNullValue()));
+            is(notNullValue()));
         assertThat("getOperationExecutedTime should return 0", mStartStopOperation
                 .getOperationExecutedTime(),
-                is(equalTo(0L)));
+            is(equalTo(0L)));
 
         mStartStopOperation = StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
 
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
-                is(notNullValue()));
+            is(notNullValue()));
         assertThat("getOperationExecutedTime should return 0", mStartStopOperation
                 .getOperationExecutedTime(),
-                is(equalTo(0L)));
+            is(equalTo(0L)));
     }
 
     @Test
@@ -237,33 +252,33 @@ public class StartStopOperationTest {
         long operationTime = 3000L;
         JXcoreThaliCallback mJXcoreThaliCallback = new JXcoreThaliCallbackMock();
         StartStopOperation mStartStopOperation =
-                StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
+            StartStopOperation.createStartOperation(true, mJXcoreThaliCallback);
 
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
-                is(notNullValue()));
+            is(notNullValue()));
         assertThat("getOperationExecutedTime should return 0", mStartStopOperation
                 .getOperationExecutedTime(),
-                is(equalTo(0L)));
+            is(equalTo(0L)));
 
         mStartStopOperation.setOperationExecutedTime(operationTime);
 
         assertThat("getOperationExecutedTime should return 3000", mStartStopOperation
                 .getOperationExecutedTime(),
-                is(equalTo(operationTime)));
+            is(equalTo(operationTime)));
 
         mStartStopOperation = StartStopOperation.createStopOperation(true, mJXcoreThaliCallback);
 
         assertThat("mStartStopOperation should not be null", mStartStopOperation,
-                is(notNullValue()));
+            is(notNullValue()));
         assertThat("getOperationExecutedTime should return 0", mStartStopOperation
                 .getOperationExecutedTime(),
-                is(equalTo(0L)));
+            is(equalTo(0L)));
 
         mStartStopOperation.setOperationExecutedTime(operationTime);
 
         assertThat("getOperationExecutedTime should return 3000", mStartStopOperation
                 .getOperationExecutedTime(),
-                is(equalTo(operationTime)));
+            is(equalTo(operationTime)));
     }
 
     @Test
@@ -348,6 +363,5 @@ public class StartStopOperationTest {
         assertThat("Result should be Stop operation: Should affect listening to advertisements only",
             result, is(equalTo("Stop operation: Should affect listening to advertisements only")));
     }
-
 
 }

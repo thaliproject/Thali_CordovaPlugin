@@ -14,7 +14,7 @@ public class StartStopOperation {
     private static final String TAG = StartStopOperation.class.getName();
     private final JXcoreThaliCallback mCallback;
     private final boolean mIsStartOperation;
-    private final boolean mShouldStartOrStopListeningToAdvertisementsOnly;
+    private final boolean mShouldAffectListeningToAdvertisementsOnly;
     private long mOperationExecutedTime = 0;
 
     /**
@@ -27,7 +27,7 @@ public class StartStopOperation {
      * @return A newly created start operation.
      */
     public static StartStopOperation createStartOperation(
-            boolean startListeningToAdvertisementsOnly, JXcoreThaliCallback callback) {
+        boolean startListeningToAdvertisementsOnly, JXcoreThaliCallback callback) {
         return new StartStopOperation(true, startListeningToAdvertisementsOnly, callback);
     }
 
@@ -41,7 +41,7 @@ public class StartStopOperation {
      * @return A newly created stop operation.
      */
     public static StartStopOperation createStopOperation(
-            boolean stopListeningToAdvertisementsOnly, JXcoreThaliCallback callback) {
+        boolean stopListeningToAdvertisementsOnly, JXcoreThaliCallback callback) {
         return new StartStopOperation(false, stopListeningToAdvertisementsOnly, callback);
     }
 
@@ -56,10 +56,10 @@ public class StartStopOperation {
      * @param callback The callback to call when we get the operation result.
      */
     private StartStopOperation(
-            boolean isStartOperation, boolean startOrStopListeningToAdvertisementsOnly, JXcoreThaliCallback callback) {
+        boolean isStartOperation, boolean startOrStopListeningToAdvertisementsOnly, JXcoreThaliCallback callback) {
         mCallback = callback;
         mIsStartOperation = isStartOperation;
-        mShouldStartOrStopListeningToAdvertisementsOnly = startOrStopListeningToAdvertisementsOnly;
+        mShouldAffectListeningToAdvertisementsOnly = startOrStopListeningToAdvertisementsOnly;
     }
 
     public JXcoreThaliCallback getCallback() {
@@ -73,8 +73,8 @@ public class StartStopOperation {
     /**
      * See constructor doc.
      */
-    public boolean getShouldStartOrStopListeningToAdvertisementsOnly() {
-        return mShouldStartOrStopListeningToAdvertisementsOnly;
+    public boolean shouldAffectListeningToAdvertisementsOnly() {
+        return mShouldAffectListeningToAdvertisementsOnly;
     }
 
     /**
@@ -102,13 +102,13 @@ public class StartStopOperation {
      * A string containing an error message otherwise (useful for debugging possible errors).
      */
     public String isTargetState(
-            ConnectionManagerState connectionManagerState, DiscoveryManagerState discoveryManagerState,
-            boolean isDiscovering, boolean isAdvertising) {
+        ConnectionManagerState connectionManagerState, DiscoveryManagerState discoveryManagerState,
+        boolean isDiscovering, boolean isAdvertising) {
         Log.v(TAG, "isTargetState: Connectivity: " + connectionManagerState
-                + ", discovery: " + discoveryManagerState
-                + ", is discovering: " + isDiscovering
-                + ", is advertising: " + isAdvertising
-                + " - " + toString());
+            + ", discovery: " + discoveryManagerState
+            + ", is discovering: " + isDiscovering
+            + ", is advertising: " + isAdvertising
+            + " - " + toString());
 
         if (mIsStartOperation) {
             // Discovery manager should always be running
@@ -116,7 +116,7 @@ public class StartStopOperation {
                 return "Discovery manager not started";
             }
 
-            if (!mShouldStartOrStopListeningToAdvertisementsOnly) {
+            if (!mShouldAffectListeningToAdvertisementsOnly) {
                 // Connection manager should be running and we should be advertising
                 if (connectionManagerState == ConnectionManagerState.NOT_STARTED) {
                     return "Connection manager not started";
@@ -133,7 +133,7 @@ public class StartStopOperation {
             }
         } else {
             // Is stop operation
-            if (mShouldStartOrStopListeningToAdvertisementsOnly) {
+            if (mShouldAffectListeningToAdvertisementsOnly) {
                 // Listening to advertisements should be stopped
                 if (isDiscovering) {
                     return "Is discovering (listening to advertisements), but should not be";
@@ -141,7 +141,7 @@ public class StartStopOperation {
             } else {
                 // Everything should be stopped
                 if (connectionManagerState != ConnectionManagerState.NOT_STARTED
-                        || discoveryManagerState != DiscoveryManagerState.NOT_STARTED) {
+                    || discoveryManagerState != DiscoveryManagerState.NOT_STARTED) {
                     return "Either the connection manager or the discovery manager is still running";
                 }
             }
@@ -153,7 +153,7 @@ public class StartStopOperation {
     @Override
     public String toString() {
         return (mIsStartOperation ? "Start" : "Stop" ) + " operation: "
-                + (mShouldStartOrStopListeningToAdvertisementsOnly
-                ? "Should affect listening to advertisements only" : "Should start/stop everything");
+            + (mShouldAffectListeningToAdvertisementsOnly
+            ? "Should affect listening to advertisements only" : "Should start/stop everything");
     }
 }

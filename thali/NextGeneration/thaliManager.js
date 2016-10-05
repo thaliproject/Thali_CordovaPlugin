@@ -36,14 +36,18 @@ var assert = require('assert');
  * If your app doesn't specify its own pool interface you will seriously
  * regret it as the default one has awful behavior. Building your own
  * thaliPeerPoolInterface is pretty much a requirement for a decent Thali app.
+ * @param {ThaliMobile.networkTypes} networkType for ThaliMobile.
  *
  * @constructor
  */
-function ThaliManager(expressPouchDB,
-                      PouchDB,
-                      dbName,
-                      ecdhForLocalDevice,
-                      thaliPeerPoolInterface) {
+function ThaliManager(
+  expressPouchDB,
+  PouchDB,
+  dbName,
+  ecdhForLocalDevice,
+  thaliPeerPoolInterface,
+  networkType
+  ) {
   var self = this;
 
   this._router = express.Router();
@@ -85,6 +89,8 @@ function ThaliManager(expressPouchDB,
     mode: 'minimumForPouchDB'
   }));
 
+  this._networkType = networkType;
+
   this.state = ThaliManager.STATES.CREATED;
 }
 
@@ -95,11 +101,11 @@ function ThaliManager(expressPouchDB,
  * @enum {string}
  */
 ThaliManager.STATES = {
-  CREATED: 'created',
+  CREATED:  'created',
   STARTING: 'starting',
-  STARTED: 'started',
+  STARTED:  'started',
   STOPPING: 'stopping',
-  STOPPED: 'stopped'
+  STOPPED:  'stopped'
 };
 
 /**
@@ -146,7 +152,11 @@ ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
   this._thaliPullReplicationFromNotification.start(arrayOfRemoteKeys);
 
   logger.debug('starting ThaliMobile');
-  this._startingPromise = ThaliMobile.start(self._router, self._getPskIdToSecret)
+  this._startingPromise = ThaliMobile.start(
+    this._router,
+    this._getPskIdToSecret,
+    this._networkType
+  )
 
   .then(function () {
     /*

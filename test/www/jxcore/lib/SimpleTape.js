@@ -6,6 +6,7 @@ var format = util.format;
 var objectAssign = require('object-assign');
 var tape         = require('tape-catch');
 var assert       = require('assert');
+var uuid         = require('node-uuid');
 
 var asserts = require('./utils/asserts');
 var Promise = require('./utils/Promise');
@@ -98,61 +99,72 @@ SimpleThaliTape.prototype.addTest = function (name, canBeSkipped, fun) {
 
 SimpleThaliTape.prototype._runTest = function (test) {
   var self = this;
-  
+
   // Test was skipped.
   var skipped = false;
 
   return new Promise(function (resolve, reject) {
-    function bindResult(tape, timeout) {
-      // 'end' can be called without 'result', so success is true by default.
-      // We can receive 'result' many times.
-      // For example each 'tape.ok' will provide a 'result'.
-      var success = true;
-      function resultHandler (result) {
-        if (!result.ok) {
-          success = false;
-        }
+    function processResult(tape, timeout) {
+      tape.sync = function () {
+        // noop
+        return Promise.resolve();
       }
-      tape.on('result', resultHandler);
 
-      function endHandler () {
-        clearTimeout(timer);
-        tape.removeListener('result', resultHandler);
+      var resultHandler;
+      var endHandler;
 
-        if (!success) {
-          var error = format(
-            'test failed, name: \'%s\'',
-            test.name
-          );
-          logger.error(error);
-          reject(new Error(error));
+      return new Promise(function (resolve, reject) {
+        // 'end' can be called without 'result', so success is true by default.
+        // We can receive 'result' many times.
+        // For example each 'tape.ok' will provide a 'result'.
+        var success = true;
+        resultHandler = function (result) {
+          if (!result.ok) {
+            success = false;
+          }
         }
-      }
-      tape.once('end', endHandler);
+        tape.on('result', resultHandler);
 
-      var timer = setTimeout(function () {
-        tape.removeListener('result', resultHandler);
-        tape.removeListener('end', endHandler);
+        endHandler = function () {
+          tape.removeListener('result', resultHandler);
+          resultHandler = null;
+          endHandler    = null;
 
-        var error = format(
-          'timeout exceed, test: \'%s\'',
-          test.name
-        );
-        logger.error(error);
-        reject(new Error(error));
-      }, timeout);
+          if (success) {
+            // Only for testing purposes.
+            resolve(tape.data);
+          } else {
+            var error = format('test failed, name: \'%s\'', test.name);
+            logger.error(error);
+            reject(new Error(error));
+          }
+        }
+        tape.once('end', endHandler);
+      })
+      .timeout(
+        timeout,
+        format('timeout exceed while processing result, test: \'%s\'', test.name)
+      )
+      .finally(function () {
+        if (resultHandler) {
+          tape.removeListener('result', resultHandler);
+        }
+        if (endHandler) {
+          tape.removeListener('end', endHandler);
+        }
+      });
     }
 
     // TODO This can be implemented using 'tape/lib/test' directly.
     // Example is 'tape.createHarness' https://github.com/substack/tape/blob/master/index.js#L103
 
     tape('setup', function (tape) {
-      bindResult(tape, self._options.setupTimeout);
+      processResult(tape, self._options.setupTimeout)
       self._options.setup(tape);
     });
 
     tape(test.name, function (tape) {
-      bindResult(tape, self._options.testTimeout);
+      processResult(tape, self._options.testTimeout);
 
       Promise.try(function () {
         if (test.canBeSkipped) {
@@ -174,7 +186,7 @@ SimpleThaliTape.prototype._runTest = function (test) {
     });
 
     tape('teardown', function (tape) {
-      bindResult(tape, self._options.teardownTimeout);
+      processResult(tape, self._options.teardownTimeout);
       tape.once('end', resolve);
       self._options.teardown(tape);
     });
@@ -221,7 +233,9 @@ SimpleThaliTape.prototype._resolveInstance = function () {
   SimpleThaliTape.instances.push(this);
 }
 
-SimpleThaliTape.begin = function (platform, version, hasRequiredHardware) {
+// Note that version, hasRequiredHardware and nativeUTFailed fields are not used and are added
+// here for consistency with CoordinatedTape
+SimpleThaliTape.begin = function (platform, version, hasRequiredHardware, nativeUTFailed) {
   var thaliTapes = SimpleThaliTape.instances;
   SimpleThaliTape.instances = [];
 

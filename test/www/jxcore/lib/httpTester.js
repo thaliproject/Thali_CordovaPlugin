@@ -3,7 +3,7 @@ var request = require('request');
 var express = require('express');
 var https = require('https');
 var ForeverAgent = require('forever-agent');
-var Promise = require('lie');
+var Promise = require('bluebird');
 var thaliConfig =
   require('thali/NextGeneration/thaliConfig');
 var makeIntoCloseAllServer =

@@ -1,5 +1,8 @@
 'use strict';
 
+var util     = require('util');
+var inherits = util.inherits;
+
 var objectAssign = require('object-assign');
 var assert       = require('assert');
 var EventEmitter = require('events').EventEmitter;
@@ -17,7 +20,11 @@ function TestDevice(rawSocket, info, options) {
 
   asserts.exists(rawSocket);
   this._socket = new Socket(rawSocket);
+
+  this._init();
 }
+
+inherits(TestDevice, EventEmitter);
 
 TestDevice.prototype._setOptions = function (options) {
   if (options) {
@@ -45,6 +52,9 @@ TestDevice.prototype._setInfo = function (info) {
   asserts.isBool(info.hasRequiredHardware);
   this.hasRequiredHardware = info.hasRequiredHardware;
 
+  asserts.isBool(info.nativeUTFailed);
+  this.nativeUTFailed = info.nativeUTFailed;
+
   asserts.isArray(info.tests);
   assert(
     info.tests.length > 0,
@@ -56,6 +66,19 @@ TestDevice.prototype._setInfo = function (info) {
   this.tests = info.tests;
 
   this.btAddress = info.btaddress;
+}
+
+TestDevice.prototype._init = function () {
+  var self = this;
+
+  // Current device wants to be synchonized with other devices.
+  this._socket.on('sync', function (data) {
+    self.emit('sync', data);
+  });
+}
+
+TestDevice.prototype.syncFinished = function (data) {
+  return this._socket.emitData('syncFinished', data);
 }
 
 TestDevice.prototype.update = function (newDevice) {
@@ -71,6 +94,7 @@ TestDevice.prototype.update = function (newDevice) {
   asserts.equals(this.platformName, newDevice.platformName);
   asserts.equals(this.type, newDevice.type);
   asserts.equals(this.hasRequiredHardware, newDevice.hasRequiredHardware);
+  asserts.equals(this.nativeUTFailed, newDevice.nativeUTFailed);
 
   asserts.arrayEquals(this.tests, newDevice.tests);
   asserts.equals(this.btAddress, newDevice.btAddress);
@@ -98,12 +122,16 @@ TestDevice.prototype.complete = function () {
   return this._socket.emitData('complete');
 }
 
-TestDevice.prototype.disqualify = function () {
-  return this._socket.emitData('disqualify');
+TestDevice.prototype.disqualify = function (error) {
+  return this._socket.emitData('disqualify', error);
 }
 
 TestDevice.prototype.discard = function () {
   return this._socket.emitData('discard');
+}
+
+TestDevice.prototype.error = function (error) {
+  return this._socket.emitData('error', error);
 }
 
 module.exports = TestDevice;

@@ -113,18 +113,30 @@ TestFramework.prototype.addDevice = function (device) {
   var deviceIndexes = platform.deviceIndexes;
   var count = platform.count;
 
+  var deviceDisqualified = false;
   if (!device.hasRequiredHardware) {
     logger.info(
       'disqualifying device with unsupported hardware, name: \'%s\'',
       device.name
     );
     device.disqualify();
-    // We can require less devices.
+    deviceDisqualified = true;
+  } else if (device.nativeUTFailed) {
+    logger.info(
+      'disqualifying device on which native tests failed, name: \'%s\'',
+      device.name
+    );
+    device.disqualify('Native unit tests failed');
+    deviceDisqualified = true;
+  }
+  // We can require less devices.
+  if (deviceDisqualified) {
     if (count > 0) {
-      count --;
+      count--;
     }
     return;
   }
+
 
   var deviceIndex = deviceIndexes[device.uuid];
   if (deviceIndex !== undefined) {

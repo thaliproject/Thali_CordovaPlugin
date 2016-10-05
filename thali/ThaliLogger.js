@@ -8,11 +8,12 @@ var winston      = require('winston');
 var EventEmitter = require('events').EventEmitter;
 
 
-var ThaliLogger = function () {
+var ThaliLogger = function (tag) {
   ThaliLogger.super_.call(this);
+  this.tag = tag;
 };
 
-util.inherits(ThaliLogger, EventEmitter);
+util.inherits(ThaliLogger, winston.Transport);
 
 ThaliLogger.prototype.name = 'ThaliLogger';
 
@@ -27,13 +28,18 @@ if (
   ThaliLogger._logger = console.log;
 }
 
+// TODO winston is unreliable, we want to find an alternative.
+// We can receive last part of message (like errors) in 'meta'.
 ThaliLogger.prototype.log = function (level, message, meta, callback) {
+  if (meta instanceof Error) {
+    message += ' ' + meta.stack;
+  }
   var now = new Date().toISOString()
     .replace(/T/, ' ')
     .replace(/.[^.]+$/, '');
   message = format(
     '%s - %s %s: \'%s\'',
-    now, level.toUpperCase(), meta.tag, message
+    now, level.toUpperCase(), this.tag, message
   );
 
   ThaliLogger._logger(message);
@@ -42,8 +48,6 @@ ThaliLogger.prototype.log = function (level, message, meta, callback) {
   // will not exit until `process.stdout` has drained anyway.
   this.emit('logged');
   callback(null, true);
-
-  this.emit('message', message);
 };
 
 module.exports = function (tag) {
@@ -52,17 +56,11 @@ module.exports = function (tag) {
       'All logging must have a tag that is at least 3 characters long!'
     );
   }
-  var thaliLogger = new ThaliLogger();
+  var thaliLogger = new ThaliLogger(tag);
   var logger = new winston.Logger({
     transports: [thaliLogger]
   });
   logger._thaliLogger = thaliLogger;
-  logger.rewriters.push(function (level, msg, meta) {
-    if (!meta.tag) {
-      meta.tag = tag;
-    }
-    return meta;
-  });
   logger.level = 'debug';
   return logger;
 };
