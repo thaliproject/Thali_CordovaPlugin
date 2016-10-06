@@ -102,7 +102,8 @@ testUtils.hasRequiredHardware()
     return thaliTape.begin(tests, {
       platform:            currentPlatform,
       version:             version,
-      hasRequiredHardware: hasRequiredHardware
+      hasRequiredHardware: hasRequiredHardware,
+      nativeUTFailed:      global.nativeUTFailed
     });
   });
 })
