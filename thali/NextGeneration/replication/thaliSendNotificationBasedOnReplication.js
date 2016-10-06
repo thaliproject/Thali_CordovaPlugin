@@ -55,6 +55,8 @@ function ThaliSendNotificationBasedOnReplication(router,
                                                  pouchDB) {
   this._router = router;
   this._millisecondsUntilExpiration = millisecondsUntilExpiration;
+  assert(millisecondsUntilExpiration > 0, 'millisecondsUntilExpiration MUST ' +
+    'be greater than 0');
   this._pouchDB = pouchDB;
   this._promiseQueue = new PromiseQueue();
   this._thaliNotificationServer =
@@ -356,8 +358,12 @@ ThaliSendNotificationBasedOnReplication.prototype._setUpChangeListener =
           return self._updateOnExpiration(0);
         }
 
-        assert(self._transientState.beaconRefreshTimerManager, 'If beacons were' +
-          'previously updated then there has to be a refresh timer for them.');
+        assert(self._transientState.beaconRefreshTimerManager, 'If beacons ' +
+          'were previously updated then there has to be a refresh timer for ' +
+          'them. lastTimeBeaconsWereUpdated is ' +
+          self._transientState.lastTimeBeaconsWereUpdated + ', ' +
+        'beaconRefreshTimerManager is ' +
+          self._transientState.beaconRefreshTimerManager);
 
         var soonestPossibleRefresh =
           self._transientState.lastTimeBeaconsWereUpdated +
@@ -380,6 +386,14 @@ ThaliSendNotificationBasedOnReplication.prototype._setUpChangeListener =
         if (whenTimerWillRun > soonestPossibleRefresh) {
           var milliSecondsUntilNextRefresh =
             soonestPossibleRefresh - Date.now();
+
+          // Under certain heavily loaded situations it's possible for the time
+          // that passed between when soonestPossibleRefresh and when Date.now()
+          // was run on the previous line to be long enough that the previous
+          // calculated value is less than 0. But we still have beacons that
+          // need updating so we have to make sure we are at least 0.
+          milliSecondsUntilNextRefresh = milliSecondsUntilNextRefresh < 0 ?
+              0 : milliSecondsUntilNextRefresh;
 
           self._updateOnExpiration(milliSecondsUntilNextRefresh);
         }
@@ -478,9 +492,9 @@ ThaliSendNotificationBasedOnReplication.prototype._calculatePeersToNotify =
 
 /**
  * Sets a timer to refresh the beacons before they expire. If the expiration
- * value is <= 0 then we clear the existing refresh timer if any but otherwise
+ * value is < 0 then we clear the existing refresh timer if any but otherwise
  * do nothing since there are no beacons to refresh.
- * @param {number} millisecondsUntilRun If <= 0 then after the current
+ * @param {number} millisecondsUntilRun If < 0 then after the current
  * timer (if any) is disabled a new one won't be set.
  * @private
  */
