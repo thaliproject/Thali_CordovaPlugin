@@ -8,7 +8,7 @@ var assert = require('assert');
 var net = require('net');
 var platform = require('thali/NextGeneration/utils/platform');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-
+var uuidValidator = require('uuid-validate');
 var logger = require('./testLogger')('wifiBasedNativeMock');
 
 var proxyquire = require('proxyquire');
@@ -263,16 +263,16 @@ MobileCallInstance.prototype.startListeningForAdvertisements =
   };
 
 MobileCallInstance.prototype._startListeningForAdvertisements =
-function (callback) {
-  this.thaliWifiInfrastructure.startListeningForAdvertisements()
-  .then(function () {
-    startListeningForAdvertisementsIsActive = true;
-    callback();
-  })
-  .catch(function (error) {
-    callback(error.message);
-  });
-};
+  function (callback) {
+    this.thaliWifiInfrastructure.startListeningForAdvertisements()
+    .then(function () {
+      startListeningForAdvertisementsIsActive = true;
+      callback();
+    })
+    .catch(function (error) {
+      callback(error.message);
+    });
+  };
 
 /**
  * This shuts down the SSDP listener/query code. It MUST otherwise behave as
@@ -743,6 +743,11 @@ MobileCallInstance.prototype.multiConnect =
       return callback('Platform does not support multiConnect');
     }
 
+    if (!uuidValidator(peerIdentifier)) {
+      callback(null);
+      return multiConnectResolvedCallbackHandler(syncValue, 'Illegal peerID');
+    }
+
     // The immediate return just says we got the request.
     callback(null);
     return this._connect(peerIdentifier, function (error, response) {
@@ -838,6 +843,10 @@ MobileCallInstance.prototype.callNative = function () {
     case 'multiConnect':
     {
       return this.multiConnect(arguments[0], arguments[1], arguments[2]);
+    }
+    case 'disconnect':
+    {
+      return this.disconnect(arguments[0], arguments[1]);
     }
     case 'killConnections':
     {

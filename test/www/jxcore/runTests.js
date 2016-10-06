@@ -28,7 +28,7 @@ var platform = require('thali/NextGeneration/utils/platform');
 // test framework to be used.
 if (typeof Mobile === 'undefined') {
   global.Mobile =
-    require('./lib/wifiBasedNativeMock.js')(platform.names.ANDROID);
+    require('./lib/wifiBasedNativeMock.js')(platform.names.IOS);
 }
 
 var hasJavaScriptSuffix = function (path) {

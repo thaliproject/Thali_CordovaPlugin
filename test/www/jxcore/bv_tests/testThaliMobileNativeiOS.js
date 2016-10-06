@@ -50,16 +50,18 @@ test('cannot call multiConnect when start listening for advertisements is ' +
   'not active', function (t) {
   var connectReturned = false;
   var syncValue = randomstring.generate();
-  Mobile('multiConnectResolved').registerToNative(function (callback) {
-    t.ok(connectReturned, 'Should only get called after multiConnect ' +
-      'returned');
-    t.equal(callback.syncValue, syncValue, 'SyncValue matches');
-    t.equal(callback.error, 'startListeningForAdvertisements is not active',
-      'Got right error');
-    t.equal(callback.listeningPort, null, 'listeningPort is null');
-    t.end();
-  });
-  Mobile('multiConnect').callNative('foo', syncValue, function (err) {
+  Mobile('multiConnectResolved').registerToNative(
+    function (syncValue, error, listeningPort) {
+      t.ok(connectReturned, 'Should only get called after multiConnect ' +
+        'returned');
+      t.equal(syncValue, syncValue, 'SyncValue matches');
+      t.equal(error, 'startListeningForAdvertisements is not active',
+        'Got right error');
+      t.equal(listeningPort, null, 'listeningPort is null');
+      t.end();
+    });
+  var peerId = nodeUuid.v4();
+  Mobile('multiConnect').callNative(peerId, syncValue, function (err) {
     t.equal(err, null, 'Got null as expected');
     connectReturned = true;
   });
@@ -68,58 +70,58 @@ test('cannot call multiConnect when start listening for advertisements is ' +
 test('cannot call multiConnect with illegal peerID', function (t) {
   var connectReturned = false;
   var syncValue = randomstring.generate();
-  Mobile('multiConnectResolved').registerToNative(function (callback) {
-    t.ok(connectReturned, 'Should only get called after multiConnect ' +
-      'returned');
-    t.equal(callback.syncValue, syncValue, 'SyncValue matches');
-    t.equal(callback.error, 'Illegal peerID',
-      'Got right error');
-    t.equal(callback.listeningPort, null, 'listeningPort is null');
-    t.end();
-  });
-  Mobile('startUpdateAdvertisingAndListening').callNative(4242,
-    function (err) {
-      t.equal(err, null, 'No error on starting');
-      Mobile('multiConnect').callNative('foo', syncValue, function (err) {
-        t.equal(err, null, 'Got null as expected');
-        connectReturned = true;
-      });
+  Mobile('multiConnectResolved').registerToNative(
+    function (syncValue, error, listeningPort) {
+      t.ok(connectReturned, 'Should only get called after multiConnect ' +
+        'returned');
+      t.equal(syncValue, syncValue, 'SyncValue matches');
+      t.equal(error, 'Illegal peerID',
+        'Got right error');
+      t.notOk(listeningPort, 'listeningPort is null');
+      t.end();
     });
+  Mobile('startListeningForAdvertisements').callNative(function (err) {
+    t.notOk(err, 'No error on starting');
+    Mobile('multiConnect').callNative('foo', syncValue, function (err) {
+      t.notOk(err, 'Got null as expected');
+      connectReturned = true;
+    });
+  });
 });
 
 test('multiConnect properly fails on legal but non-existent peerID',
   function (t) {
     var connectReturned = false;
     var syncValue = randomstring.generate();
-    Mobile('multiConnectResolved').registerToNative(function (callback) {
+    Mobile('multiConnectResolved').registerToNative(
+      function (syncValue, error, listeningPort) {
       t.ok(connectReturned, 'Should only get called after multiConnect ' +
         'returned');
-      t.equal(callback.syncValue, syncValue, 'SyncValue matches');
-      t.equal(callback.error, 'Connection could not be established ',
+      t.equal(syncValue, syncValue, 'SyncValue matches');
+      t.equal(error, 'Connection could not be established',
         'Got right error');
-      t.equal(callback.listeningPort, null, 'listeningPort is null');
+      t.notOk(listeningPort, 'listeningPort is null');
       t.end();
     });
-    Mobile('startUpdateAdvertisingAndListening').callNative(4242,
-      function (err) {
-        t.equal(err, null, 'No error on starting');
-        var peerId = nodeUuid.v4() + ':' + 0;
-        Mobile('multiConnect').callNative(peerId, syncValue, function (err) {
-          t.equal(err, null, 'Got null as expected');
-          connectReturned = true;
-        });
+    Mobile('startListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err, 'No error on starting');
+      var peerId = nodeUuid.v4();
+      Mobile('multiConnect').callNative(peerId, syncValue, function (err) {
+        t.notOk(err, 'Got null as expected');
+        connectReturned = true;
       });
+    });
   });
 
 test('disconnect doesn\'t fail on bad peer id', function (t) {
   Mobile('disconnect').callNative('foo', function(err) {
-    t.equal(err, null, 'No error');
+    t.notOk(err, 'No error');
     // Giving failure callback a chance to mess things up
     setImmediate(function () {
       t.end();
     });
   });
-  Mobile('multiConnectConnectionFailureCallback').registerToNative(
+  Mobile('multiConnectConnectionFailure').registerToNative(
     function (callback) {
       t.fail('We shouldn\'t get a failure callback');
     });
@@ -128,13 +130,13 @@ test('disconnect doesn\'t fail on bad peer id', function (t) {
 test('disconnect doesn\'t fail on plausible but bogus peer ID', function (t) {
   var peerId = nodeUuid.v4() + ':' + 0;
   Mobile('disconnect').callNative(peerId, function(err) {
-    t.equal(err, null, 'No error');
+    t.notOk(err, 'No error');
     // Giving failure callback a chance to mess things up
     setImmediate(function () {
       t.end();
     });
   });
-  Mobile('multiConnectConnectionFailureCallback').registerToNative(
+  Mobile('multiConnectConnectionFailure').registerToNative(
     function (callback) {
       t.fail('We shouldn\'t get a failure callback');
     });
