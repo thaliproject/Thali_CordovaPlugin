@@ -2,9 +2,9 @@
 
 // Issue #419
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
-var Platform = require('thali/NextGeneration/utils/platform');
+var platform = require('thali/NextGeneration/utils/platform');
 if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
-    !Platform.isAndroid) {
+    !platform.isAndroid) {
   return;
 }
 
