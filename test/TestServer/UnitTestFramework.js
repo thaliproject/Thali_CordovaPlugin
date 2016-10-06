@@ -84,7 +84,6 @@ UnitTestFramework.prototype.startTests = function (platformName) {
       'failed to run unit tests, platformName: \'%s\', error: \'%s\', stack: \'%s\'',
       platformName, error.toString(), error.stack
     );
-    /*
     return Promise.all(
       devices.map(function (device) {
         return device.error(error.toString())
@@ -96,7 +95,6 @@ UnitTestFramework.prototype.startTests = function (platformName) {
         });
       })
     );
-    */
   })
   .finally(function () {
     self.unbindSync(devices);

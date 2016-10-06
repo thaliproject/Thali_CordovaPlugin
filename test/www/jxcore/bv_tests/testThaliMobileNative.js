@@ -779,8 +779,9 @@ function killRemote(t, end) {
         });
       secondConnectionToListeningPort.on('error', function (err) {
         t.ok(err, 'We got an error which is what we wanted');
+        var RETRIES = 10;
         connectToPeer(
-          peer, 1,
+          peer, RETRIES,
           function (err) {
             t.notOk(err, 'We should be able to reconnect');
             t.end();
@@ -833,8 +834,9 @@ function killLocal(t, end) {
       new Promise(function (resolve, reject) {
         secondConnectionToListeningPort.on('error', function (err) {
           t.ok(err, 'We got an error which is what we wanted');
+          var RETRIES = 10;
           connectToPeer(
-            peer, 1,
+            peer, RETRIES,
             function (err) {
               resolve(err);
             },
