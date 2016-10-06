@@ -431,7 +431,7 @@ function (callBack) {
       var peerProxyServerClosePromises = [];
       for (var peerIdentifier in peerProxyServers) {
         var peerProxyServer = peerProxyServers[peerIdentifier];
-        peerProxyServerClosePromises.push(peerProxyServer.closeAll());
+        peerProxyServerClosePromises.push(peerProxyServer.closeAllPromise());
         delete peerProxyServers[peerIdentifier];
       }
 
