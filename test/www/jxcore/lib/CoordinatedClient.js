@@ -219,7 +219,7 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
     return new Promise(function (resolve, reject) {
       logger.debug('we are waiting for event: \'%s\'', event);
       self._serverClient.once(event, function (data) {
-        logger.debug('we are emitting data for event: \'%s\', data: \'%s\'', event, JSON.stringify(data));
+        logger.debug('we are emitting data for event: \'%s\', data: \'%s\'', event + '_confirmed', JSON.stringify(data));
         self._serverClient.emitData(event + '_confirmed', data, test.options)
         .then(function () {
           resolve(CoordinatedClient.getData(data));
