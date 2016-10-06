@@ -102,19 +102,23 @@ function roundTest(t, roundNumbersCount, isSimple) {
   });
 }
 
-test('Simple test with single round', function (t) {
+function skip () {
+  return !tape.coordinated;
+}
+
+test('Simple test with single round', skip, function (t) {
   roundTest(t, 0, true);
 });
-test('Simple test with two rounds', function (t) {
+test('Simple test with two rounds', skip, function (t) {
   roundTest(t, 1, true);
 });
-test('Simple test with 10 rounds', function (t) {
+test('Simple test with 10 rounds', skip, function (t) {
   roundTest(t, 10, true);
 });
 
-test('Complex test with two rounds', function (t) {
+test('Complex test with two rounds', skip, function (t) {
   roundTest(t, 1, false);
 });
-test('Complex test with 10 rounds', function (t) {
+test('Complex test with 10 rounds', skip, function (t) {
   roundTest(t, 10, false);
 });
