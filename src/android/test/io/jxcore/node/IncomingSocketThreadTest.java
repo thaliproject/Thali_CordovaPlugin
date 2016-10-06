@@ -173,8 +173,8 @@ public class IncomingSocketThreadTest {
                     mIncomingSocketThread.getLocalHostPort(), is(nullValue()));
         }
     }
-
-    @Test
+    // 1214
+    // @Test
     public void testRun() throws Exception {
         Future<Boolean> mFuture;
         mOutgoingSocketThread.setPort(testPortNumber);
