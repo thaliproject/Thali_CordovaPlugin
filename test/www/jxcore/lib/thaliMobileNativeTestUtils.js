@@ -125,10 +125,12 @@ function iOSConnectToPeer(peer, retries, successCb, failureCb, quitSignal) {
   });
   Mobile('multiConnect').callNative(peer.peerIdentifier, syncValue,
     function (err) {
-      logger.info('We got an error synchronously from multiConnect, that ' +
-        'really shouldn\'t happen!');
-      if (failureCb) {
-        failureCb(err, peer);
+      if (err) {
+        logger.info('We got an error synchronously from multiConnect, that ' +
+          'really shouldn\'t happen! - ' + err);
+        if (failureCb) {
+          failureCb(err, peer);
+        }
       }
     });
 }

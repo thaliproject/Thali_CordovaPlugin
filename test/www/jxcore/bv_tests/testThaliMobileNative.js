@@ -282,7 +282,8 @@ test('Can connect to a remote peer', function (t) {
         if (peer.peerAvailable && !connecting) {
           connecting = true;
           var RETRIES = 10;
-          ThaliMobileNativeTestUtils.connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
+          ThaliMobileNativeTestUtils.connectToPeer(peer, RETRIES,
+                                            onConnectSuccess, onConnectFailure);
         }
       });
     });
