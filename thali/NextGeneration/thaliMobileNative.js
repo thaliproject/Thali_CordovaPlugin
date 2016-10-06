@@ -299,7 +299,7 @@
  *
  * A call to `multiConnect` will immediately return with no information other
  * than a confirmation that the request was received or an error if this is not
- * a `multiConnect` platform. A separate {@link multiConnectResolve}
+ * a `multiConnect` platform. A separate {@link multiConnectResolved}
  * asynchronous callback will be fired with the actual result of the method
  * call.
  *

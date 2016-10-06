@@ -1,7 +1,6 @@
 'use strict';
 
 var util = require('util');
-var format = util.format;
 
 var os = require('os');
 var tmp = require('tmp');
@@ -141,9 +140,6 @@ module.exports.tmpDirectory = function () {
  * always resolves with true.
  */
 module.exports.hasRequiredHardware = function () {
-  if (!platform.isAndroid) {
-    return Promise.resolve(true);
-  }
   return new Promise(function (resolve) {
     if (isRealAndroid) {
       var checkBleMultipleAdvertisementSupport = function () {
@@ -169,7 +165,7 @@ module.exports.hasRequiredHardware = function () {
               }
               case 'Not supported': {
                 logger.info('BLE multiple advertisement not supported');
-  
+
                 resolve(false);
                 break;
               }
@@ -179,7 +175,7 @@ module.exports.hasRequiredHardware = function () {
               }
             }
           }
-        };   
+        );
       };
       checkBleMultipleAdvertisementSupport();
     } else {
@@ -283,7 +279,7 @@ var dbPath = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
 fs.ensureDirSync(dbPath);
 module.exports.getPouchDBTestDirectory = function () {
   return dbPath;
-}
+};
 
 var LevelDownPouchDB = levelDownPouchDBGenerator(dbPath);
 
@@ -575,7 +571,8 @@ function turnParticipantsIntoBufferArray (t, devicePublicKey) {
     }
   });
   return publicKeys;
-};
+}
+
 module.exports.turnParticipantsIntoBufferArray = turnParticipantsIntoBufferArray;
 
 module.exports.startServerInfrastructure =
@@ -658,7 +655,7 @@ module.exports.runTestOnAllParticipants = function (
       if (count >= MAX_FAILURE) {
         completed = true;
         clearTimeout(timerCancel);
-        reject(err);
+        reject(error);
       }
     }
 
