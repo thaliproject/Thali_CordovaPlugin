@@ -233,9 +233,7 @@ SimpleThaliTape.prototype._resolveInstance = function () {
   SimpleThaliTape.instances.push(this);
 }
 
-// Note that version, hasRequiredHardware and nativeUTFailed fields are not used and are added
-// here for consistency with CoordinatedTape
-SimpleThaliTape.begin = function (platform, version, hasRequiredHardware, nativeUTFailed) {
+SimpleThaliTape.begin = function (options) {
   var thaliTapes = SimpleThaliTape.instances;
   SimpleThaliTape.instances = [];
 
@@ -247,7 +245,7 @@ SimpleThaliTape.begin = function (platform, version, hasRequiredHardware, native
   .then(function (skippedTests) {
     logger.debug(
       'all unit tests succeeded, platformName: \'%s\'',
-      platform
+      options.platform
     );
     skippedTests = skippedTests.reduce(function (allTests, tests) {
       return allTests.concat(tests);
@@ -255,14 +253,12 @@ SimpleThaliTape.begin = function (platform, version, hasRequiredHardware, native
     logger.debug(
       'skipped tests: \'%s\'', JSON.stringify(skippedTests)
     );
-    logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
   })
   .catch(function (error) {
     logger.error(
       'failed to run unit tests, platformName: \'%s\', error: \'%s\', stack: \'%s\'',
-      platform, error.toString(), error.stack
+      options.platform, error.toString(), error.stack
     );
-    logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
     return Promise.reject(error);
   });
 }
