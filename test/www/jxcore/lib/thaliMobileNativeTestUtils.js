@@ -2,8 +2,13 @@
 
 var Platform = require('thali/NextGeneration/utils/platform');
 var logger = require('../lib/testLogger')('thaliMobileNativeTestUtils');
-var randomstring = require('randomstring');
+var randomString = require('randomstring');
 var Promise = require('lie');
+var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
+var net = require('net');
+var inherits = require('util').inherits;
+var EventEmitter = require('events').EventEmitter;
+
 
 function startAndListen(t, server, peerAvailabilityChangedHandler) {
   server.listen(0, function () {
@@ -95,36 +100,56 @@ function androidConnectToPeer(peer, retries, successCb, failureCb, quitSignal) {
   });
 }
 
+function multiConnectEmitter () {
+  EventEmitter.call(module.exports.multiConnectEmitter);
+  Mobile('multiConnectResolved').registerToNative(
+    function (syncValue, error, listeningPort) {
+      module.exports.multiConnectEmitter
+        .emit('multiConnectResolved', syncValue, error, listeningPort);
+    });
+  Mobile('multiConnectConnectionFailure').registerToNative(
+    function (peerIdentifier, error) {
+      module.exports.multiConnectEmitter
+        .emit('multiConnectConnectionFailure', peerIdentifier, error);
+    });
+}
+
+inherits(multiConnectEmitter, EventEmitter);
+
+module.exports.multiConnectEmitter =
+  new multiConnectEmitter();
+
 function iOSConnectToPeer(peer, retries, successCb, failureCb, quitSignal) {
-  var syncValue = randomstring.generate();
+  var originalSyncValue = randomString.generate();
 
   retries--;
-  Mobile('multiConnectResolved').registerToNative(function (callback) {
-    if (quitSignal && quitSignal.raised) {
-      successCb(null, null, peer);
-    }
 
-    if (callback.syncValue !== syncValue) {
-      logger.info('We got back an unexpected syncValue - ' +
-        callback.syncValue + ', when we were expecting ' + syncValue);
-      if (failureCb) {
-        failureCb('Wrong syncValue!', callback, peer);
+  module.exports.multiConnectEmitter.on('multiConnectResolved',
+    function(syncValue, error, listeningPort) {
+      logger.debug('Got multiConnectResolved - syncValue: ' + syncValue +
+        ' error: ' + error + ' listeningPort: ' + listeningPort);
+      if (quitSignal && quitSignal.raised) {
+        successCb(null, null, peer);
+      }
+
+      if (syncValue !== originalSyncValue) {
         return;
       }
-    }
 
-    if (callback.error == null) {
-      // Connected successfully..
-      successCb(null, callback, peer);
-    } else {
-      connectRetry(peer, retries, successCb, failureCb, quitSignal,
-        function () {
-          failureCb(callback.error, callback, peer);
-        });
-    }
-  });
-  Mobile('multiConnect').callNative(peer.peerIdentifier, syncValue,
+      if (error == null) {
+        // Connected successfully..
+        successCb(null, { listeningPort: parseInt(listeningPort, 10) }, peer);
+      } else {
+        connectRetry(peer, retries, successCb, failureCb, quitSignal,
+          function () {
+            failureCb(error, syncValue, peer);
+          });
+      }
+    });
+
+  Mobile('multiConnect').callNative(peer.peerIdentifier, originalSyncValue,
     function (err) {
+      logger.debug('Got multiConnect callback');
       if (err) {
         logger.info('We got an error synchronously from multiConnect, that ' +
           'really shouldn\'t happen! - ' + err);
@@ -151,3 +176,63 @@ function connectToPeer(peer, retries, successCb, failureCb, quitSignal) {
 }
 
 module.exports.connectToPeer = connectToPeer;
+
+function connectToPeerPromise(peer, retries, quitSignal) {
+  return new Promise(function (resolve, reject) {
+    connectToPeer(peer, retries, function (err, connection) {
+      resolve(connection);
+    }, function (err) {
+      reject(err);
+    }, quitSignal);
+  });
+}
+
+module.exports.connectToPeerPromise = connectToPeerPromise;
+
+function getConnectionToOnePeerAndTest(t, connectTest) {
+  var echoServer = net.createServer(function (socket) {
+    socket.pipe(socket);
+  });
+  echoServer = makeIntoCloseAllServer(echoServer);
+  var runningTest = false;
+  var currentTestPeer = null;
+  var failedPeers = 0;
+  var maxFailedPeers = 5;
+
+
+  function tryToConnect() {
+    runningTest = true;
+    var RETRIES = 10;
+    connectToPeerPromise(currentTestPeer, RETRIES)
+      .then(function (connectionCallback) {
+        connectTest(connectionCallback.listeningPort, currentTestPeer);
+      })
+      .catch(function () {
+        ++failedPeers;
+        if (failedPeers >= maxFailedPeers) {
+          t.fail('Could not get connection to anyone');
+          t.end();
+        } else {
+          runningTest = false;
+        }
+      });
+  }
+
+  startAndListen(t, echoServer, function (peers) {
+    if (runningTest) {
+      return;
+    }
+    for (var i = 0; i < peers.length; ++i) {
+      currentTestPeer = peers[i];
+      if (!currentTestPeer.peerAvailable) {
+        continue;
+      }
+      tryToConnect();
+      break;
+    }
+  });
+
+  return echoServer;
+}
+
+module.exports.getConnectionToOnePeerAndTest = getConnectionToOnePeerAndTest;

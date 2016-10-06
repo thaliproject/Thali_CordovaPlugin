@@ -2,20 +2,18 @@
 
 // Issue #419
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
-var Platform = require('thali/NextGeneration/utils/platform');
+var platform = require('thali/NextGeneration/utils/platform');
 if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
   return;
 }
 
-var EventEmitter = require('events').EventEmitter;
-var inherits = require('util').inherits;
 var net = require('net');
-var randomstring = require('randomstring');
+var randomString = require('randomstring');
 var tape = require('../lib/thaliTape');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var Promise = require('lie');
 var assert = require('assert');
-var ThaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils');
+var thaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils');
 
 var logger = require('../lib/testLogger')('testThaliMobileNative');
 
@@ -35,6 +33,7 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
+    thaliMobileNativeTestUtils.multiConnectEmitter.removeAllListeners();
     serverToBeClosed.closeAll(function () {
       Mobile('stopListeningForAdvertisements').callNative(function (err) {
         t.notOk(
@@ -166,15 +165,6 @@ test('peerAvailabilityChange is called', function (t) {
   });
 });
 
-function connectToPeerPromise(peer, retries, quitSignal) {
-  return new Promise(function (resolve, reject) {
-    ThaliMobileNativeTestUtils.connectToPeer(peer, retries, function (err, connection) {
-      resolve(connection);
-    }, function (err) {
-      reject(err);
-    }, quitSignal);
-  });
-}
 
 function connectionDiesClean(t, connection) {
   var errorFired = false;
@@ -212,7 +202,7 @@ function connectToListenerSendMessageGetResponseLength(t, port, request,
     var dataResult = null;
     var connection = net.connect(port, function () {
       connection.write(request);
-      ThaliMobileNativeTestUtils.getMessageByLength(connection, responseLength)
+      thaliMobileNativeTestUtils.getMessageByLength(connection, responseLength)
         .then(function (data) {
           dataResult = data;
         })
@@ -252,6 +242,7 @@ test('Can connect to a remote peer', function (t) {
   var echoServer = net.createServer(function (socket) {
     socket.pipe(socket);
   });
+
   echoServer = makeIntoCloseAllServer(echoServer);
   serverToBeClosed = echoServer;
 
@@ -282,7 +273,7 @@ test('Can connect to a remote peer', function (t) {
         if (peer.peerAvailable && !connecting) {
           connecting = true;
           var RETRIES = 10;
-          ThaliMobileNativeTestUtils.connectToPeer(peer, RETRIES,
+          thaliMobileNativeTestUtils.connectToPeer(peer, RETRIES,
                                             onConnectSuccess, onConnectFailure);
         }
       });
@@ -298,161 +289,34 @@ test('Can connect to a remote peer', function (t) {
   });
 });
 
-function getConnectionToOnePeerAndTest(t, connectTest) {
-  var echoServer = net.createServer(function (socket) {
-    socket.pipe(socket);
-  });
-  echoServer = makeIntoCloseAllServer(echoServer);
-  serverToBeClosed = echoServer;
-  var runningTest = false;
-  var currentTestPeer = null;
-  var failedPeers = 0;
-  var maxFailedPeers = 5;
-
-
-  function tryToConnect() {
-    runningTest = true;
-    var RETRIES = 10;
-    connectToPeerPromise(currentTestPeer, RETRIES)
-      .then(function (connectionCallback) {
-        connectTest(connectionCallback.listeningPort, currentTestPeer);
-      })
-      .catch(function () {
-        ++failedPeers;
-        if (failedPeers >= maxFailedPeers) {
-          t.fail('Could not get connection to anyone');
-          t.end();
-        } else {
-          runningTest = false;
-        }
-      });
-  }
-
-  ThaliMobileNativeTestUtils.startAndListen(t, echoServer, function (peers) {
-    if (runningTest) {
-      return;
-    }
-    for (var i = 0; i < peers.length; ++i) {
-      currentTestPeer = peers[i];
-      if (!currentTestPeer.peerAvailable) {
-        continue;
-      }
-      tryToConnect();
-      break;
-    }
-  });
-}
-
-function androidBadConnect(t, peerIdentifier, cleanUpFn) {
-  Mobile('connect').callNative(peerIdentifier,
-    function (err, connection) {
-      t.equal(err, 'Already connect(ing/ed)', 'Expected error');
-      t.notOk(connection, 'Null connection as expected');
-      cleanUpFn();
-    });
-}
-
-function multiConnectResolvedEmitter () {
-  var self = this;
-  EventEmitter.call(self);
-  Mobile('multiConnectResolved').registerToNative(function (callback) {
-    self.emit('multiConnectResolved', callback);
-  });
-}
-
-inherits(multiConnectResolvedEmitter, EventEmitter);
-
-var multiConnectResolvedEmitterObject = null;
-
-function iOSBadConnect(t, peerIdentifier, listeningPort, cleanUpFn) {
-  if (!multiConnectResolvedEmitterObject) {
-    multiConnectResolvedEmitterObject = new multiConnectResolvedEmitter();
-  }
-
-  var syncValue = randomstring.generate();
-
-  multiConnectResolvedEmitterObject.on('multiConnectResolved',
-    function (callback) {
-      if (callback.syncValue === syncValue) {
-        t.equal(callback.error, null, 'No error');
-        t.equal(callback.listeningPort, listeningPort, 'Ports equal');
-        cleanUpFn();
-      }
-    });
-
-  Mobile('multiConnect').callNative(peerIdentifier, syncValue, function (err) {
-    t.equal(err, null, 'Got null as expected');
-  });
-}
-
-test('Get error when trying to double connect to a peer on Android',
-  function (t) {
-  /*
-  We call connect twice in a row synchronously and one should connect and
-  the other should get an error
-   */
-  var completedBadConnectCalls = 0;
-  getConnectionToOnePeerAndTest(t, function (listeningPort, currentTestPeer) {
-    function cleanUpFn() {
-      ++completedBadConnectCalls;
-      if (completedBadConnectCalls === 2) {
-        t.end();
-      }
-    }
-    function badConnect() {
-      if (Platform.isAndroid) {
-        androidBadConnect(t, currentTestPeer.peerIdentifier, cleanUpFn);
-        return;
-      }
-
-      if (Platform.isIOS) {
-        iOSBadConnect(t, currentTestPeer.peerIdentifier, listeningPort,
-          cleanUpFn);
-        return;
-      }
-
-      t.fail('What the heck platform are we on?');
-      cleanUpFn();
-    }
-
-    var connection = net.connect(listeningPort,
-      function () {
-        badConnect();
-        badConnect();
-      });
-    connection.on('error', function (err) {
-      t.fail('lost connection because of ' + err);
-      t.end();
-    });
-  });
-});
-
 test('Connect port dies if not connected to in time',
   function() {
     /*
      This test should not be ran on Android until #714 is solved (implemented).
      */
-    return true;
+    return platform.isAndroid;
   },
   function (t) {
     /*
     If we don't connect to the port returned by the connect call in time
     then it should close down and we should get a connection error.
      */
-    getConnectionToOnePeerAndTest(t, function (listeningPort) {
-      setTimeout(function () {
-        var connection = net.connect(listeningPort,
-          function () {
-            t.fail('Connection should have failed due to time out');
-          });
-        connection.on('error', function (err) {
-          t.equal(err.message, 'connect ECONNREFUSED', 'failed correctly due to' +
-            ' refused connection');
-          t.end();
+    serverToBeClosed =
+      thaliMobileNativeTestUtils.getConnectionToOnePeerAndTest(t,
+        function (listeningPort) {
+          setTimeout(function () {
+            var connection = net.connect(listeningPort,
+              function () {
+                t.fail('Connection should have failed due to time out');
+              });
+            connection.on('error', function (err) {
+              t.equal(err.message, 'connect ECONNREFUSED',
+                'failed correctly due to refused connection');
+              t.end();
+            });
+          }, 3000);
         });
-      }, 3000);
-    });
-  });
+      });
 
 test('Can shift large amounts of data', function (t) {
   var connecting = false;
@@ -473,7 +337,7 @@ test('Can shift large amounts of data', function (t) {
   serverToBeClosed = echoServer;
 
   var dataSize = 4096;
-  var toSend = randomstring.generate(dataSize);
+  var toSend = randomString.generate(dataSize);
 
   function shiftData(sock) {
 
@@ -486,9 +350,6 @@ test('Can shift large amounts of data', function (t) {
 
     var done = false;
     sock.on('data', function (data) {
-
-      logger.info('forwardData');
-
       var remaining = dataSize - toRecv.length;
 
       if (remaining >= data.length) {
@@ -537,7 +398,8 @@ test('Can shift large amounts of data', function (t) {
       if (peer.peerAvailable && !connecting) {
         connecting = true;
         var RETRIES = 10;
-        ThaliMobileNativeTestUtils.connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
+        thaliMobileNativeTestUtils
+          .connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
       }
     });
   });
@@ -846,7 +708,8 @@ function clientRound(t, roundNumber, boundListener, quitSignal) {
         peersWeAreOrHaveResolved[peer.peerIdentifier] = true;
 
         var RETRIES = 10;
-        peerPromises.push(connectToPeerPromise(peer, RETRIES, quitSignal)
+        peerPromises.push(thaliMobileNativeTestUtils.
+          connectToPeerPromise(peer, RETRIES, quitSignal)
           .catch(function (err) {
             err.fatal = false;
             return Promise.reject(err);
@@ -912,7 +775,7 @@ function serverRound(t, roundNumber, pretendLocalMux, quitSignal) {
     });
     var connectionListener = function (socket) {
       connectionDiesClean(t, socket);
-      ThaliMobileNativeTestUtils.getMessageByLength(socket, messageLength())
+      thaliMobileNativeTestUtils.getMessageByLength(socket, messageLength())
         .then(function (dataBuffer) {
           var parsedMessage = parseMessage(dataBuffer);
           var validationResult =
@@ -1018,7 +881,7 @@ test('Test updating advertising and parallel data transfer', function (t) {
     t.end();
   });
 
-  ThaliMobileNativeTestUtils.startAndListen(t, pretendLocalMux, function (peers) {
+  thaliMobileNativeTestUtils.startAndListen(t, pretendLocalMux, function (peers) {
     boundListener.listener(peers);
   });
 });

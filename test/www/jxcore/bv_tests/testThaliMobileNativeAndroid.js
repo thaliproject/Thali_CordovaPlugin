@@ -12,7 +12,7 @@ var net = require('net');
 var tape = require('../lib/thaliTape');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var Promise = require('lie');
-var ThaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils');
+var thaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils');
 
 var logger = require('../lib/testLogger')('testThaliMobileNativeAndroid');
 
@@ -65,8 +65,45 @@ if (!tape.coordinated) {
   return;
 }
 
+test('Get error when trying to double connect to a peer on Android',
+  function (t) {
+    /*
+     We call connect twice in a row synchronously and one should connect and
+     the other should get an error
+     */
+    var completedBadConnectCalls = 0;
+    serverToBeClosed = thaliMobileNativeTestUtils.
+      getConnectionToOnePeerAndTest(t,
+        function (listeningPort, currentTestPeer) {
+          function cleanUpFn() {
+            ++completedBadConnectCalls;
+            if (completedBadConnectCalls === 2) {
+              t.end();
+            }
+          }
+          function badConnect() {
+            Mobile('connect').callNative(currentTestPeer.peerIdentifier,
+              function (err, connection) {
+                t.equal(err, 'Already connect(ing/ed)', 'Expected error');
+                t.notOk(connection, 'Null connection as expected');
+                cleanUpFn();
+              });
+          }
+
+          var connection = net.connect(listeningPort,
+            function () {
+              badConnect();
+              badConnect();
+            });
+          connection.on('error', function (err) {
+            t.fail('lost connection because of ' + err);
+            t.end();
+          });
+        });
+      });
+
 function getMessageAndThen(t, socket, messageToReceive, cb) {
-  return ThaliMobileNativeTestUtils.
+  return thaliMobileNativeTestUtils.
             getMessageByLength(socket, messageToReceive.length)
     .then(function (data) {
       t.ok(Buffer.compare(messageToReceive, data) === 0, 'Data matches');
@@ -80,7 +117,7 @@ function getMessageAndThen(t, socket, messageToReceive, cb) {
 
 function startAndGetConnection(t, server, onConnectSuccess, onConnectFailure) {
   var connecting = false;
-  ThaliMobileNativeTestUtils.startAndListen(t, server, function (peers) {
+  thaliMobileNativeTestUtils.startAndListen(t, server, function (peers) {
     logger.info('Received peerAvailabilityChanged with peers: ' +
       JSON.stringify(peers)
     );
@@ -88,7 +125,8 @@ function startAndGetConnection(t, server, onConnectSuccess, onConnectFailure) {
       if (peer.peerAvailable && !connecting) {
         connecting = true;
         var RETRIES = 10;
-        ThaliMobileNativeTestUtils.connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
+        thaliMobileNativeTestUtils
+          .connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
       }
     });
   });
@@ -172,7 +210,7 @@ function killRemote(t, end) {
         });
       secondConnectionToListeningPort.on('error', function (err) {
         t.ok(err, 'We got an error which is what we wanted');
-        ThaliMobileNativeTestUtils.connectToPeer(
+        thaliMobileNativeTestUtils.connectToPeer(
           peer, 1,
           function (err) {
             t.notOk(err, 'We should be able to reconnect');
@@ -226,7 +264,7 @@ function killLocal(t, end) {
       new Promise(function (resolve, reject) {
         secondConnectionToListeningPort.on('error', function (err) {
           t.ok(err, 'We got an error which is what we wanted');
-          ThaliMobileNativeTestUtils.connectToPeer(
+          thaliMobileNativeTestUtils.connectToPeer(
             peer, 1,
             function (err) {
               resolve(err);
