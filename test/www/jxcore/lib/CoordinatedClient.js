@@ -285,7 +285,7 @@ CoordinatedClient.prototype._emit = function (event, data, externalOptions) {
   .finally(function () {
     clearTimeout(timeout);
   });
-}
+};
 
 CoordinatedClient.prototype._scheduleTest = function (test) {
   var self = this;
@@ -340,7 +340,7 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
           if (!result.ok) {
             success = false;
           }
-        }
+        };
         tape.on('result', resultHandler);
 
         endHandler = function () {
@@ -364,9 +364,10 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
               logger.error(error);
               reject(new Error(error));
             }
+            return null;
           })
           .catch(reject);
-        }
+        };
         tape.once('end', endHandler);
 
         fun(tape);

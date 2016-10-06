@@ -10,7 +10,7 @@ var platform = require('thali/NextGeneration/utils/platform');
 
 if (typeof Mobile === 'undefined') {
   global.Mobile =
-    require('./lib/wifiBasedNativeMock.js')(platform.names.ANDROID);
+    require('./lib/wifiBasedNativeMock.js')(platform.names.IOS);
 }
 
 var config = require('./config.json');
@@ -66,7 +66,7 @@ if (!utResult) {
 }
 
 // Issue #914
-var networkTypes = [ThaliMobile.networkTypes.WIFI];
+var networkTypes = [ThaliMobile.networkTypes.NATIVE];
 
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {

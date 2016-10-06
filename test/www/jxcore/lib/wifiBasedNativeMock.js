@@ -238,6 +238,8 @@ function createAndStartProxyRelayServer(portNumber, peerIdentifier) {
     server.listen(0, function () {
       resolve(server);
     });
+
+    return null;
   });
 }
 
@@ -371,6 +373,7 @@ function (portNumber, callback) {
         doStart();
       });
   }
+  return null;
 };
 
 function closeAndDeleteOutgoingProxyServer(peerIdentifier) {
