@@ -241,6 +241,8 @@ test('wifi peer is marked unavailable if announcements stop', function (t) {
     if (peer.peerIdentifier !== testPeerIdentifier) {
       return;
     }
+
+    // TODO Apply changes from #904 to tests
     spy();
     if (spy.calledOnce) {
       t.equal(peer.hostAddress, testSeverHostAddress,

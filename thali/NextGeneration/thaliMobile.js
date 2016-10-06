@@ -377,7 +377,11 @@ module.exports.getNetworkStatus = function () {
  * put on the TCP connection. For some transports a handshake can take quite a
  * long time.
  */
-
+var AddressHostInfo = function (peer) {
+  this.hostAddress = peer.hostAddress;
+  this.portNumber = peer.portNumber;
+  this.suggestedTCPTimeout = peer.suggestedTCPTimeout;
+};
 /**
  * If the peer identifier and conntection type is not in the availability cache
  * (see the peerAvailabilityChanged tome below) then a 'peer not available'
@@ -429,7 +433,61 @@ module.exports.getNetworkStatus = function () {
  * @returns {Promise<peerHostInfo | Error>}
  */
 module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
-  return Promise.reject('not implemented');
+  var peersByConnectionType = peerAvailabilities[connectionType];
+  if (!peersByConnectionType) {
+    return Promise.reject(new Error('Unsupported connection type ' +
+      connectionType));
+  }
+
+  var peer = peersByConnectionType[peerIdentifier];
+  if (!peer) {
+    return Promise.reject(new Error('Peer is not available'));
+  }
+
+  var getPeerHostInfo = getPeerHostInfoStarategies[connectionType];
+  if (!getPeerHostInfo) {
+    return Promise.reject(new Error('getPeerHostInfo is not implemented for ' + connectionType));
+  }
+
+  return getPeerHostInfo(peer);
+};
+
+var getPeerHostInfoStarategies = {};
+getPeerHostInfoStarategies[connectionTypes.BLUETOOTH] = getBluetoothAddressPortInfo;
+getPeerHostInfoStarategies[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = getMPCFAddressPortInfo;
+getPeerHostInfoStarategies[connectionTypes.TCP_NATIVE] = getWifiAddressPortInfo;
+
+var LOCALHOST = '127.0.0.1';
+
+var getBluetoothAddressPortInfo = function (peer) {
+  var portInfo = new AddressHostInfo({
+    hostAddress: LOCALHOST,
+    portNumber: peer.portNumber,
+    suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_BLUETOOTH
+  });
+  return Promise.resolve(portInfo);
+};
+
+var getMPCFAddressPortInfo = function (peer) {
+  return ThaliMobileNativeWrapper
+    ._multiConnect(peer.peerIdentifier)
+    .then(function (portNumber) {
+      var portInfo = new AddressHostInfo({
+        hostAddress: LOCALHOST,
+        portNumber: portNumber,
+        suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_MPCF
+      });
+      return portInfo;
+    });
+};
+
+var getWifiAddressPortInfo = function (peer) {
+  var portInfo = new AddressHostInfo({
+    hostAddress: peer.hostAddress,
+    portNumber: peer.portNumber,
+    suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_WIFI
+  });
+  return Promise.resolve(portInfo);
 };
 
 /**
@@ -816,19 +874,25 @@ module.exports.disconnect = function(peerIdentifier, connectionType) {
  * sessions SHOULD be terminated and a new call to {@link getPeerHostInfo} SHOULD
  * be made to find the new address/port.
  */
-
+var PeerAvailabilityStatus = function (peer, connectionType, newAddressPort) {
+  this.peerIdentifier = peer.peerIdentifier;
+  this.peerAvailable = peer.peerAvailable;
+  if (this.peerAvailable) {
+    this.generation = peer.generation;
+    this.newAddressPort = newAddressPort;
+  }
+  this.connectionType = connectionType;
+};
 
 var emitPeerUnavailable = function (peerIdentifier, connectionType) {
-  module.exports.emitter.emit('peerAvailabilityChanged',
-    getExtendedPeer(
-      {
-        peerIdentifier: peerIdentifier,
-        hostAddress: null,
-        portNumber: null
-      },
-      connectionType
-    )
-  );
+  var peer = {
+    peerIdentifier: peerIdentifier,
+    peerAvailable: false
+  };
+  var unavailable =
+    new PeerAvailabilityStatus(peer, connectionType);
+
+  module.exports.emitter.emit('peerAvailabilityChanged', unavailable);
 };
 
 var peerAvailabilities = {};
@@ -899,7 +963,8 @@ var handlePeer = function (peer, connectionType) {
   } else {
     changeCachedPeerAvailable(peer);
   }
-  module.exports.emitter.emit('peerAvailabilityChanged', peer);
+  var availible = new PeerAvailabilityStatus(peer)
+  module.exports.emitter.emit('peerAvailabilityChanged', availible);
 };
 
 ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',

@@ -219,29 +219,29 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
       return;
     }
 
-    if (peerStatus.hostAddress &&
-        peerStatus.portNumber &&
-        peerStatus.suggestedTCPTimeout &&
-        peerStatus.connectionType)
-    {
-      assert(!this.peerDictionary.exists(peerStatus.peerIdentifier),
-        'peerAvailabilityChanged event with the same peerId'+
-        ' should not occur. peerIdentifier:' + peerStatus.peerIdentifier);
+    ThaliMobile
+      .getPeerHostInfo(peerStatus.peerIdentifier, peerStatus.connectionType)
+      .then(function (peerHostInfo) {
+        assert(!this.peerDictionary.exists(peerStatus.peerIdentifier),
+          'peerAvailabilityChanged event with the same peerId'+
+          ' should not occur. peerIdentifier:' + peerStatus.peerIdentifier);
 
-      var peerConnectionInfo = new PeerDictionary.PeerConnectionInformation(
-        peerStatus.connectionType, peerStatus.hostAddress,
-        peerStatus.portNumber, peerStatus.suggestedTCPTimeout);
+        var peerConnectionInfo = new PeerDictionary.PeerConnectionInformation(
+          peerStatus.connectionType, peerHostInfo.hostAddress,
+          peerHostInfo.portNumber, peerHostInfo.suggestedTCPTimeout);
 
-      var peerEntry = new PeerDictionary.NotificationPeerDictionaryEntry(
-        PeerDictionary.peerState.CONTROLLED_BY_POOL);
+        var peerEntry = new PeerDictionary.NotificationPeerDictionaryEntry(
+          PeerDictionary.peerState.CONTROLLED_BY_POOL);
 
-      this._createNewAction(peerEntry, peerStatus.peerIdentifier,
-        peerConnectionInfo);
-    }
-    else if (!peerStatus.hostAddress) {
-      // Remove the old peer if it exists.
-      this.peerDictionary.remove(peerStatus.peerIdentifier);
-    }
+        this._createNewAction(peerEntry, peerStatus.peerIdentifier,
+          peerConnectionInfo);
+      })
+      .catch(function (error) {
+        if (!peerStatus.hostAddress) {
+          // Remove the old peer if it exists.
+          this.peerDictionary.remove(peerStatus.peerIdentifier);
+        }
+      });
   };
 
 // jscs:disable maximumLineLength

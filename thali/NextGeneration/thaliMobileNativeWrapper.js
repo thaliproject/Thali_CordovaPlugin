@@ -9,6 +9,7 @@ var express = require('express');
 var TCPServersManager = require('./mux/thaliTcpServersManager');
 var https = require('https');
 var thaliConfig = require('./thaliConfig');
+var guid = require('./utils/guid');
 
 var states = {
   started: false
@@ -578,7 +579,27 @@ module.exports.getNonTCPNetworkStatus = function () {
  * the localhost port to connect to or an Error object.
  */
 module.exports._multiConnect = function (peerIdentifier) {
-  return Promise.reject(new Error('Not yet implemented'));
+  return gPromiseQueue.enqueue(function (resolve, reject) {
+    var originalSyncValue = guid();
+
+    Mobile('multiConnect')
+      .callNative(peerIdentidier, originalSyncValue, function (error) {
+        if (error) {
+          return reject(new Error(error));
+        }
+
+        Mobile('multiConnectResolved')
+          .registerToNative(function (syncValue, error, portNumber) {
+            if(originalSyncValue !== syncValue) {
+              return;
+            }
+            if (error) {
+              return reject(new Error(error));
+            }
+            resolve(portNumber);
+          });
+      });
+  });
 };
 
 /**
