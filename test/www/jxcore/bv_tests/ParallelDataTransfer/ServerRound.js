@@ -12,9 +12,9 @@ var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServe
 var ActiveConnections = require('./ActiveConnections');
 var Message = require('./Message');
 
-var tape = require('../../../lib/thaliTape');
+var tape = require('../../lib/thaliTape');
 
-var logger = require('../../../lib/testLogger')('ServerRound');
+var logger = require('../../lib/testLogger')('ServerRound');
 
 
 function ServerRound(tapeTest, roundNumber, quitSignal, options) {

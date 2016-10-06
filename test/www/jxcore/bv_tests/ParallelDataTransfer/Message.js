@@ -5,7 +5,7 @@ var Promise = require('lie');
 
 var objectKeysEquals = require('thali/validations').objectKeysEquals;
 
-var logger = require('../../../lib/testLogger')('Message');
+var logger = require('../../lib/testLogger')('Message');
 
 
 function Message (uuid, code, bulkData) {

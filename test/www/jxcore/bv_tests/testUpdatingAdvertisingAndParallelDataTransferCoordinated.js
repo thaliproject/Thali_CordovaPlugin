@@ -1,6 +1,6 @@
 'use strict';
 
-var tape = require('../../../lib/thaliTape');
+var tape = require('../lib/thaliTape');
 if (!tape.coordinated) {
   return;
 }
@@ -8,12 +8,12 @@ if (!tape.coordinated) {
 var assert = require('assert');
 var Promise = require('lie');
 
-var testUtils = require('../../../lib/testUtils');
-var logger    = require('../../../lib/testLogger')('testThaliMobileNativeComplex');
+var testUtils = require('../lib/testUtils');
+var logger    = require('../lib/testLogger')('testThaliMobileNativeComplex');
 
-var QuitSignal  = require('./QuitSignal');
-var ServerRound = require('./ServerRound');
-var ClientRound = require('./ClientRound');
+var QuitSignal  = require('./ParallelDataTransfer/QuitSignal');
+var ServerRound = require('./ParallelDataTransfer/ServerRound');
+var ClientRound = require('./ParallelDataTransfer/ClientRound');
 
 
 var test = tape({

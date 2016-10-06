@@ -2,7 +2,7 @@
 
 var assert = require('assert');
 
-var logger = require('../../../lib/testLogger')('QuitSignal');
+var logger = require('../../lib/testLogger')('QuitSignal');
 
 
 function QuitSignal() {
