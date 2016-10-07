@@ -222,7 +222,7 @@ function connectToPeer(peer, retries, successCb, failureCb, quitSignal) {
         logger.info('Scheduling a connect retry - retries left: ' + retries);
         var timeoutCancel = setTimeout(function () {
           quitSignal && quitSignal.removeTimeout(timeoutCancel);
-          connectToPeer(peer, retries, successCb, failureCb);
+          connectToPeer(peer, retries, successCb, failureCb, quitSignal);
         }, TIME_BETWEEN_RETRIES);
         quitSignal && quitSignal.addTimeout(timeoutCancel, successCb);
       } else {

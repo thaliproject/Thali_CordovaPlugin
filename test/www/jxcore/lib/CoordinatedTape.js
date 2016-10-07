@@ -59,7 +59,7 @@ CoordinatedThaliTape.prototype._getTests = function () {
   });
 }
 
-CoordinatedThaliTape.begin = function (platform, version, hasRequiredHardware) {
+CoordinatedThaliTape.begin = function (platform, version, hasRequiredHardware, nativeUTFailed) {
   var tests = CoordinatedThaliTape.instances.reduce(function (tests, thaliTape) {
     thaliTape._begin();
     return tests.concat(thaliTape._getTests());
@@ -71,7 +71,8 @@ CoordinatedThaliTape.begin = function (platform, version, hasRequiredHardware) {
     CoordinatedThaliTape.uuid,
     platform,
     version,
-    hasRequiredHardware
+    hasRequiredHardware,
+    !!nativeUTFailed
   );
 
   // Only used for testing purposes.

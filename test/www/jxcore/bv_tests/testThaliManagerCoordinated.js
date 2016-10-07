@@ -292,7 +292,7 @@ test('test repeat write 2', function (t) {
     var oldDocs = partnerKeys.map(function (partnerKey) {
       return {
         _id: partnerKey.toString('base64'),
-        test1: true, 
+        test1: true,
         test2: true
       };
     });

@@ -214,11 +214,6 @@ function matchDocsInChanges(pouchDB, docs, thaliPeerReplicationAction) {
 }
 
 test('Make sure docs replicate',
-  function () {
-    // issue #1153
-    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI &&
-      Platform.isAndroid;
-  },
   function (t) {
     testCloseAllServer = testUtils.setUpServer(function (serverPort,
                                                          randomDBName,
