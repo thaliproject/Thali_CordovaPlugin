@@ -477,6 +477,9 @@ test('Can connect to a remote peer 100 times', function (t) {
         return new Promise(function (resolve) {
           setup(resolve);
         });
+      })
+      .then(function () {
+        return t.sync();
       });
     }
   )
