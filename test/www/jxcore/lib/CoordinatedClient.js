@@ -4,18 +4,19 @@ var util     = require('util');
 var format   = util.format;
 var inherits = util.inherits;
 
-var objectAssign   = require('object-assign');
-var uuidValidate   = require('uuid-validate');
-var assert         = require('assert');
-var tape           = require('tape-catch');
-var SocketIOClient = require('socket.io-client');
-var EventEmitter   = require('events').EventEmitter;
+var net          = require('net');
+var objectAssign = require('object-assign');
+var uuidValidate = require('uuid-validate');
+var assert       = require('assert');
+var tape         = require('tape-catch');
+var EventEmitter = require('events').EventEmitter;
 
 var asserts = require('./utils/asserts');
 var Promise = require('./utils/Promise');
 
 var testUtils     = require('./testUtils');
 var serverAddress = require('../server-address');
+var ServerClient  = require('./ServerClient');
 
 var logger = require('./testLogger')('CoordinatedClient');
 
@@ -37,11 +38,6 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware, 
     tests.length > 0,
     'we should have at least one test'
   );
-  // We will use emit retry options from first test as default.
-  this._defaults = {
-    emitRetryCount:   tests[0].options.emitRetryCount,
-    emitRetryTimeout: tests[0].options.emitRetryTimeout
-  };
 
   this._tests = tests.slice();
   this._testNames = this._tests.map(function (test) {
@@ -65,20 +61,11 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware, 
 
   this._state = CoordinatedClient.states.created;
 
-  this._io = SocketIOClient(
-    'http://' + serverAddress + ':' + 3000 + '/',
-    {
-      reconnection: true,
-      reconnectionAttempts: 15,
-      reconnectionDelay: 200,
-      reconnectionDelayMax: 1000,
-      randomizationFactor: 0,
-
-      transports: ['websocket'],
-      rejectUnauthorized: null
-    }
-  );
-
+  this._serverClient = new ServerClient(serverAddress, 3000, {
+    reconnectionAttempts: 15,
+    reconnectionDelay:    200,
+    emitTimeout:          2 * 60 * 1000
+  });
   this._bind();
 }
 
@@ -86,48 +73,29 @@ inherits(CoordinatedClient, EventEmitter);
 
 CoordinatedClient.states = {
   created:   'created',
-  connected: 'connected',
   completed: 'completed'
 };
 
 CoordinatedClient.prototype._bind = function () {
-  this._io
-  .on  ('connect',           this._connect.bind(this))
-  .on  ('connect_timeout',   logger.debug.bind(logger))
-  .on  ('connect_error',     logger.error.bind(logger))
-  .on  ('reconnect',         this._reconnect.bind(this))
-  .on  ('reconnect_error',   logger.error.bind(logger))
-  .on  ('reconnect_failed',  this._error.bind(this))
-  .once('schedule',          this._schedule.bind(this))
-  .on  ('discard',           this._discard.bind(this))
-  .on  ('disqualify',        this._disqualify.bind(this))
-  .on  ('disconnect',        this._disconnect.bind(this))
-  .on  ('error',             this._error.bind(this))
-  .once('complete',          this._complete.bind(this));
+  this._serverClient
+  .on('connect', this._connect.bind(this))
+  .on('error',   this._error.bind(this))
+
+  .once('schedule',   this._schedule.bind(this))
+  .on  ('discard',    this._discard.bind(this))
+  .on  ('disqualify', this._disqualify.bind(this))
+  .on  ('close',      this._disconnect.bind(this))
+  .on  ('error',      this._error.bind(this))
+  .once('complete',   this._complete.bind(this))
+
+  .connect();
 }
 
-// We are having similar logic in both connect reconnect
-// events, because socket.io seems to behave so that sometimes
-// we get the connect event even if we have been connected before
-// (and sometimes the reconnect event).
+// Both 'connect' and 'reconnect' will be here.
 CoordinatedClient.prototype._connect = function () {
   logger.debug('connected to the test server');
-  this._newConnection();
-}
-CoordinatedClient.prototype._reconnect = function () {
-  logger.debug('reconnected to the test server');
-  this._newConnection();
-}
 
-CoordinatedClient.prototype._newConnection = function () {
-  assert(
-    this._state === CoordinatedClient.states.created ||
-    this._state === CoordinatedClient.states.connected,
-    'we should be in created or connected state'
-  );
-  this._state = CoordinatedClient.states.connected;
-
-  this._emit('present', {
+  this._serverClient.emitData('present', {
     name:    testUtils.getName(),
     uuid:    this._uuid,
     type:    'unittest',
@@ -145,7 +113,7 @@ CoordinatedClient.prototype._schedule = function (data) {
   var testNames = CoordinatedClient.getData(data);
   asserts.arrayEquals(testNames, this._testNames);
 
-  this._emit('schedule_confirmed', data)
+  this._serverClient.emitData('schedule_confirmed', data)
   .then(function () {
     var promises = self._tests.map(function (test) {
       return self._scheduleTest(test);
@@ -164,7 +132,7 @@ CoordinatedClient.prototype._schedule = function (data) {
 CoordinatedClient.prototype._discard = function (data) {
   var self = this;
 
-  this._emit('discard_confirmed', data)
+  this._serverClient.emitData('discard_confirmed', data)
   .then(function () {
     logger.debug('device discarded as surplus from the test server');
   });
@@ -176,7 +144,7 @@ CoordinatedClient.prototype._discard = function (data) {
 CoordinatedClient.prototype._disqualify = function (data) {
   var self = this;
 
-  this._emit('disqualify_confirmed', data)
+  this._serverClient.emitData('disqualify_confirmed', data)
   .then(function () {
     if (data) {
       var errorText = CoordinatedClient.getData(data);
@@ -198,10 +166,8 @@ CoordinatedClient.prototype._disqualify = function (data) {
     });
   });
 
-  if (!data) {
-    // We are waiting for 'disconnect' event.
-    self._state = CoordinatedClient.states.completed;
-  }
+  // We are waiting for 'disconnect' event.
+  self._state = CoordinatedClient.states.completed;
 }
 
 CoordinatedClient.prototype._disconnect = function () {
@@ -225,7 +191,7 @@ CoordinatedClient.prototype._error = function (error) {
 CoordinatedClient.prototype._complete = function (data) {
   var self = this;
 
-  this._emit('complete_confirmed', data)
+  this._serverClient.emitData('complete_confirmed', data)
   .then(function () {
     logger.debug('all tests completed');
   });
@@ -236,55 +202,14 @@ CoordinatedClient.prototype._complete = function (data) {
 
 CoordinatedClient.prototype._succeed = function () {
   logger.debug('test client succeed');
-  this._io.close();
+  this._serverClient.close();
   this.emit('finished');
 }
 
 CoordinatedClient.prototype._failed = function (error) {
   logger.debug('test client failed');
-  this._io.close();
+  this._serverClient.close();
   this.emit('finished', error);
-}
-
-// Emitting message to 'connected' socket without confirmation.
-// We will just check that socket is 'connected'.
-CoordinatedClient.prototype._emit = function (event, data, externalOptions) {
-  var self = this;
-
-  var options = objectAssign({}, this._defaults, externalOptions);
-  var timeout;
-  var retryIndex = 0;
-  data = data || '';
-
-  return new Promise(function (resolve, reject) {
-    function emit() {
-      if (retryIndex >= options.emitRetryCount) {
-        reject(new Error(
-          'retry count exceed'
-        ));
-        return;
-      }
-      retryIndex ++;
-
-      if (self._io.connected) {
-        self._io.emit(event, data);
-        resolve();
-        return;
-      }
-      timeout = setTimeout(emit, options.emitRetryTimeout);
-    }
-    emit();
-  })
-  .catch(function (error) {
-    logger.error(
-      'unexpected error: \'%s\', stack: \'%s\'',
-      error.toString(), error.stack
-    );
-    return Promise.reject(error);
-  })
-  .finally(function () {
-    clearTimeout(timeout);
-  });
 }
 
 CoordinatedClient.prototype._scheduleTest = function (test) {
@@ -292,8 +217,10 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
 
   function runEvent (event) {
     return new Promise(function (resolve, reject) {
-      self._io.once(event, function (data) {
-        self._emit(event + '_confirmed', data, test.options)
+      logger.debug('we are waiting for event: \'%s\'', event);
+      self._serverClient.once(event, function (data) {
+        logger.debug('we are emitting data for event: \'%s\', data: \'%s\'', event + '_confirmed', JSON.stringify(data));
+        self._serverClient.emitData(event + '_confirmed', data, test.options)
         .then(function () {
           resolve(CoordinatedClient.getData(data));
         })
@@ -307,7 +234,8 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
     .then(function () {
       return new Promise(function (resolve, reject) {
         tape.once('end', function () {
-          self._emit(event + '_skipped', undefined, test.options)
+          logger.debug('we are emitting data for event: \'%s\', data: \'%s\'', event + '_skipped', undefined);
+          self._serverClient.emitData(event + '_skipped', undefined, test.options)
           .then(resolve)
           .catch(reject);
         });
@@ -348,7 +276,11 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
           resultHandler = null;
           endHandler    = null;
 
-          self._emit(
+          logger.debug('we are emitting data for event: \'%s\', data: \'%s\'', event + '_finished', JSON.stringify({
+            success: success,
+            data:    tape.data
+          }));
+          self._serverClient.emitData(
             event + '_finished',
             {
               success: success,
@@ -398,7 +330,8 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
     }
     var callerId = getCaller(3);
 
-    return self._emit('sync', callerId, test.options)
+    logger.debug('we are emitting data for event: \'%s\', data: \'%s\'', 'sync', callerId);
+    return self._serverClient.emitData('sync', callerId, test.options)
     .then(function () {
       return runEvent('syncFinished');
     })

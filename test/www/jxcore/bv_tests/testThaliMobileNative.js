@@ -11,7 +11,7 @@ var randomstring = require('randomstring');
 var tape = require('../lib/thaliTape');
 var platform = require('thali/NextGeneration/utils/platform');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-var Promise = require('lie');
+var Promise = require('bluebird');
 var assert = require('assert');
 
 var logger = require('../lib/testLogger')('testThaliMobileNative');
@@ -22,30 +22,48 @@ var logger = require('../lib/testLogger')('testThaliMobileNative');
 // that will get closed in teardown.
 var serverToBeClosed = null;
 
-var test = tape({
-  setup: function (t) {
-    serverToBeClosed = {
-      closeAll: function (callback) {
-        callback();
-      }
-    };
-    t.end();
-  },
-  teardown: function (t) {
-    serverToBeClosed.closeAll(function () {
-      Mobile('stopListeningForAdvertisements').callNative(function (err) {
+function setup (callback) {
+  serverToBeClosed = {
+    closeAll: function (callback) {
+      callback();
+    }
+  };
+  callback();
+}
+
+function teardown (t, callback) {
+  logger.debug('server is closing');
+  serverToBeClosed.closeAll(function () {
+    logger.debug('server was closed');
+    logger.debug('start stopListeningForAdvertisements');
+    Mobile('stopListeningForAdvertisements').callNative(function (err) {
+      t.notOk(
+        err,
+        'Should be able to call stopListeningForAdvertisements in teardown'
+      );
+      logger.debug('finish stopListeningForAdvertisements');
+      logger.debug('start stopAdvertisingAndListening');
+      Mobile('stopAdvertisingAndListening').callNative(function (err) {
         t.notOk(
           err,
-          'Should be able to call stopListeningForAdvertisements in teardown'
+          'Should be able to call stopAdvertisingAndListening in teardown'
         );
-        Mobile('stopAdvertisingAndListening').callNative(function (err) {
-          t.notOk(
-            err,
-            'Should be able to call stopAdvertisingAndListening in teardown'
-          );
-          t.end();
-        });
+        logger.debug('finish stopAdvertisingAndListening');
+        callback();
       });
+    });
+  });
+}
+
+var test = tape({
+  setup: function (t) {
+    setup(function () {
+      t.end();
+    });
+  },
+  teardown: function (t) {
+    teardown(t, function () {
+      t.end();
     });
   }
 });
@@ -352,8 +370,8 @@ function startAndGetConnection(t, server, onConnectSuccess, onConnectFailure) {
   });
 }
 
-test('Can connect to a remote peer', function (t) {
-  var connecting = false;
+function canConnectToRemote(t, desiredConnectedTimes, callback) {
+  var CONNECT_RETRIES = 10;
 
   var echoServer = net.createServer(function (socket) {
     socket.pipe(socket);
@@ -361,52 +379,76 @@ test('Can connect to a remote peer', function (t) {
   echoServer = makeIntoCloseAllServer(echoServer);
   serverToBeClosed = echoServer;
 
-  function onConnectSuccess(err, connection) {
+  function connect (peer) {
+    return new Promise(function (resolve, reject) {
+      function onConnectSuccess(err, connection) {
+        if (err) {
+          reject(err);
+        }
 
-    // Called if we successfully connect to to a peer
-    connection = JSON.parse(connection);
-    logger.info(connection);
+        // Called if we successfully connect to to a peer
+        connection = JSON.parse(connection);
+        logger.info(connection);
 
-    t.ok(connection.hasOwnProperty('listeningPort'),
-      'Must have listeningPort');
-    t.ok(typeof connection.listeningPort === 'number',
-      'listeningPort must be a number');
-    t.ok(connection.hasOwnProperty('clientPort'),
-      'Connection must have clientPort');
-    t.ok(typeof connection.clientPort === 'number',
-      'clientPort must be a number');
-    t.ok(connection.hasOwnProperty('serverPort'),
-      'Connection must have serverPort');
-    t.ok(typeof connection.serverPort === 'number',
-      'serverPort must be a number');
+        t.ok(
+          connection.hasOwnProperty('listeningPort'),
+          'Must have listeningPort'
+        );
+        t.ok(
+          typeof connection.listeningPort === 'number',
+          'listeningPort must be a number'
+        );
+        t.ok(
+          connection.hasOwnProperty('clientPort'),
+          'Connection must have clientPort'
+        );
+        t.ok(
+          typeof connection.clientPort === 'number',
+          'clientPort must be a number'
+        );
+        t.ok(
+          connection.hasOwnProperty('serverPort'),
+          'Connection must have serverPort'
+        );
+        t.ok(
+          typeof connection.serverPort === 'number',
+          'serverPort must be a number'
+        );
 
-    if (connection.listeningPort !== 0)
-    {
-      // Forward connection
-      t.ok(connection.clientPort === 0,
-        'forward connection must have clientPort == 0');
-      t.ok(connection.serverPort === 0,
-        'forward connection must have serverPort == 0');
-    }
-    else
-    {
-      // Reverse connection
-      t.ok(connection.clientPort !== 0,
-        'reverse connection must have clientPort != 0');
-      t.ok(connection.serverPort !== 0,
-        'reverse connection must have serverPort != 0');
-    }
-
-    t.end();
-  }
-
-  function onConnectFailure () {
-    t.fail('Connect failed!');
-    t.end();
+        if (connection.listeningPort !== 0) {
+          // Forward connection
+          t.ok(
+            connection.clientPort === 0,
+            'forward connection must have clientPort == 0'
+          );
+          t.ok(
+            connection.serverPort === 0,
+            'forward connection must have serverPort == 0'
+          );
+        } else {
+          // Reverse connection
+          t.ok(
+            connection.clientPort !== 0,
+            'reverse connection must have clientPort != 0'
+          );
+          t.ok(
+            connection.serverPort !== 0,
+            'reverse connection must have serverPort != 0'
+          );
+        }
+        resolve();
+      }
+      function onConnectFailure () {
+        t.fail('Connect failed!');
+        resolve();
+      }
+      connectToPeer(peer, CONNECT_RETRIES, onConnectSuccess, onConnectFailure);
+    });
   }
 
   echoServer.listen(0, function () {
-
+    var connectedTimes  = 0;
+    var isConnecting    = false;
     var applicationPort = echoServer.address().port;
 
     Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
@@ -414,21 +456,69 @@ test('Can connect to a remote peer', function (t) {
         JSON.stringify(peers)
       );
       peers.forEach(function (peer) {
-        if (peer.peerAvailable && !connecting) {
-          connecting = true;
-          var RETRIES = 10;
-          connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
+        if (peer.peerAvailable && !isConnecting) {
+          isConnecting = true;
+          connect(peer)
+          .then(function () {
+            connectedTimes++;
+            if (connectedTimes === desiredConnectedTimes) {
+              t.end();
+            }
+          })
+          .finally(function () {
+            isConnecting = false;
+          });
         }
       });
     });
 
-    Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort,
-    function (err) {
-      t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
-      Mobile('startListeningForAdvertisements').callNative(function (err) {
-        t.notOk(err, 'Can call startListeningForAdvertisements without error');
+    Mobile('startUpdateAdvertisingAndListening').callNative(
+      applicationPort,
+      function (err) {
+        t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+        Mobile('startListeningForAdvertisements').callNative(function (err) {
+          t.notOk(err, 'Can call startListeningForAdvertisements without error');
+        });
+      }
+    );
+  });
+}
+
+test('Can connect to a remote peer', function (t) {
+  canConnectToRemote(t, 1, function () {
+    t.end();
+  });
+});
+test('Can connect to a remote peer 100 times', function (t) {
+  Promise.mapSeries(
+    Array.apply(null, Array(100)),
+    function () {
+      return new Promise(function (resolve) {
+        canConnectToRemote(t, 1, resolve);
+      })
+      .then(function () {
+        return t.sync();
+      })
+      .then(function () {
+        return new Promise(function (resolve) {
+          teardown(t, resolve);
+        });
+      })
+      .then(function () {
+        return t.sync();
+      })
+      .then(function () {
+        return new Promise(function (resolve) {
+          setup(resolve);
+        });
+      })
+      .then(function () {
+        return t.sync();
       });
-    });
+    }
+  )
+  .then(function () {
+    t.end();
   });
 });
 
@@ -773,8 +863,9 @@ function killRemote(t, end) {
         });
       secondConnectionToListeningPort.on('error', function (err) {
         t.ok(err, 'We got an error which is what we wanted');
+        var RETRIES = 10;
         connectToPeer(
-          peer, 1,
+          peer, RETRIES,
           function (err) {
             t.notOk(err, 'We should be able to reconnect');
             t.end();
@@ -827,8 +918,9 @@ function killLocal(t, end) {
       new Promise(function (resolve, reject) {
         secondConnectionToListeningPort.on('error', function (err) {
           t.ok(err, 'We got an error which is what we wanted');
+          var RETRIES = 10;
           connectToPeer(
-            peer, 1,
+            peer, RETRIES,
             function (err) {
               resolve(err);
             },

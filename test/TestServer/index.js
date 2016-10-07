@@ -9,16 +9,15 @@ var format = util.format;
 require('./utils/process');
 var logger = require('./utils/ThaliLogger')('TestServer');
 
-var HttpServer        = require('./HttpServer');
+var Server            = require('./Server');
 var TestDevice        = require('./TestDevice');
 var UnitTestFramework = require('./UnitTestFramework');
 
 
 var WAITING_FOR_DEVICES_TIMEOUT = 5 * 60 * 1000;
 
-var httpServer = new HttpServer({
-  port: 3000,
-  transports: ['websocket']
+var server = new Server({
+  port: 3000
 });
 
 var options = process.argv[2];
@@ -27,8 +26,8 @@ if (options) {
 }
 var unitTestManager = new UnitTestFramework(options);
 
-httpServer
-.on('present', function (device) {
+server
+.on('presented', function (device) {
   switch (device.type) {
     case 'unittest': {
       unitTestManager.addDevice(device);
@@ -40,6 +39,9 @@ httpServer
       );
     }
   }
+})
+.on('error', function (error) {
+  // throw new Error(error);
 });
 
 var timer = setTimeout(function () {
@@ -56,9 +58,12 @@ unitTestManager
   var isSuccess = results.every(function (result) {
     return result;
   });
-  if (isSuccess) {
-    process.exit(0);
-  } else {
-    process.exit(1);
-  }
+  server.shutdown()
+  .then(function () {
+    if (isSuccess) {
+      process.exit(0);
+    } else {
+      process.exit(1);
+    }
+  });
 });
