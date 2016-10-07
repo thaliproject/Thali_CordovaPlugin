@@ -65,17 +65,17 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
 
   options = extend({}, options);
 
-  // This is a workround for #970.
+  // This is a workaround for #970.
   var CustomEventEmitter = function () {
     return EventEmitter.apply(this, arguments);
-  }
+  };
 
   inherits(CustomEventEmitter, EventEmitter);
 
   inherits(PouchAlt, PouchDB);
 
   PouchAlt.preferredAdapters = PouchDB.preferredAdapters.slice();
-  Object.keys(PouchDB).forEach(function(key) {
+  Object.keys(PouchDB).forEach(function (key) {
     if (!(key in PouchAlt) ) {
       PouchAlt[key] = PouchDB[key];
     }
@@ -83,17 +83,17 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
 
   // This is a workaround for #870.
   PouchAlt.prototype.info = function () {
-    var self = this;
     return PouchAlt.super_.prototype.info.apply(this, arguments)
     .catch(function () {
       return { update_seq: 0 };
     });
-  }
+  };
 
   // This is a workaround for #970.
   PouchAlt.prototype.on =
   PouchAlt.prototype.addListener = function (type, listener) {
     var self = this;
+
     // We don't want PouchDB to catch our exception from 'listener'.
     // We want to cancel current PouchDB action and emit 'error' with exception.
     return PouchAlt.super_.prototype.addListener.call(this, type, function () {
@@ -103,7 +103,7 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
         self.emit('error', e);
       }
     });
-  }
+  };
 
   // This is a workaround for #970.
   // 'Changes' has an 'EventEmitter' too, but it isn't exported.
