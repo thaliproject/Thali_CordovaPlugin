@@ -100,8 +100,8 @@ public class IncomingSocketThreadTest {
                     mIncomingSocketThread.getLocalHostPort(), is(nullValue()));
         }
     }
-
-    //@Test
+    // 1214
+    // @Test
     public void testRun() throws Exception {
         mOutgoingSocketThread.setPort(47775);
         mIncomingSocketThread.setPort(47775);

@@ -117,7 +117,7 @@ var testServerConfiguration = {
 var testEnv = objectAssign({}, process.env, config.env);
 var testServerOpts = objectAssign({}, { env: testEnv });
 
-var testServerInstance = spawn('jx', ['../../TestServer/index.js',
+var testServerInstance = spawn('node', ['../../TestServer/index.js',
   JSON.stringify(testServerConfiguration)], testServerOpts);
 setListeners(testServerInstance, 0);
 
