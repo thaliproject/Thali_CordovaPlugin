@@ -118,7 +118,7 @@ if (platform.isMobile) {
  * @returns {string}
  */
 var tmpObject = null;
-var tmpDirectory = function () {
+function tmpDirectory () {
   if (platform.isMobile) {
     return os.tmpdir();
   }
@@ -438,7 +438,7 @@ module.exports.validateCombinedResult = function (combinedResult) {
 
 var MAX_FAILURE = 10;
 
-var turnParticipantsIntoBufferArray = function (t, devicePublicKey) {
+function turnParticipantsIntoBufferArray (t, devicePublicKey) {
   var publicKeys = [];
   t.participants.forEach(function (participant) {
     var publicKey = new Buffer(participant.data);
@@ -553,9 +553,9 @@ module.exports.runTestOnAllParticipants = function (
             .then(function () {
               success(notificationForUs.keyId);
             })
-            .catch(function (err) {
-              fail(notificationForUs.keyId, err);
-              return Promise.resolve();
+            .catch(function (error) {
+              fail(notificationForUs.keyId, error);
+              return Promise.resolve(error);
             });
             participantTask[notificationForUs.keyId] = task;
             return task;
