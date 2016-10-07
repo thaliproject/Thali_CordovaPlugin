@@ -13,6 +13,7 @@ import Foundation
 @objc public final class AdvertiserManager: NSObject {
     private let disposeAdvertiserTimeout: NSTimeInterval
     private let serviceType: String
+    internal private(set) var advertiserIdentifiers: [PeerIdentifier] = []
     internal private(set) var advertisers: Atomic<[Advertiser]> = Atomic([])
     internal private(set) var currentAdvertiser: Advertiser? = nil
 
@@ -63,6 +64,7 @@ import Foundation
 
     private func startAdvertiser(with identifier: PeerIdentifier, port: UInt16,
                                  errorHandler: ErrorType -> Void) -> Advertiser {
+        advertiserIdentifiers.append(identifier)
         let advertiser = Advertiser(peerIdentifier: identifier, serviceType: serviceType,
                                     receivedInvitationHandler: { [weak self] session in
                                         self?.handle(session, withPort: port)
@@ -86,6 +88,12 @@ import Foundation
             $0.removeAll()
         }
         currentAdvertiser = nil
+    }
+
+    public func hasAdvertiser(with identifier: PeerIdentifier) -> Bool {
+        return advertiserIdentifiers.filter {
+            $0 == identifier
+        }.count > 0
     }
 
     public func startUpdateAdvertisingAndListening(withPort port: UInt16,

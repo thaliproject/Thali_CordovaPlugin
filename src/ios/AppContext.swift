@@ -164,11 +164,12 @@ extension PeerAvailability {
     private var networkChangedRegistered: Bool = false
     public weak var delegate: AppContextDelegate?
     lazy private var browserManager: BrowserManager = { [unowned self] in
-         return BrowserManager(serviceType: self.serviceType,
-                               inputStreamReceiveTimeout: self.inputStreamReceiveTimeout) { peers in
-                                   self.handleOnPeersAvailabilityChanged(peers)
-                               }
-    }()
+        return BrowserManager(serviceType: self.serviceType,
+                              inputStreamReceiveTimeout: self.inputStreamReceiveTimeout) {
+                                [weak self] peers in
+                                self?.handleOnPeersAvailabilityChanged(peers)
+        }
+        }()
     private let advertiserManager: AdvertiserManager
 
     private var bluetoothState = RadioState.unavailable
@@ -211,8 +212,16 @@ extension PeerAvailability {
     }
 
     private func handleOnPeersAvailabilityChanged(peers: [PeerAvailability]) {
-        let mappedPeers = peers.map {
-            $0.dictionaryValue
+        let mappedPeers = peers
+            .filter {
+                // We shouldn't notify JXcore when device discovers itself
+                !self.advertiserManager.hasAdvertiser(with:$0.peerIdentifier)
+            }
+            .map {
+                $0.dictionaryValue
+        }
+        guard mappedPeers.count > 0 else {
+            return
         }
         delegate?.context(self, didChangePeerAvailability: jsonValue(mappedPeers))
     }
@@ -311,7 +320,7 @@ extension PeerAvailability {
         }
         guard let identifierString = parameters[0] as? String, syncValue = parameters[1] as? String
             else {
-            throw AppContextError.badParameters
+                throw AppContextError.badParameters
         }
         let peerIdentifier = try PeerIdentifier(stringValue: identifierString)
         browserManager.connectToPeer(peerIdentifier) { [weak self] port, error in

@@ -66,4 +66,23 @@ class AdvertiserManagerTests: XCTestCase {
         XCTAssertEqual(advertiserManager.advertisers.value.count, 0)
         XCTAssertFalse(advertiserManager.advertising)
     }
+
+    func testHasAdvertiserWithIdentifier() {
+        advertiserManager.startUpdateAdvertisingAndListening(withPort: 42,
+                                                             errorHandler: unexpectedErrorHandler)
+        let currentAdvertiserIdentifier = (advertiserManager.currentAdvertiser?.peerIdentifier)!
+        XCTAssertTrue(advertiserManager.hasAdvertiser(with: currentAdvertiserIdentifier))
+    }
+
+    func testHasAdvertiserWithIdentifierReturnsFalse() {
+        let notAdvertisingIdentifier = PeerIdentifier()
+        XCTAssertFalse(advertiserManager.hasAdvertiser(with: notAdvertisingIdentifier))
+    }
+
+    func testStartAdvertisingIncrementAdvertiserIdentifiers() {
+        XCTAssertEqual(advertiserManager.advertiserIdentifiers.count, 0)
+        advertiserManager.startUpdateAdvertisingAndListening(withPort: 42,
+                                                             errorHandler: unexpectedErrorHandler)
+        XCTAssertEqual(advertiserManager.advertiserIdentifiers.count, 1)
+    }
 }
