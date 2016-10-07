@@ -560,14 +560,14 @@ MobileCallInstance.prototype._androidConnectLogic =
       peerConnections[peerIdentifier] = net.connect(peerToConnect.portNumber,
         function () {
           setTimeout(function () {
-              peerConnections[peerIdentifier]
-                .removeListener('error', failedPeerConnectionError);
-              peerConnections[peerIdentifier]
-                .on('error', simplePeerConnectionError);
               if (!peerProxyServers[peerIdentifier]) {
                 var error = 'Unspecified Error with Radio infrastructure';
                 return callback(error);
               }
+              peerConnections[peerIdentifier]
+                .removeListener('error', failedPeerConnectionError);
+              peerConnections[peerIdentifier]
+                .on('error', simplePeerConnectionError);
               returnConnectResponse(peerIdentifier, callback,
                 cleanProxyServer);
             },
