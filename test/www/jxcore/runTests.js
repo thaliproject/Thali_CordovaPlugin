@@ -22,9 +22,7 @@ if (!process.env.SSDP_NT) {
 
 // This file is special, if it has 'Mobile' enabled
 // we need to enable mobile in any child process.
-if (typeof Mobile === 'undefined') {
-  global.Mobile = require('./lib/wifiBasedNativeMock.js')();
-} else {
+if (typeof Mobile !== 'undefined') {
   process.env.isMobileForced = 1;
 }
 
@@ -36,6 +34,9 @@ var platform = require('thali/NextGeneration/utils/platform');
 
 
 var DEFAULT_TESTS_DIRECTORY = 'bv_tests';
+
+// We will wait a bit before process.exit (for logs).
+var EXIT_TIMEOUT = 100;
 
 // 'fileName' should start with 'test' and end with '.js'.
 function isFileNameValid (fileName) {
@@ -104,6 +105,18 @@ function runTest (testFile, options) {
   return new Promise(function (resolve, reject) {
     logger.debug('spawning test: \'%s\'', testFile);
 
+    if (options.platform === 'ios') {
+      // We couldn't use 'spawn' on ios.           
+      require('./spawnTest')
+      .run(testFile, options)
+      .then(resolve)
+      .catch(reject)
+      .finally(function () {
+        logger.debug('finished test: \'%s\'', testFile);
+      });
+      return;
+    }
+
     var instance = spawn(
       node,
       ['./spawnTest.js', testFile, JSON.stringify(options)],
@@ -163,7 +176,9 @@ function run () {
   })
   .then(function () {
     logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-    process.exit(0);
+    setTimeout(function () {
+      process.exit(0);
+    }, EXIT_TIMEOUT);
   })
   .catch(function (error) {
     logger.error(
@@ -171,7 +186,9 @@ function run () {
       error.toString(), error.stack
     );
     logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-    process.exit(1);
+    setTimeout(function () {
+      process.exit(1);
+    }, EXIT_TIMEOUT);
   });
 }
 

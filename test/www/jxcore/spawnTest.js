@@ -3,7 +3,7 @@
 var assert = require('assert');
 var fs     = require('fs-extra-promise');
 
-if (process.env.isMobileForced) {
+if (typeof Mobile === 'undefined' && process.env.isMobileForced) {
   global.Mobile = require('./lib/wifiBasedNativeMock.js')();
 }
 
@@ -14,24 +14,38 @@ if (typeof Mobile === 'undefined') {
 }
 
 
-assert(process.argv.length === 4, 'we should receive 2 arguments: testFile and options');
+// We will wait a bit before process.exit (for logs).
+var EXIT_TIMEOUT = 100;
 
-var testFile = process.argv[2];
-assert(fs.existsSync(testFile), 'test file should exist');
+function run (testFile, options) {
+  assert(fs.existsSync(testFile), 'test file should exist');
 
-var options = process.argv[3];
-options = JSON.parse(options);
-assert(options.platform            !== undefined, '\'platform\' should be defined');
-assert(options.version             !== undefined, '\'version\' should be defined');
-assert(options.hasRequiredHardware !== undefined, '\'hasRequiredHardware\' should be defined');
-assert(options.nativeUTFailed      !== undefined, '\'nativeUTFailed\' should be defined');
+  assert(options.platform            !== undefined, '\'platform\' should be defined');
+  assert(options.version             !== undefined, '\'version\' should be defined');
+  assert(options.hasRequiredHardware !== undefined, '\'hasRequiredHardware\' should be defined');
+  assert(options.nativeUTFailed      !== undefined, '\'nativeUTFailed\' should be defined');
 
+  require(testFile);
+  return thaliTape.begin(options);
+}
+if (!module.parent) {
+  assert(process.argv.length === 4, 'we should receive 2 arguments: testFile and options');
 
-require(testFile);
-thaliTape.begin(options)
-.then(function () {
-  process.exit(0);
-})
-.catch(function (error) {
-  process.exit(1);
-});
+  var testFile = process.argv[2];
+
+  var options = process.argv[3];
+  options = JSON.parse(options);
+
+  run(testFile, options)
+  .then(function () {
+    setTimeout(function () {
+      process.exit(0);
+    }, EXIT_TIMEOUT);
+  })
+  .catch(function (error) {
+    setTimeout(function () {
+      process.exit(1);
+    }, EXIT_TIMEOUT);
+  });
+}
+module.exports.run = run;

@@ -64,7 +64,7 @@ CoordinatedThaliTape.begin = function (options) {
     thaliTape._begin();
     return tests.concat(thaliTape._getTests());
   }, []);
-  CoordinatedThaliTape.instances = [];
+  CoordinatedThaliTape.instances = SimpleThaliTape.instances = [];
 
   if (tests.length === 0) {
     logger.warn('we have no tests in this file');
