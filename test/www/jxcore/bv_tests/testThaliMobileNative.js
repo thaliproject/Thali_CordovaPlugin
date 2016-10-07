@@ -370,8 +370,8 @@ function startAndGetConnection(t, server, onConnectSuccess, onConnectFailure) {
   });
 }
 
-function canConnectToRemote(t, callback) {
-  var connecting = false;
+function canConnectToRemote(t, desiredConnectedTimes, callback) {
+  var CONNECT_RETRIES = 10;
 
   var echoServer = net.createServer(function (socket) {
     socket.pipe(socket);
@@ -379,52 +379,76 @@ function canConnectToRemote(t, callback) {
   echoServer = makeIntoCloseAllServer(echoServer);
   serverToBeClosed = echoServer;
 
-  function onConnectSuccess(err, connection) {
+  function connect (peer) {
+    return new Promise(function (resolve, reject) {
+      function onConnectSuccess(err, connection) {
+        if (err) {
+          reject(err);
+        }
 
-    // Called if we successfully connect to to a peer
-    connection = JSON.parse(connection);
-    logger.info(connection);
+        // Called if we successfully connect to to a peer
+        connection = JSON.parse(connection);
+        logger.info(connection);
 
-    t.ok(connection.hasOwnProperty('listeningPort'),
-      'Must have listeningPort');
-    t.ok(typeof connection.listeningPort === 'number',
-      'listeningPort must be a number');
-    t.ok(connection.hasOwnProperty('clientPort'),
-      'Connection must have clientPort');
-    t.ok(typeof connection.clientPort === 'number',
-      'clientPort must be a number');
-    t.ok(connection.hasOwnProperty('serverPort'),
-      'Connection must have serverPort');
-    t.ok(typeof connection.serverPort === 'number',
-      'serverPort must be a number');
+        t.ok(
+          connection.hasOwnProperty('listeningPort'),
+          'Must have listeningPort'
+        );
+        t.ok(
+          typeof connection.listeningPort === 'number',
+          'listeningPort must be a number'
+        );
+        t.ok(
+          connection.hasOwnProperty('clientPort'),
+          'Connection must have clientPort'
+        );
+        t.ok(
+          typeof connection.clientPort === 'number',
+          'clientPort must be a number'
+        );
+        t.ok(
+          connection.hasOwnProperty('serverPort'),
+          'Connection must have serverPort'
+        );
+        t.ok(
+          typeof connection.serverPort === 'number',
+          'serverPort must be a number'
+        );
 
-    if (connection.listeningPort !== 0)
-    {
-      // Forward connection
-      t.ok(connection.clientPort === 0,
-        'forward connection must have clientPort == 0');
-      t.ok(connection.serverPort === 0,
-        'forward connection must have serverPort == 0');
-    }
-    else
-    {
-      // Reverse connection
-      t.ok(connection.clientPort !== 0,
-        'reverse connection must have clientPort != 0');
-      t.ok(connection.serverPort !== 0,
-        'reverse connection must have serverPort != 0');
-    }
-
-    callback();
-  }
-
-  function onConnectFailure () {
-    t.fail('Connect failed!');
-    callback();
+        if (connection.listeningPort !== 0) {
+          // Forward connection
+          t.ok(
+            connection.clientPort === 0,
+            'forward connection must have clientPort == 0'
+          );
+          t.ok(
+            connection.serverPort === 0,
+            'forward connection must have serverPort == 0'
+          );
+        } else {
+          // Reverse connection
+          t.ok(
+            connection.clientPort !== 0,
+            'reverse connection must have clientPort != 0'
+          );
+          t.ok(
+            connection.serverPort !== 0,
+            'reverse connection must have serverPort != 0'
+          );
+        }
+        resolve();
+      }
+      function onConnectFailure () {
+        t.fail('Connect failed!');
+        resolve();
+      }
+      connectToPeer(peer, CONNECT_RETRIES, onConnectSuccess, onConnectFailure);
+    });
   }
 
   echoServer.listen(0, function () {
-
+    var connectedTimes  = 0;
+    var isConnecting    = false;
     var applicationPort = echoServer.address().port;
 
     Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
@@ -432,26 +456,36 @@ function canConnectToRemote(t, callback) {
         JSON.stringify(peers)
       );
       peers.forEach(function (peer) {
-        if (peer.peerAvailable && !connecting) {
-          connecting = true;
-          var RETRIES = 10;
-          connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
+        if (peer.peerAvailable && !isConnecting) {
+          isConnecting = true;
+          connect(peer)
+          .then(function () {
+            connectedTimes++;
+            if (connectedTimes === desiredConnectedTimes) {
+              t.end();
+            }
+          })
+          .finally(function () {
+            isConnecting = false;
+          });
         }
       });
     });
 
-    Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort,
-    function (err) {
-      t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
-      Mobile('startListeningForAdvertisements').callNative(function (err) {
-        t.notOk(err, 'Can call startListeningForAdvertisements without error');
-      });
-    });
+    Mobile('startUpdateAdvertisingAndListening').callNative(
+      applicationPort,
+      function (err) {
+        t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+        Mobile('startListeningForAdvertisements').callNative(function (err) {
+          t.notOk(err, 'Can call startListeningForAdvertisements without error');
+        });
+      }
+    );
   });
 }
 
 test('Can connect to a remote peer', function (t) {
-  canConnectToRemote(t, function () {
+  canConnectToRemote(t, 1, function () {
     t.end();
   });
 });
@@ -460,7 +494,7 @@ test('Can connect to a remote peer 100 times', function (t) {
     Array.apply(null, Array(100)),
     function () {
       return new Promise(function (resolve) {
-        canConnectToRemote(t, resolve);
+        canConnectToRemote(t, 1, resolve);
       })
       .then(function () {
         return t.sync();
