@@ -169,7 +169,6 @@ CoordinatedClient.prototype._discard = function (data) {
     logger.debug('device discarded as surplus from the test server');
   });
 
-  // We are waiting for 'disconnect' event.
   self._state = CoordinatedClient.states.completed;
 }
 
@@ -198,15 +197,12 @@ CoordinatedClient.prototype._disqualify = function (data) {
     });
   });
 
-  if (!data) {
-    // We are waiting for 'disconnect' event.
-    self._state = CoordinatedClient.states.completed;
-  }
+  self._state = CoordinatedClient.states.completed;
 }
 
 CoordinatedClient.prototype._disconnect = function () {
   if (this._state === CoordinatedClient.states.completed) {
-    logger.debug('test client disconnected');
+    logger.debug('completed device disconnected from the test server');
     this._succeed();
   } else {
     // Just log the error since socket.io will try to reconnect.
@@ -230,7 +226,6 @@ CoordinatedClient.prototype._complete = function (data) {
     logger.debug('all tests completed');
   });
 
-  // We are waiting for 'disconnect' event.
   self._state = CoordinatedClient.states.completed;
 }
 

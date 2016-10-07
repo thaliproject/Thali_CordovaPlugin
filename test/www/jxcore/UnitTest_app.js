@@ -14,6 +14,7 @@ var config = require('./config.json');
 var objectAssign = require('object-assign');
 process.env = objectAssign(process.env, config.env);
 
+var runTests = require('./runTests');
 var logger = require('./lib/testLogger')('UnitTest_app');
 var testUtils = require('./lib/testUtils');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
@@ -70,12 +71,11 @@ ThaliMobile.getNetworkStatus()
 
       return networkTypes.reduce(function (sequence, networkType) {
         return sequence
-          .then(function () {
-            logger.debug('Running for ' + networkType + ' network type');
-            global.NETWORK_TYPE = networkType;
-            require('./runTests.js');
-            return null;
-          });
+        .then(function () {
+          logger.debug('Running for ' + networkType + ' network type');
+          global.NETWORK_TYPE = networkType;
+          return runTests();
+        });
       }, Promise.resolve())
       .catch(function (error) {
         logger.error(error.message + '\n' + error.stack);

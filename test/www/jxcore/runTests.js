@@ -132,43 +132,50 @@ function runTest (testFile, options) {
   });
 }
 
-testUtils.hasRequiredHardware()
-.then(function (hasRequiredHardware) {
-  return testUtils.getOSVersion()
-  .then(function (version) {
-    var currentPlatform = platform.name;
-    // Our current platform can be 'darwin', 'linux', 'windows', etc.
-    // Our 'thaliTape' expects all these platforms will be named as 'desktop'.
-    if (!platform.isMobile || !currentPlatform) {
-      currentPlatform = 'desktop';
-    }
+function run () {
+  testUtils.hasRequiredHardware()
+  .then(function (hasRequiredHardware) {
+    return testUtils.getOSVersion()
+    .then(function (version) {
+      var currentPlatform = platform.name;
+      // Our current platform can be 'darwin', 'linux', 'windows', etc.
+      // Our 'thaliTape' expects all these platforms will be named as 'desktop'.
+      if (!platform.isMobile || !currentPlatform) {
+        currentPlatform = 'desktop';
+      }
 
-    var nativeUTFailed = global.nativeUTFailed;
-    if (nativeUTFailed === undefined || nativeUTFailed === null) {
-      nativeUTFailed = false;
-    }
+      var nativeUTFailed = global.nativeUTFailed;
+      if (nativeUTFailed === undefined || nativeUTFailed === null) {
+        nativeUTFailed = false;
+      }
 
-    var options = {
-      platform:            currentPlatform,
-      version:             version,
-      hasRequiredHardware: hasRequiredHardware,
-      nativeUTFailed:      nativeUTFailed
-    };
+      var options = {
+        platform:            currentPlatform,
+        version:             version,
+        hasRequiredHardware: hasRequiredHardware,
+        nativeUTFailed:      nativeUTFailed
+      };
 
-    return Promise.mapSeries(testFiles, function (testFile) {
-      return runTest(testFile, options);
+      return Promise.mapSeries(testFiles, function (testFile) {
+        return runTest(testFile, options);
+      });
     });
+  })
+  .then(function () {
+    logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+    process.exit(0);
+  })
+  .catch(function (error) {
+    logger.error(
+      'unexpected error: \'%s\', stack: \'%s\'',
+      error.toString(), error.stack
+    );
+    logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+    process.exit(1);
   });
-})
-.then(function () {
-  logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-  process.exit(0);
-})
-.catch(function (error) {
-  logger.error(
-    'unexpected error: \'%s\', stack: \'%s\'',
-    error.toString(), error.stack
-  );
-  logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-  process.exit(1);
-});
+}
+
+if (!module.parent) {
+  run();
+}
+module.exports = run;
