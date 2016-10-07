@@ -55,7 +55,9 @@ ActiveConnections.prototype.add = function (data) {
   assert(data.reject, '\'data.reject\' should exist');
 
   this._connections.push(data);
-  this._bind_timeout(data);
+  if (!data.timeoutBanned) {
+    this._bind_timeout(data);
+  }
   this._bind_autoremove(data);
   this._bind_connection(data);
 }
@@ -79,7 +81,9 @@ ActiveConnections.prototype._bind_autoremove = function (data) {
     }
   })
   .then(function () {
-    self._unbind_timeout(data);
+    if (!data.timeoutBanned) {
+      self._unbind_timeout(data);
+    }
 
     // Removing this data from the list on any promise result.
     var index = self._connections.indexOf(data);

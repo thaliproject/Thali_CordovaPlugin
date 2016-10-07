@@ -213,6 +213,13 @@ ClientRound._connectToPeer = function (peer) {
     data.resolve = resolve;
     data.reject  = reject;
 
+    // TODO There is no way to stop 'Mobile' from connecting.
+    // Mobile('connect') will throw 'Already connecting/connected'.
+    // So we couldn't let anyone to reject this promise without good reason.
+    // For example we couldn't reject this promise with timeout and try to reconnect.
+    // We have to wait for callback.
+    data.timeoutBanned = true;
+
     Mobile('connect').callNative(
       peer.peerIdentifier,
       function (error, connectionData) {
