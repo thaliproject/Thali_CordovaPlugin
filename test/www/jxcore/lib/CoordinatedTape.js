@@ -68,7 +68,7 @@ CoordinatedThaliTape.begin = function (options) {
 
   if (tests.length === 0) {
     logger.warn('we have no tests in this file');
-    return;
+    return Promise.resolve();
   }
 
   var _testClient = new CoordinatedClient(
