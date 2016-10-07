@@ -11,7 +11,7 @@ var randomstring = require('randomstring');
 var tape = require('../lib/thaliTape');
 var platform = require('thali/NextGeneration/utils/platform');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-var Promise = require('lie');
+var Promise = require('bluebird');
 var assert = require('assert');
 
 var logger = require('../lib/testLogger')('testThaliMobileNative');
@@ -22,36 +22,48 @@ var logger = require('../lib/testLogger')('testThaliMobileNative');
 // that will get closed in teardown.
 var serverToBeClosed = null;
 
-var test = tape({
-  setup: function (t) {
-    serverToBeClosed = {
-      closeAll: function (callback) {
-        callback();
-      }
-    };
-    t.end();
-  },
-  teardown: function (t) {
-    logger.debug('server is closing');
-    serverToBeClosed.closeAll(function () {
-      logger.debug('server was closed');
-      logger.debug('start stopListeningForAdvertisements');
-      Mobile('stopListeningForAdvertisements').callNative(function (err) {
+function setup (callback) {
+  serverToBeClosed = {
+    closeAll: function (callback) {
+      callback();
+    }
+  };
+  callback();
+}
+
+function teardown (t, callback) {
+  logger.debug('server is closing');
+  serverToBeClosed.closeAll(function () {
+    logger.debug('server was closed');
+    logger.debug('start stopListeningForAdvertisements');
+    Mobile('stopListeningForAdvertisements').callNative(function (err) {
+      t.notOk(
+        err,
+        'Should be able to call stopListeningForAdvertisements in teardown'
+      );
+      logger.debug('finish stopListeningForAdvertisements');
+      logger.debug('start stopAdvertisingAndListening');
+      Mobile('stopAdvertisingAndListening').callNative(function (err) {
         t.notOk(
           err,
-          'Should be able to call stopListeningForAdvertisements in teardown'
+          'Should be able to call stopAdvertisingAndListening in teardown'
         );
-        logger.debug('finish stopListeningForAdvertisements');
-        logger.debug('start stopAdvertisingAndListening');
-        Mobile('stopAdvertisingAndListening').callNative(function (err) {
-          t.notOk(
-            err,
-            'Should be able to call stopAdvertisingAndListening in teardown'
-          );
-          logger.debug('finish stopAdvertisingAndListening');
-          t.end();
-        });
+        logger.debug('finish stopAdvertisingAndListening');
+        callback();
       });
+    });
+  });
+}
+
+var test = tape({
+  setup: function (t) {
+    setup(function () {
+      t.end();
+    });
+  },
+  teardown: function (t) {
+    teardown(t, function () {
+      t.end();
     });
   }
 });
@@ -358,7 +370,7 @@ function startAndGetConnection(t, server, onConnectSuccess, onConnectFailure) {
   });
 }
 
-test('Can connect to a remote peer', function (t) {
+function canConnectToRemote(t, callback) {
   var connecting = false;
 
   var echoServer = net.createServer(function (socket) {
@@ -403,12 +415,12 @@ test('Can connect to a remote peer', function (t) {
         'reverse connection must have serverPort != 0');
     }
 
-    t.end();
+    callback();
   }
 
   function onConnectFailure () {
     t.fail('Connect failed!');
-    t.end();
+    callback();
   }
 
   echoServer.listen(0, function () {
@@ -435,6 +447,41 @@ test('Can connect to a remote peer', function (t) {
         t.notOk(err, 'Can call startListeningForAdvertisements without error');
       });
     });
+  });
+}
+
+test('Can connect to a remote peer', function (t) {
+  canConnectToRemote(t, function () {
+    t.end();
+  });
+});
+test('Can connect to a remote peer 100 times', function (t) {
+  Promise.mapSeries(
+    Array.apply(null, Array(100)),
+    function () {
+      return new Promise(function (resolve) {
+        canConnectToRemote(t, resolve);
+      })
+      .then(function () {
+        return t.sync();
+      })
+      .then(function () {
+        return new Promise(function (resolve) {
+          teardown(t, resolve);
+        });
+      })
+      .then(function () {
+        return t.sync();
+      })
+      .then(function () {
+        return new Promise(function (resolve) {
+          setup(resolve);
+        });
+      });
+    }
+  )
+  .then(function () {
+    t.end();
   });
 });
 
