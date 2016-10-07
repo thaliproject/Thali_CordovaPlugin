@@ -11,6 +11,23 @@ import XCTest
 import UIKit
 import ThaliCore
 
+// MARK: - Random string generator
+extension String {
+
+    static func random(length length: Int) -> String {
+        let letters: String = "abcdefghkmnopqrstuvxyzABCDEFGHKLMNOPQRSTUXYZ"
+        var randomString = ""
+
+        let lettersLength = UInt32(letters.characters.count)
+        for _ in 0..<length {
+            let rand = Int(arc4random_uniform(lettersLength))
+            let char = letters[letters.startIndex.advancedBy(rand)]
+            randomString.append(char)
+        }
+        return randomString
+    }
+}
+
 extension NetworkStatusParameters {
 
     static let allValues = [bluetooth, bluetoothLowEnergy, wifi, cellular, bssid]
@@ -72,10 +89,18 @@ class AppContextDelegateMock: NSObject, AppContextDelegate {
     var didEnterForeground = false
     var discoveryUpdated = false
 
+    let peerAvailabilityChangedHandler: (String) -> Void
+
+    init(peerAvailabilityChangedHandler: (String) -> Void) {
+        self.peerAvailabilityChangedHandler = peerAvailabilityChangedHandler
+    }
+
     @objc func context(context: AppContext, didResolveMultiConnectWith paramsJSONString: String) {}
     @objc func context(context: AppContext,
                        didFailMultiConnectConnectionWith paramsJSONString: String) {}
-    @objc func context(context: AppContext, didChangePeerAvailability peers: String) {}
+    @objc func context(context: AppContext, didChangePeerAvailability peers: String) {
+        peerAvailabilityChangedHandler(peers)
+    }
     @objc func context(context: AppContext, didChangeNetworkStatus status: String) {
         networkStatusUpdated = true
         networkStatus = status
@@ -151,7 +176,8 @@ class AppContextTests: XCTestCase {
     var bluetoothChangingStateGroup: dispatch_group_t?
 
     override func setUp() {
-        context = AppContext(serviceType: "thaliTest")
+        let serviceType = String.random(length: 8)
+        context = AppContext(serviceType: serviceType)
     }
 
     override func tearDown() {
@@ -179,7 +205,9 @@ class AppContextTests: XCTestCase {
     }
 
     func testWillEnterBackground() {
-        let delegateMock = AppContextDelegateMock()
+        let delegateMock = AppContextDelegateMock(peerAvailabilityChangedHandler: { _ in
+            XCTFail("unexpected peerAvailabilityChanged event")
+        })
         context.delegate = delegateMock
         NSNotificationCenter.defaultCenter()
                             .postNotificationName(UIApplicationWillResignActiveNotification,
@@ -188,7 +216,9 @@ class AppContextTests: XCTestCase {
     }
 
     func testDidEnterForeground() {
-        let delegateMock = AppContextDelegateMock()
+        let delegateMock = AppContextDelegateMock(peerAvailabilityChangedHandler: { _ in
+            XCTFail("unexpected peerAvailabilityChanged event")
+        })
         context.delegate = delegateMock
         NSNotificationCenter.defaultCenter()
                             .postNotificationName(UIApplicationDidBecomeActiveNotification,
@@ -269,7 +299,9 @@ class AppContextTests: XCTestCase {
     }
 
     func testListeningAdvertisingUpdateOnStartAdvertising() {
-        let delegateMock = AppContextDelegateMock()
+        let delegateMock = AppContextDelegateMock(peerAvailabilityChangedHandler: { _ in
+            XCTFail("unexpected peerAvailabilityChanged event")
+        })
         context.delegate = delegateMock
         let port = 42
         let _ = try? context.startUpdateAdvertisingAndListening(withParameters: [port])
@@ -278,11 +310,38 @@ class AppContextTests: XCTestCase {
     }
 
     func testListeningAdvertisingUpdateOnStartListening() {
-        let delegateMock = AppContextDelegateMock()
+        let delegateMock = AppContextDelegateMock(peerAvailabilityChangedHandler: { _ in
+            XCTFail("unexpected peerAvailabilityChanged event")
+        })
         context.delegate = delegateMock
         let _ = try? context.startListeningForAdvertisements()
         validateAdvertisingUpdate(delegateMock.advertisingListeningState, advertising: false,
                                   browsing: true)
+    }
+
+    func testStartAdvertisingAndListeningInvokePeerAvailabilityChangedForDifferentContexts() {
+        do {
+            let foundPeerFromAnotherContextExpectation =
+                expectationWithDescription("found peer from another AppContext")
+            let delegateMock = AppContextDelegateMock {
+                [weak foundPeerFromAnotherContextExpectation] peers in
+                foundPeerFromAnotherContextExpectation?.fulfill()
+            }
+            let serviceType = String.random(length: 8)
+            let context1 = AppContext(serviceType: serviceType)
+            context1.delegate = delegateMock
+            let context2 = AppContext(serviceType: serviceType)
+            let port = 42
+
+            try context1.startListeningForAdvertisements()
+            try context2.startUpdateAdvertisingAndListening(withParameters: [port])
+
+            let foundPeerTimeout: NSTimeInterval = 10
+            waitForExpectationsWithTimeout(foundPeerTimeout, handler: nil)
+
+        } catch let error {
+            XCTFail("unexpected error: \(error)")
+        }
     }
 
     func testPeerAvailabilityConversion() {
