@@ -105,7 +105,7 @@ test('Make sure start works', function (t) {
     .expects('start').exactly(1).withArgs(bufferArray);
   mockThaliNotificationClient.expects('on').exactly(1)
     .withArgs(thaliNotificationClient.Events.PeerAdvertisesDataForUs,
-              thaliPullReplicationFromNotification._boundAdvertiser);
+              thaliPullReplicationFromNotification._boundPeerAdvertisesDataForUsHandler);
 
   thaliPullReplicationFromNotification._thaliNotificationClient =
     thaliNotificationClient;
@@ -157,7 +157,7 @@ test('Make sure stop works', function (t) {
     .expects('start').exactly(1).withArgs(bufferArray);
   mockThaliNotificationClient.expects('on').exactly(1)
     .withArgs(thaliNotificationClient.Events.PeerAdvertisesDataForUs,
-      thaliPullReplicationFromNotification._boundAdvertiser);
+      thaliPullReplicationFromNotification._boundPeerAdvertisesDataForUsHandler);
 
   thaliPullReplicationFromNotification._thaliNotificationClient =
     thaliNotificationClient;
@@ -176,7 +176,7 @@ test('Make sure stop works', function (t) {
     .expects('stop').exactly(1);
   mockThaliNotificationClient.expects('removeListener').exactly(1)
     .withArgs(thaliNotificationClient.Events.PeerAdvertisesDataForUs,
-      thaliPullReplicationFromNotification._boundAdvertiser);
+      thaliPullReplicationFromNotification._boundPeerAdvertisesDataForUsHandler);
 
   thaliPullReplicationFromNotification._thaliNotificationClient =
     thaliNotificationClient;

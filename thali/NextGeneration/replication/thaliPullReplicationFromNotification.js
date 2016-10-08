@@ -3,7 +3,6 @@
 var ThaliNotificationClient = require('../notification/thaliNotificationClient');
 var logger = require('../../ThaliLogger')('thaliPullReplicationFromNotification');
 var assert = require('assert');
-var Promise = require('lie');
 var PeerAction = require('../thaliPeerPool/thaliPeerAction');
 var ThaliReplicationPeerAction = require('./thaliReplicationPeerAction');
 
@@ -68,7 +67,10 @@ function ThaliPullReplicationFromNotification(PouchDB,
   this._publicKey = ecdhForLocalDevice.getPublicKey();
   this._PouchDB = PouchDB;
   this._dbName = dbName;
-  this._boundAdvertiser = this._peerAdvertisesDataForUsHandler.bind(this);
+  this._boundPeerAdvertisesDataForUsHandler =
+    this._peerAdvertisesDataForUsHandler.bind(this);
+  this._boundPeerAvailabilityChangedHandler =
+    this._peerAvailabilityChangedHandler.bind(this);
   this._peerDictionary = {};
 
   this.state = ThaliPullReplicationFromNotification.STATES.CREATED;
@@ -91,6 +93,7 @@ ThaliPullReplicationFromNotification.STATES = {
  * with various 'connectionType' and 'keyId'.
  * Both 'connectionType' and 'keyId' wont have '-' symbol.
  * @param {Object} peerAdvertisesData
+ * @returns {string}
  * @private
  */
 ThaliPullReplicationFromNotification._getPeerDictionaryKey =
@@ -99,7 +102,7 @@ ThaliPullReplicationFromNotification._getPeerDictionaryKey =
   };
 
 /**
- * We have a new data for us ('peerAdvertisesData').
+ * We have new data for us ('peerAdvertisesData').
  * We are going to create a replication action based on this data.
  * We should make a single action from multiple data
  * with the same 'connectionType' and 'keyId'.
@@ -108,7 +111,6 @@ ThaliPullReplicationFromNotification._getPeerDictionaryKey =
  */
 ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
   function (peerAdvertisesData) {
-    var self = this;
     if (!peerAdvertisesData.portNumber) {
       logger.error(
         'We don\'t support client notification that a peer is gone, yet.'
@@ -116,7 +118,8 @@ ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
       return;
     }
 
-    var key = ThaliPullReplicationFromNotification._getPeerDictionaryKey(peerAdvertisesData);
+    var key = ThaliPullReplicationFromNotification
+                  ._getPeerDictionaryKey(peerAdvertisesData);
     var existingAction = this._peerDictionary[key];
     if (existingAction) {
       assert(
@@ -141,15 +144,39 @@ ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
   };
 
 /**
- * Action should be deleted from 'peerDictionary' (by special 'key')
- * on first starting or killed event.
+ * We only pay attention to peer not available announcements. If we get one
+ * then we will check our peerDictionary to see if we have a queued entry
+ * and if so we will kill it.
+ *
+ * @param {Object} peer
+ * @param {module:thaliMobileNativeWrapper.connectionTypes} connectionType
  * @private
  */
-ThaliPullReplicationFromNotification.prototype._bindRemoveActionFromPeerDictionary =
+ThaliPullReplicationFromNotification.prototype._peerAvailabilityChangedHandler =
+  function (peer, connectionType) {
+    if (peer.portNumber) {
+      // We are only looking for unavailable peers, we leave it to
+      // thaliNotificationClient to handle the available ones
+      return;
+    }
+
+
+  };
+
+/**
+ * Action should be deleted from 'peerDictionary' (by special 'key')
+ * on first starting or killed event.
+ * @param {module:thaliReplicationPeerAction~ThaliReplicationPeerAction} action
+ * @param {string} key
+ * @private
+ */
+ThaliPullReplicationFromNotification.prototype
+  ._bindRemoveActionFromPeerDictionary =
   function (action, key) {
     var self = this;
 
-    // TODO Invesatigate whether EventEmitter with action will provide a memory leak.
+    // TODO Investigate whether EventEmitter with action will provide a memory
+    // leak.
     // TODO Add EventEmitter to the peer action class.
     // TODO Extend EventEmitter with 'onceAny' method.
     // For example here we can use:
@@ -167,7 +194,8 @@ ThaliPullReplicationFromNotification.prototype._bindRemoveActionFromPeerDictiona
 
       assert(
         self._peerDictionary[key],
-        'The entry should exist because this is the only place that can remove it'
+        'The entry should exist because this is the only place that can ' +
+        'remove it'
       );
       delete self._peerDictionary[key];
     }
@@ -178,13 +206,13 @@ ThaliPullReplicationFromNotification.prototype._bindRemoveActionFromPeerDictiona
       removeHandler();
       action.start = originalStart;
       return originalStart.apply(this, arguments);
-    }
+    };
     var originalKill = action.kill;
     action.kill = function () {
       removeHandler();
       action.kill = originalKill;
       return originalKill.apply(this, arguments);
-    }
+    };
   };
 
 /**
@@ -214,7 +242,7 @@ ThaliPullReplicationFromNotification.prototype.start =
 
     this._thaliNotificationClient.on(
       this._thaliNotificationClient.Events.PeerAdvertisesDataForUs,
-      this._boundAdvertiser
+      this._boundPeerAdvertisesDataForUsHandler
     );
     this._thaliNotificationClient.start(prioritizedReplicationList);
 
@@ -244,7 +272,7 @@ ThaliPullReplicationFromNotification.prototype.stop = function () {
 
   this._thaliNotificationClient.removeListener(
     this._thaliNotificationClient.Events.PeerAdvertisesDataForUs,
-    this._boundAdvertiser
+    this._boundPeerAdvertisesDataForUsHandler
   );
   this._thaliNotificationClient.stop();
 
@@ -259,6 +287,6 @@ ThaliPullReplicationFromNotification.prototype.stop = function () {
  */
 ThaliPullReplicationFromNotification.prototype.getState = function () {
   return this.state;
-}
+};
 
 module.exports = ThaliPullReplicationFromNotification;
