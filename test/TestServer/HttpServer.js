@@ -90,6 +90,13 @@ Server.prototype._present = function (socket, deviceInfo) {
   this.emit('present', device);
 }
 
+Server.prototype.disconnectAll = function () {
+  var sockets = this._io.sockets.sockets;
+  Object.keys(sockets).forEach(function(socketName) {
+    sockets[socketName].disconnect(true);
+  });
+}
+
 Server.prototype._exit = function () {
   this._io.close();
 }
