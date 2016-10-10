@@ -7,99 +7,157 @@
 //  See LICENSE.txt file in the project root for full license information.
 //
 
-import Foundation
-
+/**
+ Base class for `BrowserVirtualSocketBuilder` and `AdvertiserVirtualSocketBuilder`
+ */
 class VirtualSocketBuilder {
 
-    // MARK: - Public state
-    let nonTCPsession: Session
+    // MARK: - Private state
+    private let nonTCPsession: Session
+    private var outputStream: NSOutputStream?
+    private var inputStream: NSInputStream?
+
+    // MARK: - Initialization
+    init(with nonTCPsession: Session) {
+        self.nonTCPsession = nonTCPsession
+    }
+}
+
+// TODO: check all docs
+/**
+ Creates `VirtualSocket` on `BrowserRelay` if possible.
+ */
+final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
+
+    // MARK: - Internal state
+    internal private(set) var streamName: String
 
     // MARK: - Private state
     private let streamReceivedBackTimeout: NSTimeInterval
+    private var completion: ((VirtualSocket?, ErrorType?) -> Void)?
+    private var streamReceivedBack = Atomic(false)
 
-    required init(with nonTCPsession: Session,
-                       streamReceivedBackTimeout: NSTimeInterval,
-                       completion: ((inputStream: NSInputStream, outputStream: NSOutputStream)?,
-                                    ErrorType?)
-                       -> Void) {
-
-        self.nonTCPsession = nonTCPsession
+    // MARK: - Initialization
+    init(with nonTCPsession: Session,
+              streamName: String,
+              streamReceivedBackTimeout: NSTimeInterval) {
+        self.streamName = streamName
         self.streamReceivedBackTimeout = streamReceivedBackTimeout
+        super.init(with: nonTCPsession)
     }
-}
 
-final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
-
-    required init(with nonTCPsession: Session,
-                       streamReceivedBackTimeout: NSTimeInterval,
-                       completion: ((NSInputStream, NSOutputStream)?, ErrorType?) -> Void) {
-
-        super.init(with: nonTCPsession,
-                   streamReceivedBackTimeout: streamReceivedBackTimeout,
-                   completion: completion)
-
+    // MARK: - Internal methods
+    func startBuilding(with completion: (VirtualSocket?, ErrorType?) -> Void) {
         do {
-            let streamReceivedBack = Atomic(false)
-
-            let outputStreamName = NSUUID().UUIDString
-            let outputStream = try nonTCPsession.startOutputStream(with: outputStreamName)
-            nonTCPsession.didReceiveInputStreamHandler = {
-                inputStream, inputStreamName in
-
-                guard inputStreamName == outputStreamName else {
-                    completion(nil, ThaliCoreError.ConnectionFailed)
-                    return
-                }
-
-                streamReceivedBack.modify { $0 = true }
-                completion((inputStream, outputStream), nil)
-            }
+            let outputStream = try nonTCPsession.startOutputStream(with: streamName)
+            self.outputStream = outputStream
+            self.completion = completion
 
             let streamReceivedBackTimeout = dispatch_time(
                 DISPATCH_TIME_NOW,
-                Int64(streamReceivedBackTimeout * Double(NSEC_PER_SEC))
+                Int64(self.streamReceivedBackTimeout * Double(NSEC_PER_SEC))
             )
-
             dispatch_after(streamReceivedBackTimeout, dispatch_get_main_queue()) {
                 [weak self] in
+                guard let strongSelf = self else { return }
 
-                guard let strongSelf = self else {
-                    return
+                if strongSelf.streamReceivedBack.value == false {
+                    strongSelf.completion?(nil, ThaliCoreError.ConnectionTimedOut)
+                    strongSelf.completion = nil
                 }
-
-                streamReceivedBack.withValue {
-                    if $0 == false {
-                        strongSelf.nonTCPsession.didReceiveInputStreamHandler = nil
-                    }
-                }
-
-                completion(nil, ThaliCoreError.ConnectionTimedOut)
             }
-        } catch let error {
-            completion(nil, error)
+        } catch _ {
+            self.completion?(nil, ThaliCoreError.ConnectionFailed)
         }
     }
+
+    func completeVirtualSocket(with inputStream: NSInputStream) {
+
+        streamReceivedBack.modify { $0 = true }
+
+        guard let outputStream = outputStream else {
+            completion?(nil, ThaliCoreError.ConnectionFailed)
+            completion = nil
+            return
+        }
+
+        let vs = VirtualSocket(with: inputStream, outputStream: outputStream)
+        completion?(vs, nil)
+        completion = nil
+    }
+
+//                       completion: (VirtualSocket?, ErrorType?) -> Void) {
+
+//        do {
+//            let streamReceivedBack = Atomic(false)
+//
+//            print("Start building socket..")
+//
+//            let outputStreamName = NSUUID().UUIDString
+//            let outputStream = try nonTCPsession.startOutputStream(with: outputStreamName)
+//            nonTCPsession.didReceiveInputStreamHandler = {
+//                inputStream, inputStreamName in
+//
+//                guard inputStreamName == outputStreamName else {
+////                    inputStream.close()
+////                    completion(nil, ThaliCoreError.ConnectionFailed)
+//                    return
+//                }
+//
+//                streamReceivedBack.modify { $0 = true }
+//                let virtualNonTCPSocket = VirtualSocket(with: inputStream,
+//                                                        outputStream: outputStream)
+//
+//                completion(virtualNonTCPSocket, nil)
+//            }
+//
+//            let streamReceivedBackTimeout = dispatch_time(
+//                DISPATCH_TIME_NOW,
+//                Int64(streamReceivedBackTimeout * Double(NSEC_PER_SEC))
+//            )
+//
+//            dispatch_after(streamReceivedBackTimeout, dispatch_get_main_queue()) {
+//                [weak self] in
+//                guard let strongSelf = self else { return }
+//
+//                streamReceivedBack.withValue {
+//                    if $0 == false {
+//                        strongSelf.nonTCPsession.didReceiveInputStreamHandler = nil
+//                    }
+//                }
+//
+//                completion(nil, ThaliCoreError.ConnectionTimedOut)
+//            }
+//        } catch let error {
+//            completion(nil, error)
+//        }
+//    }
 }
 
+/**
+ Creates `VirtualSocket` on `AdvertiserRelay` if possible.
+ */
 final class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
 
+    // MARK: - Private state
+    private var completion: (VirtualSocket?, ErrorType?) -> Void
+
+    // MARK: - Initialization
     required init(with nonTCPsession: Session,
-                       streamReceivedBackTimeout: NSTimeInterval,
-                       completion: ((NSInputStream, NSOutputStream)?, ErrorType?) -> Void) {
+                       completion: ((VirtualSocket?, ErrorType?) -> Void)) {
+        self.completion = completion
+        super.init(with: nonTCPsession)
+    }
 
-        super.init(with: nonTCPsession,
-                   streamReceivedBackTimeout: streamReceivedBackTimeout,
-                   completion: completion)
-
-        self.nonTCPsession.didReceiveInputStreamHandler = {
-            inputStream, inputStreamName in
-
-            do {
-                let outputStream = try nonTCPsession.startOutputStream(with: inputStreamName)
-                completion((inputStream, outputStream), nil)
-            } catch let error {
-                completion(nil, error)
-            }
+    // MARK: - Internal methods
+    func createVirtualSocket(with inputStream: NSInputStream, inputStreamName: String) {
+        do {
+            let outputStream = try nonTCPsession.startOutputStream(with: inputStreamName)
+            let virtualNonTCPSocket = VirtualSocket(with: inputStream,
+                                                    outputStream: outputStream)
+            completion(virtualNonTCPSocket, nil)
+        } catch let error {
+            completion(nil, error)
         }
     }
 }

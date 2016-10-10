@@ -7,10 +7,10 @@
 //  See LICENSE.txt file in the project root for full license information.
 //
 
-import Foundation
-
-// Class for managing Thali advertiser's logic
-public final class AdvertiserManager: NSObject {
+/**
+ Manages Thali advertiser's logic
+ */
+public final class AdvertiserManager {
 
     // MARK: - Public state
     public var advertising: Bool {
@@ -19,99 +19,91 @@ public final class AdvertiserManager: NSObject {
 
     // MARK: - Internal state
     internal private(set) var advertisers: Atomic<[Advertiser]> = Atomic([])
-    internal var didRemoveAdvertiserWithIdentifierHandler: ((PeerIdentifier) -> Void)?
+    internal private(set) var activeRelays: Atomic<[String: AdvertiserRelay]> = Atomic([:])
+    internal var didDisposeAdvertiserForPeerHandler: ((Peer) -> Void)?
 
     // MARK: - Private state
-    private var currentAdvertiser: Advertiser? = nil
+    private var currentAdvertiser: Advertiser?
     private let serviceType: String
-    private var relay: Relay<AdvertiserVirtualSocketBuilder>? = nil
-    private let disposeAdvertiserTimeout: NSTimeInterval
+    private let disposeTimeout: NSTimeInterval
 
-    // MARK: - Public state
+    // MARK: - Initialization
     public init(serviceType: String, disposeAdvertiserTimeout: NSTimeInterval) {
         self.serviceType = serviceType
-        self.disposeAdvertiserTimeout = disposeAdvertiserTimeout
-        super.init()
+        self.disposeTimeout = disposeAdvertiserTimeout
     }
 
+    // MARK: - Public methods
     public func startUpdateAdvertisingAndListening(onPort port: UInt16,
                                                           errorHandler: ErrorType -> Void) {
-
-        let advertiser: Advertiser?
-        var newPeerIdentifier = PeerIdentifier()
-
         if let currentAdvertiser = currentAdvertiser {
             disposeAdvertiserAfterTimeoutToFinishInvites(currentAdvertiser)
-            newPeerIdentifier = currentAdvertiser.peerIdentifier.nextGenerationPeer()
         }
 
-        advertiser = Advertiser(peerIdentifier: newPeerIdentifier,
-                                serviceType: serviceType,
-                                receivedInvitationHandler: {
-                                    [weak self] session in
+        let newPeer = currentAdvertiser?.peer.nextGenerationPeer() ?? Peer()
 
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
+        let advertiser = Advertiser(peer: newPeer,
+                                    serviceType: serviceType,
+                                    receivedInvitation: {
+                                        [weak self] session in
+                                        guard let strongSelf = self else { return }
 
-                                    strongSelf.relay = Relay(with: session, createSocketTimeout: 0)
+                                        strongSelf.activeRelays.modify {
+                                            let relay = AdvertiserRelay(with: session, on: port)
+                                            $0[newPeer.uuid] = relay
+                                        }
+                                    },
+                                    sessionNotConnected: {
+                                        [weak self] in
+                                        guard let strongSelf = self else { return }
 
-                                    strongSelf.relay?.openRelay(on: port) {
-                                        port, error in
-                                    }
-                                },
-                                disconnectHandler: {
-                                    [weak self] in
-
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-
-                                    strongSelf.relay?.closeRelay()
-                                })
-
-        if let advertiser = advertiser {
-            advertiser.startAdvertising(errorHandler)
-            advertisers.modify({ $0.append(advertiser) })
-        }
-
-        self.currentAdvertiser = advertiser
-
-        defer {
-            assert(self.currentAdvertiser != nil,
-                   "We should have initialized advertiser after calling this function")
-        }
-
-        guard currentAdvertiser != nil else {
+                                        strongSelf.activeRelays.modify {
+                                            if let relay = $0[newPeer.uuid] {
+                                                relay.closeRelay()
+                                            }
+                                            $0.removeValueForKey(newPeer.uuid)
+                                        }
+                                    })
+        guard let newAdvertiser = advertiser else {
+            errorHandler(ThaliCoreError.ConnectionFailed)
             return
         }
+
+        advertisers.modify {
+            newAdvertiser.startAdvertising(errorHandler)
+            $0.append(newAdvertiser)
+        }
+
+        self.currentAdvertiser = newAdvertiser
     }
 
     public func stopAdvertising() {
-        advertisers.withValue {
+        advertisers.modify {
             $0.forEach { $0.stopAdvertising() }
+            $0.removeAll()
         }
-        advertisers.modify { $0.removeAll() }
         currentAdvertiser = nil
     }
 
     // MARK: - Private methods
-    private func disposeAdvertiserAfterTimeoutToFinishInvites(advertiserToDispose: Advertiser) {
-        let disposeTimeout = dispatch_time(
-            DISPATCH_TIME_NOW,
-            Int64(self.disposeAdvertiserTimeout * Double(NSEC_PER_SEC))
-        )
+    private func disposeAdvertiserAfterTimeoutToFinishInvites(
+        advertiserShouldBeDisposed: Advertiser) {
+
+        let disposeTimeout = dispatch_time(DISPATCH_TIME_NOW,
+                                           Int64(self.disposeTimeout * Double(NSEC_PER_SEC)))
 
         dispatch_after(disposeTimeout, dispatch_get_main_queue()) {
-            advertiserToDispose.stopAdvertising()
+            [weak self] in
+            guard let strongSelf = self else { return }
 
-            self.advertisers.modify {
-                if let indexOfDisposingAdvertiser = $0.indexOf(advertiserToDispose) {
+            strongSelf.advertisers.modify {
+                advertiserShouldBeDisposed.stopAdvertising()
+                if let indexOfDisposingAdvertiser = $0.indexOf(advertiserShouldBeDisposed) {
                     $0.removeAtIndex(indexOfDisposingAdvertiser)
                 }
             }
 
-            self.didRemoveAdvertiserWithIdentifierHandler?(advertiserToDispose.peerIdentifier)
+            strongSelf.didDisposeAdvertiserForPeerHandler?(advertiserShouldBeDisposed.peer)
         }
     }
 }

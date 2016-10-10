@@ -7,9 +7,12 @@
 //  See LICENSE.txt file in the project root for full license information.
 //
 
-import Foundation
 import MultipeerConnectivity
 
+/**
+ The `Browser` class manages underlying `MCNearbyServiceBrowser` object
+ and handles `MCNearbyServiceBrowserDelegate` events
+ */
 final class Browser: NSObject {
 
     // MARK: - Internal state
@@ -18,22 +21,50 @@ final class Browser: NSObject {
 
     // MARK: - Private state
     private let browser: MCNearbyServiceBrowser
-    private var availablePeers: Atomic<[PeerIdentifier: MCPeerID]> = Atomic([:])
-    private let didFindPeerHandler: (PeerIdentifier) -> Void
-    private let didLosePeerHandler: (PeerIdentifier) -> Void
+    private var availablePeers: Atomic<[Peer: MCPeerID]> = Atomic([:])
+    private let didFindPeerHandler: (Peer) -> Void
+    private let didLosePeerHandler: (Peer) -> Void
     private var startBrowsingErrorHandler: (ErrorType -> Void)? = nil
 
-    // MARK: - Public methods
-    required init(serviceType: String,
-                  foundPeer: (PeerIdentifier) -> Void,
-                  lostPeer: (PeerIdentifier) -> Void) {
-        let peerId = MCPeerID(displayName: NSUUID().UUIDString)
-        browser = MCNearbyServiceBrowser(peer: peerId, serviceType: serviceType)
+    // MARK: - Initialization
+
+    /**
+     Returns a new `Advertiser` object or nil if it could not be created.
+
+     - parameters:
+       - serviceType:
+         The type of service to advertise.
+         This should be a string in the format of Bonjour service type:
+         1. *Must* be 1–15 characters long
+         2. Can contain *only* ASCII letters, digits, and hyphens.
+         3. *Must* contain at least one ASCII letter
+         4. *Must* not begin or end with a hyphen
+         5. Hyphens must not be adjacent to other hyphens
+         For more details, see [RFC6335](https://tools.ietf.org/html/rfc6335#section-5.1).
+
+       - foundPeer:
+         Called when a nearby peer is found.
+
+       - lostPeer:
+         Called when a nearby peer is lost.
+
+     - returns: An initialized `Advertiser` object, or nil if an object could not be created
+     due to invalid `serviceType` format.
+     */
+    required init?(serviceType: String,
+                   foundPeer: (Peer) -> Void,
+                   lostPeer: (Peer) -> Void) {
+        if !String.isValidServiceType(serviceType) {
+            return nil
+        }
+
+        let mcPeerID = MCPeerID(displayName: NSUUID().UUIDString)
+        browser = MCNearbyServiceBrowser(peer: mcPeerID, serviceType: serviceType)
         didFindPeerHandler = foundPeer
         didLosePeerHandler = lostPeer
-        super.init()
     }
 
+    // MARK: - Internal methods
     func startListening(startListeningErrorHandler: ErrorType -> Void) {
         startBrowsingErrorHandler = startListeningErrorHandler
         browser.delegate = self
@@ -47,34 +78,36 @@ final class Browser: NSObject {
         listening = false
     }
 
-    /*!
-     invites PeerIdentifier to session
+    /**
+     Invites Peer into the session
 
-     - parameter peerIdentifier: peer identifier to invite
-     - parameter disconnectHandler: notifies about session not connected state
+     - parameters:
+       - peer:
+         `Peer` to invite
+
+       - disconnectHandler:
+         Called when the nearby peer is not (or is no longer) in this session.
 
      - throws: IllegalPeerID
 
-     - returns: Session object for managing multipeer session between devices
+     - returns: Session object that manages MCSession between peers
      */
-    func inviteToConnectPeer(with peerIdentifier: PeerIdentifier,
-                                  sessionConnectHandler: () -> Void,
-                                  sessionDisconnectHandler: () -> Void) throws -> Session {
+    func inviteToConnect(peer: Peer,
+                         sessionConnected: () -> Void,
+                         sessionNotConnected: () -> Void) throws -> Session {
 
-        let mcSession = MCSession(peer: browser.myPeerID,
-                                  securityIdentity: nil,
-                                  encryptionPreference: .None)
+        let mcSession = MCSession(peer: browser.myPeerID)
 
-        guard let mcPeer = availablePeers.value[peerIdentifier] else {
+        guard let mcPeerID = availablePeers.value[peer] else {
             throw ThaliCoreError.IllegalPeerID
         }
 
         let session = Session(session: mcSession,
-                              identifier: mcPeer,
-                              connectHandler: sessionConnectHandler,
-                              disconnectHandler: sessionDisconnectHandler)
+                              identifier: mcPeerID,
+                              connected: sessionConnected,
+                              notConnected: sessionNotConnected)
 
-        browser.invitePeer(mcPeer,
+        browser.invitePeer(mcPeerID,
                            toSession: mcSession,
                            withContext: nil,
                            timeout: invitePeerTimeout)
@@ -87,11 +120,11 @@ extension Browser: MCNearbyServiceBrowserDelegate {
 
     func browser(browser: MCNearbyServiceBrowser,
                  foundPeer peerID: MCPeerID,
-                 withDiscoveryInfo info: [String : String]?) {
+                 withDiscoveryInfo info: [String: String]?) {
         do {
-            let peerIdentifier = try PeerIdentifier(peerID: peerID)
-            availablePeers.modify { $0[peerIdentifier] = peerID }
-            didFindPeerHandler(peerIdentifier)
+            let peer = try Peer(mcPeerID: peerID)
+            availablePeers.modify { $0[peer] = peerID }
+            didFindPeerHandler(peer)
         } catch let error {
             print("cannot parse identifier \"\(peerID.displayName)\" because of error: \(error)")
         }
@@ -99,9 +132,9 @@ extension Browser: MCNearbyServiceBrowserDelegate {
 
     func browser(browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
         do {
-            let peerIdentifier = try PeerIdentifier(peerID: peerID)
-            availablePeers.modify { $0.removeValueForKey(peerIdentifier) }
-            didLosePeerHandler(peerIdentifier)
+            let peer = try Peer(mcPeerID: peerID)
+            availablePeers.modify { $0.removeValueForKey(peer) }
+            didLosePeerHandler(peer)
         } catch let error {
             print("cannot parse identifier \"\(peerID.displayName)\" because of error: \(error)")
         }

@@ -1,14 +1,11 @@
 //
 //  Thali CordovaPlugin
-//  MultiConnectResolvedCallback.swift
+//  ThaliCoreError.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
 //  Licensed under the MIT license.
 //  See LICENSE.txt file in the project root for full license information.
 //
-
-public typealias MultiConnectResolvedCallback =
-    (syncValue: String, error: ErrorType?, port: UInt16?) -> Void
 
 public enum ThaliCoreError: String, ErrorType {
 

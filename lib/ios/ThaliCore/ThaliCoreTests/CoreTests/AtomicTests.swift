@@ -8,7 +8,7 @@
 //
 
 import XCTest
-@testable import ThaliCore
+import ThaliCore
 
 class AtomicTests: XCTestCase {
 

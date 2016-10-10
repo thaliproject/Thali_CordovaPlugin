@@ -7,17 +7,19 @@
 //  See LICENSE.txt file in the project root for full license information.
 //
 
-import XCTest
 @testable import ThaliCore
+import XCTest
 
 class AdvertiserManagerTests: XCTestCase {
 
+    // MARK: - State
     var serviceType: String!
     var advertiserManager: AdvertiserManager!
     let disposeTimeout: NSTimeInterval = 4.0
 
+    // MARK: - Setup
     override func setUp() {
-        serviceType = String.random(length: 7)
+        serviceType = String.randomValidServiceType(length: 7)
         advertiserManager = AdvertiserManager(serviceType: serviceType,
                                               disposeAdvertiserTimeout: disposeTimeout)
     }
@@ -27,6 +29,7 @@ class AdvertiserManagerTests: XCTestCase {
         advertiserManager = nil
     }
 
+    // MARK: - Tests
     func testStartAdvertisingChangesState() {
         // Given
         XCTAssertFalse(advertiserManager.advertising)
@@ -75,21 +78,19 @@ class AdvertiserManagerTests: XCTestCase {
                                                              errorHandler: unexpectedErrorHandler)
         XCTAssertEqual(advertiserManager.advertisers.value.count, 1)
 
-        let firstAdvertiserPeerIdentifier =
-            advertiserManager.advertisers.value.first!.peerIdentifier
-        let firstAdvertiserDisposedExpectation =
-            expectationWithDescription("advertiser disposed after delay")
+        let firstAdvertiserPeer = advertiserManager.advertisers.value.first!.peer
+        let firstAdvertiserDisposed = expectationWithDescription("Advertiser disposed after delay")
 
         // When
         advertiserManager.startUpdateAdvertisingAndListening(onPort: port2,
                                                              errorHandler: unexpectedErrorHandler)
         XCTAssertEqual(advertiserManager.advertisers.value.count, 2)
 
-        advertiserManager.didRemoveAdvertiserWithIdentifierHandler = {
-            [weak firstAdvertiserDisposedExpectation] identifier in
+        advertiserManager.didDisposeAdvertiserForPeerHandler = {
+            [weak firstAdvertiserDisposed] peer in
 
-            XCTAssertEqual(firstAdvertiserPeerIdentifier, identifier)
-            firstAdvertiserDisposedExpectation?.fulfill()
+            XCTAssertEqual(firstAdvertiserPeer, peer)
+            firstAdvertiserDisposed?.fulfill()
         }
 
         // Then

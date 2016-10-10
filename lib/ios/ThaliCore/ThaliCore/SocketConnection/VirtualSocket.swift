@@ -7,38 +7,97 @@
 //  See LICENSE.txt file in the project root for full license information.
 //
 
-import Foundation
+/**
+ `VirtualSocket` class manages non-TCP virtual socket.
 
-public class VirtualSocket: NSObject {
+ Non-TCP virtual socket is a combination of the non-TCP output and input streams
+ */
+class VirtualSocket: NSObject {
 
     // MARK: - Internal state
-    internal private(set) var inputStream: NSInputStream
-    internal private(set) var outputStream: NSOutputStream
-    internal var readDataFromStreamHandler: ((NSData) -> Void)?
+    internal var didOpenVirtualSocketHandler: ((VirtualSocket) -> Void)?
+    internal var didReadDataFromStreamHandler: ((VirtualSocket, NSData) -> Void)?
+    internal var didCloseVirtualSocketHandler: ((VirtualSocket) -> Void)?
 
-    // MARK: - Public methods
+    // MARK: - Private state
+    private var inputStream: NSInputStream
+    private var outputStream: NSOutputStream
+
+    private var inputStreamOpened = false
+    private var outputStreamOpened = false
+
+    let maxReadBufferLength = 1024
+    private var pendingDataToWrite: NSMutableData?
+
+    // MARK: - Initialize
     init(with inputStream: NSInputStream, outputStream: NSOutputStream) {
         self.inputStream = inputStream
         self.outputStream = outputStream
         super.init()
     }
 
+    // MARK: - Internal methods
     func openStreams() {
-        inputStream.delegate = self
-        inputStream.scheduleInRunLoop(NSRunLoop.mainRunLoop(), forMode: NSDefaultRunLoopMode)
-        inputStream.open()
+        let queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
+        dispatch_async(queue, {
+            self.inputStream.delegate = self
+            self.inputStream.scheduleInRunLoop(NSRunLoop.currentRunLoop(),
+                                               forMode: NSDefaultRunLoopMode)
+            self.inputStream.open()
 
-        outputStream.delegate = self
-        outputStream.scheduleInRunLoop(NSRunLoop.mainRunLoop(), forMode: NSDefaultRunLoopMode)
-        outputStream.open()
+            self.outputStream.delegate = self
+            self.outputStream.scheduleInRunLoop(NSRunLoop.currentRunLoop(),
+                                                forMode: NSDefaultRunLoopMode)
+            self.outputStream.open()
+
+            NSRunLoop.currentRunLoop().runUntilDate(NSDate.distantFuture())
+        })
     }
 
     func closeStreams() {
         inputStream.close()
-        inputStream.removeFromRunLoop(NSRunLoop.mainRunLoop(), forMode: NSDefaultRunLoopMode)
-
         outputStream.close()
-        outputStream.removeFromRunLoop(NSRunLoop.mainRunLoop(), forMode: NSDefaultRunLoopMode)
+        didCloseVirtualSocketHandler?(self)
+    }
+
+    func writeDataToOutputStream(data: NSData) {
+
+        if !outputStream.hasSpaceAvailable {
+            pendingDataToWrite?.appendData(data)
+            return
+        }
+
+        let dataLength = data.length
+        let buffer: [UInt8] = Array(
+                                UnsafeBufferPointer(start: UnsafePointer<UInt8>(data.bytes),
+                                                    count: dataLength)
+                              )
+
+        let bytesWritten = outputStream.write(buffer, maxLength: dataLength)
+        if bytesWritten < 0 {
+            closeStreams()
+        }
+    }
+
+    func writePendingData() {
+        guard let dataToWrite = pendingDataToWrite else {
+            return
+        }
+
+        pendingDataToWrite = nil
+        writeDataToOutputStream(dataToWrite)
+    }
+
+    private func readDataFromInputStream() {
+        var buffer = [UInt8](count: maxReadBufferLength, repeatedValue: 0)
+
+        let bytesReaded = self.inputStream.read(&buffer, maxLength: maxReadBufferLength)
+        if bytesReaded >= 0 {
+            let data = NSData(bytes: &buffer, length: bytesReaded)
+            didReadDataFromStreamHandler?(self, data)
+        } else {
+            closeStreams()
+        }
     }
 }
 
@@ -46,38 +105,61 @@ public class VirtualSocket: NSObject {
 extension VirtualSocket: NSStreamDelegate {
 
     // MARK: - Delegate methods
-    public func stream(aStream: NSStream, handleEvent eventCode: NSStreamEvent) {
+    internal func stream(aStream: NSStream, handleEvent eventCode: NSStreamEvent) {
+
         if aStream == self.inputStream {
-            handleEventOnInputStream(with: eventCode)
+            handleEventOnInputStream(eventCode)
         } else if aStream == self.outputStream {
-            handleEventOnOutputStream(with: eventCode)
+            handleEventOnOutputStream(eventCode)
+        } else {
+            self.closeStreams()
+            aStream.close()
         }
     }
 
-    // MARK: - Private Helpers
-    private func handleEventOnInputStream(with eventCode: NSStreamEvent) {
+    private func handleEventOnInputStream(eventCode: NSStreamEvent) {
         switch eventCode {
-        case [.HasBytesAvailable]:
-            let maxBufferLength = 1024
-            var buffer = [UInt8](count: maxBufferLength, repeatedValue: 0)
-
-            let bytesReaded = self.inputStream.read(&buffer, maxLength: maxBufferLength)
-
-            if bytesReaded >= 0 {
-                let data = NSData(bytes: &buffer, length: bytesReaded)
-                readDataFromStreamHandler?(data)
-            }
+        case NSStreamEvent.OpenCompleted:
+            inputStreamOpened = true
+            didOpenStreamHandler()
+        case NSStreamEvent.HasBytesAvailable:
+            readDataFromInputStream()
+        case NSStreamEvent.HasSpaceAvailable:
+            closeStreams()
+            didCloseVirtualSocketHandler?(self)
+        case NSStreamEvent.ErrorOccurred:
+            closeStreams()
+        case NSStreamEvent.EndEncountered:
+            closeStreams()
         default:
             break
         }
     }
 
-    private func handleEventOnOutputStream(with eventCode: NSStreamEvent) {
+    private func handleEventOnOutputStream(eventCode: NSStreamEvent) {
+        // TODO: all events
         switch eventCode {
-        case [.HasBytesAvailable]:
-            break
+        case NSStreamEvent.OpenCompleted:
+            outputStreamOpened = true
+            didOpenStreamHandler()
+        case NSStreamEvent.HasBytesAvailable:
+            readDataFromInputStream()
+        case NSStreamEvent.HasSpaceAvailable:
+            writePendingData()
+        case NSStreamEvent.ErrorOccurred:
+            closeStreams()
+        case NSStreamEvent.EndEncountered:
+            closeStreams()
         default:
             break
+        }
+    }
+
+    private func didOpenStreamHandler() {
+        if inputStreamOpened && outputStreamOpened {
+            inputStreamOpened = false
+            outputStreamOpened = false
+            didOpenVirtualSocketHandler?(self)
         }
     }
 }

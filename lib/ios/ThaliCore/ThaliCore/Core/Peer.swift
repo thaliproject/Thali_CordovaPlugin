@@ -1,20 +1,23 @@
 //
 //  Thali CordovaPlugin
-//  PeerIdentifier.swift
+//  Peer.swift
 //
 //  Copyright (C) Microsoft. All rights reserved.
 //  Licensed under the MIT license.
 //  See LICENSE.txt file in the project root for full license information.
 //
 
-import Foundation
 import MultipeerConnectivity
 
-///Peer identifier with generations
-public struct PeerIdentifier: Hashable {
+/// This object defines information about a single peer.
+public struct Peer: Hashable {
 
     // MARK: - Public state
+    /// An opaque value that identifies a non-TCP/IP transport handle for the peer.
+    /// This value must map to the UUID part of the MCPeerID.
     public let uuid: String
+
+    /// An integer which counts changes in the peer's database.
     public let generation: Int
 
     public var hashValue: Int {
@@ -22,8 +25,9 @@ public struct PeerIdentifier: Hashable {
     }
 
     // MARK: - Internal state
+    /// Combination of `uuid` and `generation` in format *uuid:generation*
     internal var stringValue: String {
-        return "\(uuid)\(PeerIdentifier.separator)\(String(generation, radix: 16))"
+        return "\(uuid)\(Peer.separator)\(String(generation, radix: 16))"
     }
 
     // MARK: - Private state
@@ -41,28 +45,31 @@ public struct PeerIdentifier: Hashable {
     }
 
     public init(stringValue: String) throws {
-        let parts = stringValue.characters
-                    .split { $0 == PeerIdentifier.separator }
+        let peerParts = stringValue.characters
+                    .split { $0 == Peer.separator }
                     .map(String.init)
-        guard parts.count == 2 else {
+        guard peerParts.count == 2 else {
             throw ThaliCoreError.IllegalPeerID
         }
-        guard let generation = Int(parts[1], radix: 16) else {
+        guard let uuid = NSUUID(UUIDString: peerParts[0]) else {
             throw ThaliCoreError.IllegalPeerID
         }
-        self.uuid = parts[0]
+        guard let generation = Int(peerParts[1], radix: 16) else {
+            throw ThaliCoreError.IllegalPeerID
+        }
+        self.uuid = uuid.UUIDString
         self.generation = generation
     }
 
-    func nextGenerationPeer() -> PeerIdentifier {
-        return PeerIdentifier(uuidIdentifier: uuid, generation: generation + 1)
+    func nextGenerationPeer() -> Peer {
+        return Peer(uuidIdentifier: uuid, generation: generation + 1)
     }
 }
 
 // MARK: - Multipeer connectivity specific functions
-extension PeerIdentifier {
+extension Peer {
 
-    init(peerID peer: MCPeerID) throws {
+    init(mcPeerID peer: MCPeerID) throws {
         try self.init(stringValue: peer.displayName)
     }
 }
@@ -70,11 +77,11 @@ extension PeerIdentifier {
 // MARK: - Multipeer connectivity specific functions
 extension MCPeerID {
 
-    convenience init(peerIdentifier: PeerIdentifier) {
-        self.init(displayName: peerIdentifier.stringValue)
+    convenience init(peer: Peer) {
+        self.init(displayName: peer.stringValue)
     }
 }
 
-public func == (lhs: PeerIdentifier, rhs: PeerIdentifier) -> Bool {
+public func == (lhs: Peer, rhs: Peer) -> Bool {
     return lhs.stringValue.compare(rhs.stringValue, options: .LiteralSearch) == .OrderedSame
 }
