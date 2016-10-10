@@ -4,6 +4,7 @@ var config       = require('./config.json')
 var spawn        = require('child_process').spawn;
 var randomString = require('randomstring');
 var objectAssign = require('object-assign');
+var Promise      = require('bluebird');
 
 
 var DEFAULT_INSTANCE_COUNT = 3;
@@ -117,8 +118,18 @@ var testServerConfiguration = {
 var testEnv = objectAssign({}, process.env, config.env);
 var testServerOpts = objectAssign({}, { env: testEnv });
 
-var testServerInstance = spawn('node', ['../../TestServer/index.js',
-  JSON.stringify(testServerConfiguration)], testServerOpts);
+// Server works infinite amount of time.
+var testServerInstance = spawn(
+  'node',
+  [
+    '../../TestServer/index.js',
+    JSON.stringify(testServerConfiguration),
+    JSON.stringify({
+      resetOnCompleted: true
+    })
+  ],
+  testServerOpts
+);
 setListeners(testServerInstance, 0);
 
 var instanceEnv = objectAssign({}, testEnv, {
@@ -143,6 +154,18 @@ var spawnTestInstance = function (instanceId) {
 for (var i = 1; i <= spawnedInstanceCount; i++) {
   spawnTestInstance(i);
 }
+
+// Server should be killed after instances.
+var promises = Object.keys(testInstances)
+.map(function (instanceId) {
+  return new Promise(function (resolve) {
+    testInstances[instanceId].once('exit', resolve);
+  });
+});
+Promise.all(promises)
+.then(function () {
+  testServerInstance.kill();
+});
 
 var shutdown = function (code) {
   // A small delay so that instances have time to print

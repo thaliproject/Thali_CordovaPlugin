@@ -20,11 +20,16 @@ var server = new Server({
   port: 3000
 });
 
-var options = process.argv[2];
+var managerOptions = process.argv[2];
+if (managerOptions) {
+  managerOptions = JSON.parse(managerOptions);
+}
+var unitTestManager = new UnitTestFramework(managerOptions);
+
+var options = process.argv[3];
 if (options) {
   options = JSON.parse(options);
 }
-var unitTestManager = new UnitTestFramework(options);
 
 server
 .on('presented', function (device) {
@@ -44,26 +49,32 @@ server
   // throw new Error(error);
 });
 
-var timer = setTimeout(function () {
-  throw new Error('timeout exceed');
-}, WAITING_FOR_DEVICES_TIMEOUT);
+function reset() {
+  var timer = setTimeout(function () {
+    throw new Error('timeout exceed');
+  }, WAITING_FOR_DEVICES_TIMEOUT);
 
-unitTestManager
-.once('started', function (results) {
-  clearTimeout(timer);
-})
-.once('completed', function (results) {
-  logger.debug('completed');
+  unitTestManager
+  .once('started', function (results) {
+    clearTimeout(timer);
+  })
+  .once('completed', function (results) {
+    logger.debug('completed');
 
-  var isSuccess = results.every(function (result) {
-    return result;
-  });
-  server.shutdown()
-  .then(function () {
+    var isSuccess = results.every(function (result) {
+      return result;
+    });
+    httpServer.disconnectAll();
     if (isSuccess) {
-      process.exit(0);
+      if (options && options.resetOnCompleted) {
+        unitTestManager.reset();
+        reset();
+      } else {
+        process.exit(0);
+      }
     } else {
       process.exit(1);
     }
   });
-});
+}
+reset();
