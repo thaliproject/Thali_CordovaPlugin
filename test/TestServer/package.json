@@ -3,15 +3,15 @@
   "version": "0.0.1",
   "description": "Thali Test Server App - to be run under CI",
   "dependencies": {
-    "fs-extra-promise": "0.2.0",
     "bluebird": "3.4.6",
+    "fs-extra-promise": "0.2.0",
+    "node-uuid": "1.4.7",
     "nssocket": "git@github.com:thaliproject/nssocket.git",
-    "winston": "2.2.0",
     "object-assign": "4.1.0",
-    "node-uuid": "1.4.7"
+    "winston": "2.2.0"
   },
   "devDependencies": {
-    "tape-catch": "1.0.4",
-    "sinon": "1.17.3"
+    "sinon": "1.17.3",
+    "tape-catch": "1.0.4"
   }
 }

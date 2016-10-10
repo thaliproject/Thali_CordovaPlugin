@@ -1,8 +1,7 @@
 'use strict';
 
-var test       = require('tape-catch');
-var sinon      = require('sinon');
-var proxyquire = require('proxyquire');
+var test  = require('tape-catch');
+var sinon = require('sinon');
 
 require('../utils/process');
 var Server = require('../Server');
@@ -11,7 +10,7 @@ var Client = require('../Client');
 
 var CHECK_TIMEOUT = 500;
 
-test('client and server connectable', function (t) {
+test.only('client and server connectable', function (t) {
   var spyServerConnect = sinon.spy(Server.prototype, '_connect');
   var spyClientConnect = sinon.spy(Client.prototype, '_connect');
   var server = new Server();
@@ -82,7 +81,7 @@ test('client should be able to reconnect to server if it was created before serv
   }, CHECK_TIMEOUT * 2);
 });
 
-test.only('client should be able to reconnect to server if network failed silently (by using keep alive)', function (t) {
+test('client should be able to reconnect to server if network failed silently (by using keep alive)', function (t) {
   var spyServerConnect = sinon.spy(Server.prototype, '_connect');
   var spyClientConnect = sinon.spy(Client.prototype, '_connect');
   var server = new Server();
@@ -90,8 +89,8 @@ test.only('client should be able to reconnect to server if network failed silent
     reconnectionDelay: CHECK_TIMEOUT,
     keepAliveTimeout:  CHECK_TIMEOUT
   });
+  // var socket = client._socket.socket;
+  // console.log(socket._handle.__proto__);
   setTimeout(function () {
-    var socket = client._socket.socket;
-    console.log(socket._handle.__proto__);
   }, CHECK_TIMEOUT);
 });

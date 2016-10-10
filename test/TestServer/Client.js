@@ -1,7 +1,6 @@
 'use strict';
 
 var util     = require('util');
-var format   = util.format;
 var inherits = util.inherits;
 
 var assert       = require('assert');
