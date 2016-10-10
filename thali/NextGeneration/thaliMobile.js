@@ -450,7 +450,7 @@ module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
 
   var peer = peersByConnectionType[peerIdentifier];
   if (!peer) {
-    return Promise.reject(new Error('Peer is not available'));
+    return Promise.reject(new Error('peer not available'));
   }
 
   var getPeerHostInfo = getPeerHostInfoStrategies[connectionType];
