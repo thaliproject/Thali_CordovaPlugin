@@ -44,7 +44,7 @@ prepare_project()
 
   cd $REPO_ROOT_DIR/test/TestServer
   npm install --no-optional
-  node generateServerAddress.js $2
+  node address/generate.js $2
 
   cd $REPO_ROOT_DIR/..
   cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME;ERROR_ABORT

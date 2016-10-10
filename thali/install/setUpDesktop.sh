@@ -11,7 +11,7 @@ set -e
 cd `dirname $0`
 cd ../../test/TestServer
 npm install --no-optional
-node generateServerAddress.js
+node address/generate.js
 
 cd ../../thali
 jx npm install --no-optional
