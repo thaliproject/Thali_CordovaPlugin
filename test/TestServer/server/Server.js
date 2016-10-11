@@ -9,22 +9,21 @@ var Promise      = require('bluebird');
 var nssocket     = require('nssocket');
 var EventEmitter = require('events').EventEmitter;
 
-var asserts = require('./utils/asserts');
-var logger  = require('./utils/ThaliLogger')('Server');
+var asserts = require('../utils/asserts');
+var logger  = require('../utils/ThaliLogger')('Server');
 
-var ServerSocket = require('./ServerSocket');
+var Socket = require('./Socket');
 
-var address = require('./server-address');
+var address = require('../server-address');
 asserts.isString(address);
 
 
 function Server (options) {
-  this._sockets = [];
+  this._sockets     = [];
+  this._isAvailable = false;
 
   this._setOptions(options);
-  this._bind();
-
-  this._isAvailable = true;
+  this.start();
 }
 
 inherits(Server, EventEmitter);
@@ -48,13 +47,19 @@ Server.prototype._setOptions = function (options) {
   );
 }
 
-Server.prototype._bind = function () {
+Server.prototype.start = function () {
   this._server = nssocket.createServer(
     {
       type: this._options.type
     },
     this._connect.bind(this)
   );
+  this._isAvailable = true;
+
+  this._bind();
+}
+
+Server.prototype._bind = function () {
   this._server.on('error', this._error.bind(this));
   this._server.listen(this._options.port, address);
 
@@ -71,7 +76,7 @@ Server.prototype._connect = function (socket) {
 
   logger.debug('client is connected');
 
-  socket = new ServerSocket(socket);
+  socket = new Socket(socket);
   this._sockets.push(socket);
   socket.once('close', function () {
     var index = self._sockets.indexOf(socket);

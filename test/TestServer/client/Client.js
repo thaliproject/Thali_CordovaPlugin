@@ -8,25 +8,25 @@ var objectAssign = require('object-assign');
 var Promise      = require('bluebird');
 var nssocket     = require('nssocket');
 
-var asserts = require('./utils/asserts');
-var logger  = require('./utils/ThaliLogger')('Client');
+var asserts = require('../utils/asserts');
+var logger  = require('../utils/ThaliLogger')('Client');
 
-var ServerSocket = require('./ServerSocket');
+var Socket = require('../Socket');
 
-var address = require('./server-address');
+var address = require('../server-address');
 asserts.isString(address);
 
 
 function Client (options) {
   this._setOptions(options);
 
-  this._isClosed = false;
-  this._isEnded  = false;
+  this._isClosed = true;
+  this._isEnded  = true;
 
   this._bind();
 }
 
-inherits(Client, ServerSocket);
+inherits(Client, Socket);
 
 Client.prototype.logger = logger;
 

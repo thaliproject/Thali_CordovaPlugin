@@ -1,4 +1,4 @@
 'use strict';
 
-var Server = require('./Server');
-var Client = require('./Client');
+var Server = require('./server/Server');
+var Client = require('./client/Client');
