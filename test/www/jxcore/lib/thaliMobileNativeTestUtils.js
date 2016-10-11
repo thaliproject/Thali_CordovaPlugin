@@ -1,6 +1,6 @@
 'use strict';
 
-var Platform = require('thali/NextGeneration/utils/platform');
+var platform = require('thali/NextGeneration/utils/platform');
 var logger = require('../lib/testLogger')('thaliMobileNativeTestUtils');
 var randomString = require('randomstring');
 var Promise = require('lie');
@@ -116,8 +116,7 @@ function multiConnectEmitter () {
 
 inherits(multiConnectEmitter, EventEmitter);
 
-module.exports.multiConnectEmitter =
-  new multiConnectEmitter();
+module.exports.multiConnectEmitter = new EventEmitter();
 
 function iOSConnectToPeer(peer, retries, successCb, failureCb, quitSignal) {
   var originalSyncValue = randomString.generate();
@@ -161,12 +160,12 @@ function iOSConnectToPeer(peer, retries, successCb, failureCb, quitSignal) {
 }
 
 function connectToPeer(peer, retries, successCb, failureCb, quitSignal) {
-  if (Platform.isAndroid) {
+  if (platform.isAndroid) {
     return androidConnectToPeer(peer, retries, successCb, failureCb,
       quitSignal);
   }
 
-  if (Platform.isIOS) {
+  if (platform.isIOS) {
     return iOSConnectToPeer(peer, retries, successCb, failureCb, quitSignal);
   }
 

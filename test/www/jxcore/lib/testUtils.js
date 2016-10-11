@@ -1,7 +1,5 @@
 'use strict';
 
-var util = require('util');
-
 var os = require('os');
 var tmp = require('tmp');
 var PouchDB = require('pouchdb');

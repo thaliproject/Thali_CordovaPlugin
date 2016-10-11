@@ -298,8 +298,8 @@ test('Connect port dies if not connected to in time',
   },
   function (t) {
     /*
-    If we don't connect to the port returned by the connect call in time
-    then it should close down and we should get a connection error.
+     If we don't connect to the port returned by the connect call in time
+     then it should close down and we should get a connection error.
      */
     serverToBeClosed =
       thaliMobileNativeTestUtils.getConnectionToOnePeerAndTest(t,
@@ -316,7 +316,7 @@ test('Connect port dies if not connected to in time',
             });
           }, 3000);
         });
-      });
+  });
 
 test('Can shift large amounts of data', function (t) {
   var connecting = false;

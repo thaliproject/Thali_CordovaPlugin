@@ -39,7 +39,7 @@ function closeServer() {
       });
     }
 
-    return Promise.resolve(null);
+    return null;
   })
   .then(function () {
     if (mobileIsListening) {
@@ -56,7 +56,7 @@ function closeServer() {
       });
     }
 
-    return Promise.resolve(null);
+    return null;
   })
   .then(function () {
     if (mobileIsAdvertising) {
@@ -73,7 +73,7 @@ function closeServer() {
       });
     }
 
-    return Promise.resolve(null);
+    return null;
   });
 }
 
@@ -209,6 +209,7 @@ test('initial peer discovery', function (t) {
       // Copying received peers to the global peers hash table.
       peersReceived.forEach(function (idAndGeneration) {
         allPeers[idAndGeneration] = true;
+        latestPeers[idAndGeneration] = true;
       });
       t.end();
     }, STEP_TIMEOUT);
