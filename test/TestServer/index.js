@@ -27,6 +27,11 @@ if (managerOptions) {
 }
 var unitTestManager = new UnitTestFramework(managerOptions);
 
+var options = process.argv[3];
+if (options) {
+  options = JSON.parse(options);
+}
+
 httpServer
 .on('present', function (device) {
   switch (device.type) {
@@ -59,8 +64,12 @@ function reset() {
     });
     httpServer.disconnectAll();
     if (isSuccess) {
-      unitTestManager.reset();
-      reset();
+      if (options && options.resetOnCompleted) {
+        unitTestManager.reset();
+        reset();
+      } else {
+        process.exit(0);
+      }
     } else {
       process.exit(1);
     }
