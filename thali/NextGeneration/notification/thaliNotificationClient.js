@@ -226,10 +226,6 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
     ThaliMobile
       .getPeerHostInfo(peerStatus.peerIdentifier, peerStatus.connectionType)
       .then(function (peerHostInfo) {
-        assert(!this.peerDictionary.exists(peerStatus.peerIdentifier),
-          'peerAvailabilityChanged event with the same peerId'+
-          ' should not occur. peerIdentifier:' + peerStatus.peerIdentifier);
-
         var peerConnectionInfo = new PeerDictionary.PeerConnectionInformation(
           peerStatus.connectionType, peerHostInfo.hostAddress,
           peerHostInfo.portNumber, peerHostInfo.suggestedTCPTimeout);
