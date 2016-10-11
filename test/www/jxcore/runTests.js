@@ -105,7 +105,7 @@ function runTest (testFile, options) {
   return new Promise(function (resolve, reject) {
     logger.debug('spawning test: \'%s\'', testFile);
 
-    if (options.platform === 'ios') {
+    if (options.platform === 'ios' || options.platform === 'android') {
       // We couldn't use 'spawn' on ios.           
       require('./spawnTest')
       .run(testFile, options)
