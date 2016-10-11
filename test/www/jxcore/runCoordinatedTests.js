@@ -123,10 +123,7 @@ var testServerInstance = spawn(
   'node',
   [
     '../../TestServer/index.js',
-    JSON.stringify(testServerConfiguration),
-    JSON.stringify({
-      resetOnCompleted: true
-    })
+    JSON.stringify(testServerConfiguration)
   ],
   testServerOpts
 );
