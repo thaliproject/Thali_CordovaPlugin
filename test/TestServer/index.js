@@ -21,16 +21,11 @@ var httpServer = new HttpServer({
   transports: ['websocket']
 });
 
-var managerOptions = process.argv[2];
-if (managerOptions) {
-  managerOptions = JSON.parse(managerOptions);
-}
-var unitTestManager = new UnitTestFramework(managerOptions);
-
-var options = process.argv[3];
+var options = process.argv[2];
 if (options) {
   options = JSON.parse(options);
 }
+var unitTestManager = new UnitTestFramework(options);
 
 httpServer
 .on('present', function (device) {
@@ -47,32 +42,23 @@ httpServer
   }
 });
 
-function reset() {
-  var timer = setTimeout(function () {
-    throw new Error('timeout exceed');
-  }, WAITING_FOR_DEVICES_TIMEOUT);
+var timer = setTimeout(function () {
+  throw new Error('timeout exceed');
+}, WAITING_FOR_DEVICES_TIMEOUT);
 
-  unitTestManager
-  .once('started', function (results) {
-    clearTimeout(timer);
-  })
-  .once('completed', function (results) {
-    logger.debug('completed');
+unitTestManager
+.once('started', function (results) {
+  clearTimeout(timer);
+})
+.once('completed', function (results) {
+  logger.debug('completed');
 
-    var isSuccess = results.every(function (result) {
-      return result;
-    });
-    httpServer.disconnectAll();
-    if (isSuccess) {
-      if (options && options.resetOnCompleted) {
-        unitTestManager.reset();
-        reset();
-      } else {
-        process.exit(0);
-      }
-    } else {
-      process.exit(1);
-    }
+  var isSuccess = results.every(function (result) {
+    return result;
   });
-}
-reset();
+  if (isSuccess) {
+    process.exit(0);
+  } else {
+    process.exit(1);
+  }
+});

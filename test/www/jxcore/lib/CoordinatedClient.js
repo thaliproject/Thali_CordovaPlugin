@@ -120,13 +120,11 @@ CoordinatedClient.prototype._reconnect = function () {
 }
 
 CoordinatedClient.prototype._newConnection = function () {
-  if(
-    this._state !== CoordinatedClient.states.created &&
-    this._state !== CoordinatedClient.states.connected
-  ) {
-    // We can ignore this reconnect event.
-    return;
-  }
+  assert(
+    this._state === CoordinatedClient.states.created ||
+    this._state === CoordinatedClient.states.connected,
+    'we should be in created or connected state'
+  );
   this._state = CoordinatedClient.states.connected;
 
   this._emit('present', {
@@ -149,16 +147,8 @@ CoordinatedClient.prototype._schedule = function (data) {
 
   this._emit('schedule_confirmed', data)
   .then(function () {
-    // Each begin schedule must provide an uniq tape instance
-    // See https://github.com/substack/tape#var-htest--testcreateharness
-    // and https://github.com/substack/tape#var-stream--testcreatestreamopts
-    // for more details
-
-    var htest = tape.createHarness();
-    htest.createStream().pipe(process.stdout);
-
     var promises = self._tests.map(function (test) {
-      return self._scheduleTest(htest, test);
+      return self._scheduleTest(test);
     });
     return Promise.all(promises);
   })
@@ -179,6 +169,7 @@ CoordinatedClient.prototype._discard = function (data) {
     logger.debug('device discarded as surplus from the test server');
   });
 
+  // We are waiting for 'disconnect' event.
   self._state = CoordinatedClient.states.completed;
 }
 
@@ -207,12 +198,15 @@ CoordinatedClient.prototype._disqualify = function (data) {
     });
   });
 
-  self._state = CoordinatedClient.states.completed;
+  if (!data) {
+    // We are waiting for 'disconnect' event.
+    self._state = CoordinatedClient.states.completed;
+  }
 }
 
 CoordinatedClient.prototype._disconnect = function () {
   if (this._state === CoordinatedClient.states.completed) {
-    logger.debug('completed device disconnected from the test server');
+    logger.debug('test client disconnected');
     this._succeed();
   } else {
     // Just log the error since socket.io will try to reconnect.
@@ -236,6 +230,7 @@ CoordinatedClient.prototype._complete = function (data) {
     logger.debug('all tests completed');
   });
 
+  // We are waiting for 'disconnect' event.
   self._state = CoordinatedClient.states.completed;
 }
 
@@ -292,7 +287,7 @@ CoordinatedClient.prototype._emit = function (event, data, externalOptions) {
   });
 }
 
-CoordinatedClient.prototype._scheduleTest = function (htest, test) {
+CoordinatedClient.prototype._scheduleTest = function (test) {
   var self = this;
 
   function runEvent (event) {
@@ -414,14 +409,14 @@ CoordinatedClient.prototype._scheduleTest = function (htest, test) {
   }
 
   return new Promise(function (resolve, reject) {
-    htest('setup', function (tape) {
+    tape('setup', function (tape) {
       tape.sync = sync.bind(undefined, tape, test.options.setupTimeout);
 
       processEvent(tape, 'setup_' + test.name, test.options.setup, test.options.setupTimeout)
       .catch(reject);
     });
 
-    htest(test.name, function (tape) {
+    tape(test.name, function (tape) {
       tape.sync = sync.bind(undefined, tape, test.options.testTimeout);
 
       Promise.try(function () {
@@ -442,7 +437,7 @@ CoordinatedClient.prototype._scheduleTest = function (htest, test) {
       .catch(reject);
     });
 
-    htest('teardown', function (tape) {
+    tape('teardown', function (tape) {
       tape.sync = sync.bind(undefined, tape, test.options.teardownTimeout);
 
       processEvent(tape, 'teardown_' + test.name, test.options.teardown, test.options.teardownTimeout)
