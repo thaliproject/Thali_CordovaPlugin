@@ -1,7 +1,8 @@
 'use strict';
 
-var test  = require('tape-catch');
-var sinon = require('sinon');
+var test    = require('tape-catch');
+var sinon   = require('sinon');
+var Promise = require('bluebird');
 
 require('../utils/process');
 var Server = require('../Server');
@@ -10,7 +11,26 @@ var Client = require('../Client');
 
 var CHECK_TIMEOUT = 500;
 
-test.only('client and server connectable', function (t) {
+function shutdown(t, client, server) {
+  Promise.all([
+    new Promise(function (resolve) {
+      client.disconnect();
+      resolve();
+    }),
+    server.shutdown()
+  ])
+  .then(function () {
+    t.pass('finished');
+  })
+  .catch(function (error) {
+    t.fail('got error', error.toString());
+  })
+  .finally(function () {
+    t.end();
+  });
+}
+
+test('client and server connectable', function (t) {
   var spyServerConnect = sinon.spy(Server.prototype, '_connect');
   var spyClientConnect = sinon.spy(Client.prototype, '_connect');
   var server = new Server();
@@ -22,14 +42,7 @@ test.only('client and server connectable', function (t) {
     t.ok(spyClientConnect.calledOnce, 'client \'_connect\' should be called once');
     Client.prototype._connect.restore();
 
-    client.disconnect();
-    server.shutdown()
-    .catch(function (error) {
-      t.fail('got error', error.toString());
-    })
-    .finally(function () {
-      t.end();
-    });
+    shutdown(t, client, server);
   }, CHECK_TIMEOUT);
 });
 
@@ -48,11 +61,7 @@ test('client should be able to connect to server if it was created after server'
     t.ok(spyClientConnect.calledOnce, 'client \'_connect\' should be called once');
     Client.prototype._connect.restore();
 
-    client.disconnect();
-    server.shutdown()
-    .then(function () {
-      t.end();
-    });
+    shutdown(t, client, server);
   }, CHECK_TIMEOUT * 2);
 });
 
@@ -73,14 +82,11 @@ test('client should be able to reconnect to server if it was created before serv
     t.ok(spyClientConnect.calledOnce, 'client \'_connect\' should be called once');
     Client.prototype._connect.restore();
 
-    client.disconnect();
-    server.shutdown()
-    .then(function () {
-      t.end();
-    });
+    shutdown(t, client, server);
   }, CHECK_TIMEOUT * 2);
 });
 
+/*
 test('client should be able to reconnect to server if network failed silently (by using keep alive)', function (t) {
   var spyServerConnect = sinon.spy(Server.prototype, '_connect');
   var spyClientConnect = sinon.spy(Client.prototype, '_connect');
@@ -94,3 +100,4 @@ test('client should be able to reconnect to server if network failed silently (b
   setTimeout(function () {
   }, CHECK_TIMEOUT);
 });
+*/

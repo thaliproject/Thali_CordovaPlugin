@@ -7,10 +7,11 @@ var assert       = require('assert');
 var objectAssign = require('object-assign');
 var Promise      = require('bluebird');
 var nssocket     = require('nssocket');
-var EventEmitter = require('events').EventEmitter;
 
 var asserts = require('./utils/asserts');
 var logger  = require('./utils/ThaliLogger')('Client');
+
+var ServerSocket = require('./ServerSocket');
 
 var address = require('./server-address');
 asserts.isString(address);
@@ -18,10 +19,16 @@ asserts.isString(address);
 
 function Client (options) {
   this._setOptions(options);
+
+  this._isClosed = false;
+  this._isEnded  = false;
+
   this._bind();
 }
 
-inherits(Client, EventEmitter);
+inherits(Client, ServerSocket);
+
+Client.prototype.logger = logger;
 
 Client.prototype.defaults = {
   port: 3000,
@@ -60,7 +67,7 @@ Client.prototype._bind = function () {
   });
   this._socket.setKeepAlive(true, this._options.keepAliveTimeout);
 
-  ;
+  Client.super_.prototype._bind.call(this);
 
   logger.debug('connecting to \'%s:%d\'', address, this._options.port);
   this._socket.connect(this._options.port, address, this._connect.bind(this));
@@ -70,8 +77,6 @@ Client.prototype._connect = function () {
   logger.debug('we are connected to server');
 }
 
-Client.prototype.disconnect = function () {
-  this._socket.destroy();
-}
+Client.prototype.disconnect = Client.prototype.close;
 
 module.exports = Client;

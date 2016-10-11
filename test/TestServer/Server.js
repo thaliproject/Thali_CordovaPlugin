@@ -50,10 +50,10 @@ Server.prototype._setOptions = function (options) {
 
 Server.prototype._bind = function () {
   this._server = nssocket.createServer(
-    this._connect.bind(this),
     {
       type: this._options.type
-    }
+    },
+    this._connect.bind(this)
   );
   this._server.on('error', this._error.bind(this));
   this._server.listen(this._options.port, address);
@@ -63,8 +63,6 @@ Server.prototype._bind = function () {
 
 Server.prototype._connect = function (socket) {
   var self = this;
-
-  console.log('ololo', socket.send);
 
   if (!this._isAvailable) {
     logger.warn('server is not available, ignoring client');
@@ -112,12 +110,13 @@ Server.prototype.shutdown = function () {
       socket
       .once('error', error)
       .once('close', close);
-      socket.destroy();
+      socket.close();
     });
   });
   return Promise.all(promises)
   .finally(function () {
     self._server.close();
+    logger.debug('server was closed');
   });
 }
 
