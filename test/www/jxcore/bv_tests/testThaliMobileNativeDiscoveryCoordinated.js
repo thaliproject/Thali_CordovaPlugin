@@ -112,7 +112,7 @@ var testTimeout = function (t) {
 var server;
 
 var allPeers = {};
-var latestPeers;
+var peersFromPreviousTest;
 
 test('initial peer discovery', function (t) {
   testTimeout(t);
@@ -124,7 +124,7 @@ test('initial peer discovery', function (t) {
   server = makeIntoCloseAllServer(server);
 
   var currentPeers = {};
-  latestPeers = {};
+  peersFromPreviousTest = {};
   function newPeersHandler(peers) {
     peers.forEach(function (peer) {
       if (peer.peerAvailable) {
@@ -174,7 +174,7 @@ test('initial peer discovery', function (t) {
     testTimeout(t);
 
     var currentPeers = {};
-    latestPeers = {};
+    peersFromPreviousTest = {};
 
     function newPeersHandler(peers) {
       peers.forEach(function (peer) {
@@ -206,10 +206,12 @@ test('initial peer discovery', function (t) {
 
       Mobile('peerAvailabilityChanged').registerToNative(function () {});
 
-      // Copying received peers to the global peers hash table.
       peersReceived.forEach(function (idAndGeneration) {
-        allPeers[idAndGeneration] = true;
-        latestPeers[idAndGeneration] = true;
+        // This is a new peer that only started advertising during this test
+        if (!allPeers[idAndGeneration]) {
+          allPeers[idAndGeneration] = true;
+          peersFromPreviousTest[idAndGeneration] = true;
+        }
       });
       t.end();
     }, STEP_TIMEOUT);
@@ -257,7 +259,7 @@ test('check latest peer discovery', function() {
         Mobile('peerAvailabilityChanged').registerToNative(function () {});
 
         var samePeers = peersReceived.every(function (idAndGeneration) {
-          return latestPeers[idAndGeneration];
+          return peersFromPreviousTest[idAndGeneration];
         });
         t.ok(
           samePeers,

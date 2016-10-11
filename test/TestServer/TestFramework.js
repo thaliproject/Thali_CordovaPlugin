@@ -59,7 +59,7 @@ TestFramework.platformStates = {
   started:   'started',
   succeeded: 'succeeded',
   failed:    'failed'
-}
+};
 
 TestFramework.prototype._setOptions = function (options) {
   var self = this;
@@ -101,7 +101,7 @@ TestFramework.prototype._setOptions = function (options) {
       format('platform name: \'%s\' is required', requiredPlatformName)
     );
   });
-}
+};
 
 TestFramework.prototype.addDevice = function (device) {
   asserts.instanceOf(device, TestDevice);
@@ -144,9 +144,9 @@ TestFramework.prototype.addDevice = function (device) {
     asserts.instanceOf(device, TestDevice);
 
     logger.info(
-      'updating existing device, name: \'%s\', uuid: \'%s\', platformName: \'%s\'',
-      existingDevice.name, existingDevice.uuid, device.platformName
-    );
+      'updating existing device, name: \'%s\', uuid: \'%s\', ' +
+      'platformName: \'%s\'', existingDevice.name, existingDevice.uuid,
+      device.platformName);
 
     existingDevice.update(device);
     return;
@@ -222,7 +222,7 @@ TestFramework.prototype.startTests = function (platformName) {
   });
 
   this.resolveStarted();
-}
+};
 
 TestFramework.prototype.resolveStarted = function () {
   var self = this;
@@ -234,7 +234,7 @@ TestFramework.prototype.resolveStarted = function () {
   if (isStarted) {
     this.emit('started');
   }
-}
+};
 
 TestFramework.prototype.resolveCompleted = function () {
   var self = this;
@@ -256,6 +256,6 @@ TestFramework.prototype.resolveCompleted = function () {
     });
     this.emit('completed', results);
   }
-}
+};
 
 module.exports = TestFramework;

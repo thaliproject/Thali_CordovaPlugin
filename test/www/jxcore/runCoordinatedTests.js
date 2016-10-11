@@ -102,14 +102,12 @@ var setListeners = function (instance, instanceId) {
 
 var testServerConfiguration = {
   devices: {
-    android: 0,
+    android: argv.instanceCount,
     ios: 0,
-    desktop: argv.instanceCount
   },
   minDevices: {
     android: 0,
     ios: 0,
-    desktop: 2
   },
   waiting_for_devices_timeout: 5 * 1000
 };
@@ -127,6 +125,7 @@ var instanceEnv = objectAssign({}, testEnv, {
     length: 'http://www.thaliproject.org/ssdp'.length
   })
 });
+
 var instanceOpts = objectAssign({}, { env: instanceEnv });
 
 var testInstances = {};
