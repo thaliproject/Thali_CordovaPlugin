@@ -68,6 +68,7 @@ Server.prototype._connect = function (socket) {
     logger.warn('server is not available, ignoring client');
     return;
   }
+
   logger.debug('client is connected');
 
   socket = new ServerSocket(socket);
@@ -83,6 +84,7 @@ Server.prototype._error = function (error) {
   if (!this._isAvailable) {
     logger.error('error after server became unavailable');
   }
+
   logger.error(
     'unexpected error: \'%s\', stack: \'%s\'',
     error.toString(), error.stack
