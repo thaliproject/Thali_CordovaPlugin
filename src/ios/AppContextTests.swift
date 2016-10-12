@@ -95,7 +95,8 @@ class AppContextDelegateMock: NSObject, AppContextDelegate {
         self.peerAvailabilityChangedHandler = peerAvailabilityChangedHandler
     }
 
-    @objc func context(context: AppContext, didResolveMultiConnectWith paramsJSONString: String) {}
+    @objc func context(context: AppContext, didResolveMultiConnectWithSyncValue value: String,
+                           error: NSObject?, listeningPort: NSObject?) {}
     @objc func context(context: AppContext,
                        didFailMultiConnectConnectionWith paramsJSONString: String) {}
     @objc func context(context: AppContext, didChangePeerAvailability peers: String) {

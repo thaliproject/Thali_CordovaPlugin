@@ -148,7 +148,7 @@
 - (void)defineConnect:(AppContext *)appContext {
     [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId) {
         [JXcore callEventCallback:callbackId withJSON:[appContext connect:params]];
-    } withName:[AppContextJSEvent disconnect]];
+    } withName:[AppContextJSEvent connect]];
 }
 
 #ifdef TEST
@@ -216,9 +216,9 @@
     }
 }
 
-- (void)context:(AppContext * _Nonnull)context didResolveMultiConnectWith:(NSString * _Nonnull)parameters {
+- (void)context:(AppContext * _Nonnull)context didResolveMultiConnectWithSyncValue:(NSString * _Nonnull)value error:(NSObject * _Nullable)error listeningPort:(NSObject * _Nullable)listeningPort {
     @synchronized(self) {
-        [JXcore callEventCallback:[AppContextJSEvent multiConnectResolved] withJSON:parameters];
+        [JXcore callEventCallback:[AppContextJSEvent multiConnectResolved] withParams:@[value, error, listeningPort]];
     }
 }
 
