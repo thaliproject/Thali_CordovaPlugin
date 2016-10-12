@@ -210,8 +210,10 @@ ThaliNotificationClient.prototype.stop = function () {
  */
 ThaliNotificationClient.prototype._peerAvailabilityChanged =
   function (peerStatus) {
+    var self = this;
 
     if (!this.peerDictionary) {
+      logger.warn('no dictionary');
       return;
     }
     if (!peerStatus) {
@@ -223,9 +225,31 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
       return;
     }
 
+    if (!peerStatus.peerAvailable) {
+      logger.warn('peer is not available');
+      // Remove the old peer if it exists.
+      this.peerDictionary.remove(peerStatus.peerIdentifier);
+      return;
+    }
+
     ThaliMobile
       .getPeerHostInfo(peerStatus.peerIdentifier, peerStatus.connectionType)
+      .catch(function (error) {
+        logger.error(
+          'Couldn\'t get peerHostInfo of the peer %s (%s).\n%s',
+          peerStatus.peerIdentifier, peerStatus.connectionType, error.stack
+        );
+        return null;
+      })
       .then(function (peerHostInfo) {
+        if (peerHostInfo === null) {
+          return;
+        }
+        assert(
+          peerHostInfo.hostAddress,
+          'it is not possible to have hostAddress unset if peer have '+
+          'advertised itself available'
+        );
         var peerConnectionInfo = new PeerDictionary.PeerConnectionInformation(
           peerStatus.connectionType, peerHostInfo.hostAddress,
           peerHostInfo.portNumber, peerHostInfo.suggestedTCPTimeout);
@@ -233,14 +257,12 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
         var peerEntry = new PeerDictionary.NotificationPeerDictionaryEntry(
           PeerDictionary.peerState.CONTROLLED_BY_POOL);
 
-        this._createNewAction(peerEntry, peerStatus.peerIdentifier,
+        self._createNewAction(peerEntry, peerStatus.peerIdentifier,
           peerConnectionInfo);
       })
       .catch(function (error) {
-        if (!peerStatus.hostAddress) {
-          // Remove the old peer if it exists.
-          this.peerDictionary.remove(peerStatus.peerIdentifier);
-        }
+        logger.error(error);
+        throw error;
       });
   };
 

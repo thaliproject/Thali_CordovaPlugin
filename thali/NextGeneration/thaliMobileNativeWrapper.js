@@ -611,7 +611,7 @@ module.exports._multiConnect = function (peerIdentifier) {
     var originalSyncValue = guid();
 
     Mobile('multiConnect')
-      .callNative(peerIdentidier, originalSyncValue, function (error) {
+      .callNative(peerIdentifier, originalSyncValue, function (error) {
         if (error) {
           return reject(new Error(error));
         }
