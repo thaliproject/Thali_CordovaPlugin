@@ -55,7 +55,8 @@
     "urlsafe-base64": "1.0.0",
     "uuid": "2.0.0",
     "uuid-validate": "0.0.2",
-    "object-assign": "4.1.0"
+    "object-assign": "4.1.0",
+    "mathjs": "3.5.3"
   },
   "devDependencies": {}
 }
