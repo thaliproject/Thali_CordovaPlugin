@@ -743,3 +743,40 @@ module.exports.setUpServer = function (testBody, appConfig) {
   );
   return testCloseAllServer;
 };
+
+module.exports.poll = function (predicate, options) {
+  if (typeof predicate !== 'function') {
+    return Promise.reject(new Error('predicate is not a function'));
+  }
+  return new Promise(function (resolve, reject) {
+    if (!options) {
+      options = {};
+    }
+    var interval = options.interval || 100;
+    var timeout = options.timeout || 30 * 1e3; // 30 sec
+
+    var pollTimeout;
+    var timeoutTimeout;
+
+    function cleanup() {
+      clearTimeout(pollTimeout);
+      clearTimeout(timeoutTimeout);
+    }
+
+    function poll() {
+      if (predicate()) {
+        cleanup();
+        resolve();
+        return;
+      }
+      pollTimeout = setTimeout(poll, interval);
+    }
+
+    timeoutTimeout = setTimeout(function () {
+      cleanup();
+      reject(new Error('Polling timed out'));
+    }, timeout);
+
+    poll();
+  });
+};
