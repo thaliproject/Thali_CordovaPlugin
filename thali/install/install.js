@@ -1,13 +1,17 @@
+//  Copyright (C) Microsoft. All rights reserved.
+//  Licensed under the MIT license. See LICENSE.txt file in the project root
+//  for full license information.
+//
+
 'use strict';
 
-var exec = require('child-process-promise').exec;
+var fs = require('fs-extra-promise');
 var path = require('path');
-var spawn = require('child_process').spawn;
+var spawn = require('./utils/child_process').spawn;
 var https = require('https');
 var unzip = require('unzip');
-var Promise = require('lie');
-var fs = require('fs-extra-promise');
 var url = require('url');
+var Promise = require('lie');
 var FILE_NOT_FOUND = 'ENOENT';
 
 // If this file exists in the thaliDontCheckIn directory then
@@ -39,7 +43,8 @@ function httpRequestPromise(method, urlObject) {
       }
 
       resolve(res);
-    }).on('error', function (e) {
+    })
+    .on('error', function (e) {
       reject(new Error('Got error on ' + urlObject.href + ' - ' + e));
     });
 
@@ -67,12 +72,12 @@ function getEtagFromEtagFile(depotName, branchName, directoryToInstallIn) {
 
 /**
  * This method is used to retrieve the release configuration data
- * stored in the releaseConfig.json.
+ * stored in the releaseConfig.json
  *
  * @returns {Promise}
  */
 function getReleaseConfig() {
-  var configFileName = path.join(__dirname, '../', 'package.json');
+  var configFileName = path.join(__dirname, '..', 'package.json');
 
   return fs.readFileAsync(configFileName, 'utf-8')
     .then(function (data) {
@@ -180,14 +185,17 @@ function installGitHubZip(projectName, depotName, branchName,
             res.pipe(unzip.Extract({ path: directoryToInstallIn}))
               .on('close', function () {
                 resolve();
-              }).on('error', function (e) {
+              })
+              .on('error', function (e) {
                 reject(new Error('Could not extract zip file from ' +
                                  gitHubZipUrlObject.href + ', error was ' + e));
               });
-          }).then(function () {
+          })
+          .then(function () {
               return writeToEtagFile(depotName, branchName,
                                      directoryToInstallIn, res);
-            }).then(function () {
+            })
+            .then(function () {
               return createGitHubZipResponse(depotName, branchName,
                                              directoryToInstallIn, true);
             });
@@ -204,21 +212,22 @@ function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
       return Promise.reject(err);
     }
     return Promise.resolve(true);
-  }).then(function (doWeNeedToUninstall) {
+  })
+  .then(function (doWeNeedToUninstall) {
     if (!doWeNeedToUninstall) {
       return Promise.resolve();
     }
     console.log('Trying to remove previously installed Thali Cordova plugin');
     var pluginRemoveCommand = 'cordova plugin remove org.thaliproject.p2p';
-    return exec(pluginRemoveCommand, { cwd: appRootDirectory })
-    .catch(function (err) {
-      console.log('Ignoring a non-critical error: ' + err);
-      // Resolve the promise even if plugin removal fails, because it is
-      // possible that the user has removed the plugin outside of this install
-      // script, but there is still the left-over file that says this script has
-      // added the plugins.
-      return Promise.resolve();
-    });
+    return spawn(pluginRemoveCommand, { cwd: appRootDirectory })
+      .catch(function (error) {
+        console.log('Ignoring a non-critical error: ' + error);
+        // Resolve the promise even if plugin removal fails, because it is
+        // possible that the user has removed the plugin outside of this install
+        // script, but there is still the left-over file that says this script has
+        // added the plugins.
+        return Promise.resolve();
+      });
   });
 }
 
@@ -240,6 +249,7 @@ function copyDevelopmentThaliCordovaPluginToProject(appRootDirectory,
   var targetDirectory = createUnzippedDirectoryPath(depotName, branchName,
                                                     thaliDontCheckIn);
   var sourceDirectory = path.join(appRootDirectory, '../Thali_CordovaPlugin');
+    appRootDirectory, '..', 'Thali_CordovaPlugin');
   return new Promise(function (resolve, reject) {
     fs.remove(targetDirectory, function (err) {
       if (err) {
@@ -269,35 +279,20 @@ function doesMagicDirectoryNamedExist(thaliDontCheckIn) {
   return fs.existsSync(magicFileLocation);
 }
 
-function fetchAndInstallJxCoreCordovaPlugin(baseDir,
-                                            jxCoreVersionNumber, jxCoreUrl) {
-  return new Promise(function (resolve, reject) {
-    console.log('Trying to install jxcore-cordova version: ' +
-                jxCoreVersionNumber);
-    var jxcBin =
-      path.join(__dirname, 'node_modules', 'jxc', 'bin', 'jxc.bin.js');
-    var jxcInstall =
-      spawn('jx',
-        [
-          jxcBin, 'install', jxCoreVersionNumber,
-          '--use-url', jxCoreUrl
-        ],
-        { cwd: baseDir }
-      );
-    jxcInstall.stdout.on('data', function (data) {
-      console.log(data + '');
+function fetchAndInstallJxCoreCordovaPlugin(
+  baseDir, jxCoreVersionNumber, jxCoreUrl) {
+
+  console.log(
+    'Trying to install jxcore-cordova version: ' + jxCoreVersionNumber);
+
+  var jxcBin = path.join(__dirname, 'node_modules', 'jxc', 'bin', 'jxc.bin.js');
+  var jxCommand = 'jx ' + jxcBin +
+    ' install ' + jxCoreVersionNumber + ' --use-url ' + jxCoreUrl;
+
+  return spawn(jxCommand, { cwd: baseDir })
+    .catch(function (error) {
+      return Promise.reject('jxc install exited with error: ' + error);
     });
-    jxcInstall.stderr.on('data', function (data) {
-      console.log(data + '');
-    });
-    jxcInstall.on('close', function (code) {
-      if (code === 0) {
-        resolve();
-      } else {
-        reject('jxc install exited with code: ' + code);
-      }
-    });
-  });
 }
 
 module.exports = function (callback, appRootDirectory) {
@@ -305,12 +300,8 @@ module.exports = function (callback, appRootDirectory) {
   // Passing as argument can be leveraged in local development and testing
   // scenarios.
   appRootDirectory = appRootDirectory ||
-                     path.join(__dirname, '../../../../../');
-  var thaliDontCheckIn = path.join(appRootDirectory, 'thaliDontCheckIn' );
-  var appScriptsFolder =
-    path.join(appRootDirectory, 'plugins/org.thaliproject.p2p/scripts');
-
-  var thaliProjectName, thaliDepotName, thaliBranchName, btconnectorlib2;
+                     path.join(__dirname, '..', '..', '..', '..', '..');
+  var thaliDontCheckIn = path.join(appRootDirectory, 'thaliDontCheckIn' ););  var thaliProjectName, thaliDepotName, thaliBranchName, btconnectorlib2;
 
   getReleaseConfig(thaliDontCheckIn)
     .then(function (conf) {
@@ -320,8 +311,11 @@ module.exports = function (callback, appRootDirectory) {
       thaliBranchName = conf.thali.branchName;
       btconnectorlib2 = conf.btconnectorlib2;
 
-      return fetchAndInstallJxCoreCordovaPlugin(appRootDirectory,
-        conf['jxcore-cordova'], conf['jxcore-cordova-url']);
+      return fetchAndInstallJxCoreCordovaPlugin(
+        appRootDirectory,
+        conf['jxcore-cordova'],
+        conf['jxcore-cordova-url']
+      );
     })
     .then(function () {
       if (doesMagicDirectoryNamedExist(thaliDontCheckIn)) {
@@ -337,11 +331,10 @@ module.exports = function (callback, appRootDirectory) {
     .then(function (thaliCordovaPluginUnZipResult) {
       // This step is used to prepare the gradle.properties file
       // containing the btconnectorlib2 version
-      var projectDir = createUnzippedDirectoryPath(thaliDepotName,
-                                                   thaliBranchName,
-                                                   thaliDontCheckIn);
-      var gradleFileName = path.join(projectDir, 'src', 'android',
-                                     'gradle.properties');
+      var projectDir = createUnzippedDirectoryPath(
+        thaliDepotName, thaliBranchName, thaliDontCheckIn);
+      var gradleFileName = path.join(
+        projectDir, 'src', 'android', 'gradle.properties');
 
       return fs.writeFileAsync(gradleFileName,
         'btconnectorlib2Version=' + btconnectorlib2)
@@ -358,10 +351,10 @@ module.exports = function (callback, appRootDirectory) {
             console.log('Adding Thali Cordova plugin from: ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory);
 
-            return exec('cordova plugins add ' +
-              thaliCordovaPluginUnZipResult.unzipedDirectory + ' -d',
-                { cwd : appRootDirectory })
-              .then(function (result) {
+            return spawn('cordova plugins add ' +
+              thaliCordovaPluginUnZipResult.unzipedDirectory,
+              { cwd: appRootDirectory });
+               .then(function (result) {
                 if (result.stdout) {
                   console.log('Added Thali Cordova plugin successfully\n');
                   console.log(result.stdout);
