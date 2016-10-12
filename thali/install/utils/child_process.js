@@ -27,4 +27,26 @@ function exec(command, options) {
   });
 }
 
+function spawn(command, options) {
+  return new Promise(function (resolve, reject) {
+    var commandSplit = command.split(' ');
+    var commandOnly = commandSplit.shift();
+    var commandSpawn = child_process.spawn(commandOnly, commandSplit, options);
+
+    commandSpawn.stdout.on('data', function (data) {
+      console.log('' + data);
+    });
+    commandSpawn.stderr.on('data', function (data) {
+      console.log('' + data);
+    });
+    commandSpawn.on('close', function (code) {
+      if (code !== 0) {
+        return reject('`' + command + '` (exited with error code' + code + ')');
+      }
+      return resolve();
+    });
+  });
+}
+
 module.exports.exec = exec;
+module.exports.spawn = spawn;
