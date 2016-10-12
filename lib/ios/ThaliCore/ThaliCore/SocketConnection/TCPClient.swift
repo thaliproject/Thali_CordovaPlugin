@@ -9,12 +9,6 @@
 
 class TCPClient: NSObject {
 
-    // MARK: - Internal state
-    internal var localPort: UInt16 {
-//        return socket.localPort
-        return activeConnections.value.first!.localPort
-    }
-
     // MARK: - Private state
     private let socketQueue = dispatch_queue_create("org.thaliproject.GCDAsyncSocket.delegateQueue",
                                                     DISPATCH_QUEUE_CONCURRENT)
