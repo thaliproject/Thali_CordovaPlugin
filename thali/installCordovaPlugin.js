@@ -5,8 +5,8 @@
 
 'use strict';
 
-var exec = require('./install/utils/child_process').exec;
 var path = require('path');
+var spawn = require('./install/utils/child_process').spawn;
 
 // If we are in the test directory inside of the GitHub Repo then we are trying
 // to do local development on the desktop and don't need the Cordova
@@ -21,7 +21,7 @@ if (path.basename(rootDirectory) === 'Thali_CordovaPlugin') {
 var installDirectory = path.join(__dirname, 'install');
 
 // First check that the installation is done to a Cordova project
-exec('cordova info')
+spawn('cordova info')
   .catch(function () {
     console.log('The installation directory does not seem to be a Cordova ' +
                 'project and currently the installation is supported only to ' +
@@ -31,16 +31,12 @@ exec('cordova info')
     process.exit(1);
   })
   .then(function () {
-    return exec('npm install --no-optional --production',
-        { cwd: installDirectory })
-      .then(function () {
-        return exec('find . -name "*.gz" -delete',
-          { cwd: installDirectory })
-          .catch(function () {
-            // this exec should break the pipe, so we ignore errors here
-            return Promise.resolve();
-          });
-      });
+    return spawn('npm install --no-optional --production',
+        { cwd: installDirectory });
+  })
+  .then(function () {
+    return spawn('find . -name "*.gz" -delete',
+      { cwd: installDirectory });
   })
   .catch(function (error) {
     console.log('Could not install dependencies for install directory. - ' +
