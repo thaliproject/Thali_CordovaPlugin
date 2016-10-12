@@ -312,99 +312,99 @@ ThaliNotificationClient.prototype._resolved =
     switch (resolution) {
       case ThaliNotificationAction.ActionResolution
         .BEACONS_RETRIEVED_AND_PARSED:
-      {
-        entry.peerState = PeerDictionary.peerState.RESOLVED;
-        this.peerDictionary.addUpdateEntry(peerId, entry);
+        {
+          entry.peerState = PeerDictionary.peerState.RESOLVED;
+          this.peerDictionary.addUpdateEntry(peerId, entry);
 
-        if (!beaconDetails) {
-          // This peerId has nothing for us, if that changes then the peer will
-          // generate a new peerId so we can safely ignore this peerId from
-          // now on.
+          if (!beaconDetails) {
+            // This peerId has nothing for us, if that changes then the peer
+            // will generate a new peerId so we can safely ignore this peerId
+            // from now on.
+            break;
+          }
+
+          var connInfo = entry.notificationAction.getConnectionInformation();
+
+          var pubKx = this._addressBookCallback(beaconDetails.unencryptedKeyId);
+
+          var pskIdentifyField =
+            NotificationBeacons.generatePskIdentityField(
+              beaconDetails.preAmble, beaconDetails.encryptedBeaconKeyId);
+
+          var pskSecret = NotificationBeacons.generatePskSecret(
+            this._ecdhForLocalDevice, pubKx, pskIdentifyField);
+
+          var peerAdvertises = new PeerAdvertisesDataForUs(
+            pubKx,
+            pskIdentifyField,
+            pskSecret,
+            connInfo.getHostAddress(),
+            connInfo.getPortNumber(),
+            connInfo.getSuggestedTCPTimeout(),
+            entry.notificationAction.getConnectionType()
+          );
+
+          this.emit(this.Events.PeerAdvertisesDataForUs,
+            peerAdvertises);
+
           break;
         }
 
-        var connInfo = entry.notificationAction.getConnectionInformation();
-
-        var pubKx = this._addressBookCallback(beaconDetails.unencryptedKeyId);
-
-        var pskIdentifyField =
-          NotificationBeacons.generatePskIdentityField(
-            beaconDetails.preAmble, beaconDetails.encryptedBeaconKeyId);
-
-        var pskSecret = NotificationBeacons.generatePskSecret(
-          this._ecdhForLocalDevice, pubKx, pskIdentifyField);
-
-        var peerAdvertises = new PeerAdvertisesDataForUs(
-          pubKx,
-          pskIdentifyField,
-          pskSecret,
-          connInfo.getHostAddress(),
-          connInfo.getPortNumber(),
-          connInfo.getSuggestedTCPTimeout(),
-          entry.notificationAction.getConnectionType()
-        );
-
-        this.emit(this.Events.PeerAdvertisesDataForUs,
-          peerAdvertises);
-
-        break;
-      }
-
       case ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_BUT_BAD:
-      {
-        // This indicates a malfunctioning peer. We need to assume they are bad
-        // all up and mark their entry as RESOLVED without taking any further
-        // action. This means we will ignore this peerIdentifier in the future.
-        entry.peerState = PeerDictionary.peerState.RESOLVED;
-        this.peerDictionary.addUpdateEntry(peerId, entry);
-        break;
-      }
+        {
+          // This indicates a malfunctioning peer. We need to assume they are bad
+          // all up and mark their entry as RESOLVED without taking any further
+          // action. This means we will ignore this peerIdentifier in the future.
+          entry.peerState = PeerDictionary.peerState.RESOLVED;
+          this.peerDictionary.addUpdateEntry(peerId, entry);
+          break;
+        }
 
       case ThaliNotificationAction.ActionResolution.HTTP_BAD_RESPONSE:
       case ThaliNotificationAction.ActionResolution.NETWORK_PROBLEM:
       case ThaliNotificationAction.ActionResolution.KILLED:
-      {
-        // This tells us that the peer is there but not in good shape or
-        // ThaliPeerPoolInterface called kill due to resource exhaustion.
-        // We will for wait time out specified in the RETRY_TIMEOUTS
-        // array and try again.
-        var timeOutHandler = function (peerId) {
+        {
+          // This tells us that the peer is there but not in good shape or
+          // ThaliPeerPoolInterface called kill due to resource exhaustion.
+          // We will for wait time out specified in the RETRY_TIMEOUTS
+          // array and try again.
+          var timeOutHandler = function (peerId) {
 
-          entry = this.peerDictionary.get(peerId);
-          if (entry && entry.peerState === PeerDictionary.peerState.WAITING) {
-            this._createNewAction(
-              entry,
-              peerId,
-              entry.notificationAction.getConnectionInformation());
+            entry = this.peerDictionary.get(peerId);
+            if (entry && entry.peerState === PeerDictionary.peerState.WAITING) {
+              this._createNewAction(
+                entry,
+                peerId,
+                entry.notificationAction.getConnectionInformation());
+            } else {
+              assert(false, 'unknown state should be WAITING');
+            }
+          };
+
+          var maxRetries = ThaliNotificationClient.RETRY_TIMEOUTS.length;
+          if (entry.retryCounter < maxRetries) {
+
+            entry.peerState = PeerDictionary.peerState.WAITING;
+            this.peerDictionary.addUpdateEntry(peerId, entry);
+
+            // Adds 0 - 100 ms random component to keep concurrent tryouts
+            // out of sync.
+            var timeOut =
+              ThaliNotificationClient.RETRY_TIMEOUTS[entry.retryCounter++] +
+              Math.floor(Math.random() * 101);
+
+            entry.waitingTimeout = setTimeout(
+              timeOutHandler.bind(this, peerId),
+              timeOut);
+            this.peerDictionary.addUpdateEntry(peerId, entry);
           } else {
-            assert(false, 'unknown state should be WAITING');
+            // Gives up after all the timeouts from the RETRY_TIMEOUTS array
+            // has been spent.
+            entry.peerState = PeerDictionary.peerState.RESOLVED;
+            this.peerDictionary.addUpdateEntry(peerId, entry);
           }
-        };
-
-        var maxRetries = ThaliNotificationClient.RETRY_TIMEOUTS.length;
-        if (entry.retryCounter < maxRetries) {
-
-          entry.peerState = PeerDictionary.peerState.WAITING;
-          this.peerDictionary.addUpdateEntry(peerId, entry);
-
-          // Adds 0 - 100 ms random component to keep concurrent tryouts
-          // out of sync.
-          var timeOut =
-            ThaliNotificationClient.RETRY_TIMEOUTS[entry.retryCounter++] +
-            Math.floor(Math.random() * 101);
-
-          entry.waitingTimeout = setTimeout(
-            timeOutHandler.bind(this, peerId),
-            timeOut);
-          this.peerDictionary.addUpdateEntry(peerId, entry);
-        } else {
-          // Gives up after all the timeouts from the RETRY_TIMEOUTS array
-          // has been spent.
-          entry.peerState = PeerDictionary.peerState.RESOLVED;
-          this.peerDictionary.addUpdateEntry(peerId, entry);
+          break;
         }
-        break;
-      }
     }
   };
 // jscs:enable maximumLineLength

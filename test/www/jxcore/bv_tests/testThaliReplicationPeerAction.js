@@ -206,7 +206,7 @@ function matchDocsInChanges(pouchDB, docs, thaliPeerReplicationAction) {
           }
         })
         .then(resolve);
-      }, ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds);
+      }, ThaliReplicationPeerAction.PUSH_LAST_SYNC_UPDATE_MILLISECONDS);
     }).on ('error', function (err) {
       reject('got error ' + err);
     });
@@ -279,8 +279,8 @@ test('Do nothing and make sure we time out', function (t) {
     // Using a different directory really shouldn't make any difference
     // to this particular test but I'm being paranoid
     var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
-    var originalTimeout = ThaliReplicationPeerAction.maxIdlePeriodSeconds;
-    ThaliReplicationPeerAction.maxIdlePeriodSeconds = 2;
+    var originalTimeout = ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS;
+    ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 2;
     thaliReplicationPeerAction =
       new ThaliReplicationPeerAction(notificationForUs,
         DifferentDirectoryPouch, randomDBName,
@@ -305,7 +305,7 @@ test('Do nothing and make sure we time out', function (t) {
         t.equal(err.statusCode, 404, 'No doc found');
       })
       .then(function () {
-        ThaliReplicationPeerAction.maxIdlePeriodSeconds = originalTimeout;
+        ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = originalTimeout;
         t.end();
       });
   });
@@ -318,8 +318,8 @@ test('Do something and make sure we time out', function (t) {
     var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
     var localPouchDB = new DifferentDirectoryPouch(randomDBName);
     var thaliReplicationPeerActionStartOutput = null;
-    var originalTimeout = ThaliReplicationPeerAction.maxIdlePeriodSeconds;
-    ThaliReplicationPeerAction.maxIdlePeriodSeconds = 2;
+    var originalTimeout = ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS;
+    ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 2;
     createDocs(remotePouchDB, 10)
       .then(function (docs) {
         var notificationForUs = {
@@ -370,7 +370,7 @@ test('Do something and make sure we time out', function (t) {
           'out');
       })
       .then(function () {
-        ThaliReplicationPeerAction.maxIdlePeriodSeconds = originalTimeout;
+        ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = originalTimeout;
         t.end();
       });
   });
