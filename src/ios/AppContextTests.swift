@@ -345,7 +345,7 @@ class AppContextTests: XCTestCase {
     }
 
     func testPeerAvailabilityConversion() {
-        let peerAvailability = PeerAvailability(peerIdentifier: PeerIdentifier(), available: true)
+        let peerAvailability = PeerAvailability(peer: Peer(), available: true)
         let dictionaryValue = peerAvailability.dictionaryValue
         XCTAssertEqual(peerAvailability.peerIdentifier,
                        dictionaryValue[JSONKey.peerIdentifier.rawValue] as? String)

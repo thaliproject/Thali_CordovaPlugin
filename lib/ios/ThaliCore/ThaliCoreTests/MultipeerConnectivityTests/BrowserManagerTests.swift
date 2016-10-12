@@ -110,7 +110,7 @@ class BrowserManagerTests: XCTestCase {
         XCTAssertFalse(browserManager.listening)
 
         // When
-        browserManager.connectToPeer(Peer(), syncValue: "0") {
+        browserManager.connectToPeer(Peer().uuid, syncValue: "0") {
             [weak getStartListeningNotActiveError] syncValue, error, port in
             if let error = error as? ThaliCoreError {
                 connectionError = error
@@ -135,7 +135,7 @@ class BrowserManagerTests: XCTestCase {
 
         // When
         let notDiscoveredPeer = Peer()
-        browserManager.connectToPeer(notDiscoveredPeer, syncValue: "0") {
+        browserManager.connectToPeer(notDiscoveredPeer.uuid, syncValue: "0") {
             [weak getIllegalPeerIDError] syncValue, error, port in
             if let error = error as? ThaliCoreError {
                 connectionError = error
@@ -165,15 +165,21 @@ class BrowserManagerTests: XCTestCase {
         // Starting 1st generation of advertiser
         advertiserManager.startUpdateAdvertisingAndListening(onPort: port1,
                                                              errorHandler: unexpectedErrorHandler)
-        let firstGenerationAdvertiserIdentifier =
-            advertiserManager.advertisers.value.last?.peer
+        guard let firstGenerationAdvertiserIdentifier =
+            advertiserManager.advertisers.value.last?.peer else {
+                XCTFail("Advertiser manager must have at least one advertiser")
+                return
+        }
 
 
         // Starting 2nd generation of advertiser
         advertiserManager.startUpdateAdvertisingAndListening(onPort: port2,
                                                              errorHandler: unexpectedErrorHandler)
-        let secondGenerationAdvertiserIdentifier =
-            advertiserManager.advertisers.value.last?.peer
+        guard let secondGenerationAdvertiserIdentifier =
+            advertiserManager.advertisers.value.last?.peer else {
+                XCTFail("Advertiser manager must have at least one advertiser")
+                return
+        }
 
         let browserManager = BrowserManager(
             serviceType: serviceType,
@@ -184,7 +190,7 @@ class BrowserManagerTests: XCTestCase {
                 if let
                     availability = peerAvailability.first
                     where
-                        availability.peerIdentifier == secondGenerationAdvertiserIdentifier?.uuid {
+                        availability.peerIdentifier == secondGenerationAdvertiserIdentifier.uuid {
                             foundedAdvertisersCount += 1
                             if foundedAdvertisersCount == expectedAdvertisersCount {
                                 foundTwoAdvertisers?.fulfill()
@@ -198,10 +204,10 @@ class BrowserManagerTests: XCTestCase {
         // Then
         waitForExpectationsWithTimeout(disposeTimeout, handler: nil)
         let lastGenerationOfAdvertiserPeer =
-            browserManager.lastGenerationPeer(for: firstGenerationAdvertiserIdentifier!)
+            browserManager.lastGenerationPeer(for: firstGenerationAdvertiserIdentifier.uuid)
 
         XCTAssertEqual(lastGenerationOfAdvertiserPeer?.generation,
-                       secondGenerationAdvertiserIdentifier?.generation)
+                       secondGenerationAdvertiserIdentifier.generation)
     }
 
     func testReceivedPeerAvailabilityEventAfterFoundAdvertiser() {
@@ -354,7 +360,7 @@ class BrowserManagerTests: XCTestCase {
 
         // When
         let peerToConnect = browserManager.availablePeers.value.first!
-        browserManager.connectToPeer(peerToConnect, syncValue: "0") {
+        browserManager.connectToPeer(peerToConnect.uuid, syncValue: "0") {
             syncValue, error, port in
 
             guard error == nil else {

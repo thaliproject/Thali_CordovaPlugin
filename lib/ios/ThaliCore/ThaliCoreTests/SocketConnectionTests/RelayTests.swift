@@ -127,7 +127,7 @@ class RelayTests: XCTestCase {
         browserManagerConnected = expectationWithDescription("BrowserManager is connected")
 
         var browserNativeTCPListenerPort: UInt16 = 0
-        browserManager.connectToPeer(peerToConnect, syncValue: "0") {
+        browserManager.connectToPeer(peerToConnect.uuid, syncValue: "0") {
             syncValue, error, port in
 
             guard let port = port else {

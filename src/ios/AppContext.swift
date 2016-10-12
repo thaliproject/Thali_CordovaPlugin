@@ -261,8 +261,7 @@ extension PeerAvailability {
         appNotificationsManager = ApplicationStateNotificationsManager()
         self.serviceType = serviceType
         advertiserManager = AdvertiserManager(serviceType: serviceType,
-                                              disposeAdvertiserTimeout: disposeAdvertiserTimeout,
-                                              inputStreamReceiveTimeout: inputStreamReceiveTimeout)
+                                              disposeAdvertiserTimeout: disposeAdvertiserTimeout)
         super.init()
         appNotificationsManager.didEnterForegroundHandler = {[weak self] in
             self?.handleDidEnterForeground()
@@ -322,16 +321,15 @@ extension PeerAvailability {
         guard parameters.count >= 2 else {
             throw AppContextError.badParameters
         }
-        guard let identifierString = parameters[0] as? String, syncValue = parameters[1] as? String
+        guard let peerIdentifier = parameters[0] as? String, syncValue = parameters[1] as? String
             else {
                 throw AppContextError.badParameters
         }
-        let peerIdentifier = try PeerIdentifier(stringValue: identifierString)
         browserManager.connectToPeer(peerIdentifier, syncValue: syncValue) {
             [weak self] syncValue, error, port in
             self?.handleMultiConnectResolved(withSyncValue: syncValue, port: port, error: error)
             if let error = error {
-                self?.handleMultiConnectConnectionFailure(withIdentifier: identifierString,
+                self?.handleMultiConnectConnectionFailure(withIdentifier: peerIdentifier,
                                                           error: error)
             }
         }
@@ -354,10 +352,9 @@ extension PeerAvailability {
     }
 
     public func disconnect(parameters: [AnyObject]) throws {
-        guard let peerID = parameters.first as? String else {
+        guard let peerIdentifier = parameters.first as? String else {
             throw AppContextError.badParameters
         }
-        let peerIdentifier = try PeerIdentifier(stringValue: peerID)
         browserManager.disconnect(peerIdentifier)
     }
 

@@ -58,7 +58,7 @@ public final class BrowserManager {
         self.currentBrowser = nil
     }
 
-    public func connectToPeer(peer: Peer,
+    public func connectToPeer(peerIdentifier: String,
                               syncValue: String,
                               completion: (syncValue: String,
                                            error: ErrorType?,
@@ -71,14 +71,14 @@ public final class BrowserManager {
             return
         }
 
-        if let activeRelay = activeRelays.value[peer.uuid] {
+        if let activeRelay = activeRelays.value[peerIdentifier] {
             completion(syncValue: syncValue,
                        error: nil,
                        port: activeRelay.listenerPort)
             return
         }
 
-        guard let lastGenerationPeer = self.lastGenerationPeer(for: peer) else {
+        guard let lastGenerationPeer = self.lastGenerationPeer(for: peerIdentifier) else {
                 completion(syncValue: syncValue,
                            error: ThaliCoreError.IllegalPeerID,
                            port: nil)
@@ -92,7 +92,8 @@ public final class BrowserManager {
                                             [weak self] in
                                             guard let strongSelf = self else { return }
 
-                                            let relay = strongSelf.activeRelays.value[peer.uuid]
+                                            let relay =
+                                                strongSelf.activeRelays.value[peerIdentifier]
 
                                             relay?.openRelay {
                                                 port, error in
@@ -106,17 +107,17 @@ public final class BrowserManager {
                                             guard let strongSelf = self else { return }
 
                                             strongSelf.activeRelays.modify {
-                                                if let relay = $0[peer.uuid] {
+                                                if let relay = $0[peerIdentifier] {
                                                     relay.closeRelay()
                                                 }
-                                                $0.removeValueForKey(peer.uuid)
+                                                $0.removeValueForKey(peerIdentifier)
                                             }
                                         })
 
             activeRelays.modify {
                 let relay = BrowserRelay(with: nonTCPsession,
                                          createVirtualSocketTimeout: self.inputStreamReceiveTimeout)
-                $0[peer.uuid] = relay
+                $0[peerIdentifier] = relay
             }
         } catch let error {
             completion(syncValue: syncValue,
@@ -125,8 +126,8 @@ public final class BrowserManager {
         }
     }
 
-    public func disconnect(peer: Peer) {
-        guard let relay = activeRelays.value[peer.uuid] else {
+    public func disconnect(peerIdentifer: String) {
+        guard let relay = activeRelays.value[peerIdentifer] else {
             return
         }
 
@@ -134,10 +135,10 @@ public final class BrowserManager {
     }
 
     // MARK: - Internal methods
-    func lastGenerationPeer(for peer: Peer) -> Peer? {
+    func lastGenerationPeer(for peerIdentifier: String) -> Peer? {
         return availablePeers.withValue {
             $0
-            .filter { $0.uuid == peer.uuid }
+            .filter { $0.uuid == peerIdentifier }
             .maxElement { $0.0.generation < $0.1.generation }
         }
     }

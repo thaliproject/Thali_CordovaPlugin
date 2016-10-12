@@ -85,8 +85,8 @@ public final class AdvertiserManager {
         currentAdvertiser = nil
     }
 
-    public func hasAdvertiser(with identifier: Peer) -> Bool {
-        return advertisers.value.filter { $0.peer == identifier }
+    public func hasAdvertiser(with identifier: String) -> Bool {
+        return advertisers.value.filter { $0.peer.uuid == identifier }
                                 .count > 0
     }
 
