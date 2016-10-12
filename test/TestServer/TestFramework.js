@@ -21,7 +21,35 @@ function TestFramework(options) {
   TestFramework.super_.call(this);
 
   this._setOptions(options);
-  this.reset();
+
+  var devices    = this._options.devices;
+  var minDevices = this._options.minDevices;
+  this.platforms = Object.keys(devices)
+  .reduce(function (platforms, platformName) {
+    var count    = devices[platformName];
+    var minCount = minDevices[platformName];
+    asserts.isNumber(count);
+    asserts.isNumber(minCount);
+
+    if (count === -1) {
+      var timeout = self._options.waiting_for_devices_timeout;
+      asserts.isNumber(timeout);
+      setTimeout(function () {
+        self.startTests(platformName);
+      }, timeout);
+    }
+
+    if (count === -1 || count > 0) {
+      platforms[platformName] = {
+        count: count,
+        minCount: minCount,
+        devices: [],
+        deviceIndexes: {},
+        state: TestFramework.platformStates.created
+      };
+    }
+    return platforms;
+  }, {});
 }
 
 inherits(TestFramework, EventEmitter);
@@ -73,41 +101,6 @@ TestFramework.prototype._setOptions = function (options) {
       format('platform name: \'%s\' is required', requiredPlatformName)
     );
   });
-}
-
-TestFramework.prototype.reset = function () {
-  var self = this;
-
-  logger.debug('reset');
-
-  var devices    = this._options.devices;
-  var minDevices = this._options.minDevices;
-  this.platforms = Object.keys(devices)
-  .reduce(function (platforms, platformName) {
-    var count    = devices[platformName];
-    var minCount = minDevices[platformName];
-    asserts.isNumber(count);
-    asserts.isNumber(minCount);
-
-    if (count === -1) {
-      var timeout = self._options.waiting_for_devices_timeout;
-      asserts.isNumber(timeout);
-      setTimeout(function () {
-        self.startTests(platformName);
-      }, timeout);
-    }
-
-    if (count === -1 || count > 0) {
-      platforms[platformName] = {
-        count: count,
-        minCount: minCount,
-        devices: [],
-        deviceIndexes: {},
-        state: TestFramework.platformStates.created
-      };
-    }
-    return platforms;
-  }, {});
 }
 
 TestFramework.prototype.addDevice = function (device) {

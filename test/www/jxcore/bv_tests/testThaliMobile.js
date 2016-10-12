@@ -499,11 +499,11 @@ var setupDiscoveryAndFindPeers = function (t, router, callback) {
 
 test('peer should be found once after listening and discovery started',
 function (t) {
-  var peers = {};
+  var spy = sinon.spy();
   var availabilityChangedHandler = function (peer) {
     // Only count changes that mark peer becoming available.
     if (peer.hostAddress !== null && peer.portNumber !== null) {
-      peers[peer.connectionType + ':' + peer.peerIdentifier] = true;
+      spy();
     }
   };
   var peerFound = false;
@@ -528,7 +528,7 @@ function (t) {
       // The maximum amount is the participants count minues ourseld times 2,
       // because the same participant may be reached via Wifi and non-TCP.
       var maxAvailabilityChanges = (t.participants.length - 1) * 2;
-      t.ok(Object.keys(peers).length <= maxAvailabilityChanges,
+      t.ok(spy.callCount <= maxAvailabilityChanges,
         'must not receive too many peer availabilities');
       done();
     }, timeout);
