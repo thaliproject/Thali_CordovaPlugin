@@ -139,7 +139,7 @@ test('multiple connect to peers', function (t) {
           error.toString(), id
         ));
       });
-    } else if (data.attempts.length <= CONNECT_ATTEMPS) {
+    } else if (data.attempts.length < CONNECT_ATTEMPS) {
       // Peer is connecting or it is already connected.
       // We want to receive 'already connecting/connected' error.
 
@@ -157,6 +157,9 @@ test('multiple connect to peers', function (t) {
             id
           );
           data.attempts.push(error._latency);
+
+          // We want to print current attempts
+          printAttempts(id, data.attempts, 'current');
         } else {
           t.fail(format(
             'we received unexpected error: \'%s\'',
@@ -287,26 +290,29 @@ test('multiple connect to peers', function (t) {
     if (ids.length === t.participants.length - 1) {
       ids.forEach(function (id) {
         var attempts = peersCompleted[id];
-
-        function round(number) {
-          return Math.round(number * 1000) / 1000;
-        }
-
-        var sum = attempts.reduce(function (sum, latency) {
-          return sum + latency;
-        }, 0);
-        var average = round(sum / attempts.length);
-        var median  = round(math.median(attempts));
-        var std     = round(math.std(attempts));
-
-        logger.info(
-          'latency for id: \'%s\', average: %d, median: %d, standard deviation: %d',
-          id, average, median, std
-        );
+        printAttempts(id, attempts, 'total');
       });
 
       peerAvailability.removeListener('data', newPeer);
       t.end();
     }
+  }
+
+  function printAttempts(id, attempts, prefix) {
+    var sum = attempts.reduce(function (sum, latency) {
+      return sum + latency;
+    }, 0);
+    var average = round(sum / attempts.length);
+    var median  = round(math.median(attempts));
+    var std     = round(math.std(attempts));
+
+    logger.info(
+      '%s attempts count: %d, latency for id: \'%s\', average: %d, median: %d, standard deviation: %d',
+      prefix, attempts.length, id, average, median, std
+    );
+  }
+
+  function round(number) {
+    return Math.round(number * 1000) / 1000;
   }
 });
