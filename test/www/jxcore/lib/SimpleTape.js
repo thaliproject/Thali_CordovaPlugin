@@ -97,7 +97,7 @@ SimpleThaliTape.prototype.addTest = function (name, canBeSkipped, fun) {
   return this._handler;
 }
 
-SimpleThaliTape.prototype._runTest = function (htest, test) {
+SimpleThaliTape.prototype._runTest = function (test) {
   var self = this;
 
   // Test was skipped.
@@ -155,12 +155,15 @@ SimpleThaliTape.prototype._runTest = function (htest, test) {
       });
     }
 
-    htest('setup', function (tape) {
+    // TODO This can be implemented using 'tape/lib/test' directly.
+    // Example is 'tape.createHarness' https://github.com/substack/tape/blob/master/index.js#L103
+
+    tape('setup', function (tape) {
       processResult(tape, self._options.setupTimeout)
       self._options.setup(tape);
     });
 
-    htest(test.name, function (tape) {
+    tape(test.name, function (tape) {
       processResult(tape, self._options.testTimeout);
 
       Promise.try(function () {
@@ -182,7 +185,7 @@ SimpleThaliTape.prototype._runTest = function (htest, test) {
       .catch(reject);
     });
 
-    htest('teardown', function (tape) {
+    tape('teardown', function (tape) {
       processResult(tape, self._options.teardownTimeout);
       tape.once('end', resolve);
       self._options.teardown(tape);
@@ -197,7 +200,7 @@ SimpleThaliTape.prototype._runTest = function (htest, test) {
   });
 }
 
-SimpleThaliTape.prototype._begin = function (htest) {
+SimpleThaliTape.prototype._begin = function () {
   var self = this;
   assert(
     this._state === SimpleThaliTape.states.created,
@@ -208,7 +211,7 @@ SimpleThaliTape.prototype._begin = function (htest) {
   var skippedTests = [];
   return Promise.all(
     this._tests.map(function (test) {
-      return self._runTest(htest, test)
+      return self._runTest(test)
       .catch(function (error) {
         if (error.message === 'skipped') {
           skippedTests.push(test.name);
@@ -230,27 +233,21 @@ SimpleThaliTape.prototype._resolveInstance = function () {
   SimpleThaliTape.instances.push(this);
 }
 
-SimpleThaliTape.begin = function (options) {
+// Note that version, hasRequiredHardware and nativeUTFailed fields are not used and are added
+// here for consistency with CoordinatedTape
+SimpleThaliTape.begin = function (platform, version, hasRequiredHardware, nativeUTFailed) {
   var thaliTapes = SimpleThaliTape.instances;
   SimpleThaliTape.instances = [];
 
-  // Each begin call must provide an uniq tape instance
-  // See https://github.com/substack/tape#var-htest--testcreateharness
-  // and https://github.com/substack/tape#var-stream--testcreatestreamopts
-  // for more details
-
-  var htest = tape.createHarness();
-  htest.createStream().pipe(process.stdout);
-
   return Promise.all(
     thaliTapes.map(function (thaliTape) {
-      return thaliTape._begin(htest);
+      return thaliTape._begin();
     })
   )
   .then(function (skippedTests) {
     logger.debug(
       'all unit tests succeeded, platformName: \'%s\'',
-      options.platform
+      platform
     );
     skippedTests = skippedTests.reduce(function (allTests, tests) {
       return allTests.concat(tests);
@@ -258,12 +255,14 @@ SimpleThaliTape.begin = function (options) {
     logger.debug(
       'skipped tests: \'%s\'', JSON.stringify(skippedTests)
     );
+    logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
   })
   .catch(function (error) {
     logger.error(
       'failed to run unit tests, platformName: \'%s\', error: \'%s\', stack: \'%s\'',
-      options.platform, error.toString(), error.stack
+      platform, error.toString(), error.stack
     );
+    logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
     return Promise.reject(error);
   });
 }
