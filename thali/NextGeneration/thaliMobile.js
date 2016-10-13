@@ -69,9 +69,7 @@ var getWifiOrNativeMethodByNetworkType = function (method, networkType) {
           wifiMethod.apply(null, args),
           nativeMethod.apply(null, args)
         ])
-          .then(function (result) {
-            return getCombinedResult(result);
-          });
+          .then(getCombinedResult);
       };
     }
     case networkTypes.WIFI: {

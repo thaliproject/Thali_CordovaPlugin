@@ -28,7 +28,7 @@ inherits(TestDevice, EventEmitter);
 
 TestDevice.prototype._setOptions = function (options) {
   if (options) {
-    asserts.isObject(options);
+    asserts.isObject(options, 'TestDevice._setOptions');
   }
   this._options = objectAssign({}, defaultConfig, options);
   asserts.isNumber(this._options.setupTimeout);
