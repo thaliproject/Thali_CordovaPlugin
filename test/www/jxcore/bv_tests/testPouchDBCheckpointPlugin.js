@@ -5,19 +5,12 @@ var testUtils = require('../lib/testUtils');
 var sinon = require('sinon');
 var randomString = require('randomstring');
 
-var fs = require('fs-extra-promise');
-var PouchDB = require('pouchdb')
+var PouchDB = testUtils.getLevelDownPouchDb()
   .plugin(require('pouchdb-size'))
-  .plugin(require('thali/NextGeneration/utils/pouchDBCheckpointsPlugin'))
-  .defaults({
-     db: require('leveldown-mobile')
-   });
+  .plugin(require('thali/NextGeneration/utils/pouchDBCheckpointsPlugin'));
 
-// DB directory should be unique among all tests and any instance of this test.
-// This is especially required for tape.coordinated.
 var db;
-var dbName = testUtils.getPouchDBTestDirectory() +
-  'pouch-db-checkpoint-plugin' + testUtils.getRandomPouchDBName();
+var dbName = testUtils.getRandomPouchDBName();
 var dbOptions = {
   checkpoint: 500
 };
@@ -29,11 +22,12 @@ var test = tape({
   },
   teardown: function (t) {
     db.destroy()
-      .then(function () {
-        fs.removeSync(dbName);
-        t.end();
+      .catch(function (error) {
+        t.fail(error);
       })
-      .catch(t.end);
+      .then(function () {
+        t.end();
+      });
   }
 });
 

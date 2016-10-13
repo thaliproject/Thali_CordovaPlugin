@@ -48,10 +48,13 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
 
     opts = extend({}, opts);
 
-    // If database endpoint is not remote we are using defaultDirectory as
+    // If database endpoint is not remote we will use defaultDirectory as
     // prefix and defaultAdapter as adapter for it.
-    if (name !== undefined && name.indexOf('http') !== 0 &&
-        name.indexOf('https') !== 0) {
+    if (
+      name !== undefined &&
+      name.indexOf('http') !== 0 &&
+      name.indexOf('https') !== 0
+    ) {
       if (!opts.db && options.defaultAdapter) {
         opts.db = options.defaultAdapter;
       }
@@ -65,13 +68,6 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
 
   options = extend({}, options);
 
-  // This is a workaround for #970.
-  var CustomEventEmitter = function () {
-    return EventEmitter.apply(this, arguments);
-  };
-
-  inherits(CustomEventEmitter, EventEmitter);
-
   inherits(PouchAlt, PouchDB);
 
   PouchAlt.preferredAdapters = PouchDB.preferredAdapters.slice();
@@ -80,6 +76,17 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
       PouchAlt[key] = PouchDB[key];
     }
   });
+
+  PouchAlt.plugin = function (obj) {
+    if (typeof obj === 'function') { // function style for plugins
+      obj(PouchAlt);
+    } else {
+      Object.keys(obj).forEach(function (id) { // object style for plugins
+        PouchAlt.prototype[id] = obj[id];
+      });
+    }
+    return PouchAlt;
+  };
 
   // This is a workaround for #870.
   PouchAlt.prototype.info = function () {

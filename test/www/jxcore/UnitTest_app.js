@@ -6,8 +6,11 @@
 
 'use strict';
 
+var platform = require('thali/NextGeneration/utils/platform');
+
 if (typeof Mobile === 'undefined') {
-  global.Mobile = require('./lib/wifiBasedNativeMock.js')();
+  global.Mobile =
+    require('./lib/wifiBasedNativeMock.js')(platform.names.ANDROID);
 }
 
 var config = require('./config.json');
@@ -16,7 +19,6 @@ process.env = objectAssign(process.env, config.env);
 
 var logger = require('./lib/testLogger')('UnitTest_app');
 var testUtils = require('./lib/testUtils');
-var platform = require('thali/NextGeneration/utils/platform');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('bluebird');
 
