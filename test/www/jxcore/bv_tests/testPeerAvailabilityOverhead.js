@@ -59,6 +59,7 @@ function start () {
 
       var index = 0;
       Mobile('peerAvailabilityChanged').registerToNative(function () {
+        logger.debug('we've received peerAvailabilityChanged event');
         index ++;
       });
 
