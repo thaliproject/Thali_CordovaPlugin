@@ -29,6 +29,8 @@
 		1C6D713F1DAF9BD200802569 /* TCPClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD347571DA048BF006F1126 /* TCPClientTests.swift */; };
 		1C6D71401DAF9BD400802569 /* TCPListenerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD3474F1D9F7EBC006F1126 /* TCPListenerTests.swift */; };
 		1C6D71411DAF9BDB00802569 /* StringRandomTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD347541D9FEED9006F1126 /* StringRandomTests.swift */; };
+		1C6D71421DAFBBD100802569 /* TCPClientMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C148D151DA3B17500E0E1AC /* TCPClientMock.swift */; };
+		1C6D71431DAFBBDC00802569 /* TCPServerMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C148D131DA3B16C00E0E1AC /* TCPServerMock.swift */; };
 		1CB9B4211D7063C700C59CCF /* BluetoothManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1CB9B4201D7063C700C59CCF /* BluetoothManager.h */; };
 		1CD4C0AF1DA68E7B005FFC3B /* AdvertiserRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CD4C0AE1DA68E7B005FFC3B /* AdvertiserRelay.swift */; };
 		1CD4C0B01DA68E7B005FFC3B /* AdvertiserRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CD4C0AE1DA68E7B005FFC3B /* AdvertiserRelay.swift */; };
@@ -723,6 +725,7 @@
 				FAADD7FFE1EE91F294513ADA /* AdvertiserManager.swift in Sources */,
 				FAADD6ED0224218F394D9DAB /* BrowserManager.swift in Sources */,
 				FAADDD566FA7D3F34C6C4581 /* Session.swift in Sources */,
+				1C6D71421DAFBBD100802569 /* TCPClientMock.swift in Sources */,
 				1CEBB3F31D997A8600B229C9 /* GCDAsyncSocket.m in Sources */,
 				3AD347531D9FB556006F1126 /* TCPClient.swift in Sources */,
 				1C40E5F81DA24B0A00DA369E /* MCSessionMock.swift in Sources */,
@@ -738,6 +741,7 @@
 				FAADD14FB68CA0A056A2EFAF /* AtomicTests.swift in Sources */,
 				FAADDB1A4C19C000CBA8C6A5 /* PeerTests.swift in Sources */,
 				FAADD7417CEB0C20CC94F301 /* AppStateNotificationsManagerTests.swift in Sources */,
+				1C6D71431DAFBBDC00802569 /* TCPServerMock.swift in Sources */,
 				1C6D71401DAF9BD400802569 /* TCPListenerTests.swift in Sources */,
 				1C6D713B1DAF9BC800802569 /* RelayTests.swift in Sources */,
 				1C6D71411DAF9BDB00802569 /* StringRandomTests.swift in Sources */,
