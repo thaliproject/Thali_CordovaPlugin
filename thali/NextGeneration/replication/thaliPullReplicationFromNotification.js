@@ -108,7 +108,6 @@ ThaliPullReplicationFromNotification._getPeerDictionaryKey =
  */
 ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
   function (peerAdvertisesData) {
-    var self = this;
     if (!peerAdvertisesData.portNumber) {
       logger.error(
         'We don\'t support client notification that a peer is gone, yet.'
@@ -149,7 +148,7 @@ ThaliPullReplicationFromNotification.prototype._bindRemoveActionFromPeerDictiona
   function (action, key) {
     var self = this;
 
-    // TODO Invesatigate whether EventEmitter with action will provide a memory leak.
+    // TODO Investigate whether EventEmitter with action will provide a memory leak.
     // TODO Add EventEmitter to the peer action class.
     // TODO Extend EventEmitter with 'onceAny' method.
     // For example here we can use:
@@ -166,8 +165,8 @@ ThaliPullReplicationFromNotification.prototype._bindRemoveActionFromPeerDictiona
       removed = true;
 
       assert(
-        self._peerDictionary[key],
-        'The entry should exist because this is the only place that can remove it'
+        self._peerDictionary[key], 'The entry should exist because this is ' +
+        'the only place that can remove it'
       );
       delete self._peerDictionary[key];
     }

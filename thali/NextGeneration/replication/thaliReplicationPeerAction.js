@@ -96,6 +96,10 @@ ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 3;
  */
 ThaliReplicationPeerAction.PUSH_LAST_SYNC_UPDATE_MILLISECONDS = 200;
 
+ThaliReplicationPeerAction.prototype.getPeerAdvertisesDataForUs = function () {
+  return this._peerAdvertisesDataForUs;
+};
+
 /**
  * The replication timer is needed because by default we do live replications
  * which will keep a connection open to the remote server and send heartbeats
@@ -216,7 +220,8 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
       it seems to work.
        */
       var remoteUrl = 'https://' + self._peerAdvertisesDataForUs.hostAddress +
-        ':' + self._peerAdvertisesDataForUs.portNumber + path.join(thaliConfig.BASE_DB_PATH, self._dbName);
+        ':' + self._peerAdvertisesDataForUs.portNumber +
+        path.join(thaliConfig.BASE_DB_PATH, self._dbName);
       var ajaxOptions = {
         ajax : {
           agentClass: ForeverAgent.SSL,

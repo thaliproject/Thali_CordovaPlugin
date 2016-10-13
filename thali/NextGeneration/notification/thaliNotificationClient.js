@@ -351,10 +351,15 @@ ThaliNotificationClient.prototype._resolved =
         }
 
       case ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_BUT_BAD:
+      case ThaliNotificationAction.ActionResolution.KILLED_SUPERSEDED:
         {
-          // This indicates a malfunctioning peer. We need to assume they are bad
-          // all up and mark their entry as RESOLVED without taking any further
-          // action. This means we will ignore this peerIdentifier in the future.
+          // This indicates a malfunctioning peer. We need to assume they are
+          // bad all up and mark their entry as RESOLVED without taking any
+          // further action. This means we will ignore this peerIdentifier in
+          // the future.
+          // Alternatively this is also used when we have decided to discard
+          // this action in favor of one for the same peer with a newer PeerID
+          // and so we don't want to retry the action.
           entry.peerState = PeerDictionary.peerState.RESOLVED;
           this.peerDictionary.addUpdateEntry(peerId, entry);
           break;
