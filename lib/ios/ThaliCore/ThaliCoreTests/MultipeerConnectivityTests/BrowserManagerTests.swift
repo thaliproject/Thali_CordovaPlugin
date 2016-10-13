@@ -146,7 +146,7 @@ class BrowserManagerTests: XCTestCase {
         // Then
         let getIllegalPeerTimeout: NSTimeInterval = 5
         waitForExpectationsWithTimeout(getIllegalPeerTimeout, handler: nil)
-        XCTAssertEqual(connectionError, .IllegalPeerID)
+        XCTAssertEqual(connectionError, .ConnectionFailed)
     }
 
     func testPickLatestGenerationAdvertiserOnConnect() {
