@@ -69,7 +69,9 @@ var getWifiOrNativeMethodByNetworkType = function (method, networkType) {
           wifiMethod.apply(null, args),
           nativeMethod.apply(null, args)
         ])
-          .then(getCombinedResult);
+          .then(function (result) {
+            return getCombinedResult(result);
+          });
       };
     }
     case networkTypes.WIFI: {
@@ -92,8 +94,7 @@ var getWifiOrNativeMethodByNetworkType = function (method, networkType) {
           });
       };
     }
-    default:
-    {
+    default: {
       throw new Error('Unsupported network type ' + networkType);
     }
   }
@@ -234,7 +235,12 @@ module.exports.start = function (router, pskIdToSecret, networkType) {
 
     getWifiOrNativeMethodByNetworkType('start',
       thaliMobileStates.networkType)(router, pskIdToSecret)
-      .then(resolve);
+      .then(function (result) {
+        if (result.wifiResult === null && result.nativeResult === null) {
+          return resolve(result);
+        }
+        return reject(result);
+      });
   });
 };
 

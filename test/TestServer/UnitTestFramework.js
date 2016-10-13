@@ -226,8 +226,6 @@ UnitTestFramework.prototype.bindSync = function (devices) {
 };
 
 UnitTestFramework.prototype.unbindSync = function (devices) {
-  var self = this;
-
   var syncDevices = this._syncDevicesData.map(function (data) {
     return data.device;
   });
