@@ -19,7 +19,7 @@ please head over to test/README.md and follow the directions in the sections
 entitled 'Installing software' and 'Running your own NPM registry'.
 
 From there you need to create your cordova project and install Thali into it.
-To do that I assume you are at the command line and are starting at the 
+To do that I assume you are at the command line and are starting at the
 directory which contains the clone of Thali_CordovaPlugin.
 
 ```
@@ -86,7 +86,7 @@ have hanging out in your package.json.
 find . -name "*.gz" -delete
 ```
 
-You may have noticed above we have commands '--autoremove "*.gz'. These are a
+You may have noticed above we have commands '--autoremove "*.gz"'. These are a
 special command in JXcore that does exactly what the line above does. However
 we have noticed that the command doesn't always seem to work so we just use the
 line above to be sure. The point of this command is that Android gets very unhappy
@@ -153,7 +153,7 @@ Again, see testThaliManagerCoordinated.js for the relevant includes. The code
 above creates a new public key object with a specific curve, then generates a
 public/private key pair matching that curve. We have to use this specific curve
 so don't change it.
- 
+
 Note that the private key can be retrieved via getPrivateKey() and stored
 somewhere secure on the device. This key will be needed the next time the device
 runs to create a new ECDH object in the future using setPrivateKey(). Note that
@@ -196,7 +196,7 @@ some point, connected to the cloud in order to download a list of public keys.
 If you don't happen to have a handy cloud then you need to figure out your own
 solution for how to distribute the keys. Anyone wanting to resurrect the identity
 exchange code can contact us via any of the mechanisms listed [here](http://thaliproject.org/WaysToContribute/).
-Alternatively you can just cheat. Set up an open PouchDB/CouchDB server some 
+Alternatively you can just cheat. Set up an open PouchDB/CouchDB server some
 place and have devices sync their keys there and then sync down from that server
 all the other device's keys. It's a hack to get you going.
 
