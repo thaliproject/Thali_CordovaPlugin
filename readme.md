@@ -211,6 +211,47 @@ That is about it. If it works then anything you stick into the database you
 gave us the name for should be sync'd to the other devices you told us about
 if they are around and vice versa.
 
+## Useful commands to run Android apps via command line
+
+### Build
+
+```
+cordova build android --release --device
+```
+
+### Sign unsigned
+
+`cordova build` creates unsigned _apk_. So in order to install the _apk_ into device
+you need to sign the _apk_.
+
+Please note that `build-tools` should be at least `24.0.3`.
+Because this guide uses tool `apksigner` that is available starting
+from `build-tools` `24.0.3`.
+
+You should have keystore file before running the command below.
+
+```
+/usr/local/opt/android-sdk/build-tools/24.0.3/apksigner sign --ks path/to/keystore/file path/to/unsigned.apk
+```
+
+### Get devices list
+
+You need to know device serial number or qualifier to install build into device
+via command line. The command below lists all connected devices with their
+qualifiers (first value in each line).
+
+```
+adb devices -l
+```
+
+### Install into device and debug
+
+```
+adb -s DEVICE_QUALIFIER install -r path/to/signed.apk
+```
+
+Please note using `logcat` if you need providing the team with the logs from devices.
+
 ## Prerequisites
 
 ### Android
