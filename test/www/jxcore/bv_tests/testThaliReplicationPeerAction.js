@@ -219,8 +219,7 @@ test('Make sure docs replicate',
                                                          randomDBName,
                                                          remotePouchDB) {
       var thaliReplicationPeerAction = null;
-      var DifferentDirectoryPouch =
-        testUtils.getPouchDBFactoryInRandomDirectory();
+      var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
       var localPouchDB = new DifferentDirectoryPouch(randomDBName);
       createDocs(remotePouchDB, 10)
      .then(function (docs) {
@@ -279,8 +278,7 @@ test('Do nothing and make sure we time out', function (t) {
     };
     // Using a different directory really shouldn't make any difference
     // to this particular test but I'm being paranoid
-    var DifferentDirectoryPouch =
-      testUtils.getPouchDBFactoryInRandomDirectory();
+    var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
     var originalTimeout = ThaliReplicationPeerAction.maxIdlePeriodSeconds;
     ThaliReplicationPeerAction.maxIdlePeriodSeconds = 2;
     thaliReplicationPeerAction =
@@ -317,8 +315,7 @@ test('Do something and make sure we time out', function (t) {
   testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName,
                                                        remotePouchDB) {
     var thaliReplicationPeerAction = null;
-    var DifferentDirectoryPouch =
-      testUtils.getPouchDBFactoryInRandomDirectory();
+    var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
     var localPouchDB = new DifferentDirectoryPouch(randomDBName);
     var thaliReplicationPeerActionStartOutput = null;
     var originalTimeout = ThaliReplicationPeerAction.maxIdlePeriodSeconds;
@@ -393,8 +390,7 @@ test('Start replicating and then catch error when server goes', function (t) {
   testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName,
                                                        remotePouchDB) {
     var thaliReplicationPeerAction = null;
-    var DifferentDirectoryPouch =
-      testUtils.getPouchDBFactoryInRandomDirectory();
+    var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
     createDocs(remotePouchDB, 10)
       .then(function () {
         var notificationForUs = {

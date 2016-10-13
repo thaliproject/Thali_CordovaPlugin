@@ -823,50 +823,39 @@ MobileCallInstance.prototype.didRegisterToNative = function (method, callback) {
  */
 MobileCallInstance.prototype.callNative = function () {
   switch (this.mobileMethodName) {
-    case 'startListeningForAdvertisements':
-    {
+    case 'startListeningForAdvertisements': {
       return this.startListeningForAdvertisements(arguments[0]);
     }
-    case 'stopListeningForAdvertisements':
-    {
+    case 'stopListeningForAdvertisements': {
       return this.stopListeningForAdvertisements(arguments[0]);
     }
-    case 'startUpdateAdvertisingAndListening':
-    {
+    case 'startUpdateAdvertisingAndListening': {
       return this.startUpdateAdvertisingAndListening(
           arguments[0], arguments[1]);
     }
-    case 'stopAdvertisingAndListening':
-    {
+    case 'stopAdvertisingAndListening': {
       return this.stopAdvertisingAndListening(
           arguments[0]);
     }
-    case 'connect':
-    {
+    case 'connect': {
       return this.connect(arguments[0], arguments[1]);
     }
-    case 'multiConnect':
-    {
+    case 'multiConnect': {
       return this.multiConnect(arguments[0], arguments[1], arguments[2]);
     }
-    case 'disconnect':
-    {
+    case 'disconnect': {
       return this.disconnect(arguments[0], arguments[1]);
     }
-    case 'killConnections':
-    {
+    case 'killConnections': {
       return this.killConnections(arguments[0]);
     }
-    case 'GetDeviceName':
-    {
+    case 'GetDeviceName': {
       return this.getDeviceName(arguments[0]);
     }
-    case 'didRegisterToNative':
-    {
+    case 'didRegisterToNative': {
       return this.didRegisterToNative(arguments[0], arguments[1]);
     }
-    default:
-    {
+    default: {
       throw new Error('The supplied mobileName does not have a matching ' +
           'callNative method: ' + this.mobileMethodName);
     }

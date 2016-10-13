@@ -3,8 +3,9 @@
 var os = require('os');
 var tmp = require('tmp');
 var PouchDB = require('pouchdb');
+var LeveldownMobile = require('leveldown-mobile');
+var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var path = require('path');
-var randomString = require('randomstring');
 var Promise = require('bluebird');
 var https = require('https');
 var logger = require('thali/ThaliLogger')('testUtils');
@@ -22,9 +23,6 @@ var inherits = require('inherits');
 
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
-
-var isRealAndroid = platform._isRealAndroid;
-var isRealMobile = platform._isRealMobile;
 
 var doToggle = function (toggleFunction, on) {
   if (typeof Mobile === 'undefined') {
@@ -98,7 +96,7 @@ module.exports.getName = function () {
   return myName;
 };
 
-if (isRealMobile) {
+if (platform._isRealMobile) {
   Mobile('setMyNameCallback').registerAsync(function (callback) {
     myNameCallback = callback;
     // If the name is already set, pass it to the callback
@@ -117,8 +115,8 @@ if (isRealMobile) {
  * @returns {string}
  */
 var tmpObject = null;
-module.exports.tmpDirectory = function () {
-  if (isRealMobile) {
+function tmpDirectory () {
+  if (platform._isRealMobile) {
     return os.tmpdir();
   }
 
@@ -130,6 +128,7 @@ module.exports.tmpDirectory = function () {
   }
   return tmpObject.name;
 };
+module.exports.tmpDirectory = tmpDirectory;
 
 /**
  * Returns a promise that resolved with true or false depending on if this
@@ -139,7 +138,7 @@ module.exports.tmpDirectory = function () {
  */
 module.exports.hasRequiredHardware = function () {
   return new Promise(function (resolve) {
-    if (isRealAndroid) {
+    if (platform._isRealAndroid) {
       var checkBleMultipleAdvertisementSupport = function () {
         Mobile('isBleMultipleAdvertisementSupported').callNative(
           function (error, result) {
@@ -208,7 +207,7 @@ module.exports.returnsValidNetworkStatus = function () {
 
 module.exports.getOSVersion = function () {
   return new Promise(function (resolve) {
-    if (!isRealMobile) {
+    if (!platform._isRealMobile) {
       return resolve('dummy');
     }
     Mobile('getOSVersion').callNative(function (version) {
@@ -226,86 +225,14 @@ module.exports.verifyCombinedResultSuccess =
       message || 'error should be null');
   };
 
-function levelDownPouchDBGenerator(defaultDirectory) {
-  // Shamelessly stolen from https://github.com/pouchdb/pouchdb/blob/fb77927d2f14911478032884f1576b770815bcab/packages/pouchdb-core/src/setup.js#L108-L137
-  function PouchAlt(name, opts, callback) {
-    if (!(this instanceof PouchAlt)) {
-      return new PouchAlt(name, opts, callback);
-    }
-
-    if (typeof opts === 'function' || typeof opts === 'undefined') {
-      callback = opts;
-      opts = {};
-    }
-
-    if (name && typeof name === 'object') {
-      opts = name;
-      name = undefined;
-    }
-
-    opts = extend({}, opts);
-
-    if (name !== undefined && name.indexOf('http') !== 0) {
-      if (!opts.db) {
-        opts.db = require('leveldown-mobile');
-      }
-
-      if (!opts.prefix) {
-        opts.prefix = defaultDirectory;
-      }
-    }
-
-    PouchDB.call(this, name, opts, callback);
-  }
-
-  inherits(PouchAlt, PouchDB);
-
-  PouchAlt.preferredAdapters = PouchDB.preferredAdapters.slice();
-  Object.keys(PouchDB).forEach(function (key) {
-    if (!(key in PouchAlt)) {
-      PouchAlt[key] = PouchDB[key];
-    }
-  });
-
-  return PouchAlt;
-}
-
-// Use a folder specific to this test so that the database content
-// will not interfere with any other databases that might be created
-// during other tests.
-var dbPath = path.join(module.exports.tmpDirectory(), 'pouchdb-test-directory');
-fs.ensureDirSync(dbPath);
-module.exports.getPouchDBTestDirectory = function () {
-  return dbPath;
+// Short, random and globally unique name can be obtained from current
+// timestamp. For example '1w8ueaswm1'
+var getUniqueRandomName = function () {
+  var time = process.hrtime();
+  time = time[0] * Math.pow(10, 9) + time[1];
+  return time.toString(36);
 };
-
-var LevelDownPouchDB = levelDownPouchDBGenerator(dbPath);
-
-module.exports.getLevelDownPouchDb = function () {
-  return LevelDownPouchDB;
-};
-
-var getRandomName = function () {
-  return randomString.generate({
-    length: 40,
-    charset: 'alphabetic'
-  });
-};
-module.exports.getRandomPouchDBName = getRandomName;
-module.exports.getUniqueRandomName  = getRandomName;
-
-module.exports.getRandomlyNamedTestPouchDBInstance = function () {
-  return new LevelDownPouchDB(module.exports.getRandomPouchDBName());
-};
-
-module.exports.getPouchDBFactoryInRandomDirectory = function () {
-  var directory = path.join(dbPath, randomString.generate({
-    length: 20,
-    charset: 'alphabetic'
-  }));
-  fs.ensureDirSync(directory);
-  return levelDownPouchDBGenerator(directory);
-};
+module.exports.getUniqueRandomName = getUniqueRandomName;
 
 var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
   notificationBeacons.EXPIRATION_SIZE;
@@ -439,7 +366,7 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
       exitCall(null, new Error('Timer expired'));
     }, MAX_TIME_TO_WAIT_IN_MILLISECONDS);
 
-    function tryAgain(portNumber, err) {
+    function tryAgain(portNumber) {
       ++retryCount;
       logger.warn('Retry count for getSamePeerWithRetry is ' + retryCount);
       getRequestPromise =
@@ -498,33 +425,6 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
   });
 };
 
-module.exports.createPskPouchDBRemote = function (serverPort, dbName,
-                                                 pskId, pskKey, host) {
-  var serverUrl = 'https://' + (host ? host : '127.0.0.1') + ':' + serverPort +
-    thaliConfig.BASE_DB_PATH + '/' + dbName;
-
-  /**
-   * See the notes in thaliReplicationPeerAction.start for why the below
-   * is here and why it's wrong and should use agent instead but can't.
-   */
-  return new LevelDownPouchDB(serverUrl,
-    {
-      ajax: {
-        agentClass: ForeverAgent.SSL,
-        agentOptions: {
-          keepAlive: true,
-          keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-          maxSockets: Infinity,
-          maxFreeSockets: 256,
-          ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-          pskIdentity: pskId,
-          pskKey: pskKey,
-          secureOptions: pskId + serverUrl
-        }
-      }
-    });
-};
-
 module.exports.validateCombinedResult = function (combinedResult) {
   if (combinedResult.wifiResult !== null ||
     combinedResult.nativeResult !== null) {
@@ -532,30 +432,6 @@ module.exports.validateCombinedResult = function (combinedResult) {
       JSON.stringify(combinedResult)));
   }
   return Promise.resolve();
-};
-
-module.exports.setUpServer = function (testBody, appConfig) {
-  var app = express();
-  appConfig && appConfig(app);
-  app.use(thaliConfig.BASE_DB_PATH, expressPouchdb(LevelDownPouchDB, {mode: 'minimumForPouchDB'}));
-  var testCloseAllServer = makeIntoCloseAllServer(https.createServer(
-    {
-      ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-      pskCallback : function (id) {
-        return id === pskId ? pskKey : null;
-      },
-      key: thaliConfig.BOGUS_KEY_PEM,
-      cert: thaliConfig.BOGUS_CERT_PEM
-    }, app));
-  testCloseAllServer.listen(0, function () {
-    var serverPort = testCloseAllServer.address().port;
-    var randomDBName = randomString.generate(30);
-    var remotePouchDB =
-      module.exports.createPskPouchDBRemote(serverPort, randomDBName, pskId,
-                                            pskKey);
-    testBody(serverPort, randomDBName, remotePouchDB);
-  });
-  return testCloseAllServer;
 };
 
 var MAX_FAILURE = 10;
@@ -606,12 +482,15 @@ module.exports.runTestOnAllParticipants = function (
   testToRun
 ) {
   var publicKeys = turnParticipantsIntoBufferArray(t, devicePublicKey);
+
   return new Promise(function (resolve, reject) {
     var completed = false;
     // Each participant is recorded via their public key
     // If the value is -1 then they are done
     // If the value is 0 then no test has completed
-    // If the value is greater than 0 then that is how many failures there have been.
+    // If the value is greater than 0 then that is how many failures there have
+    // been.
+
     var participantCount = publicKeys.reduce(function (participantCount, participantPublicKey) {
       participantCount[participantPublicKey] = 0;
       return participantCount;
@@ -629,7 +508,7 @@ module.exports.runTestOnAllParticipants = function (
 
       participantCount[publicKey] = -1;
 
-      var hasParticipant= Object.keys(participantCount)
+      var hasParticipant = Object.keys(participantCount)
       .some(function (participantKey) {
         return participantCount[participantKey] !== -1;
       });
@@ -730,4 +609,93 @@ module.exports.checkArgs = function (t, spy, description, args) {
       arg.description + '\' as ' + (index + 1) + '-st argument';
     t.ok(arg.compare(currentArgs[index]), argDescription);
   });
+};
+
+
+// -- pouchdb --
+
+var pouchDBTestDirectory = path.join(tmpDirectory(), 'pouchdb-test-directory');
+fs.ensureDirSync(pouchDBTestDirectory);
+module.exports.getPouchDBTestDirectory = function () {
+  return pouchDBTestDirectory;
+};
+
+function getLevelDownPouchDb() {
+  // Running each PouchDB in different directory.
+  var defaultDirectory = path.join(pouchDBTestDirectory, getUniqueRandomName());
+  fs.ensureDirSync(defaultDirectory);
+  return PouchDBGenerator(PouchDB, defaultDirectory, {
+    defaultAdapter: LeveldownMobile
+  });
+};
+module.exports.getLevelDownPouchDb = getLevelDownPouchDb;
+
+module.exports.getRandomlyNamedTestPouchDBInstance = function () {
+  return new getLevelDownPouchDb()(getUniqueRandomName());
+};
+
+module.exports.getRandomPouchDBName = getUniqueRandomName;
+
+var createPskPouchDBRemote = function (
+  serverPort, dbName,
+  pskId, pskKey, host
+) {
+  var serverUrl = 'https://' + (host ? host : '127.0.0.1') + ':' + serverPort +
+    thaliConfig.BASE_DB_PATH + '/' + dbName;
+
+  // See the notes in thaliReplicationPeerAction.start for why the below
+  // is here and why it's wrong and should use agent instead but can't.
+  return new getLevelDownPouchDb()(
+    serverUrl, {
+      ajax: {
+        agentClass: ForeverAgent.SSL,
+        agentOptions: {
+          keepAlive: true,
+          keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
+          maxSockets: Infinity,
+          maxFreeSockets: 256,
+          ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+          pskIdentity: pskId,
+          pskKey: pskKey,
+          secureOptions: pskId + serverUrl
+        }
+      }
+    }
+  );
+};
+module.exports.createPskPouchDBRemote = createPskPouchDBRemote;
+
+module.exports.setUpServer = function (testBody, appConfig) {
+  var app = express();
+  appConfig && appConfig(app);
+  app.use(
+    thaliConfig.BASE_DB_PATH,
+    expressPouchdb(
+      getLevelDownPouchDb(),
+      { mode: 'minimumForPouchDB' }
+    )
+  );
+  var testCloseAllServer = makeIntoCloseAllServer(
+    https.createServer(
+      {
+        ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+        pskCallback: function (id) {
+          return id === pskId ? pskKey : null;
+        }
+      },
+      app
+    )
+  );
+  testCloseAllServer.listen(
+    0,
+    function () {
+      var serverPort = testCloseAllServer.address().port;
+      var randomDBName = getUniqueRandomName();
+      var remotePouchDB = createPskPouchDBRemote(
+        serverPort, randomDBName, pskId, pskKey
+      );
+      testBody(serverPort, randomDBName, remotePouchDB);
+    }
+  );
+  return testCloseAllServer;
 };

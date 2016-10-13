@@ -238,8 +238,7 @@
  *
  *  - The TCP/IP connection to the 127.0.0.1 port is closed or half closed
  *  - No connection is made to the 127.0.0.1 port within a fixed period of
- *  time, typically 2 seconds (this only applies on Android and for lexically
- *  larger iOS peers)
+ *  time, typically 2 seconds (this only applies on Android)
  *  - If the non-TCP/IP connection should fail in whole or in part (e.g. some
  *  non-TCP/IP transports have the TCP/IP equivalent of a 1/2 closed connection)
  *
