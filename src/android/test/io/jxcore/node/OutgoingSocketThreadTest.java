@@ -56,6 +56,7 @@ public class OutgoingSocketThreadTest {
             Log.i(mTag, "Starting test: " + description.getMethodName());
         }
     };
+    public static final int TEST_PORT_NUMBER = 57775;
 
     @Before
     public void setUp() throws Exception {
@@ -160,16 +161,13 @@ public class OutgoingSocketThreadTest {
         assertThat("mServerSocket should be null", mServerSocket, is(nullValue()));
     }
 
-    //#1214
-   // @Test
+
+    @Test
     public void testRun() throws Exception {
-        int testPortNumber = 57775;
-        mOutgoingSocketThread.setPort(testPortNumber);
-        mIncomingSocketThread.setPort(testPortNumber);
 
         try {
-            mOutgoingSocketThread.start();
-            Future<Boolean> mFuture = mExecutor.submit(createCheckOutgoingSocketThreadStart());
+
+            Future<Boolean> mFuture = runningOutgoingSocketThread();
 
             assertThat("OutgoingSocketThread started", mFuture.get(), is(true));
 
@@ -187,9 +185,7 @@ public class OutgoingSocketThreadTest {
                 mListeningOnPortNumber, is(equalTo(mServerSocket.getLocalPort())));
             assertThat("mServerSocket.isBound should return true", mServerSocket.isBound(), is(true));
 
-            mIncomingSocketThread.start(); //Simulate incoming connection
-
-            mFuture = mExecutor.submit(createCheckIncomingSocketThreadStart());
+            mFuture = runningIncomingSocketThread();
 
             assertThat("IncomingSocketThread started", mFuture.get(), is(true));
             assertThat("localStreamsCreatedSuccessfully should be true",
@@ -204,26 +200,63 @@ public class OutgoingSocketThreadTest {
                 mOutgoingSocketThread.tempOutputStream,
                 is(equalTo(mOutgoingSocketThread.mLocalOutputStream)));
 
-            assertThat("mLocalhostSocket port should be equal to " + testPortNumber,
+            assertThat("mLocalhostSocket port should be equal to " + TEST_PORT_NUMBER,
                 mOutgoingSocketThread.mLocalhostSocket.getLocalPort(),
-                is(equalTo(testPortNumber)));
+                is(equalTo(TEST_PORT_NUMBER)));
 
             copyingFinishedLatch.await(5000L, TimeUnit.MILLISECONDS);
-
-            //See the comment in IncomingSocketThread testRun
+            int attempts = 10;
+            Log.i(mTag,"OutgoingSocketThreadTest");
+            while(attempts>0 && (!incomingOutputStream.toString()
+                    .equals(textOutgoing))){
+                attempts--;
+                closeSockets();
+                setUp();
+                runningOutgoingSocketThread();
+                runningIncomingSocketThread();
+                copyingFinishedLatch.await(5000L, TimeUnit.MILLISECONDS);
+                Log.i(mTag,"OutgoingSocketThreadTest failed, attempts left " + attempts);
+                Log.i(mTag,"incomingOutputStream = " + incomingOutputStream.toString());
+                Log.i(mTag,"textOutgoing= " + textOutgoing);
+            }
+            if(attempts == 0) {
+                //See the comment in IncomingSocketThread testRun
 //            assertThat("OutgoingSocketThread should get inputStream from IncomingSocketThread and " +
 //                    "copy it to local outgoingOutputStream", outgoingOutputStream.toString(),
 //                is(equalTo(textIncoming)));
 
-            assertThat("IncomingSocketThread should get inputStream from OutgoingSocketThread and " +
-                    "copy it to local incomingOutputStream", incomingOutputStream.toString(),
-                is(equalTo(textOutgoing)));
+                assertThat("IncomingSocketThread should get inputStream from OutgoingSocketThread and " +
+                                "copy it to local incomingOutputStream", incomingOutputStream.toString(),
+                        is(equalTo(textOutgoing)));
+            }
         } finally {
+            closeSockets();
+        }
+    }
+
+    private Future runningOutgoingSocketThread() throws Exception{
+        System.out.println("Running OutgoingSocketThread");
+        mOutgoingSocketThread.setPort(57775);
+        mIncomingSocketThread.setPort(57775);
+        mOutgoingSocketThread.start();
+        return mExecutor.submit(createCheckOutgoingSocketThreadStart());
+    }
+
+    private Future runningIncomingSocketThread() throws Exception{
+        mIncomingSocketThread.start(); //Simulate incoming connection
+        return mExecutor.submit(createCheckIncomingSocketThreadStart());
+    }
+
+
+    private void closeSockets(){
+        try {
             if (mOutgoingSocketThread.mServerSocket != null) {
                 mOutgoingSocketThread.mServerSocket.close();
             }
             mIncomingSocketThread.close();
             mOutgoingSocketThread.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
