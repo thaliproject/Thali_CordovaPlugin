@@ -361,9 +361,9 @@ as uninstall the old plugin and install the new plugin.
 In case of Thali failures do the following first.
 
 1. Go into cloned Thali folder and execute the following command `find . -name "node_modules" -type d -exec rm -r "{}" \;`. __WARNING: Use `rm -r` with caution it deletes the folder and all its contents__.
-2. `rm -f ~/.jx`
-3. `rm -f ~/.jxc`
-4. `rm -f ~/.node-gyp`
+2. `rm -r ~/.jx`
+3. `rm -r ~/.jxc`
+4. `rm -r ~/.node-gyp`
 
 ### Documentation
 
