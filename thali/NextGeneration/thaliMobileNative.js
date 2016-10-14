@@ -595,7 +595,7 @@
  * @readonly
  * @enum {string}
  */
-var radioState = {
+module.exports.radioState = {
   /** The radio is on and available for use. */
   ON: 'on',
   /** The radio exists on the device but is turned off. */
