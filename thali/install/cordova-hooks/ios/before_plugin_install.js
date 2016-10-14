@@ -11,10 +11,11 @@ var path = require('path');
 var fs = require('fs');
 
 function updateJXcoreExtensionImport(context) {
-  var cordova_util = context.requireCordovaModule('cordova-lib/src/cordova/util');
+  var cordovaUtil =
+    context.requireCordovaModule('cordova-lib/src/cordova/util');
   var ConfigParser = context.requireCordovaModule('cordova-lib').configparser;
-  var projectRoot = cordova_util.isCordova();
-  var xml = cordova_util.projectConfig(projectRoot);
+  var projectRoot = cordovaUtil.isCordova();
+  var xml = cordovaUtil.projectConfig(projectRoot);
   var cfg = new ConfigParser(xml);
 
   var jxcoreExtensionPath = path.join(
@@ -39,28 +40,28 @@ module.exports = function (context) {
   // Temporary hack to run npm install on this plugin's hooks dependencies.
   var hooksDir = path.resolve(__dirname);
   var execCallback = function (error, stdout, stderr) {
-      if (error) {
-        if (stdout) { console.log('stdout: ' + stdout); }
-        if (stderr) { console.log('stderr: ' + stderr); }
+    if (error) {
+      if (stdout) { console.log('stdout: ' + stdout); }
+      if (stderr) { console.log('stderr: ' + stderr); }
 
-        deferred.reject(error);
-        return;
-      }
+      deferred.reject(error);
+      return;
+    }
 
-      if (stdout) {
-        console.log(
-          'Install dependencies for Thali Cordova plugin hooks success');
-        console.log(stdout);
-      }
+    if (stdout) {
+      console.log(
+        'Install dependencies for Thali Cordova plugin hooks success');
+      console.log(stdout);
+    }
 
-      if (stderr) {
-        console.log(
-          'Install dependencies for Thali Cordova plugin hooks with errors');
-        console.log(stderr);
-      }
+    if (stderr) {
+      console.log(
+        'Install dependencies for Thali Cordova plugin hooks with errors');
+      console.log(stderr);
+    }
 
-      deferred.resolve();
-    };
+    deferred.resolve();
+  };
 
   console.log(
     'Installing dependencies for Thali Cordova plugin hooks in ' +

@@ -4,6 +4,7 @@
   "description": "Thali Cordova Plugin",
   "main": "thalireplicationmanager.js",
   "dependencies": {
+    "bluebird": "3.4.6",
     "body-parser": "1.13.3",
     "express": "4.13.3",
     "forever-agent": "0.6.1",
@@ -34,9 +35,9 @@
     "jxcore-cordova-url": "http://jxcore.azureedge.net/jxcore-cordova/0.1.5/release/io.jxcore.node.jx"
   },
   "scripts": {
-    "prepublish": "jx install/prePublishThaliCordovaPlugin.js",
-    "postpublish": "jx install/postPublishThaliCordovaPlugin.js",
-    "postinstall": "jx installCordovaPlugin.js",
+    "prepublish": "node install/prePublishThaliCordovaPlugin.js",
+    "postpublish": "node install/postPublishThaliCordovaPlugin.js",
+    "postinstall": "node installCordovaPlugin.js",
     "createPublicDocs": "./node_modules/.bin/jsdoc -c conf.json .",
     "createInternalDocs": "./node_modules/.bin/jsdoc -c conf.json -p ."
   },
