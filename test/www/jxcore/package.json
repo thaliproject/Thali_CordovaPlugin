@@ -55,12 +55,7 @@
     "urlsafe-base64": "1.0.0",
     "uuid": "2.0.0",
     "uuid-validate": "0.0.2",
-    "object-assign": "4.1.0",
-
-    "node-gyp": "PouchDB depends on leveldown, it won't build with spider monkey, we don't need it. But we need some of it's deps",
-    "node-gyp": "3.4.0",
-    "node-ninja": "1.0.2",
-    "prebuild": "4.2.2"
+    "object-assign": "4.1.0"
   },
   "devDependencies": {}
 }
