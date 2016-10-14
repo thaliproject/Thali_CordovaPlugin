@@ -47,6 +47,7 @@ enum NetworkStatusParameters: String {
     case wifi = "wifi"
     case cellular = "cellular"
     case bssid = "bssid"
+    case ssid = "ssid"
 }
 
 @objc public enum AppContextError: Int, ErrorType, CustomStringConvertible {
@@ -194,13 +195,17 @@ extension PeerAvailability {
         let bssid = ((wifiState == .on) && wifiConnected)
             ? networkReachability.BSSID()
             : NSNull()
+        let ssid = ((wifiState == .on) && wifiConnected)
+            ? networkReachability.SSID()
+            : NSNull()
 
         let networkStatus = [
             NetworkStatusParameters.wifi.rawValue                : wifiState.rawValue,
             NetworkStatusParameters.bluetooth.rawValue           : bluetoothState.rawValue,
             NetworkStatusParameters.bluetoothLowEnergy.rawValue  : bluetoothLowEnergyState.rawValue,
             NetworkStatusParameters.cellular.rawValue            : cellularState.rawValue,
-            NetworkStatusParameters.bssid.rawValue               : bssid
+            NetworkStatusParameters.bssid.rawValue               : bssid,
+            NetworkStatusParameters.ssid.rawValue                : ssid
         ]
 
 
