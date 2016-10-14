@@ -317,7 +317,7 @@ extension PeerAvailability {
         guard parameters.count >= 2 else {
             throw AppContextError.badParameters
         }
-        guard let peerIdentifier = parameters[0] as? String, syncValue = parameters[1] as? String
+        guard let identifierString = parameters[0] as? String, syncValue = parameters[1] as? String
             else {
                 throw AppContextError.badParameters
         }
@@ -325,13 +325,13 @@ extension PeerAvailability {
         // This code MUST be executed asynchronously to avoid race conditions on JXcore side
         dispatch_async(dispatch_get_main_queue()) {
             do {
-                let peerIdentifier = try Peer(uuidIdentifier: identifierString, generation: 0)
+                let _ = try Peer(uuidIdentifier: identifierString, generation: 0)
                 guard self.bluetoothState == .on || NetworkReachability().isWiFiEnabled() else {
                     self.handleMultiConnectConnectionFailure(withIdentifier: identifierString,
                                                              error: ThaliCoreError.RadioTurnedOff)
                     return
                 }
-                self.browserManager.connectToPeer(peerIdentifier, syncValue: syncValue) {
+                self.browserManager.connectToPeer(identifierString, syncValue: syncValue) {
                     [weak self] syncValue, error, port in
                     self?.handleMultiConnectResolved(withSyncValue: syncValue, port: port, error: error)
                     if let error = error {
@@ -365,11 +365,11 @@ extension PeerAvailability {
     }
 
     public func disconnect(parameters: [AnyObject]) throws {
-        guard let peerIdentifier = parameters.first as? String else {
+        guard let identifierString = parameters.first as? String else {
             throw AppContextError.badParameters
         }
-        if let peerIdentifier = try? Peer(stringValue: peerID) {
-            browserManager.disconnect(peerIdentifier)
+        if let _ = try? Peer(stringValue: identifierString) {
+            browserManager.disconnect(identifierString)
         }
     }
 
