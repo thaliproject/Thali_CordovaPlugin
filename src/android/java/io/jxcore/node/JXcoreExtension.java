@@ -2,7 +2,6 @@
  * See the license file delivered with this project for further information.
  */
 package io.jxcore.node;
-import com.test.thalitest.RegisterExecuteUT;
 
 import android.content.Context;
 import android.net.wifi.WifiManager;
@@ -104,7 +103,6 @@ public class JXcoreExtension {
         });
 
         lifeCycleMonitor.start();
-        RegisterExecuteUT.Register();
         /*
             This is the line where we are dynamically sticking execution of UT during build, so if you are
             editing this line, please check updateJXCoreExtensionWithUTMethod in androidBeforeCompile.js.
