@@ -20,7 +20,6 @@
     "balanced-match": "0.2.0",
     "bn.js": "4.10.0",
     "body-parser": "1.13.3",
-    "child-process-promise": "1.1.0",
     "concat-map": "0.0.1",
     "express": "4.13.3",
     "express-pouchdb": "1.0.5-thali",

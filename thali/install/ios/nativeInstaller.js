@@ -30,7 +30,7 @@
 
 'use strict';
 
-var exec = require('child-process-promise').exec;
+var spawn = require('../utils/child_process').spawn;
 var fs = require('fs-extra-promise');
 var path = require('path');
 var Promise = require('lie');
@@ -155,7 +155,7 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
   var projectPath = path.join(projectDir, projectName + '.xcodeproj');
   var buildDir = path.join(projectDir, 'build');
 
-  var buildCmd = 'set -o pipefail && ' +
+  var buildCommand = 'set -o pipefail && ' +
     'xcodebuild -project' +
     ' \"' + projectPath + '\"' +
     ' -scheme ' + '\"' + projectScheme + '\"' +
@@ -167,8 +167,7 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
 
   console.log('Building ThaliCore.framework');
 
-  // todo: fixed buffer size should be fixed with streaming in #1001
-  return exec(buildCmd, { maxBuffer: 10*1024*1024 } )
+  return spawn(buildCommand)
     .then(function () {
       return fs.ensureDir(outputDir);
     })

@@ -7,7 +7,7 @@
 'use strict';
 
 var fs = require('fs');
-var nativeInstaller = require('../../thali/install/ios/nativeInstaller');
+var nativeInstaller = require('../../ios/nativeInstaller');
 var path = require('path');
 
 function loadIsTestEnvironment() {
@@ -72,12 +72,14 @@ module.exports = function (context) {
 
   // Cordova libs to get the project path and project name
   // so we can locate the xcode project file.
-  var cordova_util = context.requireCordovaModule('cordova-lib/src/cordova/util'),
-      ConfigParser = context.requireCordovaModule('cordova-lib').configparser,
-      appRoot = context.opts.projectRoot,
-      projectRoot = cordova_util.isCordova(),
-      xml = cordova_util.projectConfig(projectRoot),
-      cfg = new ConfigParser(xml);
+  var cordova_util = context
+    .requireCordovaModule('cordova-lib/src/cordova/util');
+  var ConfigParser = context
+    .requireCordovaModule('cordova-lib').configparser;
+  var appRoot = context.opts.projectRoot;
+  var projectRoot = cordova_util.isCordova();
+  var xml = cordova_util.projectConfig(projectRoot);
+  var cfg = new ConfigParser(xml);
 
   var projectPath = path.join(
     projectRoot, 'platforms', 'ios', cfg.name() + '.xcodeproj');

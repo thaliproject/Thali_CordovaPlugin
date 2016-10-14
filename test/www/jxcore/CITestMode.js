@@ -23,7 +23,7 @@ var setUpFunctions = {
   },
 
   updateThaliTestSuiteFunction: () => {
-    const locationOfAndroidBeforeCompile = '../../../scripts/android/before_compile.js';
+    const locationOfAndroidBeforeCompile = '../../../thali/install/cordova-hooks/android/after_plugin_install.js';
 
     let originalContent = fs.readFileSync(locationOfAndroidBeforeCompile);
     let newContent = originalContent.toString().replace('Test.java', 'CITest');
@@ -32,7 +32,7 @@ var setUpFunctions = {
   },
 
   copyCINativeTestClass: () => {
-    const path = '../../../scripts/android/before_compile.js';
+    const path = '../../../thali/install/cordova-hooks/android/after_plugin_install.js';
 
     let originalContent = fs.readFileSync(path);
     let oldFunc = 'var i, testClassName;';

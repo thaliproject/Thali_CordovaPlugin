@@ -5,6 +5,7 @@
   "main": "thalireplicationmanager.js",
   "dependencies": {
     "body-parser": "1.13.3",
+    "bluebird": "3.4.6",
     "express": "4.13.3",
     "forever-agent": "0.6.1",
     "ip": "1.0.1",
