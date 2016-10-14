@@ -11,7 +11,7 @@ var spawn = require('./utils/child_process').spawn;
 var https = require('https');
 var unzip = require('unzip');
 var url = require('url');
-var Promise = require('lie');
+var Promise = require('./utils/Promise');
 var FILE_NOT_FOUND = 'ENOENT';
 
 // If this file exists in the thaliDontCheckIn directory then
