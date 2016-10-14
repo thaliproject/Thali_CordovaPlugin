@@ -354,21 +354,6 @@ module.exports = function (callback, appRootDirectory) {
             return spawn('cordova plugins add ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory,
               { cwd: appRootDirectory });
-               .then(function (result) {
-                if (result.stdout) {
-                  console.log('Added Thali Cordova plugin successfully\n');
-                  console.log(result.stdout);
-                }
-
-                if (result.stderr) {
-                  console.log('Added Thali Cordova plugin with errors\n');
-                  console.log(result.stderr);
-                }
-              })
-              .catch(function (error) {
-                console.log('Failed adding Thali Cordova plugin\n');
-                console.log(error);
-              });
           })
           .then(function () {
             return fs.writeFileAsync(weAddedPluginsFile, 'yes');
