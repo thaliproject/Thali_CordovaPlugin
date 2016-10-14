@@ -356,6 +356,15 @@ If you want to upgrade to a newer version of Thali_CordovaPlugin all you have to
 with the version you want and then run 'jx npm install'. This will automatically update the Javascript files as well
 as uninstall the old plugin and install the new plugin.
 
+### Troubleshooting
+
+In case of Thali failures do the following first.
+
+1. Go into cloned Thali folder and execute the following command `find . -name "node_modules" -type d -exec rm -r "{}" \;`. __WARNING: Use `rm -r` with caution it deletes the folder and all its contents__.
+2. `rm -f ~/.jx`
+3. `rm -f ~/.jxc`
+4. `rm -f ~/.node-gyp`
+
 ### Documentation
 
 The following API documentation is available for the Thali Cordova Plugin:
