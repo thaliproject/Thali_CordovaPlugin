@@ -92,8 +92,7 @@ var getWifiOrNativeMethodByNetworkType = function (method, networkType) {
           });
       };
     }
-    default:
-    {
+    default: {
       throw new Error('Unsupported network type ' + networkType);
     }
   }

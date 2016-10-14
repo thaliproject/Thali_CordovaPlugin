@@ -11,6 +11,7 @@ var ThaliReplicationPeerAction = require('../replication/thaliReplicationPeerAct
 var ThaliMobileNativeWrapper = require('../thaliMobileNativeWrapper');
 var assert = require('assert');
 var ThaliPeerAction = require('./thaliPeerAction');
+var USN = require('../utils/usn');
 
 /** @module thaliPeerPoolBigReplication */
 
@@ -203,14 +204,30 @@ ThaliPeerPoolBigReplication.prototype._queue = [];
  * Currently we encode both the real peerID and the generation into a single
  * value we call peerID. That will change eventually.
  * @param {string} peerID
+ * @param {module:thaliMobileNativeWrapper.connectionTypes} connectionType
  * @returns {string}
  * @private
  */
-ThaliPeerPoolBigReplication.prototype._getPeerIdFromPeerId = function (peerID) {
-  var split = peerID.split[':'];
-  assert(split.length === 2,
-    'We got a peerID with a format we do not recognize!');
-  return split[0];
+ThaliPeerPoolBigReplication.prototype._getPeerIdFromPeerId =
+  function (peerID, connectionType) {
+    switch(connectionType) {
+      case ThaliMobileNativeWrapper.connectionTypes
+        .MULTI_PEER_CONNECTIVITY_FRAMEWORK:
+      case ThaliMobileNativeWrapper.connectionTypes.BLUETOOTH: {
+        var split = peerID.split(':');
+        assert(split.length >= 2,
+          'We got a peerID with a format we do not recognize!');
+        return split[0];
+      }
+      case ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE: {
+        var peerObject = USN.parse(peerID);
+        return peerObject.realPeerIdentifier;
+      }
+      default: {
+        throw new Error('Unsupported connection type in ' +
+          'ThaliPeerPoolBigReplication');
+      }
+    }
 };
 
 ThaliPeerPoolBigReplication.prototype._searchQueue =
