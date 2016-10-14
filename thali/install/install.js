@@ -248,7 +248,7 @@ function copyDevelopmentThaliCordovaPluginToProject(appRootDirectory,
                                                     branchName) {
   var targetDirectory = createUnzippedDirectoryPath(depotName, branchName,
                                                     thaliDontCheckIn);
-  var sourceDirectory = path.join(appRootDirectory, '../Thali_CordovaPlugin');
+  var sourceDirectory = path.join(
     appRootDirectory, '..', 'Thali_CordovaPlugin');
   return new Promise(function (resolve, reject) {
     fs.remove(targetDirectory, function (err) {
@@ -301,7 +301,8 @@ module.exports = function (callback, appRootDirectory) {
   // scenarios.
   appRootDirectory = appRootDirectory ||
                      path.join(__dirname, '..', '..', '..', '..', '..');
-  var thaliDontCheckIn = path.join(appRootDirectory, 'thaliDontCheckIn' ););  var thaliProjectName, thaliDepotName, thaliBranchName, btconnectorlib2;
+  var thaliDontCheckIn = path.join(appRootDirectory, 'thaliDontCheckIn' );
+  var thaliProjectName, thaliDepotName, thaliBranchName, btconnectorlib2;
 
   getReleaseConfig(thaliDontCheckIn)
     .then(function (conf) {
