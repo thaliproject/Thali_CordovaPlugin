@@ -19,7 +19,7 @@ please head over to test/README.md and follow the directions in the sections
 entitled 'Installing software' and 'Running your own NPM registry'.
 
 From there you need to create your cordova project and install Thali into it.
-To do that I assume you are at the command line and are starting at the 
+To do that I assume you are at the command line and are starting at the
 directory which contains the clone of Thali_CordovaPlugin.
 
 ```
@@ -86,7 +86,7 @@ have hanging out in your package.json.
 find . -name "*.gz" -delete
 ```
 
-You may have noticed above we have commands '--autoremove "*.gz'. These are a
+You may have noticed above we have commands '--autoremove "*.gz"'. These are a
 special command in JXcore that does exactly what the line above does. However
 we have noticed that the command doesn't always seem to work so we just use the
 line above to be sure. The point of this command is that Android gets very unhappy
@@ -153,7 +153,7 @@ Again, see testThaliManagerCoordinated.js for the relevant includes. The code
 above creates a new public key object with a specific curve, then generates a
 public/private key pair matching that curve. We have to use this specific curve
 so don't change it.
- 
+
 Note that the private key can be retrieved via getPrivateKey() and stored
 somewhere secure on the device. This key will be needed the next time the device
 runs to create a new ECDH object in the future using setPrivateKey(). Note that
@@ -196,7 +196,7 @@ some point, connected to the cloud in order to download a list of public keys.
 If you don't happen to have a handy cloud then you need to figure out your own
 solution for how to distribute the keys. Anyone wanting to resurrect the identity
 exchange code can contact us via any of the mechanisms listed [here](http://thaliproject.org/WaysToContribute/).
-Alternatively you can just cheat. Set up an open PouchDB/CouchDB server some 
+Alternatively you can just cheat. Set up an open PouchDB/CouchDB server some
 place and have devices sync their keys there and then sync down from that server
 all the other device's keys. It's a hack to get you going.
 
@@ -210,6 +210,47 @@ you can call 'stop'.
 That is about it. If it works then anything you stick into the database you
 gave us the name for should be sync'd to the other devices you told us about
 if they are around and vice versa.
+
+## Useful commands to run Android apps via command line
+
+### Build
+
+```
+cordova build android --release --device
+```
+
+### Sign unsigned
+
+`cordova build` creates unsigned _apk_. So in order to install the _apk_ into device
+you need to sign the _apk_.
+
+Please note that `build-tools` should be at least `24.0.3`.
+Because this guide uses tool `apksigner` that is available starting
+from `build-tools` `24.0.3`.
+
+You should have keystore file before running the command below.
+
+```
+/usr/local/opt/android-sdk/build-tools/24.0.3/apksigner sign --ks path/to/keystore/file path/to/unsigned.apk
+```
+
+### Get devices list
+
+You need to know device serial number or qualifier to install build into device
+via command line. The command below lists all connected devices with their
+qualifiers (first value in each line).
+
+```
+adb devices -l
+```
+
+### Install onto device and debug
+
+```
+adb -s DEVICE_QUALIFIER install -r path/to/signed.apk
+```
+
+Please note using `logcat` if you need providing the team with the logs from devices.
 
 ## Prerequisites
 
@@ -314,6 +355,15 @@ Note that Thali uses a subdirectory in your project called thaliDontCheckin to m
 If you want to upgrade to a newer version of Thali_CordovaPlugin all you have to do is just edit your package.json
 with the version you want and then run 'jx npm install'. This will automatically update the Javascript files as well
 as uninstall the old plugin and install the new plugin.
+
+### Troubleshooting
+
+In case of Thali failures do the following first.
+
+1. Go into cloned Thali folder and execute the following command `find . -name "node_modules" -type d -exec rm -r "{}" \;`. __WARNING: Use `rm -r` with caution it deletes the folder and all its contents__.
+2. `rm -r ~/.jx`
+3. `rm -r ~/.jxc`
+4. `rm -r ~/.node-gyp`
 
 ### Documentation
 
