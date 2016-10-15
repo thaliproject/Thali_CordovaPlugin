@@ -100,7 +100,7 @@ function androidConnectToPeer(peer, retries, successCb, failureCb, quitSignal) {
   });
 }
 
-function multiConnectEmitter () {
+function MultiConnectEmitter () {
   EventEmitter.call(module.exports.multiConnectEmitter);
   Mobile('multiConnectResolved').registerToNative(
     function (syncValue, error, listeningPort) {
@@ -114,9 +114,9 @@ function multiConnectEmitter () {
     });
 }
 
-inherits(multiConnectEmitter, EventEmitter);
+inherits(MultiConnectEmitter, EventEmitter);
 
-module.exports.multiConnectEmitter = new EventEmitter();
+module.exports.multiConnectEmitter = new MultiConnectEmitter();
 
 function iOSConnectToPeer(peer, retries, successCb, failureCb, quitSignal) {
   var originalSyncValue = randomString.generate();
