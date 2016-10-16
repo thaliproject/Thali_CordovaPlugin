@@ -419,6 +419,28 @@
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 
+/**
+ * This method is only supported on Android. If called on iOS it MUST return
+ * 'Method not supported on this platform'.
+ *
+ * In theory all of our Android devices support WiFi (who doesn't) but if we
+ * are on a device that doesn't have WiFi then this method MUST return a
+ * 'Wifi is not enabled' error.
+ *
+ * It is up to the caller to know the existing state of the WiFi radio and to
+ * know if it was the app who put the radio into that state. For example, if
+ * the WiFi radio is off and the app didn't turn the radio off then this
+ * implies the user or another app turned it off and perhaps it would not be
+ * wise for the app to turn it back on without asking the user's permission?
+ *
+ * @private
+ * @function external:"Mobile('setWifiRadioState')".callNative
+ * @param {boolean} setRadioTo If true then turn the WiFi radio on. If the Wifi
+ * radio was already on then that is not an error. If false then turn the Wifi
+ * radio off. If the Wifi radio was laready off then that is not an error.
+ * @param {module:thaliMobileNative~ThaliMobileCallback} callback
+ */
+
 /*
               registerToNative Methods
  */
@@ -624,8 +646,13 @@ var radioState = {
  * @property {string} bssidName If null this value indicates that either
  * wifiRadioOn is not 'on' or that the Wi-Fi isn't currently connected to an
  * access point. If non-null then this is the BSSID of the access point that
- * Wi-Fi is connected to. If missing, means that it was not possible to get
+ * Wi-Fi is connected to. If missing, this means that it was not possible to get
  * the BSSID (for example, this platform doesn't provide an API for it).
+ * @property {string} ssidName If null this value indicates that either
+ * wifiRadioOn is not 'on' or that the Wi-Fi isn't currently connected to an
+ * access point. If non-null then this is the SSID of the access point that
+ * Wi-Fi is connected to. If missing, this means that it was not possible to get
+ * the SSID (for example, this platform doesn't provide an API for it).
  */
 
 /**
