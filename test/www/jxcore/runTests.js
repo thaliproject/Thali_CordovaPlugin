@@ -27,7 +27,8 @@ var platform = require('thali/NextGeneration/utils/platform');
 // has been required so that thaliTape can pick up the right
 // test framework to be used.
 if (typeof Mobile === 'undefined') {
-  global.Mobile = require('./lib/wifiBasedNativeMock.js')();
+  global.Mobile =
+    require('./lib/wifiBasedNativeMock.js')(platform.names.ANDROID);
 }
 
 var hasJavaScriptSuffix = function (path) {
@@ -39,12 +40,12 @@ var loadFile = function (filePath) {
   try {
     require(filePath);
   } catch (error) {
-    error = format(
+    var prettyError = format(
       'test load failed, filePath: \'%s\', error: \'%s\', stack: \'%s\'',
       filePath, error.toString(), error.stack
     );
-    logger.error(error);
-    throw new Error(error);
+    logger.error(prettyError);
+    throw new Error(prettyError);
   }
 };
 
@@ -65,7 +66,7 @@ if (hasJavaScriptSuffix(testsToRun)) {
 var currentPlatform = platform.name;
 // Our current platform can be 'darwin', 'linux', 'windows', etc.
 // Our 'thaliTape' expects all these platforms will be named as 'desktop'.
-if (!platform.isMobile) {
+if (!platform._isRealMobile) {
   currentPlatform = 'desktop';
 }
 
@@ -73,12 +74,15 @@ testUtils.hasRequiredHardware()
 .then(function (hasRequiredHardware) {
   return testUtils.getOSVersion()
   .then(function (version) {
-    return thaliTape.begin(currentPlatform, version, hasRequiredHardware, global.nativeUTFailed);
-  })
+    return thaliTape.begin(currentPlatform, version, hasRequiredHardware,
+                            global.nativeUTFailed);
+  });
 })
 .then(function () {
+  logger.info('Finished');
   process.exit(0);
 })
-.catch(function () {
+.catch(function (error) {
+  logger.error(error.message + '\n' + error.stack);
   process.exit(1);
 });

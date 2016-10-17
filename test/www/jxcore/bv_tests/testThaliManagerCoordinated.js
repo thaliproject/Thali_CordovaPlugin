@@ -14,7 +14,6 @@ var crypto = require('crypto');
 var Promise = require('bluebird');
 var PouchDB = require('pouchdb');
 var ExpressPouchDB = require('express-pouchdb');
-var LeveldownMobile = require('leveldown-mobile');
 
 var sinon = require('sinon');
 
@@ -23,14 +22,6 @@ var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var ThaliManager = require('thali/NextGeneration/thaliManager');
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
-
-// DB defaultDirectory should be unique among all tests
-// and any instance of this test.
-// This is especially required for tape.coordinated.
-var defaultDirectory = path.join(
-  testUtils.getPouchDBTestDirectory(),
-  'thali-manager-db-' + testUtils.getUniqueRandomName()
-);
 
 // Public key for local device should be passed
 // to the tape 'setup' as 'tape.data'.
@@ -41,19 +32,15 @@ var publicBase64KeyForLocalDevice = ecdhForLocalDevice.getPublicKey('base64');
 // PouchDB name should be the same between peers.
 var DB_NAME = 'ThaliManagerCoordinated';
 
-PouchDB = PouchDBGenerator(PouchDB, defaultDirectory, {
-  defaultAdapter: LeveldownMobile
-});
+PouchDB = testUtils.getLevelDownPouchDb();
 
 var thaliManager;
 
 var TEST_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
-var thisWasTheLastTest = false;
 var test = tape({
   setup: function (t) {
     t.data = publicKeyForLocalDevice.toJSON();
-    fs.ensureDirSync(defaultDirectory);
     t.end();
   },
   teardown: function (t) {
@@ -64,9 +51,6 @@ var test = tape({
       }
     })
     .then(function () {
-      if (thisWasTheLastTest) {
-        fs.removeSync(defaultDirectory);
-      }
       t.end();
     });
   }
@@ -275,9 +259,6 @@ test('test repeat write 1', function (t) {
 });
 
 test('test repeat write 2', function (t) {
-  // We will make a cleanup after this test.
-  thisWasTheLastTest = true;
-
   testUtils.testTimeout(t, TEST_TIMEOUT);
 
   var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
@@ -311,7 +292,7 @@ test('test repeat write 2', function (t) {
     var oldDocs = partnerKeys.map(function (partnerKey) {
       return {
         _id: partnerKey.toString('base64'),
-        test1: true, 
+        test1: true,
         test2: true
       };
     });

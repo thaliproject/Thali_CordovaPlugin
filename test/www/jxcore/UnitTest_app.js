@@ -6,8 +6,11 @@
 
 'use strict';
 
+var platform = require('thali/NextGeneration/utils/platform');
+
 if (typeof Mobile === 'undefined') {
-  global.Mobile = require('./lib/wifiBasedNativeMock.js')();
+  global.Mobile =
+    require('./lib/wifiBasedNativeMock.js')(platform.names.ANDROID);
 }
 
 var config = require('./config.json');
@@ -21,7 +24,7 @@ var Promise = require('bluebird');
 
 var utResult = false;
 
-if (process.platform === 'android' || process.platform === 'ios') {
+if (platform._isRealMobile) {
   Mobile('executeNativeTests').callNative(function (result) {
     logger.debug('Running unit tests');
     if (result) {
@@ -80,16 +83,18 @@ ThaliMobile.getNetworkStatus()
       logger.debug('My device name is: %s', name);
       testUtils.setName(name);
 
-      networkTypes.reduce(function (sequence, networkType) {
+      return networkTypes.reduce(function (sequence, networkType) {
         return sequence
           .then(function () {
             logger.debug('Running for ' + networkType + ' network type');
             global.NETWORK_TYPE = networkType;
             require('./runTests.js');
+            return null;
           });
       }, Promise.resolve())
       .catch(function (error) {
         logger.error(error.message + '\n' + error.stack);
+        return null;
       });
     });
   });

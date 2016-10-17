@@ -18,16 +18,17 @@ export JX_NPM_JXB
 
 cd `dirname $0`
 cd ../../test/TestServer
-jx npm install --no-optional
-jx generateServerAddress.js
+npm install --no-optional
+node generateServerAddress.js
+
 cd ../../thali
 jx npm install --no-optional
-jx npm link
+npm link
+
 cd install
-jx npm install --no-optional
+npm install --no-optional
 node validateBuildEnvironment.js
 cd ../../test/www/jxcore
-jx npm link thali
-jx installCustomPouchDB.js
+npm link thali
+node installCustomPouchDB.js
 jx npm install --no-optional
-

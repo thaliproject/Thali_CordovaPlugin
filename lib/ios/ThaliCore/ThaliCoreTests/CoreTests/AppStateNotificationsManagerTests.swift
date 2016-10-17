@@ -7,9 +7,8 @@
 //  See LICENSE.txt file in the project root for full license information.
 //
 
-
+@testable import ThaliCore
 import XCTest
-import ThaliCore
 
 class AppStateNotificationsManagerTests: XCTestCase {
 

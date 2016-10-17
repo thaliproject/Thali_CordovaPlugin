@@ -93,6 +93,7 @@ module.exports._isStarted = function () {
 function failedConnectionHandler(failedConnection) {
   var peer = {
     peerIdentifier: failedConnection.peerIdentifier,
+    generation: failedConnection.generation,
     portNumber: null
   };
   handlePeerAvailabilityChanged(peer);
@@ -150,8 +151,9 @@ function listenerRecreatedAfterFailureHandler(recreateAnnouncement) {
   var generation = peerGenerations[recreateAnnouncement.peerIdentifier];
   module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
     peerIdentifier: recreateAnnouncement.peerIdentifier,
-    portNumber: recreateAnnouncement.portNumber,
-    generation: generation
+    peerAvailable: true,
+    generation: generation,
+    portNumber: recreateAnnouncement.portNumber
   });
 }
 
@@ -652,9 +654,9 @@ module.exports._disconnect = function (peerIdentifier) {
  * reject with an Error will be returned) the response will be a resolve with
  * a null result.
  */
-module.exports.disconnect = function(peerIdentifier) {
+module.exports.disconnect = function (peerIdentifier) {
   return Promise.reject(new Error('Not yet implemented'));
-}
+};
 
 /**
  * Used on `connect` platforms to terminate a TCP/IP listener waiting for
@@ -833,8 +835,9 @@ var handlePeerAvailabilityChanged = function (peer) {
       // for that?
       module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
         peerIdentifier: peer.peerIdentifier,
-        portNumber: null,
-        generation: null
+        peerAvailable: false,
+        generation: null,
+        portNumber: null
       });
       delete peerGenerations[peer.peerIdentifier];
       resolve();
@@ -845,8 +848,9 @@ var handlePeerAvailabilityChanged = function (peer) {
       .then(function (portNumber) {
         module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
           peerIdentifier: peer.peerIdentifier,
-          portNumber: portNumber,
-          generation: peer.generation
+          peerAvailable: true,
+          generation: peer.generation,
+          portNumber: portNumber
         });
         peerGenerations[peer.peerIdentifier] = peer.generation;
         resolve();

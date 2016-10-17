@@ -14,7 +14,7 @@ import ThaliCore
 func jsonValue(object: AnyObject) -> String {
     guard let data = try? NSJSONSerialization.dataWithJSONObject(object, options:
         NSJSONWritingOptions(rawValue:0)) else {
-        return ""
+            return ""
     }
     return String(data: data, encoding: NSUTF8StringEncoding) ?? ""
 }
@@ -85,10 +85,9 @@ public enum JSONKey: String {
 extension PeerAvailability {
 
     var dictionaryValue: [String : AnyObject] {
-        return [JSONKey.peerIdentifier.rawValue : peerIdentifier.uuid,
+        return [JSONKey.peerIdentifier.rawValue : peerIdentifier,
                 JSONKey.peerAvailable.rawValue : available,
-                JSONKey.generation.rawValue : peerIdentifier.generation,
-        ]
+                JSONKey.generation.rawValue : generation]
     }
 }
 
@@ -115,8 +114,8 @@ extension PeerAvailability {
      - parameter discoveryAdvertisingState: json with information about peer's state
      - parameter context:                   related AppContext
      */
-    func context(context: AppContext, didUpdateDiscoveryAdvertisingState
-                 discoveryAdvertisingStateJSONString: String)
+    func context(context: AppContext,
+                 didUpdateDiscoveryAdvertisingState discoveryAdvertisingStateJSONString: String)
 
     /**
      Notifies about failing connection to port
@@ -163,11 +162,17 @@ extension PeerAvailability {
 
     private var networkChangedRegistered: Bool = false
     public weak var delegate: AppContextDelegate?
-    lazy private var browserManager: BrowserManager = { [unowned self] in
-         return BrowserManager(serviceType: self.serviceType,
-                               inputStreamReceiveTimeout: self.inputStreamReceiveTimeout) { peers in
-                                   self.handleOnPeersAvailabilityChanged(peers)
-                               }
+    lazy private var browserManager: BrowserManager = {
+        [unowned self] in
+
+        return BrowserManager(serviceType: self.serviceType,
+                              inputStreamReceiveTimeout: self.inputStreamReceiveTimeout,
+                              peersAvailabilityChangedHandler: {
+                                  [weak self] peers in
+                                  guard let strongSelf = self else { return }
+
+                                  strongSelf.handleOnPeersAvailabilityChanged(peers)
+                              })
     }()
     private let advertiserManager: AdvertiserManager
 
@@ -211,8 +216,16 @@ extension PeerAvailability {
     }
 
     private func handleOnPeersAvailabilityChanged(peers: [PeerAvailability]) {
-        let mappedPeers = peers.map {
-            $0.dictionaryValue
+        let mappedPeers = peers
+            .filter {
+                // We shouldn't notify JXcore when device discovers itself
+                !self.advertiserManager.hasAdvertiser(with:$0.peerIdentifier)
+            }
+            .map {
+                $0.dictionaryValue
+        }
+        guard mappedPeers.count > 0 else {
+            return
         }
         delegate?.context(self, didChangePeerAvailability: jsonValue(mappedPeers))
     }
@@ -248,8 +261,7 @@ extension PeerAvailability {
         appNotificationsManager = ApplicationStateNotificationsManager()
         self.serviceType = serviceType
         advertiserManager = AdvertiserManager(serviceType: serviceType,
-                                              disposeAdvertiserTimeout: disposeAdvertiserTimeout,
-                                              inputStreamReceiveTimeout: inputStreamReceiveTimeout)
+                                              disposeAdvertiserTimeout: disposeAdvertiserTimeout)
         super.init()
         appNotificationsManager.didEnterForegroundHandler = {[weak self] in
             self?.handleDidEnterForeground()
@@ -289,7 +301,7 @@ extension PeerAvailability {
         guard let port = (parameters.first as? NSNumber)?.unsignedShortValue else {
             throw AppContextError.badParameters
         }
-        advertiserManager.startUpdateAdvertisingAndListening(withPort: port) { [weak self] error in
+        advertiserManager.startUpdateAdvertisingAndListening(onPort: port) { [weak self] error in
             print("failed start advertising due the error \(error)")
             self?.updateListeningAdvertisingState()
         }
@@ -309,15 +321,15 @@ extension PeerAvailability {
         guard parameters.count >= 2 else {
             throw AppContextError.badParameters
         }
-        guard let identifierString = parameters[0] as? String, syncValue = parameters[1] as? String
+        guard let peerIdentifier = parameters[0] as? String, syncValue = parameters[1] as? String
             else {
-            throw AppContextError.badParameters
+                throw AppContextError.badParameters
         }
-        let peerIdentifier = try PeerIdentifier(stringValue: identifierString)
-        browserManager.connectToPeer(peerIdentifier) { [weak self] port, error in
+        browserManager.connectToPeer(peerIdentifier, syncValue: syncValue) {
+            [weak self] syncValue, error, port in
             self?.handleMultiConnectResolved(withSyncValue: syncValue, port: port, error: error)
             if let error = error {
-                self?.handleMultiConnectConnectionFailure(withIdentifier: identifierString,
+                self?.handleMultiConnectConnectionFailure(withIdentifier: peerIdentifier,
                                                           error: error)
             }
         }
@@ -340,10 +352,9 @@ extension PeerAvailability {
     }
 
     public func disconnect(parameters: [AnyObject]) throws {
-        guard let peerID = parameters.first as? String else {
+        guard let peerIdentifier = parameters.first as? String else {
             throw AppContextError.badParameters
         }
-        let peerIdentifier = try PeerIdentifier(stringValue: peerID)
         browserManager.disconnect(peerIdentifier)
     }
 
@@ -414,13 +425,12 @@ extension AppContext: CBCentralManagerDelegate {
     @objc public static let multiConnectConnectionFailure: String = "multiConnectConnectionFailure"
     @objc public static let stopAdvertisingAndListening: String = "stopAdvertisingAndListening"
     @objc public static let startUpdateAdvertisingAndListening: String =
-                        "startUpdateAdvertisingAndListening"
+        "startUpdateAdvertisingAndListening"
     @objc public static let stopListeningForAdvertisements: String =
-                        "stopListeningForAdvertisements"
+        "stopListeningForAdvertisements"
     @objc public static let startListeningForAdvertisements: String =
-                        "startListeningForAdvertisements"
-    @objc public static let disconnect: String =
-                        "disconnect"
+        "startListeningForAdvertisements"
+    @objc public static let disconnect: String = "disconnect"
 }
 
 func errorDescription(error: ErrorType) -> String {

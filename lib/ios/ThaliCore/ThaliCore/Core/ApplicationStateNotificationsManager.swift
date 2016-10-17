@@ -7,7 +7,6 @@
 //  See LICENSE.txt file in the project root for full license information.
 //
 
-import Foundation
 import UIKit
 
 /// Class that listens for UIApplicationWillResignActiveNotification and

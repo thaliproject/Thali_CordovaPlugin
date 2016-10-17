@@ -47,8 +47,8 @@ prepare_project()
   echo "Preparing ${TEST_PROJECT_NAME} Cordova project"
 
   cd $REPO_ROOT_DIR/test/TestServer
-  jx npm install --no-optional
-  jx generateServerAddress.js $IPADDRESS
+  npm install --no-optional
+  node generateServerAddress.js $IPADDRESS
   cd $REPO_ROOT_DIR/..
   cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME
   mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev
@@ -69,8 +69,9 @@ install_thali()
   echo "Installing Thali into ${TEST_PROJECT_NAME}"
 
   cd $TEST_PROJECT_ROOT_DIR/www/jxcore
-jx installCustomPouchDB.js
-  jx npm install $REPO_ROOT_DIR/thali --save --no-optional --autoremove "*.gz"
+  node installCustomPouchDB.js
+  jx npm install $REPO_ROOT_DIR/thali --save --no-optional
+  find . -name "*.gz" -delete
 
   if [ $IS_MINIGW_PLATFORM == true ]; then
       # On Windows the package.json file will contain an invalid local file URI for Thali,
@@ -84,7 +85,7 @@ jx installCustomPouchDB.js
   # SuperTest which is used by some of the BVTs include a PEM file (for private
   # keys) that makes Android unhappy so we remove it below in addition to the gz
   # files.
-  jx npm install --no-optional --autoremove "*.gz,*.pem"
+  npm install --no-optional --production
 
   # In case autoremove fails to delete the files, delete them explicitly.
   find . -name "*.gz" -delete
@@ -93,9 +94,9 @@ jx installCustomPouchDB.js
   cp -v $1 app.js
 
   cd $REPO_ROOT_DIR/thali/install
-  jx npm install --no-optional
+  npm install --no-optional
   cd $TEST_PROJECT_ROOT_DIR/thaliDontCheckIn
-  jx $REPO_ROOT_DIR/thali/install/setUpThaliTestIds.js
+  node $REPO_ROOT_DIR/thali/install/setUpThaliTestIds.js
 }
 
 add_android_platform()

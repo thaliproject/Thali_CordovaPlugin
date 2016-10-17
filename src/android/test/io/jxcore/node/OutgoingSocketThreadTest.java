@@ -155,7 +155,8 @@ public class OutgoingSocketThreadTest {
         assertThat("mServerSocket should be null", mServerSocket, is(nullValue()));
     }
 
-    @Test
+    // https://github.com/thaliproject/Thali_CordovaPlugin/issues/1214
+    // @Test
     public void testRun() throws Exception {
         mOutgoingSocketThread.setPort(testPortNumber);
         mIncomingSocketThread.setPort(testPortNumber);
