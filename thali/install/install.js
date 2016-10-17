@@ -362,6 +362,25 @@ module.exports = function (callback, appRootDirectory) {
 
         return uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory)
           .then(function () {
+            // this section isn't valid, but it has to be at the moment
+            // since the current script may copy / clone Thali
+            // and install Thali from a new and clean folder
+            // we have to be sure that the packages for install
+            // are available
+            var installDirectory = path.join(
+              thaliCordovaPluginUnZipResult.unzipedDirectory,
+              'thali', 'install');
+
+            console.log('Installing installer packages in ' + installDirectory);
+
+            return exec('npm install --no-optional --production',
+                { cwd: installDirectory })
+              .then(function () {
+                return exec('find . -name "*.gz" -delete',
+                  { cwd: installDirectory });
+              });
+          })
+          .then(function () {
             console.log('Adding Thali Cordova plugin from: ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory);
 
