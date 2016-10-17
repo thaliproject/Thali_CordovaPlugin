@@ -317,6 +317,20 @@ public class JXcoreExtension {
                         if (methodName.equals(METHOD_ARGUMENT_NETWORK_CHANGED)) {
                             mNetworkChangedRegistered = true;
                             mConnectionHelper.getConnectivityMonitor().updateConnectivityInfo(true); // Will call notifyNetworkChanged
+                        } 
+                        if (methodName.equals(EVENT_NAME_PEER_AVAILABILITY_CHANGED)) {
+                            PeerProperties peerProperties = new PeerProperties(PeerProperties.NO_PEER_NAME_STRING,
+                                    "12:12:34:45:56");
+                            peerProperties.setBluetoothMacAddress("");
+                            try {
+                                for (int i = 0; i < 1000; i++) {
+                                    peerProperties.setExtraInformation(i%256);
+                                    notifyPeerAvailabilityChanged(peerProperties, true);
+                                    Thread.sleep(1);
+                                }
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
                         } else {
                             errorString = "Unrecognized method name: " + methodName;
                         }
