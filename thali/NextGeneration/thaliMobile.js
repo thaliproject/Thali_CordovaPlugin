@@ -827,7 +827,7 @@ var emitPeerUnavailable = function (peerIdentifier, connectionType) {
   module.exports.emitter.emit('peerAvailabilityChanged', unavailable);
 };
 
-// TODO: mode peer availability cache to the seaprate module
+// TODO: move peer availability cache to the separate module
 var peerAvailabilities = {};
 peerAvailabilities[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = {};
 peerAvailabilities[connectionTypes.BLUETOOTH] = {};
@@ -883,10 +883,8 @@ var peersDiff = function (oldState, newState) {
 var handlePeer = function (peer) {
   var cachedPeer = peerAvailabilities[peer.connectionType][peer.peerIdentifier];
 
-  if (!cachedPeer) {
-    if (!peer.peerAvailable) {
-      return;
-    }
+  if (!cachedPeer && !peer.peerAvailable) {
+    return;
   }
 
   var diff = null;
@@ -1191,7 +1189,7 @@ var handleNetworkChanged = function (networkChangedValue) {
       changePeersUnavailable(connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK);
     }
   }
-  if (networkChangedValue.bluetooth === 'off' ||
+  if (networkChangedValue.bluetooth === 'off' &&
       networkChangedValue.bluetoothLowEnergy === 'off') {
     // If either Bluetooth or BLE is off, we mark Android peers unavailable.
     changePeersUnavailable(connectionTypes.BLUETOOTH);
