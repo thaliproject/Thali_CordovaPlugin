@@ -32,7 +32,7 @@ function updateJXcoreExtensionImport(context) {
 
     deferred.resolve();
   } catch (error) {
-    console.log('Failed updating of JXcoreExtension.m');
+    console.log('Failed updating JXcoreExtension.m');
 
     deferred.reject(error);
   }
