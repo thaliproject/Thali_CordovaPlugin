@@ -6,10 +6,10 @@
 
 'use strict';
 
-var exec = require('child_process').exec;
 var path = require('path');
 var fs = require('fs');
 
+// Replaces PROJECT_NAME pattern with actual Cordova's project name
 function updateJXcoreExtensionImport(context) {
   var cordovaUtil =
     context.requireCordovaModule('cordova-lib/src/cordova/util');
@@ -18,55 +18,28 @@ function updateJXcoreExtensionImport(context) {
   var xml = cordovaUtil.projectConfig(projectRoot);
   var cfg = new ConfigParser(xml);
 
-  var jxcoreExtensionPath = path.join(
-    context.opts.plugin.dir, 'src', 'ios', 'JXcoreExtension.m');
-  try {
-    var oldContent = fs.readFileSync(jxcoreExtensionPath, 'utf8');
-    var newContent = oldContent.replace('%PROJECT_NAME%', cfg.name());
-    fs.writeFileSync(jxcoreExtensionPath, newContent, 'utf8');
-  } catch (error) {
-    console.log(error);
-    console.log('Failed to rename JXcoreExtension.m import');
-  }
-}
-
-module.exports = function (context) {
   var Q = context.requireCordovaModule('q');
   var deferred = new Q.defer();
 
-  // replacing PROJECT_NAME pattern with actual Cordova's project name
-  updateJXcoreExtensionImport(context);
+  var jxcoreExtensionPath = path.join(
+    context.opts.plugin.dir, 'src', 'ios', 'JXcoreExtension.m');
+  try {
+    console.log('Updating JXcoreExtension.m');
 
-  // Temporary hack to run npm install on this plugin's hooks dependencies.
-  var hooksDir = path.resolve(__dirname);
-  var execCallback = function (error, stdout, stderr) {
-    if (error) {
-      if (stdout) { console.log('stdout: ' + stdout); }
-      if (stderr) { console.log('stderr: ' + stderr); }
-
-      deferred.reject(error);
-      return;
-    }
-
-    if (stdout) {
-      console.log(
-        'Install dependencies for Thali Cordova plugin hooks success');
-      console.log(stdout);
-    }
-
-    if (stderr) {
-      console.log(
-        'Install dependencies for Thali Cordova plugin hooks with errors');
-      console.log(stderr);
-    }
+    var oldContent = fs.readFileSync(jxcoreExtensionPath, 'utf8');
+    var newContent = oldContent.replace('%PROJECT_NAME%', cfg.name());
+    fs.writeFileSync(jxcoreExtensionPath, newContent, 'utf8');
 
     deferred.resolve();
-  };
+  } catch (error) {
+    console.log('Failed updating of JXcoreExtension.m');
 
-  console.log(
-    'Installing dependencies for Thali Cordova plugin hooks in ' +
-    hooksDir);
-  exec('jx npm install --autoremove "*.gz"', { cwd: hooksDir }, execCallback);
+    deferred.reject(error);
+  }
 
   return deferred.promise;
+}
+
+module.exports = function (context) {
+  return updateJXcoreExtensionImport(context);
 };
