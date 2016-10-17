@@ -826,7 +826,7 @@ test('networkChanged - fires peerAvailabilityChanged event for native peers ' +
       ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
         wifi: radioState.ON,
         bssidName: null,
-        bluetoothLowEnergy: radioState.ON,
+        bluetoothLowEnergy: radioState.OFF,
         bluetooth: radioState.OFF,
         cellular: radioState.ON
       });
