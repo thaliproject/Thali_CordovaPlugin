@@ -11,7 +11,7 @@
 import XCTest
 
 func createMPCFPeers(with browsingCompletion: (PeerAvailability) -> Void)
-    -> (AdvertiserManager, BrowserManager) {
+                     -> (AdvertiserManager, BrowserManager) {
 
         let serviceType = String.randomValidServiceType(length: 7)
 

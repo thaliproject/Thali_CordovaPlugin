@@ -92,9 +92,9 @@ class SessionTests: XCTestCase {
         let session = Session(session: mcSession,
                               identifier: peerID,
                               connected: {
-                                [weak connectHandlerInvoked] in
-                                connectHandlerInvoked?.fulfill()
-            },
+                                  [weak connectHandlerInvoked] in
+                                  connectHandlerInvoked?.fulfill()
+                              },
                               notConnected: unexpectedDisconnectHandler)
 
         // When

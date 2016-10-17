@@ -50,12 +50,12 @@ public final class BrowserManager {
         }
 
         newBrowser.startListening(errorHandler)
-        self.currentBrowser = newBrowser
+        currentBrowser = newBrowser
     }
 
     public func stopListeningForAdvertisements() {
         currentBrowser?.stopListening()
-        self.currentBrowser = nil
+        currentBrowser = nil
     }
 
     public func connectToPeer(peerIdentifier: String,

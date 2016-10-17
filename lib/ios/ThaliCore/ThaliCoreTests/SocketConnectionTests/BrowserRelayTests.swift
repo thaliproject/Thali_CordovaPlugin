@@ -179,7 +179,7 @@ class BrowserRelayTests: XCTestCase {
         // Start listening on fake node server (Advertiser's side)
         let advertiserNodeMock = TCPServerMock(didAcceptConnection: { },
                                                didReadData: { _ in},
-                                               didDisconnect: unexpectedDisconnectHandler)
+                                               didDisconnect: unexpectedSocketDisconnectHandler)
         var advertiserNodeListenerPort: UInt16 = 0
         do {
             advertiserNodeListenerPort = try advertiserNodeMock.startListening(on: anyAvailalbePort)
@@ -242,15 +242,20 @@ class BrowserRelayTests: XCTestCase {
 
         waitForExpectationsWithTimeout(browserConnectTimeout) {
             error in
+            guard error == nil else {
+                XCTFail("Browser could not connect to peer")
+                return
+            }
+            browserManager.stopListeningForAdvertisements()
             browserManagerConnected = nil
         }
 
         // Check if relay objectes are valid
         guard
             let browserRelayInfo: (uuid: String, relay: BrowserRelay) =
-            browserManager.activeRelays.value.first,
+                browserManager.activeRelays.value.first,
             let advertiserRelayInfo: (uuid: String, relay: AdvertiserRelay) =
-            advertiserManager.activeRelays.value.first
+                advertiserManager.activeRelays.value.first
             else {
                 return
         }
@@ -298,5 +303,7 @@ class BrowserRelayTests: XCTestCase {
             error in
             browserNodeClientReceivedMessage = nil
         }
+
+        advertiserManager.stopAdvertising()
     }
 }

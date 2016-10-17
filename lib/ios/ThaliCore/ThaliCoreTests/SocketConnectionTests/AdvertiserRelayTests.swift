@@ -14,16 +14,14 @@ import XCTest
 class AdvertiserRelayTests: XCTestCase {
 
     // MARK: - State
-    var mcPeerID: MCPeerID!
-    var mcSessionMock: MCSessionMock!
-    var nonTCPSession: Session!
+    var advertiserManager: AdvertiserManager!
 
     var randomlyGeneratedServiceType: String!
     var randomMessage: String!
     var anyAvailablePort: UInt16 = 0
 
     let browserFindPeerTimeout: NSTimeInterval = 5.0
-    let browserConnectTimeout: NSTimeInterval = 5.0
+    let browserConnectTimeout: NSTimeInterval = 10.0
     let streamReceivedTimeout: NSTimeInterval = 5.0
     let disposeTimeout: NSTimeInterval = 30.0
     let receiveMessageTimeout: NSTimeInterval = 10.0
@@ -31,19 +29,20 @@ class AdvertiserRelayTests: XCTestCase {
 
     // MARK: - Setup
     override func setUp() {
-        mcPeerID = MCPeerID(displayName: String.random(length: 5))
-        mcSessionMock = MCSessionMock(peer: mcPeerID)
-        nonTCPSession = Session(session: mcSessionMock,
-                                identifier: mcPeerID,
-                                connected: {},
-                                notConnected: {})
-
         randomlyGeneratedServiceType = String.randomValidServiceType(length: 7)
 
         let crlf = "\r\n"
         let fullMessageLength = 10 * 1024
         let plainMessageLength = fullMessageLength - crlf.characters.count
         randomMessage = String.random(length: plainMessageLength) + crlf
+
+        advertiserManager = AdvertiserManager(serviceType: randomlyGeneratedServiceType,
+                                              disposeAdvertiserTimeout: disposeTimeout)
+    }
+
+    override func tearDown() {
+        advertiserManager.stopAdvertising()
+        advertiserManager = nil
     }
 
     // MARK: - Tests
@@ -70,7 +69,7 @@ class AdvertiserRelayTests: XCTestCase {
 
                                                    advertisersNodeServerReceivedMessage?.fulfill()
                                                },
-                                               didDisconnect: unexpectedDisconnectHandler)
+                                               didDisconnect: unexpectedSocketDisconnectHandler)
         var advertiserNodeListenerPort: UInt16 = 0
         do {
             advertiserNodeListenerPort = try advertiserNodeMock.startListening(on: anyAvailablePort)
@@ -81,6 +80,10 @@ class AdvertiserRelayTests: XCTestCase {
         // Prepare pair of advertiser and browser
         MPCFBrowserFoundAdvertiser =
             expectationWithDescription("Browser peer found Advertiser peer")
+
+        // Start advertising on Advertiser's side
+        advertiserManager.startUpdateAdvertisingAndListening(onPort: advertiserNodeListenerPort,
+                                                             errorHandler: unexpectedErrorHandler)
 
         // Start listening for advertisements on Browser's side
         let browserManager = BrowserManager(serviceType: randomlyGeneratedServiceType,
@@ -97,12 +100,6 @@ class AdvertiserRelayTests: XCTestCase {
                                             })
         browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
 
-        // Start advertising on Advertiser's side
-        let advertiserManager = AdvertiserManager(serviceType: randomlyGeneratedServiceType,
-                                                  disposeAdvertiserTimeout: disposeTimeout)
-        advertiserManager.startUpdateAdvertisingAndListening(onPort: advertiserNodeListenerPort,
-                                                             errorHandler: unexpectedErrorHandler)
-
         waitForExpectationsWithTimeout(browserFindPeerTimeout) {
             error in
             MPCFBrowserFoundAdvertiser = nil
@@ -116,8 +113,7 @@ class AdvertiserRelayTests: XCTestCase {
         }
 
         // Connect method invocation
-        browserManagerConnected =
-            expectationWithDescription("BrowserManager is connected")
+        browserManagerConnected = expectationWithDescription("BrowserManager is connected")
 
         var browserNativeTCPListenerPort: UInt16 = 0
         browserManager.connectToPeer(peerToConnect.uuid, syncValue: "0") {
@@ -134,6 +130,11 @@ class AdvertiserRelayTests: XCTestCase {
 
         waitForExpectationsWithTimeout(browserConnectTimeout) {
             error in
+            guard error == nil else {
+                XCTFail("Browser could not connect to peer")
+                return
+            }
+            browserManager.stopListeningForAdvertisements()
             browserManagerConnected = nil
         }
 
