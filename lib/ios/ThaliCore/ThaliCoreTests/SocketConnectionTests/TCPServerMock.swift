@@ -20,11 +20,11 @@ class TCPServerMock: NSObject {
 
     private var didAcceptConnectionHandler: () -> Void
     private var didReadDataHandler: (GCDAsyncSocket, NSData) -> Void
-    private var didDisconnectHandler: () -> Void
+    private var didDisconnectHandler: (GCDAsyncSocket) -> Void
 
     init(didAcceptConnection: () -> Void,
          didReadData: (GCDAsyncSocket, NSData) -> Void,
-         didDisconnect: () -> Void) {
+         didDisconnect: (GCDAsyncSocket) -> Void) {
         tcpListener = GCDAsyncSocket()
         didAcceptConnectionHandler = didAcceptConnection
         didReadDataHandler = didReadData
@@ -107,7 +107,7 @@ extension TCPServerMock: GCDAsyncSocketDelegate {
                 $0.removeAtIndex(indexOfDisconnectedSocket)
             }
         }
-        didDisconnectHandler()
+        didDisconnectHandler(sock)
     }
 
     func socket(sock: GCDAsyncSocket, didReadData data: NSData, withTag tag: Int) {

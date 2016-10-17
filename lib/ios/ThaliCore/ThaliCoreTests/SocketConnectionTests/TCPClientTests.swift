@@ -30,7 +30,7 @@ class TCPClientTests: XCTestCase {
                                            mockServerAcceptedConnection?.fulfill()
                                        },
                                        didReadData: unexpectedReadDataHandler,
-                                       didDisconnect: unexpectedDisconnectHandler)
+                                       didDisconnect: unexpectedSocketDisconnectHandler)
 
         var listenerPort: UInt16 = 0
         do {
@@ -72,7 +72,7 @@ class TCPClientTests: XCTestCase {
                                            mockServerAcceptedConnection?.fulfill()
                                        },
                                        didReadData: { _ in },
-                                       didDisconnect: unexpectedDisconnectHandler)
+                                       didDisconnect: unexpectedSocketDisconnectHandler)
 
         var listenerPort: UInt16 = 0
         do {
@@ -126,7 +126,7 @@ class TCPClientTests: XCTestCase {
                                            mockServerAcceptedConnection?.fulfill()
                                        },
                                        didReadData: unexpectedReadDataHandler,
-                                       didDisconnect: {})
+                                       didDisconnect: { _ in })
 
         var listenerPort: UInt16 = 0
         do {
