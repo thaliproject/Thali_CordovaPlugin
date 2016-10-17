@@ -70,7 +70,6 @@ switch(settings.mode) {
   }
   default: {
     logger.debug('we have nothing to do');
-    return;
   }
 }
 
@@ -137,7 +136,7 @@ ThaliMobile.getNetworkStatus()
   logger.debug('we are listening');
 
   var promises = [];
-  if (isListening) {
+  if (isAdvertising) {
     if (isWifi) {
       promises.push(thaliWifiInfrastructure.startUpdateAdvertisingAndListening());
     }
