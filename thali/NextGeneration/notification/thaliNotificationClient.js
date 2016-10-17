@@ -232,38 +232,11 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
       return;
     }
 
-    ThaliMobile
-      .getPeerHostInfo(peerStatus.peerIdentifier, peerStatus.connectionType)
-      .catch(function (error) {
-        logger.error(
-          'Couldn\'t get peerHostInfo of the peer %s (%s).\n%s',
-          peerStatus.peerIdentifier, peerStatus.connectionType, error.stack
-        );
-        return null;
-      })
-      .then(function (peerHostInfo) {
-        if (peerHostInfo === null) {
-          return;
-        }
-        assert(
-          peerHostInfo.hostAddress,
-          'it is not possible to have hostAddress unset if peer have '+
-          'advertised itself available'
-        );
-        var peerConnectionInfo = new PeerDictionary.PeerConnectionInformation(
-          peerStatus.connectionType, peerHostInfo.hostAddress,
-          peerHostInfo.portNumber, peerHostInfo.suggestedTCPTimeout);
+    var peerEntry = new PeerDictionary.NotificationPeerDictionaryEntry(
+      PeerDictionary.peerState.CONTROLLED_BY_POOL);
 
-        var peerEntry = new PeerDictionary.NotificationPeerDictionaryEntry(
-          PeerDictionary.peerState.CONTROLLED_BY_POOL);
-
-        self._createNewAction(peerEntry, peerStatus.peerIdentifier,
-          peerConnectionInfo);
-      })
-      .catch(function (error) {
-        logger.error(error);
-        throw error;
-      });
+    self._createNewAction(peerEntry, peerStatus.peerIdentifier,
+      peerStatus.connectionType);
   };
 
 // jscs:disable maximumLineLength
@@ -279,13 +252,13 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
  */
 // jscs:enable maximumLineLength
 ThaliNotificationClient.prototype._createNewAction =
-  function (peerEntry, peerIdentifier, peerConnectionInfo ) {
+  function (peerEntry, peerIdentifier, connectionType) {
 
     var action = new ThaliNotificationAction(
       peerIdentifier,
       this._ecdhForLocalDevice,
       this._addressBookCallback,
-      peerConnectionInfo);
+      connectionType);
 
     action.eventEmitter.on(ThaliNotificationAction.Events.Resolved,
       this._resolved.bind(this));
@@ -365,8 +338,7 @@ ThaliNotificationClient.prototype._resolved =
           peerId
         );
 
-        this.emit(this.Events.PeerAdvertisesDataForUs,
-          peerAdvertises);
+        this.emit(this.Events.PeerAdvertisesDataForUs, peerAdvertises);
 
         break;
       }
