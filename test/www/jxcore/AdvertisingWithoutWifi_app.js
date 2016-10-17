@@ -1,5 +1,7 @@
 'use strict';
 
+process.env.DEBUG = "*";
+
 var SWITCH_TIMEOUT = 30 * 1000;
 var TEST_TIMEOUT   = 2 * 60 * 1000;
 var WIFI_TIMEOUT   = 10 * 1000;
