@@ -21,7 +21,7 @@ const versions =
   brew: '1.0.4-17',
   ruby: '2.3.0p0',
   wget: '1.18',
-  jxcore: '0.3.1.4',
+  jxcore: '0.3.1.5',
   androidBuildTools: '23.0.3',
   androidPlatform: 'android-23',
   // We don't have an easy way to identify the version of the support libraries
@@ -40,8 +40,8 @@ const versions =
   java: '1.8.0_102',
   git: '2.10.0',
   swiftLint: '0.12.0',
-  btconnectorlib2: '0.3.2',
-  jxcoreCordova: '0.1.2b',
+  btconnectorlib2: '0.3.5-alpha',
+  jxcoreCordova: '0.1.5',
   sinopiaNode: ' ',
   sinopiaJxCore: ' '
 };
