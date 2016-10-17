@@ -1191,7 +1191,7 @@ var handleNetworkChanged = function (networkChangedValue) {
   }
   if (networkChangedValue.bluetooth === 'off' &&
       networkChangedValue.bluetoothLowEnergy === 'off') {
-    // If either Bluetooth or BLE is off, we mark Android peers unavailable.
+    // If both Bluetooth and BLE are off, we mark Android peers unavailable.
     changePeersUnavailable(connectionTypes.BLUETOOTH);
   }
   var radioEnabled = false;
