@@ -7,6 +7,7 @@ var ThaliMobile = proxyquire('thali/NextGeneration/thaliMobile', {
   }
 });
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
+var USN = require('thali/NextGeneration/utils/usn');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var platform = require('thali/NextGeneration/utils/platform');
 var tape = require('../lib/thaliTape');
@@ -230,7 +231,7 @@ test('wifi peer is marked unavailable if announcements stop', function (t) {
   // have to wait for so long.
   thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD =
     thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 2;
-  var testPeerIdentifier = 'urn:uuid:' + uuid.v4();
+  var testPeerIdentifier = uuid.v4();
   var testSeverHostAddress = randomstring.generate({
     charset: 'hex', // to get lowercase chars for the host address
     length: 8
@@ -244,11 +245,16 @@ test('wifi peer is marked unavailable if announcements stop', function (t) {
     // waiting for the advertisement.
     adInterval: thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 10
   });
-  testServer.setUSN(testPeerIdentifier);
+  var onTheWirePeerId = USN.stringify({
+    realPeerIdentifier: testPeerIdentifier,
+    generation: 0
+  });
+  testServer.setUSN(onTheWirePeerId);
 
   var spy = sinon.spy();
   var availabilityChangedHandler = function (peer) {
-    if (peer.peerIdentifier !== testPeerIdentifier) {
+    console.log('peer: ' + JSON.stringify(peer));
+    if (peer.peerIdentifier !== onTheWirePeerId) {
       return;
     }
     spy();
@@ -270,7 +276,7 @@ test('wifi peer is marked unavailable if announcements stop', function (t) {
   };
   ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityChangedHandler);
 
-  ThaliMobile.start()
+  ThaliMobile.start(express.Router())
   .then(function () {
     return ThaliMobile.startListeningForAdvertisements();
   })
@@ -367,7 +373,7 @@ test('calls correct starts when network changes', function (t) {
 });
 
 test('peer is marked unavailable if port number changes', function (t) {
-  var somePeerIdentifier = 'urn:uuid:' + uuid.v4();
+  var somePeerIdentifier = USN._prefix + uuid.v4() + ':' + 2343;
   var somePort = 8080;
   var spy = sinon.spy();
 
@@ -418,7 +424,7 @@ test('peer is marked unavailable if port number changes', function (t) {
 
 test('when network connection is lost a peer should be marked unavailable',
 function (t) {
-  var somePeerIdentifier = 'urn:uuid:' + uuid.v4();
+  var somePeerIdentifier = USN._prefix + uuid.v4() + '99292';
   ThaliMobile.start(express.Router())
   .then(function () {
     var availabilityHandler = function (peer) {
@@ -583,7 +589,7 @@ if (global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI) {
 
 test('Discovered peer should be removed if no availability updates ' +
   'were received during availability timeout', function (t) {
-    var peerIdentifier = 'urn:uuid:' + uuid.v4();
+    var peerIdentifier = USN._prefix + uuid.v4() + '1111113213123123';
     var portNumber = 8080;
 
     ThaliMobile.start(express.Router())

@@ -298,7 +298,6 @@ ThaliNotificationClient.prototype._createNewAction =
 // jscs:disable maximumLineLength
 ThaliNotificationClient.prototype._resolved =
   function (peerId, resolution, beaconDetails) {
-
     if (!this.peerDictionary) {
       return;
     }
@@ -308,7 +307,6 @@ ThaliNotificationClient.prototype._resolved =
     if (!entry) {
       return;
     }
-
     switch (resolution) {
       case ThaliNotificationAction.ActionResolution
         .BEACONS_RETRIEVED_AND_PARSED:

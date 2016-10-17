@@ -125,11 +125,9 @@ test('Coordinated pull replication from notification test', function (t) {
       exit(error);
     });
   })
-
   .then(function () {
     return t.sync();
   })
-
   .then(function () {
     thaliPullReplicationFromNotification.stop();
     return thaliPeerPoolDefault.stop();

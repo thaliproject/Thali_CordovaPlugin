@@ -264,7 +264,6 @@ ThaliNotificationAction.prototype._complete = function (resolution,
 
     this.eventEmitter.emit(ThaliNotificationAction.Events.Resolved,
       this.getPeerIdentifier(), resolution, beaconDetails);
-
     if (error && this._reject) {
       this._reject(new Error(error));
     } else if (this._resolve) {
@@ -319,7 +318,7 @@ ThaliNotificationAction.ActionResolution = {
    * The action was killed because it has been superseded by another
    * notification action and no further work on this action should occur.
    */
-  KILLED_SUPERSEDED: 'killedOldGeneration'
+  KILLED_SUPERSEDED: 'killedSuperseded'
 };
 
 ThaliNotificationAction.Events = {
