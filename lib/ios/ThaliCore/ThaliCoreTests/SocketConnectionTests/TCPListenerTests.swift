@@ -18,6 +18,7 @@ class TCPListenerTests: XCTestCase {
     let anyAvailablePort: UInt16 = 0
 
     let startListeningTimeout: NSTimeInterval = 5.0
+    let stopListeningTimeout: NSTimeInterval = 5.0
     let acceptConnectionTimeout: NSTimeInterval = 5.0
     let readDataTimeout: NSTimeInterval = 5.0
     let disconnectTimeout: NSTimeInterval = 5.0
@@ -38,13 +39,13 @@ class TCPListenerTests: XCTestCase {
 
         var listenerPort: UInt16? = nil
         let tcpListener = TCPListener(with: unexpectedReadDataHandler,
-                                      socketDisconnected: unexpectedSocketDisconnectHandler)
-        tcpListener.startListeningForConnections(
-                                        on: anyAvailablePort,
-                                        connectionAccepted: {
-                                            socket in
-                                            acceptNewConnectionHandlerInvoked?.fulfill()
-                                        }) {
+                                      socketDisconnected: unexpectedSocketDisconnectHandler,
+                                      stoppedListening: unexpectedStopListeningHandler)
+        tcpListener.startListeningForConnections(on: anyAvailablePort,
+                                                 connectionAccepted: {
+                                                     socket in
+                                                     acceptNewConnectionHandlerInvoked?.fulfill()
+                                                 }) {
             port, error in
             XCTAssertNil(error)
             XCTAssertNotNil(port)
@@ -99,7 +100,8 @@ class TCPListenerTests: XCTestCase {
                                                        "Received message is wrong")
                                         readDataHandlerInvoked?.fulfill()
                                       },
-                                      socketDisconnected: unexpectedSocketDisconnectHandler)
+                                      socketDisconnected: unexpectedSocketDisconnectHandler,
+                                      stoppedListening: unexpectedStopListeningHandler)
 
         tcpListener.startListeningForConnections(on: anyAvailablePort,
                                                  connectionAccepted: {
@@ -166,7 +168,8 @@ class TCPListenerTests: XCTestCase {
                                       socketDisconnected: {
                                           socket in
                                           disconnectHandlerInvoked?.fulfill()
-                                      })
+                                      },
+                                      stoppedListening: unexpectedStopListeningHandler)
         tcpListener.startListeningForConnections(on: anyAvailablePort,
                                                  connectionAccepted: {
                                                      _ in
@@ -228,7 +231,8 @@ class TCPListenerTests: XCTestCase {
 
         var listenerPort: UInt16? = nil
         let firstTcpListener = TCPListener(with: unexpectedReadDataHandler,
-                                           socketDisconnected: unexpectedSocketDisconnectHandler)
+                                           socketDisconnected: unexpectedSocketDisconnectHandler,
+                                           stoppedListening: unexpectedStopListeningHandler)
         firstTcpListener.startListeningForConnections(
                                             on: anyAvailablePort,
                                             connectionAccepted: unexpectedAcceptConnectionHandler) {
@@ -254,7 +258,8 @@ class TCPListenerTests: XCTestCase {
             expectationWithDescription("TCP Listener can't start listener")
 
         let secondTcpListener = TCPListener(with: unexpectedReadDataHandler,
-                                            socketDisconnected: unexpectedSocketDisconnectHandler)
+                                            socketDisconnected: unexpectedSocketDisconnectHandler,
+                                            stoppedListening: unexpectedStopListeningHandler)
 
         // When
         secondTcpListener.startListeningForConnections(
@@ -276,14 +281,17 @@ class TCPListenerTests: XCTestCase {
     func testStopListeningForConnectionsReleasesPort() {
         // Expectations
         var TCPListenerIsListening: XCTestExpectation?
+        var TCPListenerIsStopped: XCTestExpectation?
 
         // Given
-        TCPListenerIsListening =
-            expectationWithDescription("TCP Listener is listenining")
+        TCPListenerIsListening = expectationWithDescription("TCP Listener is listenining")
 
         var listenerPort: UInt16? = nil
         let firstTcpListener = TCPListener(with: unexpectedReadDataHandler,
-                                           socketDisconnected: unexpectedSocketDisconnectHandler)
+                                           socketDisconnected: unexpectedSocketDisconnectHandler,
+                                           stoppedListening: {
+                                               TCPListenerIsStopped?.fulfill()
+                                           })
         firstTcpListener.startListeningForConnections(
                                             on: anyAvailablePort,
                                             connectionAccepted: unexpectedAcceptConnectionHandler) {
@@ -299,24 +307,29 @@ class TCPListenerTests: XCTestCase {
             TCPListenerIsListening = nil
         }
 
-        guard let busyPort = listenerPort else {
+        TCPListenerIsStopped = expectationWithDescription("TCP Listener is stopped")
+        firstTcpListener.stopListeningForConnectionsAndDisconnectClients()
+        waitForExpectationsWithTimeout(stopListeningTimeout) {
+            error in
+            TCPListenerIsStopped = nil
+        }
+
+        guard let potentiallyReleasedPort = listenerPort else {
             XCTFail("Listener port is nil")
             return
         }
 
-        firstTcpListener.stopListeningForConnectionsAndDisconnectClients()
-
         // Trying to connect to busy port
-        TCPListenerIsListening =
-            expectationWithDescription("TCP Listener is listenining")
+        TCPListenerIsListening = expectationWithDescription("TCP Listener is listenining")
 
         let secondTcpListener = TCPListener(with: unexpectedReadDataHandler,
-                                            socketDisconnected: unexpectedSocketDisconnectHandler)
+                                            socketDisconnected: unexpectedSocketDisconnectHandler,
+                                            stoppedListening: unexpectedStopListeningHandler)
 
         // When
         secondTcpListener.startListeningForConnections(
-            on: busyPort,
-            connectionAccepted: unexpectedAcceptConnectionHandler) {
+                                            on: potentiallyReleasedPort,
+                                            connectionAccepted: unexpectedAcceptConnectionHandler) {
                 port, error in
                 XCTAssertNil(error)
                 XCTAssertNotNil(port)
@@ -343,7 +356,8 @@ class TCPListenerTests: XCTestCase {
         let tcpListener = TCPListener(with: unexpectedReadDataHandler,
                                       socketDisconnected: {
                                           socket in
-                                      })
+                                      },
+                                      stoppedListening: {})
         tcpListener.startListeningForConnections(on: anyAvailablePort,
                                                  connectionAccepted: {
                                                     _ in
@@ -409,7 +423,8 @@ class TCPListenerTests: XCTestCase {
         let tcpListener = TCPListener(with: unexpectedReadDataHandler,
                                       socketDisconnected: {
                                           socket in
-                                      })
+                                      },
+                                      stoppedListening: {})
         tcpListener.startListeningForConnections(on: anyAvailablePort,
                                                  connectionAccepted: {
                                                      _ in

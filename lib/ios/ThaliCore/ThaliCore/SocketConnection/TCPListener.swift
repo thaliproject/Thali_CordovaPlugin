@@ -28,13 +28,16 @@ class TCPListener: NSObject {
     private var didAcceptConnectionHandler: ((GCDAsyncSocket) -> Void)?
     private var didReadDataFromSocketHandler: ((GCDAsyncSocket, NSData) -> Void)
     private var didSocketDisconnectHandler: ((GCDAsyncSocket) -> Void)
+    private var didStoppedListeningHandler: () -> Void
 
     // MARK: - Initialization
     required init(with didReadDataFromSocket: (GCDAsyncSocket, NSData) -> Void,
-                  socketDisconnected: (GCDAsyncSocket) -> Void) {
+                  socketDisconnected: (GCDAsyncSocket) -> Void,
+                  stoppedListening: () -> Void) {
         socket = GCDAsyncSocket()
         didReadDataFromSocketHandler = didReadDataFromSocket
         didSocketDisconnectHandler = socketDisconnected
+        didStoppedListeningHandler = stoppedListening
         super.init()
         socket.delegate = self
         socket.delegateQueue = socketQueue
@@ -76,13 +79,13 @@ extension TCPListener: GCDAsyncSocketDelegate {
                 $0.forEach { $0.disconnect() }
                 $0.removeAll()
             }
+            didStoppedListeningHandler()
         } else {
             activeConnections.modify {
                 if let indexOfDisconnectedSocket = $0.indexOf(sock) {
                     $0.removeAtIndex(indexOfDisconnectedSocket)
                 }
             }
-
             didSocketDisconnectHandler(sock)
         }
     }
