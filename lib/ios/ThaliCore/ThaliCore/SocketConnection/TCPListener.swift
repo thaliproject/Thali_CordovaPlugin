@@ -18,17 +18,17 @@ class TCPListener: NSObject {
     }
 
     // MARK: - Private state
-    private var socket: GCDAsyncSocket
+    private let socket: GCDAsyncSocket
     private var listening = false
 
     private let socketQueue = dispatch_queue_create("org.thaliproject.GCDAsyncSocket.delegateQueue",
                                                     DISPATCH_QUEUE_CONCURRENT)
-    private var activeConnections: Atomic<[GCDAsyncSocket]> = Atomic([])
+    private let activeConnections: Atomic<[GCDAsyncSocket]> = Atomic([])
 
     private var didAcceptConnectionHandler: ((GCDAsyncSocket) -> Void)?
-    private var didReadDataFromSocketHandler: ((GCDAsyncSocket, NSData) -> Void)
-    private var didSocketDisconnectHandler: ((GCDAsyncSocket) -> Void)
-    private var didStoppedListeningHandler: () -> Void
+    private let didReadDataFromSocketHandler: ((GCDAsyncSocket, NSData) -> Void)
+    private let didSocketDisconnectHandler: ((GCDAsyncSocket) -> Void)
+    private let didStoppedListeningHandler: () -> Void
 
     // MARK: - Initialization
     required init(with didReadDataFromSocket: (GCDAsyncSocket, NSData) -> Void,
