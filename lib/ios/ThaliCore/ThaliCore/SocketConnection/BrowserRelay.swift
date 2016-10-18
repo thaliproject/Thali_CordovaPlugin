@@ -169,8 +169,4 @@ final class BrowserRelay {
             completion(virtualSocket, error)
         }
     }
-
-    private func didVirtualSocketCreated(virtualSocket: VirtualSocket?, error: ErrorType?) {
-
-    }
 }
