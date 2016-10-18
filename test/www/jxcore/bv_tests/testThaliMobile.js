@@ -270,9 +270,7 @@ test('wifi peer is marked unavailable if announcements stop', function (t) {
     }
     spy();
     if (spy.calledOnce) {
-      t.equal(peer.hostAddress, testServerHostAddress,
-        'host address should match');
-      t.equal(peer.portNumber, testServerPort, 'port should match');
+      t.equal(peer.peerAvailable, true, 'peer should be available');
     } else if (spy.calledTwice) {
       t.equal(peer.peerAvailable, false, 'peer should become unavailable');
 

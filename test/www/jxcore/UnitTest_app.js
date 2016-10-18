@@ -10,7 +10,7 @@ var platform = require('thali/NextGeneration/utils/platform');
 
 if (typeof Mobile === 'undefined') {
   global.Mobile =
-    require('./lib/wifiBasedNativeMock.js')(platform.names.IOS);
+    require('./lib/wifiBasedNativeMock.js')(platform.names.ANDROID);
 }
 
 var config = require('./config.json');
