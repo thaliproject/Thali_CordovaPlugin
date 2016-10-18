@@ -15,10 +15,10 @@ const versions =
 {
   xcode: '7.3.1',
   xcodeCommandLineTools: ' ',
-  osX: '10.11.6',
+  macOS: '10.11.6',
   node: '6.6.0',
   npm: '3.10.3',
-  brew: '1.0.4-17',
+  brew: '1.0.',
   ruby: '2.3.0p0',
   wget: '1.18',
   jxcore: '0.3.1.5',
@@ -39,7 +39,7 @@ const versions =
   cordova: '6.3.1',
   java: '1.8.0_102',
   git: '2.10.0',
-  swiftLint: '0.12.0',
+  swiftlint: '0.12.0',
   btconnectorlib2: '0.3.5-alpha',
   jxcoreCordova: '0.1.5',
   sinopiaNode: ' ',
@@ -97,7 +97,7 @@ const commandsAndResults =
       (result, version) => boolToPromise(result && result.length === 2 &&
       result[0] === 'Library' && result[1] === 'usr')
   },
-  osX: {
+  macOS: {
     platform: ['darwin'],
     versionCheck: 'sw_vers -productVersion',
     versionValidate:
@@ -118,7 +118,7 @@ const commandsAndResults =
     versionCheck: 'brew -v',
     versionValidate:
       (result, version) =>
-        boolToPromise(result.startsWith('Homebrew ' + version + '-'))
+        boolToPromise(result.startsWith('Homebrew ' + version))
   },
   ruby: {
     platform: ['darwin'],
@@ -207,7 +207,7 @@ const commandsAndResults =
       (result, version) => boolToPromise(
                                     'git version ' + version === result.trim())
   },
-  swiftLint: {
+  swiftlint: {
     platform: ['darwin'],
     versionCheck: 'swiftlint version',
     versionValidate:
