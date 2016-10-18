@@ -311,8 +311,7 @@ ThaliNotificationClient.prototype._resolved =
 
     switch (resolution) {
       case ThaliNotificationAction.ActionResolution
-        .BEACONS_RETRIEVED_AND_PARSED:
-      {
+        .BEACONS_RETRIEVED_AND_PARSED: {
         entry.peerState = PeerDictionary.peerState.RESOLVED;
         this.peerDictionary.addUpdateEntry(peerId, entry);
 
@@ -350,8 +349,7 @@ ThaliNotificationClient.prototype._resolved =
         break;
       }
 
-      case ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_BUT_BAD:
-      {
+      case ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_BUT_BAD: {
         // This indicates a malfunctioning peer. We need to assume they are bad
         // all up and mark their entry as RESOLVED without taking any further
         // action. This means we will ignore this peerIdentifier in the future.
@@ -362,8 +360,7 @@ ThaliNotificationClient.prototype._resolved =
 
       case ThaliNotificationAction.ActionResolution.HTTP_BAD_RESPONSE:
       case ThaliNotificationAction.ActionResolution.NETWORK_PROBLEM:
-      case ThaliNotificationAction.ActionResolution.KILLED:
-      {
+      case ThaliNotificationAction.ActionResolution.KILLED: {
         // This tells us that the peer is there but not in good shape or
         // ThaliPeerPoolInterface called kill due to resource exhaustion.
         // We will for wait time out specified in the RETRY_TIMEOUTS
