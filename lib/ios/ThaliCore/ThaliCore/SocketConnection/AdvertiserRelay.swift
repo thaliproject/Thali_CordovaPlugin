@@ -122,6 +122,10 @@ final class AdvertiserRelay {
     }
 
     private func didDisconnectHandler(socket: GCDAsyncSocket) {
-
+        virtualSockets.modify {
+            let virtualSocket = $0[socket]
+            virtualSocket?.closeStreams()
+            $0.removeValueForKey(socket)
+        }
     }
 }
