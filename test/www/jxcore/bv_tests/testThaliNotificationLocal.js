@@ -7,6 +7,8 @@ var Promise = require('lie');
 var httpTester = require('../lib/httpTester.js');
 var proxyquire = require('proxyquire').noCallThru();
 
+var ThaliMobile =
+  require('thali/NextGeneration/thaliMobile');
 var ThaliNotificationClient =
   require('thali/NextGeneration/notification/thaliNotificationClient');
 var ThaliMobileNativeWrapper =
@@ -46,9 +48,15 @@ var GlobalVariables = function () {
 
   this.TCPEvent = {
     peerIdentifier: 'id123',
+    peerAvailable: true,
+    newAddressPort: false,
+    generation: 0,
+    connectionType: ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
+  };
+
+  this.TCPPeerHostInfo = {
     hostAddress: '127.0.0.1',
     portNumber: 0,
-    connectionType: ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
     suggestedTCPTimeout: 10000
   };
 
@@ -72,13 +80,23 @@ var GlobalVariables = function () {
 
 };
 
+function stubGetPeerHostInfo() {
+  return sinon.stub(
+    ThaliMobile,
+    'getPeerHostInfo',
+    function (peerIdentifier, connectionType) {
+      return Promise.resolve(globals.TCPPeerHostInfo);
+    }
+  );
+}
+
 GlobalVariables.prototype.init = function () {
   var self = this;
   return httpTester.getTestHttpsServer(self.expressApp,
     self.expressRouter)
     .then(function (server) {
       self.expressServer = server;
-      self.TCPEvent.portNumber = self.expressServer.address().port;
+      self.TCPPeerHostInfo.portNumber = self.expressServer.address().port;
       return Promise.resolve();
     })
     .catch(function (failure) {
@@ -119,13 +137,7 @@ var test = tape({
   }
 });
 
-test('Client to server request locally',
-function () {
-  // TODO: fix this test
-  return true;
-},
-function (t) {
-
+test('Client to server request locally', function (t) {
   // Purpose of this test is to ensure basic communication between
   // NotificationClient and NotificationServer works using mainly Notification
   // layer components. Behavior of the ThaliMobile is mocked on the
@@ -138,13 +150,14 @@ function (t) {
   // Simulates how the peer pool runs actions
   var enqueue = function (action) {
     var keepAliveAgent = httpTester.getTestAgent();
-    action.start(keepAliveAgent).then( function () {
-    }).catch( function ( ) {
+    action.start(keepAliveAgent).catch(function (err) {
       t.fail('This action should not fail!');
+      t.end(err);
     });
   };
 
   sinon.stub(peerPool, 'enqueue', enqueue);
+  var getPeerHostInfoStub = stubGetPeerHostInfo();
 
   // Initialize the ThaliNotificationClient
   var notificationClient =
@@ -152,8 +165,8 @@ function (t) {
       globals.targetDeviceKeyExchangeObjects[0]);
 
   notificationClient.on(
-    notificationClient.Events.PeerAdvertisesDataForUs, function ( res) {
-
+    notificationClient.Events.PeerAdvertisesDataForUs,
+    function (res) {
       var secret = getPskIdToSecret(res.pskIdentifyField);
       t.ok(secret.compare(res.psk) === 0, 'secrets are equal');
 
@@ -161,28 +174,30 @@ function (t) {
         'Public key matches with the server key');
       t.equals(
         res.hostAddress,
-        globals.TCPEvent.hostAddress,
-        'Host address must match');
+        globals.TCPPeerHostInfo.hostAddress,
+        'hostAddress must match');
+      t.equals(
+        res.portNumber,
+        globals.TCPPeerHostInfo.portNumber,
+        'portNumber must match');
       t.equals(
         res.suggestedTCPTimeout,
-        globals.TCPEvent.suggestedTCPTimeout,
+        globals.TCPPeerHostInfo.suggestedTCPTimeout,
         'suggestedTCPTimeout must match');
       t.equals(
         res.connectionType,
         globals.TCPEvent.connectionType,
         'connectionType must match');
-      t.equals(
-        res.portNumber,
-        globals.TCPEvent.portNumber,
-        'portNumber must match');
       notificationClient.stop();
+      getPeerHostInfoStub.restore();
       globals.notificationServer.stop().then(function () {
         t.end();
       }).catch(function (failure) {
         t.fail('Stopping failed:' + failure);
         t.end();
       });
-    });
+    }
+  );
 
   globals.notificationServer.start(globals.targetPublicKeysToNotify).
   then(function () {
