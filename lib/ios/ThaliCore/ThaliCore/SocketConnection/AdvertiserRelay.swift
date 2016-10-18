@@ -121,6 +121,7 @@ final class AdvertiserRelay {
         }
     }
 
+    // TODO: add unit test (issue #1358)
     private func didDisconnectHandler(socket: GCDAsyncSocket) {
         virtualSockets.modify {
             let virtualSocket = $0[socket]
