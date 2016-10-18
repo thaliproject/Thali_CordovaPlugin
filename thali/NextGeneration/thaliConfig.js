@@ -48,5 +48,6 @@ module.exports = {
   BEACON_PSK_IDENTITY: 'Beacon Please',
   BEACON_KEY: new Buffer('Let me in please!!'),
   MAX_NOTIFICATIONSERVER_PSK_MAP_CACHE_SIZE: 50,
-  LOCAL_SEQ_POINT_PREFIX: 'thali_'
+  LOCAL_SEQ_POINT_PREFIX: 'thali_',
+  UPDATE_WINDOWS_FOREGROUND_MS: 1000
 };
