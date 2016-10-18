@@ -238,6 +238,10 @@ module.exports.start = function (router, pskIdToSecret, networkType) {
   });
 };
 
+module.exports.isStarted = function () {
+  return thaliMobileStates.started;
+}
+
 /**
  * This calls stop on both stacks even if start failed.
  *

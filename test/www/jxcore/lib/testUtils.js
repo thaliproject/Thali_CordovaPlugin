@@ -27,32 +27,49 @@ var inherits = require('inherits');
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
 
-var doToggle = function (toggleFunction, on) {
+function toggleBluetooth (value) {
   if (typeof Mobile === 'undefined') {
+    logger.warn('Mobile is not defined');
     return Promise.resolve();
   }
-  if (platform.isIOS) {
+  if (platform.isAndroid || platform.isIOS) {
+    logger.warn('\'toggleBluetooth\' is not implemented on android and ios');
     return Promise.resolve();
   }
   return new Promise(function (resolve, reject) {
-    Mobile[toggleFunction](on, function (err) {
-      if (err) {
-        logger.warn('Mobile.%s returned an error: %s', toggleFunction, err);
-        return reject(new Error(err));
+    Mobile['toggleBluetooth'](value, function (error) {
+      if (error) {
+        logger.warn('Mobile.setWifiRadioState returned an error: \'%s\'', error.toString());
+        reject(error);
+      } else {
+        resolve();
       }
-      return resolve();
     });
   });
 };
-
-var toggleWifi = function (on) {
-  return doToggle('toggleWiFi', on);
-};
-var toggleBluetooth = function (on) {
-  return doToggle('toggleBluetooth', on);
-};
-module.exports.toggleWifi      = toggleWifi;
 module.exports.toggleBluetooth = toggleBluetooth;
+
+function toggleWifi (value) {
+  if (typeof Mobile === 'undefined') {
+    logger.warn('Mobile is not defined');
+    return Promise.resolve();
+  }
+  if (platform.isIOS) {
+    logger.warn('\'setWifiRadioState\' is not implemented on ios');
+    return Promise.resolve();
+  }
+  return new Promise(function (resolve, reject) {
+    Mobile.setWifiRadioState.callNative(value, function (error) {
+      if (error) {
+        logger.warn('Mobile.setWifiRadioState returned an error: \'%s\'', error.toString());
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+module.exports.toggleWifi = toggleWifi;
 
 var ThaliMobile;
 var ensureNetwork = function (type, toggle, value) {
@@ -66,20 +83,39 @@ var ensureNetwork = function (type, toggle, value) {
     if (networkStatus[type] !== valueString) {
 
       // We will wait until network status will reach required 'value'.
-      return new Promise(function (resolve) {
-        function networkChangedHandler (networkStatus) {
-          if (networkStatus[type] === valueString) {
-            ThaliMobile.emitter.removeListener('networkChanged', networkChangedHandler);
-            resolve();
-          } else {
-            logger.warn(
-              'we are %s %s network, but it don\'t want to obey',
-              value? 'enabling' : 'disabling', type
-            );
+      // We need to start ThaliMobile to receive 'networkChanged' event.
+      // We can't use Mobile('networkChanged').registerToNative here because it can replace existing listener.
+      var promise;
+      var isStarted = ThaliMobile.isStarted();
+      if (isStarted) {
+        promise = Promise.resolve();
+      } else {
+        promise = ThaliMobile.start(express.Router());
+      }
+
+      return promise.then(function () {
+        return new Promise(function (resolve) {
+          function networkChangedHandler (networkStatus) {
+            if (networkStatus[type] === valueString) {
+              ThaliMobile.emitter.removeListener('networkChanged', networkChangedHandler);
+              resolve();
+            } else {
+              logger.warn(
+                'we are %s %s network, but it don\'t want to obey',
+                value? 'enabling' : 'disabling', type
+              );
+            }
           }
+          ThaliMobile.emitter.on('networkChanged', networkChangedHandler);
+          toggle(value);
+        });
+      })
+
+      .then(function () {
+        if (!isStarted) {
+          // We need to cleanup after our 'ThaliMobile.start'.
+          return ThaliMobile.stop();
         }
-        ThaliMobile.emitter.on('networkChanged', networkChangedHandler);
-        toggle(value);
       });
     }
   });

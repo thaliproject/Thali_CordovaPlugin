@@ -293,7 +293,7 @@ test('network changes emitted correctly', function (t) {
       function networkChangedHandler (networkStatus) {
         t.equals(networkStatus.wifi, 'off', 'wifi should be off');
         t.equals(networkStatus.bssidName, null, 'bssid should be null');
-        t.equals(networkStatus.ssidName, null, 'ssid should be null');
+        t.equals(networkStatus.ssidName,  null, 'ssid should be null');
         resolve();
       }
       ThaliMobile.emitter.once('networkChanged', networkChangedHandler);
@@ -332,15 +332,18 @@ function noNetworkChanged (t, toggle) {
   return new Promise(function (resolve) {
     var isEmitted = false;
     function networkChangedHandler (networkStatus) {
+      console.trace();
       isEmitted = true;
     }
     ThaliMobile.emitter.once('networkChanged', networkChangedHandler);
-    toggle();
 
-    process.nextTick(function () {
-      t.notOk(isEmitted, 'event should not be emitted');
-      ThaliMobile.emitter.removeListener('networkChanged', networkChangedHandler);
-      resolve();
+    toggle()
+    .then(function () {
+      process.nextTick(function () {
+        t.notOk(isEmitted, 'event should not be emitted');
+        ThaliMobile.emitter.removeListener('networkChanged', networkChangedHandler);
+        resolve();
+      });
     });
   });
 }
@@ -349,7 +352,7 @@ test('network changes not emitted in started state', function (t) {
   testUtils.ensureWifi(true)
   .then(function () {
     return noNetworkChanged(t, function () {
-      testUtils.toggleWifi(true);
+      return testUtils.toggleWifi(true);
     });
   })
   .then(function () {
@@ -357,11 +360,11 @@ test('network changes not emitted in started state', function (t) {
   });
 });
 
-test.only('network changes not emitted in stopped state', function (t) {
+test('network changes not emitted in stopped state', function (t) {
   testUtils.ensureWifi(false)
   .then(function () {
     return noNetworkChanged(t, function () {
-      testUtils.toggleWifi(false);
+      return testUtils.toggleWifi(false);
     });
   })
   .then(function () {
@@ -382,7 +385,7 @@ if (platform.isMobile) {
 }
 
 test('calls correct starts when network changes', function (t) {
-  var listeningSpy = null;
+  var listeningSpy   = null;
   var advertisingSpy = null;
 
   var networkChangedHandler = function (networkChangedValue) {

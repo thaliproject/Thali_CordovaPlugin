@@ -1060,8 +1060,9 @@ function WifiBasedNativeMock(platform, router) {
   mobileHandler.toggleBluetooth =
     toggleBluetooth(platform, thaliWifiInfrastructure);
 
-  mobileHandler.toggleWiFi =
-    toggleWiFi(platform, thaliWifiInfrastructure);
+  mobileHandler.setWifiRadioState = {
+    callNative: toggleWiFi(platform, thaliWifiInfrastructure)
+  };
 
   mobileHandler.firePeerAvailabilityChanged =
     firePeerAvailabilityChanged(platform, thaliWifiInfrastructure);
