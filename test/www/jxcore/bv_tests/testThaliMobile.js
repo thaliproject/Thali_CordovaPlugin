@@ -17,6 +17,7 @@ var sinon = require('sinon');
 var uuid = require('uuid');
 var nodessdp = require('node-ssdp');
 var randomstring = require('randomstring');
+var Promise = require('bluebird');
 
 var verifyCombinedResultSuccess = testUtils.verifyCombinedResultSuccess;
 
@@ -281,6 +282,97 @@ test('wifi peer is marked unavailable if announcements stop', function (t) {
   });
 });
 
+test('network changes emitted correctly', function (t) {
+  testUtils.ensureWifi(true)
+  .then(function () {
+    return ThaliMobile.start(express.Router());
+  })
+
+  .then(function () {
+    return new Promise(function (resolve) {
+      function networkChangedHandler (networkStatus) {
+        t.equals(networkStatus.wifi, 'off', 'wifi should be off');
+        t.equals(networkStatus.bssidName, null, 'bssid should be null');
+        t.equals(networkStatus.ssidName, null, 'ssid should be null');
+        resolve();
+      }
+      ThaliMobile.emitter.once('networkChanged', networkChangedHandler);
+      testUtils.toggleWifi(false);
+    });
+  })
+
+  .then(function () {
+    return new Promise(function (resolve) {
+      function networkChangedHandler (networkStatus) {
+        t.equals(networkStatus.wifi, 'on', 'wifi should be on');
+        t.ok(
+          testUtils.validateBSSID(networkStatus.bssidName),
+          'bssid should be valid'
+        );
+        t.ok(
+          networkStatus.ssidName && networkStatus.ssidName.length > 0,
+          'ssid should exist'
+        );
+        resolve();
+      }
+      ThaliMobile.emitter.once('networkChanged', networkChangedHandler);
+      testUtils.toggleWifi(true);
+    });
+  })
+
+  .then(function () {
+    return testUtils.ensureWifi(true);
+  })
+  .then(function () {
+    t.end();
+  });
+});
+
+function noNetworkChanged (t, toggle) {
+  return new Promise(function (resolve) {
+    var isEmitted = false;
+    function networkChangedHandler (networkStatus) {
+      isEmitted = true;
+    }
+    ThaliMobile.emitter.once('networkChanged', networkChangedHandler);
+    toggle();
+
+    process.nextTick(function () {
+      t.notOk(isEmitted, 'event should not be emitted');
+      ThaliMobile.emitter.removeListener('networkChanged', networkChangedHandler);
+      resolve();
+    });
+  });
+}
+
+test('network changes not emitted in started state', function (t) {
+  testUtils.ensureWifi(true)
+  .then(function () {
+    return noNetworkChanged(t, function () {
+      testUtils.toggleWifi(true);
+    });
+  })
+  .then(function () {
+    t.end();
+  });
+});
+
+test.only('network changes not emitted in stopped state', function (t) {
+  testUtils.ensureWifi(false)
+  .then(function () {
+    return noNetworkChanged(t, function () {
+      testUtils.toggleWifi(false);
+    });
+  })
+  .then(function () {
+    return testUtils.ensureWifi(true);
+  })
+  .then(function () {
+    t.end();
+  });
+});
+
+
 // From here onwards, tests work only with the mocked
 // up Mobile, because with real devices in CI, the Wifi
 // network is configured in a way that it doesn't allow
@@ -288,40 +380,6 @@ test('wifi peer is marked unavailable if announcements stop', function (t) {
 if (platform.isMobile) {
   return;
 }
-
-test('network changes emitted correctly', function (t) {
-  ThaliMobile.start(express.Router())
-  .then(function () {
-    ThaliMobile.emitter.once('networkChanged', function (networkChangedValue) {
-      t.equals(networkChangedValue.wifi, 'off', 'wifi is off');
-      ThaliMobile.emitter.once('networkChanged',
-      function (networkChangedValue) {
-        t.equals(networkChangedValue.wifi, 'on', 'wifi is on');
-        t.end();
-      });
-      testUtils.toggleWifi(true);
-    });
-    testUtils.toggleWifi(false);
-  });
-});
-
-test('network changes not emitted in stopped state', function (t) {
-  var networkChangedHandler = function () {
-    t.fail('network change should not be emitted');
-    ThaliMobile.emitter.removeListener('networkChanged', networkChangedHandler);
-    t.end();
-  };
-  ThaliMobile.emitter.on('networkChanged', networkChangedHandler);
-  testUtils.toggleWifi(false);
-  process.nextTick(function () {
-    t.ok(true, 'event was not emitted');
-    ThaliMobile.emitter.removeListener('networkChanged', networkChangedHandler);
-    testUtils.toggleWifi(true)
-    .then(function () {
-      t.end();
-    });
-  });
-});
 
 test('calls correct starts when network changes', function (t) {
   var listeningSpy = null;

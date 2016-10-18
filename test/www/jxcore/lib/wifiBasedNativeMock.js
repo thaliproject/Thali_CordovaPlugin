@@ -36,11 +36,16 @@ var platformChoice = {
   IOS: 'iOS'
 };
 
+var BSSID = 'c1:5b:05:5a:41:1e'; // 'c1-5b-05-5a-41-1e' is valid too.
+var SSID  = 'myWifi';
 var currentNetworkStatus = {
-  wifi: 'on',
-  bluetooth: 'on',
-  bluetoothLowEnergy: 'doNotCare',
-  cellular: 'doNotCare'
+  wifi:               'on',
+  bluetooth:          'on',
+  bluetoothLowEnergy: 'on',
+  cellular:           'on',
+
+  bssidName: BSSID,
+  ssidName:  SSID
 };
 
 var getCurrentNetworkStatus = function () {
@@ -909,6 +914,15 @@ var doToggle = function (setting, property, callback) {
     return;
   }
   currentNetworkStatus[property] = newStatus;
+  if (property === 'wifi') {
+    if (setting) {
+      currentNetworkStatus.bssidName = BSSID;
+      currentNetworkStatus.ssidName  = SSID;
+    } else {
+      currentNetworkStatus.bssidName = null;
+      currentNetworkStatus.ssidName  = null;
+    }
+  }
 
   if (networkChangedCallback !== null) {
     // Record the status on this event loop to make sure

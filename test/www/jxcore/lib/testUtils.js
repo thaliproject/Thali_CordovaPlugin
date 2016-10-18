@@ -45,13 +45,57 @@ var doToggle = function (toggleFunction, on) {
   });
 };
 
-module.exports.toggleWifi = function (on) {
+var toggleWifi = function (on) {
   return doToggle('toggleWiFi', on);
 };
-
-exports.toggleBluetooth = function (on) {
+var toggleBluetooth = function (on) {
   return doToggle('toggleBluetooth', on);
 };
+module.exports.toggleWifi      = toggleWifi;
+module.exports.toggleBluetooth = toggleBluetooth;
+
+var ThaliMobile;
+var ensureNetwork = function (type, toggle, value) {
+  if (!ThaliMobile) {
+    ThaliMobile = require('thali/NextGeneration/thaliMobile');
+  }
+  var valueString = value? 'on' : 'off';
+
+  return ThaliMobile.getNetworkStatus()
+  .then(function (networkStatus) {
+    if (networkStatus[type] !== valueString) {
+
+      // We will wait until network status will reach required 'value'.
+      return new Promise(function (resolve) {
+        function networkChangedHandler (networkStatus) {
+          if (networkStatus[type] === valueString) {
+            ThaliMobile.emitter.removeListener('networkChanged', networkChangedHandler);
+            resolve();
+          } else {
+            logger.warn(
+              'we are %s %s network, but it don\'t want to obey',
+              value? 'enabling' : 'disabling', type
+            );
+          }
+        }
+        ThaliMobile.emitter.on('networkChanged', networkChangedHandler);
+        toggle(value);
+      });
+    }
+  });
+}
+
+module.exports.ensureWifi = function (value) {
+  return ensureNetwork('wifi', toggleWifi, value);
+}
+module.exports.ensureBluetooth = function (value) {
+  return ensureNetwork('bluetooth', toggleBluetooth, value);
+}
+
+module.exports.validateBSSID = function (value) {
+  // Both 'c1:5b:05:5a:41:1e' and 'c1-5b-05-5a-41-1e' are valid.
+  return /([0-9a-f]{2}[:-]|$){6}/i.test(value);
+}
 
 /**
  * Turn Bluetooth and Wifi either on or off.
@@ -188,7 +232,9 @@ module.exports.returnsValidNetworkStatus = function () {
   // we can require the test utils also from an environment
   // where Mobile isn't defined (which is a requirement when
   // thaliMobile is required).
-  var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+  if (!ThaliMobile) {
+    ThaliMobile = require('thali/NextGeneration/thaliMobile');
+  }
   // Check that network status is as expected and
   // report to CI that this device is ready.
   return ThaliMobile.getNetworkStatus()
