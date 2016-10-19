@@ -96,14 +96,7 @@ Server.prototype._error = function (error) {
   );
 }
 
-Server.prototype.shutdown = function () {
-  var self = this;
-
-  if (!this._isAvailable) {
-    return Promise.reject(new Error('server is not available'));
-  }
-  this._isAvailable = false;
-
+Server.prototype.closeAllSockets = function () {
   var promises = this._sockets.map(function (socket) {
     return new Promise(function (resolve, reject) {
       function error(error) {
@@ -117,10 +110,24 @@ Server.prototype.shutdown = function () {
       socket
       .once('error', error)
       .once('close', close);
-      socket.close();
+      socket.end();
     });
   });
   return Promise.all(promises)
+  .then(function () {
+    logger.debug('all sockets killed');
+  });
+}
+
+Server.prototype.shutdown = function () {
+  var self = this;
+
+  if (!this._isAvailable) {
+    return Promise.reject(new Error('server is not available'));
+  }
+  this._isAvailable = false;
+
+  return this.closeAllSockets()
   .finally(function () {
     self._server.close();
     logger.debug('server was closed');

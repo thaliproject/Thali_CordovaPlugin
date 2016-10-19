@@ -84,7 +84,7 @@ Socket.prototype._close = function () {
   this.logger.debug('socket was closed');
 }
 
-Socket.prototype.close = function () {
+Socket.prototype.end = function () {
   if (this._isEnded) {
     throw new Error('socket is already ended');
     return;

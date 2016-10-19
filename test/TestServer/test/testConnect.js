@@ -115,3 +115,29 @@ test('client should be able to reconnect to server if it restarted', function (t
     });
   }, CHECK_TIMEOUT);
 });
+
+test('client should be able to reconnect to server if it\'s socket become dead', function (t) {
+  var spyServerConnect = sinon.spy(Server.prototype, '_connect');
+  var spyClientConnect = sinon.spy(Client.prototype, '_connect');
+  var server = new Server();
+  var client = new Client({
+    reconnectionDelay: CHECK_TIMEOUT
+  });
+
+  setTimeout(function () {
+    t.ok(spyServerConnect.calledOnce, 'server \'_connect\' should be called once');
+    t.ok(spyClientConnect.calledOnce, 'client \'_connect\' should be called once');
+
+    server.closeAllSockets()
+    .then(function () {
+      setTimeout(function () {
+        t.ok(spyServerConnect.calledTwice, 'server \'_connect\' should be called twice');
+        Server.prototype._connect.restore();
+        t.ok(spyClientConnect.calledTwice, 'client \'_connect\' should be called twice');
+        Client.prototype._connect.restore();
+
+        shutdown(t, client, server);
+      }, CHECK_TIMEOUT * 2);
+    });
+  }, CHECK_TIMEOUT);
+});

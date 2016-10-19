@@ -80,9 +80,11 @@ Client.prototype._connect = function () {
   logger.debug('we are connected to server');
 
   logger.debug('sending id: \'%s\'', this.id);
-  this._socket.send('id', this.id);
+  this._socket.send('id', this.id, function () {
+    logger.debug('sent id');
+  });
 }
 
-Client.prototype.disconnect = Client.prototype.close;
+Client.prototype.disconnect = Client.prototype.end;
 
 module.exports = Client;

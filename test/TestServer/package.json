@@ -13,5 +13,8 @@
   "devDependencies": {
     "sinon": "1.17.3",
     "tape-catch": "1.0.4"
+  },
+  "scripts": {
+    "test": "node test/main.js"
   }
 }
