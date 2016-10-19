@@ -13,8 +13,8 @@ var randomString = require('randomstring');
 // ponyfills
 var endsWith = require('end-with');
 
-var Promise = require('./utils/Promise');
-require('./utils/process');
+var Promise = require('./Promise');
+require('./process');
 
 
 // We want to find the first path that ends with 'name'.
@@ -127,7 +127,8 @@ function replaceStringsInFile(name, replacements) {
 
 function replaceThaliConfig () {
   // example: 'SSDP_NT: process.env.SSDP_NT || 'http://www.thaliproject.org/ssdp','
-  // We want to replace 'http://www.thaliproject.org/ssdp' here with random string.
+  // or: SSDP_NT: 'http://www.thaliproject.org/ssdp',
+  // We want to replace it with random string.
   var value = randomString.generate({
     length: 'http://www.thaliproject.org/ssdp'.length
   });
@@ -222,5 +223,5 @@ Promise.all([
   // replaceJXcoreExtension()
 ])
 .then(function () {
-  console.info('We have replaced hardcoded ids with random values.');
+  console.info('We have replaced SSDP_NT with random values.');
 });
