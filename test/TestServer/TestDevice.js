@@ -28,13 +28,13 @@ inherits(TestDevice, EventEmitter);
 
 TestDevice.prototype._setOptions = function (options) {
   if (options) {
-    asserts.isObject(options);
+    asserts.isObject(options, 'TestDevice._setOptions');
   }
   this._options = objectAssign({}, defaultConfig, options);
   asserts.isNumber(this._options.setupTimeout);
   asserts.isNumber(this._options.testTimeout);
   asserts.isNumber(this._options.teardownTimeout);
-}
+};
 
 TestDevice.prototype._setInfo = function (info) {
   asserts.isString(info.name);
@@ -66,7 +66,7 @@ TestDevice.prototype._setInfo = function (info) {
   this.tests = info.tests;
 
   this.btAddress = info.btaddress;
-}
+};
 
 TestDevice.prototype._init = function () {
   var self = this;
@@ -75,11 +75,11 @@ TestDevice.prototype._init = function () {
   this._socket.on('sync', function (data) {
     self.emit('sync', data);
   });
-}
+};
 
 TestDevice.prototype.syncFinished = function (data) {
   return this._socket.emitData('syncFinished', data);
-}
+};
 
 TestDevice.prototype.update = function (newDevice) {
   // This is annoying.
@@ -100,38 +100,41 @@ TestDevice.prototype.update = function (newDevice) {
   asserts.equals(this.btAddress, newDevice.btAddress);
 
   this._socket.update(newDevice._socket);
-}
+};
 
 TestDevice.prototype.scheduleTests = function (tests) {
   return this._socket.emitData('schedule', tests);
-}
+};
 
 TestDevice.prototype.setupTest = function (test, canBeSkipped) {
-  return this._socket.runEvent('setup', test, undefined, this._options.setupTimeout, canBeSkipped);
-}
+  return this._socket.runEvent('setup', test, undefined,
+    this._options.setupTimeout, canBeSkipped);
+};
 
 TestDevice.prototype.runTest = function (test, data, canBeSkipped) {
-  return this._socket.runEvent('run', test, data, this._options.testTimeout, canBeSkipped);
-}
+  return this._socket.runEvent('run', test, data,
+    this._options.testTimeout, canBeSkipped);
+};
 
 TestDevice.prototype.teardownTest = function (test, canBeSkipped) {
-  return this._socket.runEvent('teardown', test, undefined, this._options.teardownTimeout, canBeSkipped);
-}
+  return this._socket.runEvent('teardown', test, undefined,
+    this._options.teardownTimeout, canBeSkipped);
+};
 
 TestDevice.prototype.complete = function () {
   return this._socket.emitData('complete');
-}
+};
 
 TestDevice.prototype.disqualify = function (error) {
   return this._socket.emitData('disqualify', error);
-}
+};
 
 TestDevice.prototype.discard = function () {
   return this._socket.emitData('discard');
-}
+};
 
 TestDevice.prototype.error = function (error) {
   return this._socket.emitData('error', error);
-}
+};
 
 module.exports = TestDevice;

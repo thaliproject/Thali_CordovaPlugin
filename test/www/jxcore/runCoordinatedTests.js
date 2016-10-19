@@ -1,6 +1,6 @@
 'use strict';
 
-var config       = require('./config.json')
+var config       = require('./config.json');
 var spawn        = require('child_process').spawn;
 var randomString = require('randomstring');
 var objectAssign = require('object-assign');
@@ -127,6 +127,7 @@ var instanceEnv = objectAssign({}, testEnv, {
     length: 'http://www.thaliproject.org/ssdp'.length
   })
 });
+
 var instanceOpts = objectAssign({}, { env: instanceEnv });
 
 var testInstances = {};

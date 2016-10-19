@@ -10,14 +10,11 @@ var asserts = require('./utils/asserts.js');
 var Promise = require('./utils/Promise');
 var logger  = require('./utils/ThaliLogger')('UnitTestFramework');
 
-var TestDevice    = require('./TestDevice');
 var TestFramework = require('./TestFramework');
 var defaultConfig = require('./config/UnitTest');
 
 
 function UnitTestFramework(config) {
-  var self = this;
-
   this.config = objectAssign({}, defaultConfig, config);
 
   UnitTestFramework.super_.call(this, this.config);
@@ -108,7 +105,7 @@ UnitTestFramework.prototype.startTests = function (platformName) {
   .finally(function () {
     self.resolveCompleted();
   });
-}
+};
 
 UnitTestFramework.prototype.runTest = function (devices, test) {
   var self = this;
@@ -125,7 +122,7 @@ UnitTestFramework.prototype.runTest = function (devices, test) {
         return {
           uuid: device.uuid,
           data: data
-        }
+        };
       });
     })
   )
@@ -173,7 +170,7 @@ UnitTestFramework.prototype.runTest = function (devices, test) {
       );
     }
   });
-}
+};
 
 UnitTestFramework.prototype._sync = function (deviceData, content) {
   logger.debug('#sync');
@@ -213,9 +210,9 @@ UnitTestFramework.prototype._sync = function (deviceData, content) {
         error.toString(), error.stack
       );
       return Promise.reject(error);
-    })
+    });
   }
-}
+};
 
 UnitTestFramework.prototype.bindSync = function (devices) {
   var self = this;
@@ -226,11 +223,9 @@ UnitTestFramework.prototype.bindSync = function (devices) {
     data.handler = self._sync.bind(self, data);
     data.device.on('sync', data.handler);
   });
-}
+};
 
 UnitTestFramework.prototype.unbindSync = function (devices) {
-  var self = this;
-
   var syncDevices = this._syncDevicesData.map(function (data) {
     return data.device;
   });
@@ -242,6 +237,6 @@ UnitTestFramework.prototype.unbindSync = function (devices) {
     data.device.removeListener('sync', data.handler);
   });
   delete this._syncDevicesData;
-}
+};
 
 module.exports = UnitTestFramework;
