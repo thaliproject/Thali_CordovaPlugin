@@ -15,12 +15,12 @@ node address/generate.js
 
 cd ../../thali
 jx npm install --no-optional
-jx npm link
+npm link
 
 cd install
-jx npm install --no-optional
+npm install --no-optional
 
 cd ../../test/www/jxcore
-jx npm link thali
-jx installCustomPouchDB.js
+npm link thali
+node installCustomPouchDB.js
 jx npm install --no-optional

@@ -59,25 +59,20 @@ CoordinatedThaliTape.prototype._getTests = function () {
   });
 }
 
-CoordinatedThaliTape.begin = function (options) {
+CoordinatedThaliTape.begin = function (platform, version, hasRequiredHardware, nativeUTFailed) {
   var tests = CoordinatedThaliTape.instances.reduce(function (tests, thaliTape) {
     thaliTape._begin();
     return tests.concat(thaliTape._getTests());
   }, []);
-  CoordinatedThaliTape.instances = SimpleThaliTape.instances = [];
-
-  if (tests.length === 0) {
-    logger.warn('we have no tests in this file');
-    return Promise.resolve();
-  }
+  CoordinatedThaliTape.instances = [];
 
   var testClient = new CoordinatedClient(
     tests,
     CoordinatedThaliTape.uuid,
-    options.platform,
-    options.version,
-    options.hasRequiredHardware,
-    options.nativeUTFailed
+    platform,
+    version,
+    hasRequiredHardware,
+    !!nativeUTFailed
   );
 
   // Only used for testing purposes.
@@ -93,16 +88,15 @@ CoordinatedThaliTape.begin = function (options) {
     });
   })
   .then(function () {
-    logger.debug(
-      'all unit tests succeeded, platformName: \'%s\'',
-      options.platform
-    );
+    logger.debug('all tests succeed');
+    logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
   })
   .catch(function (error) {
     logger.error(
-      'failed to run unit tests, platformName: \'%s\', error: \'%s\', stack: \'%s\'',
-      options.platform, error.toString(), error.stack
+      'tests failed, error: \'%s\', stack: \'%s\'',
+      error.toString(), error.stack
     );
+    logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
     return Promise.reject(error);
   });
 }
