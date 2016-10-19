@@ -34,7 +34,8 @@ final class BrowserRelay {
         self.virtualSocketBuilders = Atomic([:])
         nonTCPsession.didReceiveInputStreamHandler = sessionDidReceiveInputStreamHandler
         tcpListener = TCPListener(with: didReadDataFromSocketHandler,
-                                  socketDisconnected: didSocketDisconnectHandler)
+                                  socketDisconnected: didSocketDisconnectHandler,
+                                  stoppedListening: didStopListeningForConnections)
     }
 
     // MARK: - Internal methods
@@ -128,6 +129,10 @@ final class BrowserRelay {
         }
     }
 
+    private func didStopListeningForConnections() {
+        disconnectNonTCPSession()
+    }
+
     private func didInputStreamOpenedHandler(virtualSocket: VirtualSocket) {
         guard let socket = virtualSockets.value.key(for: virtualSocket) else {
             virtualSocket.closeStreams()
@@ -163,9 +168,5 @@ final class BrowserRelay {
 
             completion(virtualSocket, error)
         }
-    }
-
-    private func didVirtualSocketCreated(virtualSocket: VirtualSocket?, error: ErrorType?) {
-
     }
 }
