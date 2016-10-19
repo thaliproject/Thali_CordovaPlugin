@@ -78,8 +78,8 @@ function isObject(value) {
 module.exports.isObject = function (value, message) {
   assert(
     isObject(value),
-    format('object expected, received: \'%s\'', value) +
-      message ? message : ''
+    format('object expected, received: \'%s\' \'%s\'', value,
+      message ? ('-' + message) : '')
   );
 };
 
