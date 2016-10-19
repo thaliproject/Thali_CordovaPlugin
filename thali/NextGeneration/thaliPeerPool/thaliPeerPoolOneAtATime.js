@@ -6,8 +6,10 @@ var thaliConfig = require('../thaliConfig');
 var ForeverAgent = require('forever-agent');
 var logger = require('../../ThaliLogger')('thaliPeerPoolDefault');
 var Utils = require('../utils/common.js');
+var Promise = require('lie');
+var PromiseQueue = require('../promiseQueue');
 
-/** @module thaliPeerPoolDefault */
+/** @module thaliPeerPoolOneAtATime */
 
 /**
  * @classdesc This is the default implementation of the
@@ -63,25 +65,28 @@ var Utils = require('../utils/common.js');
  * @public
  * @constructor
  */
-function ThaliPeerPoolDefault() {
-  ThaliPeerPoolDefault.super_.call(this);
+function ThaliPeerPoolOneAtATime() {
+  ThaliPeerPoolOneAtATime.super_.call(this);
   this._stopped = true;
+  this._serialPromiseQueue = new PromiseQueue();
 }
 
-util.inherits(ThaliPeerPoolDefault, ThaliPeerPoolInterface);
-ThaliPeerPoolDefault.ERRORS = ThaliPeerPoolInterface.ERRORS;
+util.inherits(ThaliPeerPoolOneAtATime, ThaliPeerPoolInterface);
+ThaliPeerPoolOneAtATime.ERRORS = ThaliPeerPoolInterface.ERRORS;
 
-ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED = 'We are stopped';
+ThaliPeerPoolOneAtATime.ERRORS.ENQUEUE_WHEN_STOPPED = 'We are stopped';
 
-ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
+ThaliPeerPoolOneAtATime.prototype._serialPromise = null;
+
+ThaliPeerPoolOneAtATime.prototype.enqueue = function (peerAction) {
   if (this._stopped) {
-    throw new Error(ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED);
+    throw new Error(ThaliPeerPoolOneAtATime.ERRORS.ENQUEUE_WHEN_STOPPED);
   }
 
   // Right now we will just allow everything to run parallel.
 
   var result =
-    ThaliPeerPoolDefault.super_.prototype.enqueue.apply(this, arguments);
+    ThaliPeerPoolOneAtATime.super_.prototype.enqueue.apply(this, arguments);
 
   var actionAgent = new ForeverAgent.SSL({
     keepAlive: true,
@@ -96,21 +101,27 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
   // We hook our clean up code to kill and it is always legal to call
   // kill, even if it has already been called. So this ensures that our
   // cleanup code gets called regardless of how the action ended.
-  peerAction.start(actionAgent)
-    .catch(function (err) {
-      logger.debug('Got err ', Utils.serializePouchError(err));
-    })
-    .then(function () {
-      peerAction.kill();
-    });
+  this._serialPromiseQueue.enqueue(function (resolve, reject) {
+    logger.debug(peerAction.getId() + ' - Peer Action Started');
+    return peerAction.start(actionAgent)
+      .catch(function (err) {
+        logger.debug('Got err ', Utils.serializePouchError(err));
+      })
+      .then(function () {
+        logger.debug(peerAction.getId() + ' - Peer Action Stopped');
+        peerAction.kill();
+        resolve(true);
+      });
+  });
+
 
   return result;
 };
 
-ThaliPeerPoolDefault.prototype.start = function () {
+ThaliPeerPoolOneAtATime.prototype.start = function () {
   this._stopped = false;
 
-  return ThaliPeerPoolDefault.super_.prototype.start.apply(this, arguments);
+  return ThaliPeerPoolOneAtATime.super_.prototype.start.apply(this, arguments);
 };
 
 /**
@@ -119,11 +130,10 @@ ThaliPeerPoolDefault.prototype.start = function () {
  * killed. It will also return errors if any further attempts are made
  * to enqueue.
  */
-ThaliPeerPoolDefault.prototype.stop = function () {
-  var self = this;
+ThaliPeerPoolOneAtATime.prototype.stop = function () {
   this._stopped = true;
 
-  return ThaliPeerPoolDefault.super_.prototype.stop.apply(this, arguments);
+  return ThaliPeerPoolOneAtATime.super_.prototype.stop.apply(this, arguments);
 };
 
-module.exports = ThaliPeerPoolDefault;
+module.exports = ThaliPeerPoolOneAtATime;
