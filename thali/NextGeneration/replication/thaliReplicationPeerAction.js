@@ -348,7 +348,8 @@ ThaliReplicationPeerAction.prototype._complete =
           }
           case 'ECONNRESET': {
             self._reject(
-              new Error('Could establish TCP connection but couldn\'t keep it running')
+              new Error('Could establish TCP connection but couldn\'t keep' +
+                ' it running')
             );
             return true;
           }

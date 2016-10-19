@@ -12,6 +12,7 @@ var ThaliMobileNativeWrapper = require('../thaliMobileNativeWrapper');
 var assert = require('assert');
 var ThaliPeerAction = require('./thaliPeerAction');
 var platform = require('../utils/platform');
+var ThaliMobile = require('../thaliMobile');
 
 /** @module thaliPeerPoolBigReplication */
 
@@ -33,7 +34,7 @@ var platform = require('../utils/platform');
  *
  * Right now we don't have a standard way to communicate peerID and generation.
  * In fact it's worse because wifi doesn't use peerID and generation. Instead it
- * just uses a new USN everytime the generation changes.
+ * just uses a new USN every time the generation changes.
  *
  * Until we merge with the iOS branch (and resolve 1365) we will use the
  * following hacks to figure out the peerID in a peerAvailabilityChanged event
@@ -61,6 +62,42 @@ var platform = require('../utils/platform');
  * create a fake peerID using the host name and address (yes, this can blow
  * up in some cases and no we aren't going to worry about that right now) and
  * for fake Android we'll also use the real Wifi approach.
+ *
+ * # Handling peerAvailabilityChanged event saying a peer is gone in the old
+ * world
+ *
+ * With Wifi we have to be very careful because the peer unavailable status
+ * really is just related to a particular USN. So all we can take from the
+ * unavailable event is that the associated USN is gone, not that the peer
+ * is gone. This will be fixed when we move to the new world. So the best we
+ * can do is go through the queue looking for any entries that match the
+ * peerID in the peerAvailabilityChanged event and kill them.
+ *
+ * With Android however the notification is really about the peer all up. So
+ * we can remove all instances of that realPeerID in the queue. If we have a
+ * started action for that peerID (there should be exactly one) then we can
+ * call disconnect on whatever peerID it used.
+ *
+ * # Closing connections on Android in the old world
+ *
+ * If the start promise returns from a thaliNotificationAction on Android that
+ * contains any value but BEACONS_RETRIEVED_AND_PARSED with beacons set to a
+ * non-null value then we MUST call disconnect on the peerID. This is really too
+ * aggressive but we want to keep our logic simple for now.
+ *
+ * If we get the thaliNotificationAction start promise result with
+ * BEACONS_RETRIEVED_AND_PARSED and a non-null beacon value then we know that a
+ * replication action is going to be created and we want to keep the Bluetooth
+ * connection open so we won't call disconnect.
+ *
+ * If we get a response from thaliReplicationPeerAction then we always call
+ * disconnect. We are doing a live replication and if this action returns then
+ * it means the peer really has nothing further to say and we should give
+ * someone else a chance at the Bluetooth connection. Ideally we would stick
+ * in an optimization that if the next action on the queue is for the same
+ * peerID then we would move the action down the queue. But we anyway per
+ * #1383 we are going to rethink how the replication action works and that will
+ * have plenty of changes here.
  *
  * # Universal Logic for notification actions added to the queue
  *
@@ -237,6 +274,14 @@ ThaliPeerPoolBigReplication.MPCF_MAX_START = 3;
 
 ThaliPeerPoolBigReplication.prototype._queue = null;
 
+ThaliPeerPoolBigReplication._getPeerIdFromAndroidOldPeerIdentifier =
+  function(oldAndroidPeerId) {
+    var split = oldAndroidPeerId.split('-');
+    assert(split.length >= 2,
+      'We got a peerID with a format we do not recognize!');
+    return split[0];
+  };
+
 ThaliPeerPoolBigReplication._getPeerIdFromAction = function (action) {
   function getWifiFakePeerId(action) {
     switch (action.getActionType()) {
@@ -269,10 +314,8 @@ ThaliPeerPoolBigReplication._getPeerIdFromAction = function (action) {
         return getWifiFakePeerId(action);
       }
 
-      var split = action.getPeerIdentifier().split('-');
-      assert(split.length >= 2,
-        'We got a peerID with a format we do not recognize!');
-      return split[0];
+      return ThaliPeerPoolBigReplication
+        ._getPeerIdFromAndroidOldPeerIdentifier(action.getPeerIdentifier());
     }
     case ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE: {
       return getWifiFakePeerId(action);
@@ -300,6 +343,39 @@ ThaliPeerPoolBigReplication.prototype._searchQueue =
       return connectionTypeMatch && actionTypeMatch && peerIDMatch &&
         doNotIncludeKilledMatch;
     });
+  };
+
+ThaliPeerPoolBigReplication.prototype._bindForPeerAvailabilityChange =
+  function(peer, connectionType) {
+    if (this._stopped) {
+      return;
+    }
+
+    switch(connectionType) {
+      case ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE: {
+        this._queue.filter(function (peerAction) {
+          return peerAction.getConnectionType() === connectionType &&
+            peerAction.getPeerIdentifier() === peer.peerIdentifier &&
+            peerAction.getActionState() !==
+            ThaliPeerAction.actionState.KILLED;
+        }).forEach(function (peerAction) {
+          peerAction.kill();
+        });
+        return;
+      }
+      case ThaliMobileNativeWrapper.connectionTypes.BLUETOOTH: {
+        this._searchQueue(connectionType, null,
+          ThaliPeerPoolBigReplication
+            ._getPeerIdFromAndroidOldPeerIdentifier(peer.peerIdentifier),
+          true)
+          .forEach(function (peerAction) {
+            peerAction.kill();
+            ThaliMobileNativeWrapper.terminateListener()
+            STOPPED HERE!!!!!!
+          });
+      }
+
+    }
   };
 
 ThaliPeerPoolBigReplication._case2 =

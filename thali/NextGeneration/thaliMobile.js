@@ -92,8 +92,7 @@ var getWifiOrNativeMethodByNetworkType = function (method, networkType) {
           });
       };
     }
-    default:
-    {
+    default: {
       throw new Error('Unsupported network type ' + networkType);
     }
   }
@@ -487,7 +486,7 @@ module.exports.getPeerHostInfo = function () {
  * @returns {Promise<?Error>}
  */
 module.exports.disconnect = function () {
-  return Promise.reject('not implement');
+  return Promise.reject('not implemented');
 };
 /*
         EVENTS
