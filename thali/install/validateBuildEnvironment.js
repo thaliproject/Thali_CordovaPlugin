@@ -334,7 +334,7 @@ if (require.main === module) {
       const home = process.env.HOME;
       const jx = path.join(home, '.jx');
       const jxc = path.join(home, '.jxc');
-      const nodeGyp = path.join(home, 'node-gyp');
+      const nodeGyp = path.join(home, '.node-gyp');
       return Promise.all([fs.removeAsync(jx), fs.removeAsync(jxc),
                          fs.removeAsync(nodeGyp)]);
     })
