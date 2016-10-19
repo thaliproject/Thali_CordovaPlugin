@@ -327,11 +327,22 @@ module.exports = function (callback, appRootDirectory) {
                                                           thaliDepotName,
                                                           thaliBranchName);
       } else {
-        return installGitHubZip(thaliProjectName, thaliDepotName,
-                                thaliBranchName, thaliDontCheckIn);
+        var errorMessage =
+          'The magic for local deployment' +
+          MAGIC_DIRECTORY_NAME_FOR_LOCAL_DEPLOYMENT +
+          ' doesn\'t seem to exist' +
+          ' currently the installation only supports local deployment.' +
+          ' See README.md for the details.';
+
+        return Promise.reject(new Error(errorMessage));
+
+        // The lines below should be uncommented as soon as we do release
+        //
+        // return installGitHubZip(thaliProjectName, thaliDepotName,
+        //                         thaliBranchName, thaliDontCheckIn);
       }
     })
-    .then(function (thaliCordovaPluginUnZipResult){
+    .then(function (thaliCordovaPluginUnZipResult) {
       // This step is used to prepare the gradle.properties file
       // containing the btconnectorlib2 version
       var projectDir = createUnzippedDirectoryPath(
