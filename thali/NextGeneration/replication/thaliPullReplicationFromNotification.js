@@ -94,7 +94,7 @@ ThaliPullReplicationFromNotification.STATES = {
  * @private
  */
 ThaliPullReplicationFromNotification._getPeerDictionaryKey =
-  function(peerAdvertisesData) {
+  function (peerAdvertisesData) {
     return peerAdvertisesData.connectionType + '-' + peerAdvertisesData.keyId;
   };
 
@@ -108,7 +108,6 @@ ThaliPullReplicationFromNotification._getPeerDictionaryKey =
  */
 ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
   function (peerAdvertisesData) {
-    var self = this;
     if (!peerAdvertisesData.portNumber) {
       logger.error(
         'We don\'t support client notification that a peer is gone, yet.'
@@ -116,7 +115,8 @@ ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
       return;
     }
 
-    var key = ThaliPullReplicationFromNotification._getPeerDictionaryKey(peerAdvertisesData);
+    var key = ThaliPullReplicationFromNotification.
+      _getPeerDictionaryKey(peerAdvertisesData);
     var existingAction = this._peerDictionary[key];
     if (existingAction) {
       assert(
@@ -145,11 +145,13 @@ ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
  * on first starting or killed event.
  * @private
  */
-ThaliPullReplicationFromNotification.prototype._bindRemoveActionFromPeerDictionary =
+ThaliPullReplicationFromNotification.prototype.
+  _bindRemoveActionFromPeerDictionary =
   function (action, key) {
     var self = this;
 
-    // TODO Invesatigate whether EventEmitter with action will provide a memory leak.
+    // TODO Investigate whether EventEmitter with action will provide a memory
+    // leak.
     // TODO Add EventEmitter to the peer action class.
     // TODO Extend EventEmitter with 'onceAny' method.
     // For example here we can use:
@@ -166,8 +168,8 @@ ThaliPullReplicationFromNotification.prototype._bindRemoveActionFromPeerDictiona
       removed = true;
 
       assert(
-        self._peerDictionary[key],
-        'The entry should exist because this is the only place that can remove it'
+        self._peerDictionary[key], 'The entry should exist because this is ' +
+        'the only place that can remove it'
       );
       delete self._peerDictionary[key];
     }
@@ -178,13 +180,13 @@ ThaliPullReplicationFromNotification.prototype._bindRemoveActionFromPeerDictiona
       removeHandler();
       action.start = originalStart;
       return originalStart.apply(this, arguments);
-    }
+    };
     var originalKill = action.kill;
     action.kill = function () {
       removeHandler();
       action.kill = originalKill;
       return originalKill.apply(this, arguments);
-    }
+    };
   };
 
 /**
@@ -259,6 +261,6 @@ ThaliPullReplicationFromNotification.prototype.stop = function () {
  */
 ThaliPullReplicationFromNotification.prototype.getState = function () {
   return this.state;
-}
+};
 
 module.exports = ThaliPullReplicationFromNotification;

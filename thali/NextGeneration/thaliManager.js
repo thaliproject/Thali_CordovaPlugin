@@ -207,59 +207,55 @@ ThaliManager.prototype.stop = function () {
 
   // Can we stop now?
   var args = arguments;
-  switch (this.state) {
+  switch (self.state) {
     case ThaliManager.STATES.CREATED:
     case ThaliManager.STATES.STOPPED: {
       return Promise.resolve();
     }
     case ThaliManager.STATES.STOPPING: {
-      return this._stoppingPromise;
+      return self._stoppingPromise;
     }
     case ThaliManager.STATES.STARTING: {
-      return this._startingPromise
+      return self._startingPromise
         .then(function () {
           return self.stop.apply(self, args);
         });
     }
   }
   assert(
-    this.state === ThaliManager.STATES.STARTED,
+    self.state === ThaliManager.STATES.STARTED,
     'ThaliManager state should be \'STARTED\' for stop'
   );
-  this.state = ThaliManager.STATES.STOPPING;
+  self.state = ThaliManager.STATES.STOPPING;
 
-  logger.debug('stopping thaliPullReplicationFromNotification');
-  this._thaliPullReplicationFromNotification.stop();
+  logger.debug('stopping thaliPeerPoolInterface');
+  self._stoppingPromise = self._thaliPeerPoolInterface.stop()
+    .then(function () {
+      logger.debug('stopping thaliPullReplicationFromNotification');
+      self._thaliPullReplicationFromNotification.stop();
 
-  logger.debug('stopping thaliSendNotificationBasedOnReplication');
-  this._stoppingPromise = this._thaliSendNotificationBasedOnReplication.stop()
+      logger.debug('stopping thaliSendNotificationBasedOnReplication');
+      return self._thaliSendNotificationBasedOnReplication.stop()
+    })
+    .then(function () {
+      logger.debug('stopping advertising and listening');
+      return ThaliMobile.stopAdvertisingAndListening();
+    })
+    .then(function () {
+      logger.debug('stopping listening for advertisements');
+      return ThaliMobile.stopListeningForAdvertisements();
+    })
+    .then(function () {
+      logger.debug('stopping ThaliMobile');
+      return ThaliMobile.stop();
+    })
+    .then(function () {
+      self.state = ThaliManager.STATES.STOPPED;
+      self._stoppingPromise = undefined;
+      return true;
+    });
 
-  .then(function () {
-    logger.debug('stopping thaliPeerPoolInterface');
-    return self._thaliPeerPoolInterface.stop();
-  })
-
-  .then(function () {
-    logger.debug('stopping advertising and listening');
-    return ThaliMobile.stopAdvertisingAndListening();
-  })
-
-  .then(function () {
-    logger.debug('stopping listening for advertisements');
-    return ThaliMobile.stopListeningForAdvertisements();
-  })
-
-  .then(function () {
-    logger.debug('stopping ThaliMobile');
-    return ThaliMobile.stop();
-  })
-
-  .then(function () {
-    self.state = ThaliManager.STATES.STOPPED;
-    self._stoppingPromise = undefined;
-  });
-
-  return this._stoppingPromise;
+  return self._stoppingPromise;
 };
 
 /**
