@@ -1,6 +1,7 @@
 'use strict';
 
 var LEADER_TIMEOUT = 10 * 1000;
+var SYNC_TIMEOUT   = 10 * 1000;
 var TEST_TIMEOUT   = 5 * 60 * 1000;
 var DATA_LENGTH    = 1e6;
 
@@ -145,11 +146,21 @@ function resolveLeader () {
 
 resolveLeader()
 .then(function (isLeader) {
+  return new Promise(function (resolve) {
+    if (isLeader) {
+      logger.debug('I am a leader');
+    } else {
+      logger.debug('I am not a leader');
+    }
+    setTimeout(function () {
+      resolve(isLeader);
+    }, SYNC_TIMEOUT);
+  });
+})
+.then(function (isLeader) {
   if (isLeader) {
-    logger.debug('I am a leader');
     sendRandomData();
   } else {
-    logger.debug('I am not a leader');
     receiveRandomData();
   }
 });
@@ -179,12 +190,7 @@ function sendRandomData() {
   var confirmedPeers = {};
 
   function resolveConfirmedPeers () {
-    var isSamePeers = Object.keys(peerIds)
-    .every(function (peerId) {
-      return confirmedPeers[peerId];
-    });
-    console.log('ololo', isSamePeers, peerIds, confirmedPeers);
-    if (isSamePeers) {
+    if (Object.keys(peerIds).length === Object.keys(confirmedPeers).length) {
       stop()
       .then(function () {
         logger.debug('we are stopped');
@@ -249,7 +255,6 @@ function sendRandomData() {
 
 function receiveRandomData() {
   var server;
-  var dataLength = 0;
 
   function start () {
     return new Promise(function (resolve) {
@@ -286,19 +291,20 @@ function receiveRandomData() {
     });
   }
 
+  var totalLength = 0;
+
   function receiveData(socket) {
     logger.debug('we got a connection from leader');
 
-    var id;
     socket.on('data', function (data) {
       data = data.toString();
-      dataLength += data.length;
+      totalLength += data.length;
       logger.debug(
-        'we received data from peer: \'%s\', length: %d, total length: %d',
-        id, data.length, dataLength
+        'we received data from leader, length: %d, total length: %d',
+        data.length, totalLength
       );
 
-      if (dataLength >= DATA_LENGTH) {
+      if (totalLength >= DATA_LENGTH) {
         // This is our confirmation byte.
         logger.debug('we sent a confirmation byte to leader');
         socket.write('0', function () {
