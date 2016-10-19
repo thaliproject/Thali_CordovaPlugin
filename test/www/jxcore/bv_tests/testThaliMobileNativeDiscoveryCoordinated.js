@@ -291,7 +291,12 @@ test('Set up for no peer discovery test',
     t.end();
   });
 
-test('no peer discovery', function (t) {
+test('no peer discovery',
+  function () {
+    // disabled until #1323 will be resolved
+    return platform.isIOS;
+  },
+  function (t) {
   testTimeout(t);
 
   mobileIsListening = true;
