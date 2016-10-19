@@ -45,11 +45,13 @@ Socket.prototype._data = function (data) {
     this._socket.event.length === 2,
     'we should receive \'data\' and \'event\' name'
   );
-  asserts.equals(this._socket.event[0], 'data');
+  asserts.equals(this._socket.event[0], 'data', 'we should receive \'data\'');
   var event = this._socket.event[1];
   asserts.isString(event);
 
+  event = 'data:' + event;
   this.logger.debug('socket received event: \'%s\'', event);
+  this.emit(event, data);
 }
 
 Socket.prototype._error = function (error) {

@@ -7,6 +7,7 @@ var assert       = require('assert');
 var objectAssign = require('object-assign');
 var Promise      = require('bluebird');
 var nssocket     = require('nssocket');
+var uuid         = require('node-uuid');
 
 var asserts = require('../utils/asserts');
 var logger  = require('../utils/ThaliLogger')('Client');
@@ -18,6 +19,8 @@ asserts.isString(address);
 
 
 function Client (options) {
+  this.id = uuid.v4();
+
   this._setOptions(options);
 
   this._isClosed = true;
@@ -75,6 +78,9 @@ Client.prototype._bind = function () {
 
 Client.prototype._connect = function () {
   logger.debug('we are connected to server');
+
+  logger.debug('sending id: \'%s\'', this.id);
+  this._socket.send('id', this.id);
 }
 
 Client.prototype.disconnect = Client.prototype.close;

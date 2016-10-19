@@ -28,4 +28,16 @@ inherits(ServerSocket, Socket);
 
 ServerSocket.prototype.logger = logger;
 
+ServerSocket.prototype._bind = function () {
+  ServerSocket.super_.prototype._bind.call(this);
+
+  logger.debug('waiting for id');
+  this.once('data:id', this._data_id.bind(this));
+}
+
+ServerSocket.prototype._data_id = function (id) {
+  this.id = id;
+  logger.debug('received id: \'%s\'', this.id);
+}
+
 module.exports = ServerSocket;

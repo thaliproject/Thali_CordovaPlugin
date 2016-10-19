@@ -115,18 +115,3 @@ test('client should be able to reconnect to server if it restarted', function (t
     });
   }, CHECK_TIMEOUT);
 });
-
-/*
-test.only('client should be able to reconnect to server if network failed silently (by using keep alive)', function (t) {
-  var spyServerConnect = sinon.spy(Server.prototype, '_connect');
-  var spyClientConnect = sinon.spy(Client.prototype, '_connect');
-  var server = new Server();
-  var client = new Client({
-    reconnectionDelay: CHECK_TIMEOUT,
-    keepAliveTimeout:  CHECK_TIMEOUT
-  });
-
-  setTimeout(function () {
-  }, CHECK_TIMEOUT);
-});
-*/
