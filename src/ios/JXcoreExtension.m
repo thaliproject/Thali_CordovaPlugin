@@ -104,9 +104,9 @@
 
 - (void)defineMultiConnect:(AppContext *)appContext {
     [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId) {
-        NSError *error = nil;
-        [appContext multiConnectToPeer:params error:&error];
-        [self handleCallback:callbackId error:error];
+        [appContext multiConnectToPeer:params validationCompletionHandler:^(NSError *error) {
+            [self handleCallback:callbackId error:error];
+        }];
     } withName:[AppContextJSEvent multiConnect]];
 }
 

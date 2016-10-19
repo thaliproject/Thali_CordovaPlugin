@@ -308,30 +308,44 @@ extension PeerAvailability {
         updateListeningAdvertisingState()
     }
 
-    public func stopListening() throws {
-    }
-
     public func stopAdvertisingAndListening() throws {
+        self.advertiserManager.stopAdvertising()
+        self.updateListeningAdvertisingState()
     }
 
-    public func multiConnectToPeer(parameters: [AnyObject]) throws {
-        guard bluetoothState == .on || NetworkReachability().isWiFiEnabled() else {
-            throw ThaliCoreError.RadioTurnedOff
-        }
+    public func multiConnectToPeer(parameters: [AnyObject], validationCompletionHandler: (NSError?) -> Void)  {
         guard parameters.count >= 2 else {
-            throw AppContextError.badParameters
+            validationCompletionHandler(AppContextError.badParameters as NSError)
+            return
         }
         guard let peerIdentifier = parameters[0] as? String, syncValue = parameters[1] as? String
             else {
-                throw AppContextError.badParameters
+                validationCompletionHandler(AppContextError.badParameters as NSError)
+                return
         }
-        browserManager.connectToPeer(peerIdentifier, syncValue: syncValue) {
-            [weak self] syncValue, error, port in
-            self?.handleMultiConnectResolved(withSyncValue: syncValue, port: port, error: error)
-            if let error = error {
-                self?.handleMultiConnectConnectionFailure(withIdentifier: peerIdentifier,
-                                                          error: error)
+        validationCompletionHandler(nil)
+
+        // This code MUST be executed after validation to avoid racing on JXcore side between
+        // multiConnect and multiConnectResolved callbacks
+        do {
+            let _ = try Peer(uuidIdentifier: identifierString, generation: 0)
+            guard self.bluetoothState == .on || NetworkReachability().isWiFiEnabled() else {
+                self.handleMultiConnectConnectionFailure(withIdentifier: identifierString,
+                                                         error: ThaliCoreError.RadioTurnedOff)
+                return
             }
+            self.browserManager.connectToPeer(identifierString, syncValue: syncValue) {
+                [weak self] syncValue, error, port in
+                self?.handleMultiConnectResolved(withSyncValue: syncValue, port: port, error: error)
+                if let error = error {
+                    self?.handleMultiConnectConnectionFailure(withIdentifier: identifierString,
+                                                              error: error)
+                }
+            }
+        } catch let err {
+            self.handleMultiConnectResolved(withSyncValue: syncValue, port: nil, error: err)
+
+            return
         }
     }
 
@@ -364,9 +378,9 @@ extension PeerAvailability {
 
     #if TEST
     func executeNativeTests() -> String {
-    let runner = TestRunner.`default`
-    runner.runTest()
-    return runner.resultDescription ?? ""
+        let runner = TestRunner.`default`
+        runner.runTest()
+        return runner.resultDescription ?? ""
     }
     #endif
 
