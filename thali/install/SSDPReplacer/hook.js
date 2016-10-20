@@ -3,18 +3,19 @@
 var util   = require('util');
 var format = util.format;
 
-var assert = require('assert');
 var findit = require('findit');
 var fs     = require('fs-extra-promise');
 
 var uuid         = require('node-uuid');
 var randomString = require('randomstring');
+var Promise      = require('bluebird');
 
 // ponyfills
 var endsWith = require('end-with');
 
-var Promise = require('./utils/Promise');
-require('./utils/process');
+require('./process');
+
+var THALI_DIRECTORY = './thaliDontCheckIn';
 
 
 // We want to find the first path that ends with 'name'.
@@ -32,9 +33,10 @@ function findFirstFile (name) {
       }
     }
 
-    var finder = findit('.')
+    var finder = findit(THALI_DIRECTORY)
     .on('file', function (path) {
-      // We can receive here 'path': 'a/b/my-file', 'a/b/bad-my-file', 'my-file', 'bad-my-file'.
+      // We can receive here 'path': 'a/b/my-file', 'a/b/bad-my-file',
+      //  'my-file', 'bad-my-file'.
       // Both 'a/b/my-file' and 'my-file' should be valid.
       if (path === name || endsWith(path, '/' + name)) {
         resultPath = path;
@@ -56,7 +58,7 @@ function findFirstFile (name) {
   });
 }
 
-function replaceContent(content, replacements) {
+function replaceContent(path, content, replacements) {
   // String.prototype.replace in javascript is defected by design.
   // https://stackoverflow.com/questions/5257000/how-to-know-if-javascript-string-replace-did-anything
   function replace(string, pattern, replacement) {
@@ -67,21 +69,20 @@ function replaceContent(content, replacements) {
 
       // arguments are $0, $1, ..., offset, string
       return Array.prototype.slice.call(arguments, 1, -2)
-      .reduce(function (pattern, match, index) {
-        // '$1' from strings like '$11 $12' shouldn't be replaced.
-        return pattern.replace(
-          new RegExp('\\$' + (index + 1) + '(?=[^\\d]|$)', 'g'),
-          match
-        );
-      }, replacement);
+        .reduce(function (pattern, match, index) {
+          // '$1' from strings like '$11 $12' shouldn't be replaced.
+          return pattern.replace(
+            new RegExp('\\$' + (index + 1) + '(?=[^\\d]|$)', 'g'),
+            match
+          );
+        }, replacement);
     });
 
     if (!isReplaced) {
-      console.log(pattern);
       throw new Error(
         format(
-          'we couldn\'t replace pattern: \'%s\' with value: \'%s\'',
-          pattern, replacement
+          'we couldn\'t replace pattern: \'%s\' with value: \'%s\' in file: \'%s\'',
+          pattern, replacement, path
         )
       );
     }
@@ -94,20 +95,20 @@ function replaceContent(content, replacements) {
 }
 
 // We want to replace multiple 'strings' in file.
-// 'replacements' will be an array: [{ pattern: /pattern/, value: 'replacement' }]
+// 'replacements' will be an array:
+// [{ pattern: /pattern/, value: 'replacement' }]
 function replaceStringsInFile(name, replacements) {
-  return new Promise(function (resolve, reject) {
-    return findFirstFile(name)
-    .then(function (path) {
-      return fs.readFileAsync(path, 'utf8')
-      .then(function (content) {
-        return replaceContent(content, replacements);
-      })
-      .then(function (content) {
-        return fs.writeFileAsync(path, content, 'utf8');
-      })
-      .then(resolve);
+  return findFirstFile(name)
+  .then(function (path) {
+
+    return fs.readFileAsync(path, 'utf8')
+    .then(function (content) {
+      return replaceContent(path, content, replacements);
+    })
+    .then(function (content) {
+      return fs.writeFileAsync(path, content, 'utf8');
     });
+
   })
   .catch(function (error) {
     console.error(
@@ -127,7 +128,8 @@ function replaceStringsInFile(name, replacements) {
 
 function replaceThaliConfig () {
   // example: 'SSDP_NT: process.env.SSDP_NT || 'http://www.thaliproject.org/ssdp','
-  // We want to replace 'http://www.thaliproject.org/ssdp' here with random string.
+  // or: SSDP_NT: 'http://www.thaliproject.org/ssdp',
+  // We want to replace it with random string.
   var value = randomString.generate({
     length: 'http://www.thaliproject.org/ssdp'.length
   });
@@ -150,14 +152,16 @@ function replaceThaliConfig () {
 function replaceConnectionHelper () {
   var replacements = [];
 
-  // Example: 'private static final String BLE_SERVICE_UUID_AS_STRING = "b6a44ad1-d319-4b3a-815d-8b805a47fb51";'
+  // Example: 'private static final String BLE_SERVICE_UUID_AS_STRING =
+  // "b6a44ad1-d319-4b3a-815d-8b805a47fb51";'
   // We want to replace 'b6a44ad1-d319-4b3a-815d-8b805a47fb51' with new uuid.v4.
 
   replacements.push({
     pattern: new RegExp(
       [
         '(',
-          ['static', 'final', 'String', 'BLE_SERVICE_UUID_AS_STRING'].join('\\s+'),
+          ['static', 'final', 'String', 'BLE_SERVICE_UUID_AS_STRING']
+            .join('\\s+'),
           '\\s*', '=', '\\s*',
         ')',
         '(',
@@ -179,7 +183,7 @@ function replaceConnectionHelper () {
       [
         '(',
           ['static', 'final', 'int', 'MANUFACTURER_ID'].join('\\s+'),
-          '\\s*', '=',
+        '\\s*', '=',
         ')',
         '(',
           '\\s*', '.*?', ';',
@@ -193,7 +197,8 @@ function replaceConnectionHelper () {
 }
 
 function replaceJXcoreExtension() {
-  // example: 'appContext = [[AppContext alloc] initWithServiceType:@"thaliproject"];'
+  // example:
+  // 'appContext = [[AppContext alloc] initWithServiceType:@"thaliproject"];'
   // We want to replace 'thaliproject' here with random alphabetic string.
   var value = randomString.generate({
     length:  'thaliproject'.length,
