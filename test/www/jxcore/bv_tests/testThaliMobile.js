@@ -270,7 +270,7 @@ test('wifi peer is marked unavailable if announcements stop', function (t) {
   };
   ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityChangedHandler);
 
-  ThaliMobile.start()
+  ThaliMobile.start(express.Router())
   .then(function () {
     return ThaliMobile.startListeningForAdvertisements();
   })

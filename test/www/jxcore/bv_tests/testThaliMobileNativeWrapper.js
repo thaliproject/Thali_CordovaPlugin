@@ -312,7 +312,7 @@ var verifyCallWithArguments = function (t, callName, parameters) {
   var mockServersManager = {};
   var spy = sinon.spy();
   var serversManagerEquivalentCallName = callName === '_terminateConnection' ?
-    'terminateIncomingConnection' : callName;
+    'terminateIncomingConnection' : 'terminateOutgoingConnection';
   mockServersManager[serversManagerEquivalentCallName] = function () {
     spy.apply(this, arguments);
     return Promise.resolve();
