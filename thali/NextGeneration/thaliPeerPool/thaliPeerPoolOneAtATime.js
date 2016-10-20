@@ -4,10 +4,12 @@ var util = require('util');
 var ThaliPeerPoolInterface = require('./thaliPeerPoolInterface');
 var thaliConfig = require('../thaliConfig');
 var ForeverAgent = require('forever-agent');
-var logger = require('../../ThaliLogger')('thaliPeerPoolDefault');
+var logger = require('../../ThaliLogger')('thaliPeerPoolOneAtATime');
 var Utils = require('../utils/common.js');
 var Promise = require('lie');
 var PromiseQueue = require('../promiseQueue');
+var ThaliReplicationPeerAction = require('../replication/thaliReplicationPeerAction');
+var assert = require('assert');
 
 /** @module thaliPeerPoolOneAtATime */
 
@@ -69,6 +71,7 @@ function ThaliPeerPoolOneAtATime() {
   ThaliPeerPoolOneAtATime.super_.call(this);
   this._stopped = true;
   this._serialPromiseQueue = new PromiseQueue();
+  this._wifiReplicationCount = {};
 }
 
 util.inherits(ThaliPeerPoolOneAtATime, ThaliPeerPoolInterface);
@@ -76,7 +79,102 @@ ThaliPeerPoolOneAtATime.ERRORS = ThaliPeerPoolInterface.ERRORS;
 
 ThaliPeerPoolOneAtATime.ERRORS.ENQUEUE_WHEN_STOPPED = 'We are stopped';
 
-ThaliPeerPoolOneAtATime.prototype._serialPromise = null;
+ThaliPeerPoolOneAtATime.prototype._startAction = function (peerAction) {
+  var actionAgent = new ForeverAgent.SSL({
+    keepAlive: true,
+    keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
+    maxSockets: Infinity,
+    maxFreeSockets: 256,
+    ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+    pskIdentity: peerAction.getPskIdentity(),
+    pskKey: peerAction.getPskKey()
+  });
+
+  return peerAction.start(actionAgent)
+  .then(function () {
+    logger.debug('action returned successfully from start');
+    return null;
+  })
+  .catch(function (err) {
+    logger.debug('action returned with error from start' + err);
+    return null;
+  });
+};
+
+ThaliPeerPoolOneAtATime.prototype._wifiReplicationCount = null;
+
+ThaliPeerPoolOneAtATime.prototype._wifiEnqueue = function (peerAction) {
+  var self = this;
+  if (peerAction.getActionType() !== ThaliReplicationPeerAction.actionType) {
+    return self._startAction(peerAction);
+  }
+
+  var peerId = peerAction.getPeerIdentifier();
+
+  var count = self._wifiReplicationCount[peerId];
+  switch (count) {
+    case undefined:
+    case 0: {
+      self._wifiReplicationCount[peerId] = 1;
+      break;
+    }
+    case 1: {
+      self._wifiReplicationCount[peerId] = 2;
+      break;
+    }
+    case 2: {
+      return peerAction.kill();
+    }
+    default: {
+      logger.error('We got an illegal count: ' + count);
+    }
+  }
+
+  var originalKill = peerAction.kill;
+  peerAction.kill = function () {
+    var count = self._wifiReplicationCount[peerId];
+    switch (count) {
+      case 1: {
+        delete self._wifiReplicationCount[peerId];
+        break;
+      }
+      case 2: {
+        self._wifiReplicationCount[peerId] = 1;
+        break;
+      }
+      default: {
+        logger.error('Count had to be 1 or 2 - ' + count);
+      }
+    }
+    return originalKill.apply(this, arguments);
+  };
+
+  return self._startAction(peerAction);
+};
+
+ThaliPeerPoolOneAtATime.prototype._bluetoothEnqueue = function (peerAction) {
+  /*
+  For Bluetooth we will issue exactly one action at a time. So don't test more
+  than two phones over native because there are conditions where the phones
+  can get stuck in a cycle and lock one of the phones out for awhile.
+
+  The easy issue is running actions one at a time. The serialPromiseQueue is
+  perfect for that.
+
+  The challenge is knowing when to terminate connections.
+
+  For notification actions if we get any result but BEACONS_RETRIEVED_AND_PARSED
+  with beacons set to a non-null value then we should call
+  terminateOutgoingConnection just to be safe. The trick though is that we HAVE
+  to make sure that the next action is going to be the replication action.
+  Otherwise we can get an already connected error. So what we have to do is
+  when we get a magic result from the notification action
+
+  For replication actions we should always call terminateOutgoingConnection. If
+  we get a completed replication action then it means they have stopped playing
+  with the phones and we should give them a chance to connect to someone else.
+   */
+};
 
 ThaliPeerPoolOneAtATime.prototype.enqueue = function (peerAction) {
   if (this._stopped) {
@@ -88,15 +186,6 @@ ThaliPeerPoolOneAtATime.prototype.enqueue = function (peerAction) {
   var result =
     ThaliPeerPoolOneAtATime.super_.prototype.enqueue.apply(this, arguments);
 
-  var actionAgent = new ForeverAgent.SSL({
-    keepAlive: true,
-    keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-    maxSockets: Infinity,
-    maxFreeSockets: 256,
-    ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-    pskIdentity: peerAction.getPskIdentity(),
-    pskKey: peerAction.getPskKey()
-  });
 
   // We hook our clean up code to kill and it is always legal to call
   // kill, even if it has already been called. So this ensures that our
@@ -132,7 +221,7 @@ ThaliPeerPoolOneAtATime.prototype.start = function () {
  */
 ThaliPeerPoolOneAtATime.prototype.stop = function () {
   this._stopped = true;
-
+  this._wifiReplicationCount = {};
   return ThaliPeerPoolOneAtATime.super_.prototype.stop.apply(this, arguments);
 };
 
