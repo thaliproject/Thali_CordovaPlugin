@@ -98,8 +98,10 @@ public final class AdvertiserManager {
                                            Int64(self.disposeTimeout * Double(NSEC_PER_SEC)))
 
         dispatch_after(disposeTimeout, dispatch_get_main_queue()) {
-            [weak self] in
+            [weak self,
+             weak advertiserShouldBeDisposed] in
             guard let strongSelf = self else { return }
+            guard let advertiserShouldBeDisposed = advertiserShouldBeDisposedelse else { return }
 
             strongSelf.advertisers.modify {
                 advertiserShouldBeDisposed.stopAdvertising()
