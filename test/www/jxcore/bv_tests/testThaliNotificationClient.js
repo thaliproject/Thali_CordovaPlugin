@@ -274,10 +274,7 @@ test('Notification action killed with a superseded', function (t) {
       globals.targetDeviceKeyExchangeObjects[0]);
 
   var peerPoolInterface = globals.peerPoolInterface;
-  var callCounter = 0;
   var enqueue = function (action) {
-    ++callCounter;
-    console.log("GOT CALLED: " + callCounter);
     setImmediate(function () {
       action.killSuperseded();
       // Give the system a chance to fire any promises or events in case the
