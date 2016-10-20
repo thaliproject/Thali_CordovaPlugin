@@ -16,6 +16,7 @@
 - (BOOL)isWiFiEnabled;
 - (BOOL)isWiFiConnected;
 - (NSString *)BSSID;
+- (NSString *)SSID;
 
 @end
 
