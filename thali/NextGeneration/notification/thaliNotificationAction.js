@@ -60,6 +60,10 @@ function ThaliNotificationAction(peerIdentifier,
 
 inherits(ThaliNotificationAction, PeerAction);
 
+ThaliNotificationAction.prototype.getResolution = function () {
+  return this._resolution;
+};
+
 /**
  * NotificationAction's event emitter
  *
@@ -153,6 +157,19 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
 ThaliNotificationAction.prototype.kill = function () {
   ThaliNotificationAction.super_.prototype.kill.call(this);
   this._complete(ThaliNotificationAction.ActionResolution.KILLED);
+};
+
+/**
+ * Used primarily by peer pool managers who have decided to kill this
+ * notification action for a particular peerID on a particular connection
+ * type in favor of a newer one.
+ *
+ * @public
+ */
+ThaliNotificationAction.prototype.killSuperseded = function () {
+  ThaliNotificationAction.super_.prototype.kill.call(this);
+  this._complete(
+    ThaliNotificationAction.ActionResolution.KILLED_SUPERSEDED);
 };
 
 /**
@@ -297,7 +314,12 @@ ThaliNotificationAction.ActionResolution = {
   /**
    * The action was killed before it completed.
    */
-  KILLED: 'killed'
+  KILLED: 'killed',
+  /**
+   * The action was killed because it has been superseded by another
+   * notification action and no further work on this action should occur.
+   */
+  KILLED_SUPERSEDED: 'killedSuperseded'
 };
 
 ThaliNotificationAction.Events = {
