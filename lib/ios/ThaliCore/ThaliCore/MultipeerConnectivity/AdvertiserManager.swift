@@ -101,7 +101,7 @@ public final class AdvertiserManager {
             [weak self,
              weak advertiserShouldBeDisposed] in
             guard let strongSelf = self else { return }
-            guard let advertiserShouldBeDisposed = advertiserShouldBeDisposedelse else { return }
+            guard let advertiserShouldBeDisposed = advertiserShouldBeDisposed else { return }
 
             strongSelf.advertisers.modify {
                 advertiserShouldBeDisposed.stopAdvertising()
