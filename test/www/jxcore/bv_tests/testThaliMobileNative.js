@@ -293,8 +293,9 @@ test('Connect port dies if not connected to in time',
   function() {
     /*
      This test should not be ran on Android until #714 is solved (implemented).
+     This test should not be ran on iOS until #1340 is solved (implemented).
      */
-    return platform.isAndroid;
+    return platform.isAndroid || platform.isIOS;
   },
   function (t) {
     /*
