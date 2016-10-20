@@ -28,13 +28,15 @@
 //  for full license information.
 //
 
+/* jshint esnext: true */
+
 'use strict';
 
-var exec = require('child-process-promise').exec;
 var fs = require('fs-extra-promise');
 var path = require('path');
-var Promise = require('lie');
+var spawn = require('../utils/child_process').spawn;
 var xcode = require('xcode');
+var Promise = require('../utils/Promise');
 
 function addFramework(
   projectPath, frameworkProjectDir, frameworkOutputDir, buildWithTests) {
@@ -136,7 +138,7 @@ function addFramework(
           pbxProjectPath, xcodeProject.writeSync(), 'utf-8');
       });
     });
-};
+}
 
 /**
  * @param {string} projectDir Xcode project directory
@@ -152,35 +154,33 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
 
   var projectConfiguration = 'Release';
   var sdk = 'iphoneos';
-  var projectPath = path.join(projectDir, projectName + '.xcodeproj');
+  var projectPath = path.join(projectDir, `${projectName}.xcodeproj`);
   var buildDir = path.join(projectDir, 'build');
 
-  var buildCmd = 'set -o pipefail && ' +
-    'xcodebuild -project' +
-    ' \"' + projectPath + '\"' +
-    ' -scheme ' + '\"' + projectScheme + '\"' +
-    ' -configuration ' + projectConfiguration +
-    ' -sdk ' + sdk +
-    ' ONLY_ACTIVE_ARCH=NO ' +
-    ' BUILD_DIR=' + '\"' + buildDir + '\"' +
-    ' clean build';
+  var buildCmd =
+    `xcodebuild -project "${projectPath}"` +
+    ` -scheme "${projectScheme}"` +
+    ` -configuration ${projectConfiguration}` +
+    ` -sdk ${sdk}` +
+    ` ONLY_ACTIVE_ARCH=NO` +
+    ` BUILD_DIR="${buildDir}"` +
+    ` clean build`;
 
   console.log('Building ThaliCore.framework');
 
-  // todo: fixed buffer size should be fixed with streaming in #1001
-  return exec(buildCmd, { maxBuffer: 10*1024*1024 } )
+  return spawn(buildCmd)
     .then(function () {
       return fs.ensureDir(outputDir);
     })
     .then(function () {
       var frameworkBuildDir = path.join(
-        buildDir, projectConfiguration + '-' + sdk, projectName + '.framework');
+        buildDir, `${projectConfiguration}-${sdk}`, `${projectName}.framework`);
       var frameworkOutputDir = path.join(
-        outputDir, projectName + '.framework');
+        outputDir, `${projectName}.framework`);
 
       return fs.copy(frameworkBuildDir, frameworkOutputDir, { clobber: false });
     });
-};
+}
 
 module.exports = {
   addFramework: addFramework
