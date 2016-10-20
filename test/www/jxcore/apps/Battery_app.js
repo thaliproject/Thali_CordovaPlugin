@@ -7,7 +7,7 @@ var settings = {
 };
 
 if (typeof Mobile === 'undefined') {
-  global.Mobile = require('./lib/wifiBasedNativeMock.js')();
+  global.Mobile = require('../lib/wifiBasedNativeMock.js')();
 }
 
 var objectAssign = require('object-assign');
@@ -19,12 +19,12 @@ var ThaliWifiInfrastructure  = require('thali/NextGeneration/thaliWifiInfrastruc
 var thaliWifiInfrastructure  = new ThaliWifiInfrastructure();
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 
-require('./lib/utils/process');
-var logger    = require('./lib/testLogger')('Battery_app');
-var testUtils = require('./lib/testUtils');
+require('../lib/utils/process');
+var logger    = require('../lib/testLogger')('Battery_app');
+var testUtils = require('../lib/testUtils');
 
 
-var config = require('./config.json');
+var config = require('../config.json');
 objectAssign(process.env, config.env);
 
 var isWifi = false, isNative = false;

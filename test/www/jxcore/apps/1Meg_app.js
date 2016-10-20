@@ -8,7 +8,7 @@ var TEST_TIMEOUT = 5 * 60 * 1000;
 var DATA_LENGTH = 1e6;
 
 if (typeof Mobile === 'undefined') {
-  global.Mobile = require('./lib/wifiBasedNativeMock.js')();
+  global.Mobile = require('../lib/wifiBasedNativeMock.js')();
 }
 
 var net          = require('net');
@@ -19,9 +19,9 @@ var randomstring = require('randomstring');
 
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 
-require('./lib/utils/process');
-var logger    = require('./lib/testLogger')('1Meg_app');
-var testUtils = require('./lib/testUtils');
+require('../lib/utils/process');
+var logger    = require('../lib/testLogger')('1Meg_app');
+var testUtils = require('../lib/testUtils');
 
 
 // We will resolve leader by compare peer ids.
