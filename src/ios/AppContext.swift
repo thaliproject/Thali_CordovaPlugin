@@ -130,7 +130,8 @@ extension PeerAvailability {
      callback for multiConnect function
 
      */
-    func context(context: AppContext, didResolveMultiConnectWith paramsJSONString: String)
+    func context(context: AppContext, didResolveMultiConnectWithSyncValue value: String,
+                 error: NSObject?, listeningPort: NSObject?)
 
     /**
      callback for multiConnect function
@@ -245,12 +246,10 @@ extension PeerAvailability {
 
     private func handleMultiConnectResolved(withSyncValue value: String, port: UInt16?,
                                                           error: ErrorType?) {
-        let parameters = [
-            "syncValue" : value,
-            "error" : error != nil ? errorDescription(error!) : NSNull(),
-            "port" : port != nil ? NSNumber(unsignedShort: port!) : NSNull()
-        ]
-        delegate?.context(self, didResolveMultiConnectWith: jsonValue(parameters))
+        let errorValue = error != nil ? errorDescription(error!) : NSNull()
+        let listeningPort = port != nil ? NSNumber(unsignedShort: port!) : NSNull()
+        delegate?.context(self, didResolveMultiConnectWithSyncValue: value,
+                          error: errorValue, listeningPort: listeningPort)
     }
 
     private func handleMultiConnectConnectionFailure(withIdentifier identifier: String,
@@ -320,24 +319,38 @@ extension PeerAvailability {
     }
 
     public func multiConnectToPeer(parameters: [AnyObject]) throws {
-        guard bluetoothState == .on || NetworkReachability().isWiFiEnabled() else {
-            throw ThaliCoreError.RadioTurnedOff
-        }
         guard parameters.count >= 2 else {
             throw AppContextError.badParameters
         }
-        guard let peerIdentifier = parameters[0] as? String, syncValue = parameters[1] as? String
+        guard let identifierString = parameters[0] as? String, syncValue = parameters[1] as? String
             else {
                 throw AppContextError.badParameters
         }
-        browserManager.connectToPeer(peerIdentifier, syncValue: syncValue) {
-            [weak self] syncValue, error, port in
-            self?.handleMultiConnectResolved(withSyncValue: syncValue, port: port, error: error)
-            if let error = error {
-                self?.handleMultiConnectConnectionFailure(withIdentifier: peerIdentifier,
-                                                          error: error)
+
+        // This code MUST be executed asynchronously to avoid race conditions on JXcore side
+        dispatch_async(dispatch_get_main_queue()) {
+            do {
+                let _ = try Peer(uuidIdentifier: identifierString, generation: 0)
+                guard self.bluetoothState == .on || NetworkReachability().isWiFiEnabled() else {
+                    self.handleMultiConnectConnectionFailure(withIdentifier: identifierString,
+                                                             error: ThaliCoreError.RadioTurnedOff)
+                    return
+                }
+                self.browserManager.connectToPeer(identifierString, syncValue: syncValue) {
+                    [weak self] syncValue, error, port in
+                    self?.handleMultiConnectResolved(withSyncValue: syncValue, port: port, error: error)
+                    if let error = error {
+                        self?.handleMultiConnectConnectionFailure(withIdentifier: identifierString,
+                                                                  error: error)
+                    }
+                }
+            } catch let err {
+                self.handleMultiConnectResolved(withSyncValue: syncValue, port: nil, error: err)
+
+                return
             }
         }
+        return
     }
 
     public func killConnection(parameters: [AnyObject]) throws {
@@ -357,10 +370,12 @@ extension PeerAvailability {
     }
 
     public func disconnect(parameters: [AnyObject]) throws {
-        guard let peerIdentifier = parameters.first as? String else {
+        guard let identifierString = parameters.first as? String else {
             throw AppContextError.badParameters
         }
-        browserManager.disconnect(peerIdentifier)
+        if let _ = try? Peer(stringValue: identifierString) {
+            browserManager.disconnect(identifierString)
+        }
     }
 
     public func connect(parameters: [AnyObject]) -> String {

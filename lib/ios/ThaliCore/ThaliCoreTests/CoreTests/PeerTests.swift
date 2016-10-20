@@ -58,26 +58,14 @@ class PeerTests: XCTestCase {
         XCTAssertEqual(parsingError, .IllegalPeerID)
     }
 
-    func testEqualityByCharacter() {
-        let peerID1 = Peer()
-        let peerID2 = Peer(uuidIdentifier: peerID1.uuid, generation: peerID1.generation)
-        XCTAssertEqual(peerID1, peerID2)
-
-        /* These strings has the same linguistic meaning and appearance but using different UTF-8
-           characters. But `==` treats them as equal because they're canonically equivalent.
-           Therefore we need to use String.compare function to compare strings by character
-         */
-        let peerID3 = Peer(uuidIdentifier: "id\u{E9}ntifi\u{E9}r", generation: 0)
-        let peerID4 = Peer(uuidIdentifier: "id\u{65}\u{301}ntifi\u{65}\u{301}r",
-                           generation: 0)
-        XCTAssertEqual(peerID3.uuid, peerID4.uuid)
-        XCTAssertNotEqual(peerID3, peerID4)
-    }
-
     func testGenerationsEquality() {
         let peerID1 = Peer()
-        let peerID2 = Peer(uuidIdentifier: peerID1.uuid,
-                                     generation: peerID1.generation + 1)
-        XCTAssertNotEqual(peerID1, peerID2)
+        do {
+            let peerID2 = try Peer(uuidIdentifier: peerID1.uuid,
+                                         generation: peerID1.generation + 1)
+            XCTAssertNotEqual(peerID1, peerID2)
+        } catch let error {
+            XCTFail("unexpected error \(error)")
+        }
     }
 }

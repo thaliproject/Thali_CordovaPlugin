@@ -80,7 +80,7 @@ public final class BrowserManager {
 
         guard let lastGenerationPeer = self.lastGenerationPeer(for: peerIdentifier) else {
                 completion(syncValue: syncValue,
-                           error: ThaliCoreError.IllegalPeerID,
+                           error: ThaliCoreError.ConnectionFailed,
                            port: nil)
                 return
         }
