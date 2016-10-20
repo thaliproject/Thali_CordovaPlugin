@@ -1151,7 +1151,7 @@ var emitDiscoveryAdvertisingStateUpdate = function () {
 
 
 ThaliMobileNativeWrapper.emitter.on(
-  'discoveryAdvertisingStateUpdateNonTCPEvent',
+  'discoveryAdvertisingStateUpdateNonTCP',
   function (discoveryAdvertisingStateUpdateValue) {
     discoveryAdvertisingState.nonTCPDiscoveryActive =
       discoveryAdvertisingStateUpdateValue.discoveryActive;

@@ -173,10 +173,10 @@ test('does not emit duplicate discoveryAdvertisingStateUpdate', function (t) {
     };
     // Emit the same status twice.
     ThaliMobileNativeWrapper.emitter.emit(
-      'discoveryAdvertisingStateUpdateNonTCPEvent', testStatus
+      'discoveryAdvertisingStateUpdateNonTCP', testStatus
     );
     ThaliMobileNativeWrapper.emitter.emit(
-      'discoveryAdvertisingStateUpdateNonTCPEvent', testStatus
+      'discoveryAdvertisingStateUpdateNonTCP', testStatus
     );
   });
 });
