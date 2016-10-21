@@ -200,6 +200,7 @@ function (t) {
     return waitForRemoteDocs(pouchDB, localDoc, [], docs, true);
   })
   .then(function () {
+    t.pass('OK');
     t.end();
   });
 });

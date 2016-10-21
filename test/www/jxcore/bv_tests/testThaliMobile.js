@@ -337,6 +337,7 @@ test('wifi peer is marked unavailable if announcements stop',
         t.equal(peer.peerAvailable, true, 'peer should be available');
       } else if (spy.calledTwice) {
         t.equal(peer.peerAvailable, false, 'peer should become unavailable');
+
         ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
           availabilityChangedHandler);
         testServer.stop(function () {
@@ -1360,6 +1361,7 @@ test('network changes not emitted in stopped state',
 
 test('calls correct starts when network changes',
   function () {
+    // works only in wifi mode because it fires non-tcp network changes
     return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
   },
   function (t) {
@@ -1403,8 +1405,8 @@ test('calls correct starts when network changes',
         networkChangedHandler);
       testUtils.toggleWifi(false);
     });
-  });
-
+  }
+);
 
 test('We properly fire peer unavailable and then available when ' +
   'connection fails',
