@@ -353,7 +353,7 @@ test('make sure we actually call kill connections properly', function (t) {
     }
   })
   .catch(function (error) {
-    if (platform.isIOS) {
+    if (platform._isRealIOS) {
       t.fail('should not fail on iOS');
       t.end();
     } else {

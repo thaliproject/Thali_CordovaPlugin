@@ -37,7 +37,8 @@ Server.prototype.defaults = {
 };
 
 Server.prototype._setOptions = function (options) {
-  asserts.isObject(options);
+  asserts.isObject(options, 'Server._setOptions');
+
   this._options = objectAssign({}, this.defaults, options);
 
   asserts.isNumber(this._options.port);
@@ -45,12 +46,12 @@ Server.prototype._setOptions = function (options) {
   this._options.transports.forEach(function (transport) {
     asserts.isString(transport);
   });
-}
+};
 
 Server.prototype._bind = function () {
   process.once('exit', this._exit.bind(this));
   this._io.on('connect', this._connect.bind(this));
-}
+};
 
 Server.prototype._connect = function (socket) {
   asserts.exists(socket);
@@ -60,14 +61,14 @@ Server.prototype._connect = function (socket) {
   .on('disconnect', this._disconnect.bind(this, socket))
   .on('error',      this._error.bind(this, socket))
   .on('present',    this._present.bind(this, socket));
-}
+};
 
 Server.prototype._disconnect = function (socket, reason) {
   logger.info(
     'Socket to device name: \'%s\' disconnected, reason: \'%s\'',
     socket.deviceName, reason
   );
-}
+};
 
 Server.prototype._error = function (socket, error) {
   logger.error(
@@ -75,7 +76,7 @@ Server.prototype._error = function (socket, error) {
     error.content
   );
   throw new Error(error.content);
-}
+};
 
 Server.prototype._present = function (socket, deviceInfo) {
   var device = new TestDevice(socket, deviceInfo);
@@ -84,14 +85,15 @@ Server.prototype._present = function (socket, deviceInfo) {
   logger.debug(
     'device presented, name: \'%s\', uuid: \'%s\', platformName: \'%s\', ' +
     'type: \'%s\', hasRequiredHardware: \'%s\', nativeUTFailed: \'%s\'',
-    device.name, device.uuid, device.platformName, device.type, device.hasRequiredHardware, device.nativeUTFailed
+    device.name, device.uuid, device.platformName, device.type,
+    device.hasRequiredHardware, device.nativeUTFailed
   );
 
   this.emit('present', device);
-}
+};
 
 Server.prototype._exit = function () {
   this._io.close();
-}
+};
 
 module.exports = Server;

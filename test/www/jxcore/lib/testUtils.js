@@ -1,8 +1,5 @@
 'use strict';
 
-var util = require('util');
-var format = util.format;
-
 var os = require('os');
 var tmp = require('tmp');
 var PouchDB = require('pouchdb');
@@ -165,6 +162,7 @@ module.exports.hasRequiredHardware = function () {
               }
               case 'Not supported': {
                 logger.info('BLE multiple advertisement not supported');
+
                 resolve(false);
                 break;
               }
@@ -447,7 +445,8 @@ function turnParticipantsIntoBufferArray (t, devicePublicKey) {
     }
   });
   return publicKeys;
-};
+}
+
 module.exports.turnParticipantsIntoBufferArray = turnParticipantsIntoBufferArray;
 
 module.exports.startServerInfrastructure =

@@ -18,7 +18,7 @@ public struct Peer: Hashable {
     public let uuid: String
 
     /// An integer which counts changes in the peer's database.
-    public let generation: Int
+    public private(set) var generation: Int
 
     public var hashValue: Int {
         return stringValue.hashValue
@@ -39,7 +39,10 @@ public struct Peer: Hashable {
         generation = 0
     }
 
-    init(uuidIdentifier: String, generation: Int) {
+    public init(uuidIdentifier: String, generation: Int) throws {
+        guard let _ = NSUUID(UUIDString: uuidIdentifier) else {
+            throw ThaliCoreError.IllegalPeerID
+        }
         self.uuid = uuidIdentifier
         self.generation = generation
     }
@@ -62,7 +65,9 @@ public struct Peer: Hashable {
     }
 
     func nextGenerationPeer() -> Peer {
-        return Peer(uuidIdentifier: uuid, generation: generation + 1)
+        var peer = self
+        peer.generation += 1
+        return peer
     }
 }
 

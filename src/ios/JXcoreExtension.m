@@ -144,7 +144,7 @@
 - (void)defineConnect:(AppContext *)appContext {
     [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId) {
         [JXcore callEventCallback:callbackId withJSON:[appContext connect:params]];
-    } withName:[AppContextJSEvent disconnect]];
+    } withName:[AppContextJSEvent connect]];
 }
 
 #ifdef TEST
