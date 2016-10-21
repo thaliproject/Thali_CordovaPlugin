@@ -74,9 +74,8 @@ function waitForRemoteDocs(pouchDB, localDoc, oldRemoteDocs, newRemoteDocs) {
   var newRemoteDocStrings = newRemoteDocs.map(toString);
 
   function allDocsFound() {
-    return !localDocString &&
-      newRemoteDocStrings.length === 0 &&
-      oldRemoteDocStrings.length === 0;
+    return !localDocString && newRemoteDocStrings.length === 0;
+      // oldRemoteDocStrings.length === 0 // We should not wait for old documents.
   }
 
   function verifyDoc(doc) {
