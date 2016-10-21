@@ -5,11 +5,10 @@ var ThaliPeerPoolInterface = require('./thaliPeerPoolInterface');
 var thaliConfig = require('../thaliConfig');
 var ForeverAgent = require('forever-agent');
 var logger = require('../../ThaliLogger')('thaliPeerPoolOneAtATime');
-var Utils = require('../utils/common.js');
-var Promise = require('lie');
 var PromiseQueue = require('../promiseQueue');
 var ThaliReplicationPeerAction = require('../replication/thaliReplicationPeerAction');
 var assert = require('assert');
+var thaliMobileNativeWrapper = require('../thaliMobileNativeWrapper');
 
 /** @module thaliPeerPoolOneAtATime */
 
@@ -152,28 +151,46 @@ ThaliPeerPoolOneAtATime.prototype._wifiEnqueue = function (peerAction) {
   return self._startAction(peerAction);
 };
 
+ThaliPeerPoolOneAtATime.prototype._bluetoothReplicationAction = null;
+
 ThaliPeerPoolOneAtATime.prototype._bluetoothEnqueue = function (peerAction) {
-  /*
-  For Bluetooth we will issue exactly one action at a time. So don't test more
-  than two phones over native because there are conditions where the phones
-  can get stuck in a cycle and lock one of the phones out for awhile.
+  var self = this;
+  if (peerAction.getActionType() === ThaliReplicationPeerAction.ACTION_TYPE) {
+    if (self._bluetoothReplicationAction) {
+      logger.error('Something VERY bad has happened. We got a second ' +
+        'replication action without having cleared the first!');
+      self._bluetoothReplicationAction.kill();
+    }
 
-  The easy issue is running actions one at a time. The serialPromiseQueue is
-  perfect for that.
+    self._bluetoothReplicationAction = peerAction;
+    return;
+  }
 
-  The challenge is knowing when to terminate connections.
-
-  For notification actions if we get any result but BEACONS_RETRIEVED_AND_PARSED
-  with beacons set to a non-null value then we should call
-  terminateOutgoingConnection just to be safe. The trick though is that we HAVE
-  to make sure that the next action is going to be the replication action.
-  Otherwise we can get an already connected error. So what we have to do is
-  when we get a magic result from the notification action
-
-  For replication actions we should always call terminateOutgoingConnection. If
-  we get a completed replication action then it means they have stopped playing
-  with the phones and we should give them a chance to connect to someone else.
-   */
+  self._serialPromiseQueue.enqueue(function (resolve, reject) {
+    return self._startAction(peerAction)
+      .then(function () {
+        if (self._bluetoothReplicationAction) {
+          var replicationAction = self._bluetoothReplicationAction;
+          return self._startAction(replicationAction)
+            .then(function () {
+              thaliMobileNativeWrapper._getServersManager()
+                .terminateOutgoingConnection(peerAction.getPeerIdentifier(),
+                  replicationAction.getPeerAdvertisesDataForUs().portNumber);
+              self._bluetoothReplicationAction = null;
+              replicationAction.kill();
+              peerAction.kill();
+              resolve(true);
+              return null;
+            });
+        }
+        peerAction.kill();
+        thaliMobileNativeWrapper._getServersManager()
+          .terminateOutgoingConnection(peerAction.getPeerIdentifier(),
+            peerAction.getConnectionInformation().getPortNumber());
+        resolve(true);
+        return null;
+      });
+  });
 };
 
 ThaliPeerPoolOneAtATime.prototype.enqueue = function (peerAction) {
@@ -181,28 +198,27 @@ ThaliPeerPoolOneAtATime.prototype.enqueue = function (peerAction) {
     throw new Error(ThaliPeerPoolOneAtATime.ERRORS.ENQUEUE_WHEN_STOPPED);
   }
 
-  // Right now we will just allow everything to run parallel.
-
   var result =
     ThaliPeerPoolOneAtATime.super_.prototype.enqueue.apply(this, arguments);
 
-
-  // We hook our clean up code to kill and it is always legal to call
-  // kill, even if it has already been called. So this ensures that our
-  // cleanup code gets called regardless of how the action ended.
-  this._serialPromiseQueue.enqueue(function (resolve, reject) {
-    logger.debug(peerAction.getId() + ' - Peer Action Started');
-    return peerAction.start(actionAgent)
-      .catch(function (err) {
-        logger.debug('Got err ', Utils.serializePouchError(err));
-      })
-      .then(function () {
-        logger.debug(peerAction.getId() + ' - Peer Action Stopped');
-        peerAction.kill();
-        resolve(true);
-      });
-  });
-
+  switch(peerAction.getConnectionType()) {
+    // MPCF is here because right now master doesn't really know how to set
+    // the mock type to anything but Android
+    case thaliMobileNativeWrapper.connectionTypes
+      .MULTI_PEER_CONNECTIVITY_FRAMEWORK:
+    case thaliMobileNativeWrapper.connectionTypes.BLUETOOTH: {
+      this._bluetoothEnqueue(peerAction);
+      break;
+    }
+    case thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE: {
+      this._wifiEnqueue(peerAction);
+      break;
+    }
+    default: {
+      logger.error('Got unrecognized connection type: ' +
+        peerAction.getConnectionType());
+    }
+  }
 
   return result;
 };
