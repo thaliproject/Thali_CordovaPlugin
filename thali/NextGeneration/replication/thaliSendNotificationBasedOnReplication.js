@@ -75,7 +75,8 @@ function ThaliSendNotificationBasedOnReplication(router,
  * @public
  * @type {number}
  */
-ThaliSendNotificationBasedOnReplication.UPDATE_WINDOWS_FOREGROUND = 1000;
+ThaliSendNotificationBasedOnReplication.UPDATE_WINDOWS_FOREGROUND =
+  thaliConfig.UPDATE_WINDOWS_FOREGROUND_MS;
 
 /**
  * We will only update the notification beacons every X milliseconds while the
@@ -84,7 +85,8 @@ ThaliSendNotificationBasedOnReplication.UPDATE_WINDOWS_FOREGROUND = 1000;
  * @public
  * @type {number}
  */
-ThaliSendNotificationBasedOnReplication.UPDATE_WINDOWS_BACKGROUND = 10000;
+ThaliSendNotificationBasedOnReplication.UPDATE_WINDOWS_BACKGROUND =
+  thaliConfig.UPDATE_WINDOWS_BACKGROUND_MS;
 
 /**
  * We MUST NOT submit more than this number of peers to the
@@ -92,7 +94,8 @@ ThaliSendNotificationBasedOnReplication.UPDATE_WINDOWS_BACKGROUND = 10000;
  * @public
  * @type {number}
  */
-ThaliSendNotificationBasedOnReplication.MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY = 15;
+ThaliSendNotificationBasedOnReplication.MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY =
+  thaliConfig.MAXIMUM_NUMBER_OF_PEERS_TO_NOTIFY;
 
 /**
  * Takes an ecdh public key value as a buffer and creates the doc ID to find
