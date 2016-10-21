@@ -106,7 +106,7 @@ PromiseQueue.prototype._changeQueue = function (fn, unshiftOrPushFn) {
  * it have been executed.
  *
  * @public
- * @param {module:promiseQueue~promiseFunction} fn
+ * @param {promiseFunction} fn
  * @returns {Promise} A promise that will resolve or be rejected depending
  * on the outcome of the submitted function.
  */

@@ -21,6 +21,9 @@ var ThaliManager = require('thali/NextGeneration/thaliManager');
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 
+var ThaliPeerPoolOneAtATime =
+  require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolOneAtATime');
+
 // Public key for local device should be passed
 // to the tape 'setup' as 'tape.data'.
 var ecdhForLocalDevice = crypto.createECDH(thaliConfig.BEACON_CURVE);
@@ -180,7 +183,7 @@ test('test write', function (t) {
       PouchDB,
       DB_NAME,
       ecdhForLocalDevice,
-      new ThaliPeerPoolDefault(),
+      new ThaliPeerPoolOneAtATime(),
       global.NETWORK_TYPE
     );
     return thaliManager.start(partnerKeys);
