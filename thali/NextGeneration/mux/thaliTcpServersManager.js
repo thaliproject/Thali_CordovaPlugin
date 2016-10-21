@@ -289,7 +289,7 @@ ThaliTcpServersManager.prototype.terminateOutgoingConnection =
     if (!peerServer || peerServer.server.address().port !== port) {
       return Promise.resolve(null);
     }
-    createPeerListener.closeServer(this, peerServer, null, false);
+    createPeerListener.closeServer(this, peerServer.server, null, false);
   };
 
 /**
