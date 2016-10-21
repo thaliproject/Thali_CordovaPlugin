@@ -207,6 +207,9 @@ UnitTestFramework.prototype._sync = function (deviceData, content) {
       return data.device.syncFinished(content);
     });
     Promise.all(promises)
+    .then(function () {
+      logger.debug('#sync finished ok');
+    })
     .catch(function (error) {
       logger.error(
         '#sync failed: error: \'%s\', stack: \'%s\'',
