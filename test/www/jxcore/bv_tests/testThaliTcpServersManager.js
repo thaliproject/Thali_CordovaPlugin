@@ -204,8 +204,8 @@ test('terminate an Outgoing connection',
       t.ok(true, 'Passed good id but bogus port');
       closeServerFunction = function (self, server, error, retry) {
         t.equal(self, proxiedTCPServersManager, 'Passed right context');
-        t.equal(server, proxiedTCPServersManager._peerServers.foo, 'Right ' +
-          'server');
+        t.equal(server, proxiedTCPServersManager._peerServers.foo.server,
+          'Right server');
         t.equal(error, null, 'No error should be set');
         t.equal(retry, false, 'Retry should be false');
         closeServerCalled = true;
