@@ -302,7 +302,12 @@ test('test repeat write 2', function (t) {
   })
 
   .then(function () {
-    // infinite loop
+    return t.sync();
+  })
+
+  .then(function () {
+    console.log('--infinite loop--');
+
     function sendData(index) {
       console.log('sending data for index: %d', index);
       var name = 'test' + index;
@@ -312,6 +317,7 @@ test('test repeat write 2', function (t) {
       .then(function (response) {
         localDoc._rev = response.rev;
       })
+
       .then(function () {
         newDocs = oldDocs.map(function (doc) {
           doc = objectAssign({}, doc);
@@ -323,6 +329,7 @@ test('test repeat write 2', function (t) {
           oldDocs = newDocs;
         });
       })
+
       .then(function () {
         console.log('sent data for index: %d', index);
 
@@ -339,9 +346,11 @@ test('test repeat write 2', function (t) {
   })
 
   .then(function () {
+    t.pass('finished');
     t.end();
   })
-  .catch(function () {
+  .catch(function (error) {
+    t.fail('got error ' + error.toString());
     t.end();
   });
 });
