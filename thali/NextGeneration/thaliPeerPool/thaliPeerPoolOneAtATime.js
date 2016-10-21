@@ -13,45 +13,38 @@ var thaliMobileNativeWrapper = require('../thaliMobileNativeWrapper');
 /** @module thaliPeerPoolOneAtATime */
 
 /**
- * @classdesc This is the default implementation of the
- * {@link module:thaliPeerPoolInterface~ThaliPeerPoolInterface} interface.
+ * @classdesc This is a quick and dirty hack to let us test a real application
+ * using Thali.
  *
  * WARNING: This code is really just intended for use for testing and
  * prototyping. It is not intended to be shipped.
  *
- * How the default implementation function depends on what connection type an
- * action is associated with.
- *
  * # Wifi
- *
- * When we run on Wifi we pretty much will allow all submitted actions to
- * run in parallel. The real control on their behavior is that they will
- * all share the same http agent pool so this will limit the total number
- * of outstanding connections. As we gain more operational experience I
- * expect we will determine a certain number of replications that make
- * sense to run in parallel and then we will throttle to just allowing
- * that number of connections to run in parallel, but not today. Today they
- * all run, just the pool controls them.
- *
- *
- * # Multipeer Connectivity Framework
- *
- * This one is tough because it all depends on if we have WiFi or just
- * Bluetooth. For now we will just cheat and treat this the same as WiFi above
- * except that we will use a dedicated http agent pool (no reason so share
- * with WiFi).
+ * We run all actions as soon as they come in with the exception of replication
+ * actions. With those we will only allow a maximum of two replication actions
+ * to run to the same IP Address/port. The reason for this is that there is a
+ * theoretical race condition where if peer A advertises a change for peer B
+ * then peer B will start replicating. While they are replicating peer A is
+ * getting new values that will cause it after 1 second to generate a new
+ * beacon which peer B will see but it has a different ID so now peer B will
+ * start a second replication. Basically a new replication will start every
+ * second until there is no more data to share. Then eventually all the
+ * replications will go away. This peer policy manager deals with this by
+ * restricting the number of replications to a single address/port to no more
+ * than 2. The reason for allowing 2 is that there are some race conditions
+ * where it's theoretically possible to end up in a situation where there is
+ * one last change that got missed and so if we terminate the replication
+ * without carefully checking notifications we can miss that last update. Since
+ * this is a hack we just use two replications.
  *
  * # Bluetooth
- *
- * We have written
- * [an article](http://www.thaliproject.org/androidWirelessIssues) about all
- * the challenges of making Bluetooth behave itself. There are different
- * tradeoffs depending on the app. For now we mostly test with chat apps
- * that don't move a ton of data and when we do test large amounts of data
- * we set up the test to only try one connection at a time. So for now we
- * aren't going to try to regulate how many connections, incoming or outgoing
- * we have. Instead we will give each client connection its own HTTP
- * agent pool and call it a day.
+ * With Bluetooth we run exactly one action at a time. This makes this policy
+ * between useless to painful if testing with 3 or more native devices. After
+ * each action we make sure to terminate the native connection so we don't run
+ * into 'already connected' errors. The one exception is when a notification
+ * action successfully retrieves beacons. In that case we use an awful trick
+ * described below to make sure that the replication action gets called before
+ * we kill the native connection created by the notification action.
  *
  * # Connection pooling
  *
@@ -69,7 +62,7 @@ var thaliMobileNativeWrapper = require('../thaliMobileNativeWrapper');
 function ThaliPeerPoolOneAtATime() {
   ThaliPeerPoolOneAtATime.super_.call(this);
   this._stopped = true;
-  this._serialPromiseQueue = new PromiseQueue();
+  this._bluetoothSerialPromiseQueue = new PromiseQueue();
   this._wifiReplicationCount = {};
 }
 
@@ -89,13 +82,16 @@ ThaliPeerPoolOneAtATime.prototype._startAction = function (peerAction) {
     pskKey: peerAction.getPskKey()
   });
 
+  logger.debug('Action Started ' + peerAction.loggingDescription());
   return peerAction.start(actionAgent)
   .then(function () {
-    logger.debug('action returned successfully from start');
+    logger.debug('action returned successfully from start - ' +
+      peerAction.loggingDescription());
     return null;
   })
   .catch(function (err) {
-    logger.debug('action returned with error from start' + err);
+    logger.debug('action returned with error from start' + err + ' - ' +
+      peerAction.loggingDescription());
     return null;
   });
 };
@@ -153,8 +149,17 @@ ThaliPeerPoolOneAtATime.prototype._wifiEnqueue = function (peerAction) {
 
 ThaliPeerPoolOneAtATime.prototype._bluetoothReplicationAction = null;
 
+// Bluetooth actions are put into a serial queue so working with more than
+// a total of 2 phones is going to be a bit dicey
 ThaliPeerPoolOneAtATime.prototype._bluetoothEnqueue = function (peerAction) {
   var self = this;
+  // This code depends on an evil race condition where if a notification
+  // action successfully retrieves beacons from a peer then before the start
+  // method for that notification action returns we will already have created
+  // a replication action to get the beacons and will have called enqueue. We
+  // depend on that race condition. We will store the replication action when
+  // it comes in but not run it until the notification action that led to
+  // the replication action being generated returns from start.
   if (peerAction.getActionType() === ThaliReplicationPeerAction.ACTION_TYPE) {
     if (self._bluetoothReplicationAction) {
       logger.error('Something VERY bad has happened. We got a second ' +
@@ -166,13 +171,18 @@ ThaliPeerPoolOneAtATime.prototype._bluetoothEnqueue = function (peerAction) {
     return;
   }
 
-  self._serialPromiseQueue.enqueue(function (resolve, reject) {
+  self._bluetoothSerialPromiseQueue.enqueue(function (resolve) {
     return self._startAction(peerAction)
       .then(function () {
         if (self._bluetoothReplicationAction) {
           var replicationAction = self._bluetoothReplicationAction;
           return self._startAction(replicationAction)
             .then(function () {
+              // Currently replication actions use the remote public key as
+              // the peer ID instead of the Bluetooth MAC. But listeners
+              // in thaliMobileNativeWrapper are indexed by MAC. So use the
+              // MAC from the associated notification action. Yes, we really
+              // should fix this.
               thaliMobileNativeWrapper._getServersManager()
                 .terminateOutgoingConnection(peerAction.getPeerIdentifier(),
                   replicationAction.getPeerAdvertisesDataForUs().portNumber);

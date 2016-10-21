@@ -1,6 +1,7 @@
 'use strict';
 
 var Promise = require('lie');
+var util = require('util');
 
 /** @module thaliPeerAction */
 
@@ -58,6 +59,11 @@ PeerAction.actionState = {
   KILLED: 'killed'
 };
 
+PeerAction.prototype.loggingDescription = function () {
+  return util.format('Action ID: %d, Action Type: %s, Connection Type: %s, ' +
+    'Peer Identifier: %s', this.getId(), this.getActionType(),
+    this.getConnectionType(), this.getPeerIdentifier());
+};
 
 /**
  * The remote peer this action targets
