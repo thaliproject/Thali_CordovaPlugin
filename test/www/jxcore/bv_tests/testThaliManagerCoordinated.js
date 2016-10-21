@@ -1,5 +1,8 @@
 'use strict';
 
+var util = require('util');
+var format = util.format;
+
 var tape = require('../lib/thaliTape');
 if (!tape.coordinated) {
   return;
@@ -76,24 +79,22 @@ function waitForRemoteDocs(pouchDB, localDoc, oldRemoteDocs, newRemoteDocs) {
       oldRemoteDocStrings.length === 0;
   }
 
-  function findDoc(doc) {
+  function verifyDoc(doc) {
     var docString = toString(doc);
 
     var oldIndex = oldRemoteDocStrings.indexOf(docString);
     var newIndex = newRemoteDocStrings.indexOf(docString);
     if (localDocString && docString === localDocString) {
       localDocString = undefined;
-      return true;
-    }
-    else if (oldIndex !== - 1) {
+    } else if (oldIndex !== - 1) {
       oldRemoteDocStrings.splice(oldIndex, 1);
-      return true;
-    }
-    else if (newIndex !== -1) {
+    } else if (newIndex !== -1) {
       newRemoteDocStrings.splice(newIndex, 1);
-      return true;
-    }
-    else {
+    } else {
+      throw new Error(format(
+        'invalid doc: \'%s\', expected local doc string: \'%s\', expected old remote docs: \'%s\', expected new remote docs: \'%s\'',
+        docString, localDocString, oldRemoteDocStrings.join(', '), newRemoteDocStrings.join(', ')
+      ));
       return false;
     }
   }
@@ -119,12 +120,13 @@ function waitForRemoteDocs(pouchDB, localDoc, oldRemoteDocs, newRemoteDocs) {
       include_docs: true
     })
     .on('change', function (change) {
-      if (findDoc(change.doc)) {
+      try {
+        verifyDoc(change.doc);
         if (allDocsFound()) {
           changesFeed.cancel();
         }
-      } else {
-        error = new Error('invalid doc');
+      } catch (_error) {
+        error = _error;
         changesFeed.cancel();
       }
     })
@@ -329,6 +331,10 @@ test('test repeat write 2', function (t) {
           oldDocs = newDocs;
         });
       })
+      .catch(function (error) {
+        console.error('received error on replication, name: \'%s\', error: \'%s\'', name, error.toString());
+        return Promise.reject(error);
+      })
 
       .then(function () {
         console.log('sent data for index: %d', index);
@@ -350,7 +356,7 @@ test('test repeat write 2', function (t) {
     t.end();
   })
   .catch(function (error) {
-    t.fail('got error ' + error.toString());
+    t.fail('Got error ' + error.toString());
     t.end();
   });
 });
