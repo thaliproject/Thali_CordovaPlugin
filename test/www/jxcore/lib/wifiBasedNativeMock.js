@@ -209,7 +209,7 @@ function setUpSocketListeners(socket, socketName, pipedSocket, peerIdentifier) {
   socket.on('close', function () {
     debugLogWithId(socketName + ' closed ', peerIdentifier);
     pipedSocket.destroy();
-  })
+  });
 }
 
 function createAndStartProxyRelayServer(portNumber, peerIdentifier) {
@@ -1115,7 +1115,7 @@ function fireMultiConnectResolved() {
 function fireMultiConnectConnectionFailure() {
   return function(peerIdentifier, error) {
     multiConnectConnectionFailureCallbackHandler(peerIdentifier, error);
-  }
+  };
 }
 
 // jscs:disable maximumLineLength
