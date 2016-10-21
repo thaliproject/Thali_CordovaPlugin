@@ -86,10 +86,13 @@ function waitForRemoteDocs(pouchDB, localDoc, oldRemoteDocs, newRemoteDocs) {
     var newIndex = newRemoteDocStrings.indexOf(docString);
     if (localDocString && docString === localDocString) {
       localDocString = undefined;
+      console.log('received data for local doc');
     } else if (oldIndex !== - 1) {
       oldRemoteDocStrings.splice(oldIndex, 1);
+      console.log('received data for old remote doc');
     } else if (newIndex !== -1) {
       newRemoteDocStrings.splice(newIndex, 1);
+      console.log('received data for new remote doc');
     } else {
       throw new Error(format(
         'invalid doc: \'%s\', expected local doc string: \'%s\', expected old remote docs: \'%s\', expected new remote docs: \'%s\'',
@@ -304,20 +307,21 @@ test('test repeat write 2', function (t) {
   })
 
   .then(function () {
-    return t.sync();
-  })
-
-  .then(function () {
     console.log('--infinite loop--');
 
     function sendData(index) {
-      console.log('sending data for index: %d', index);
       var name = 'test' + index;
-      localDoc[name] = true;
 
-      return pouchDB.put(localDoc)
-      .then(function (response) {
-        localDoc._rev = response.rev;
+      return t.sync()
+
+      .then(function () {
+        console.log('sending data for index: %d', index);
+        localDoc[name] = true;
+
+        return pouchDB.put(localDoc)
+        .then(function (response) {
+          localDoc._rev = response.rev;
+        })
       })
 
       .then(function () {
@@ -326,14 +330,11 @@ test('test repeat write 2', function (t) {
           doc[name] = true;
           return doc;
         });
+        console.log('waiting data for index: %d', index);
         return waitForRemoteDocs(pouchDB, localDoc, oldDocs, newDocs)
         .then(function () {
           oldDocs = newDocs;
         });
-      })
-      .catch(function (error) {
-        console.error('received error on replication, name: \'%s\', error: \'%s\'', name, error.toString());
-        return Promise.reject(error);
       })
 
       .then(function () {
