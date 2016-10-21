@@ -315,6 +315,7 @@ test('test repeat write 2', function (t) {
     function sendData(index) {
       var name = 'test' + index;
 
+      console.log('Calling sync for index: %d', index);
       return t.sync()
 
       .then(function () {

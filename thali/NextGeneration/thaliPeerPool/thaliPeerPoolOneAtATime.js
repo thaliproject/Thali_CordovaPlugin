@@ -152,6 +152,7 @@ ThaliPeerPoolOneAtATime.prototype._bluetoothReplicationAction = null;
 // Bluetooth actions are put into a serial queue so working with more than
 // a total of 2 phones is going to be a bit dicey
 ThaliPeerPoolOneAtATime.prototype._bluetoothEnqueue = function (peerAction) {
+  logger.debug('Got enqueue request for ' + peerAction.loggingDescription());
   var self = this;
   // This code depends on an evil race condition where if a notification
   // action successfully retrieves beacons from a peer then before the start
