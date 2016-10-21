@@ -51,7 +51,7 @@ if (!utResult) {
 // return;
 
 // Issue #914
-var networkTypes = [ThaliMobile.networkTypes.WIFI];
+var networkTypes = [ThaliMobile.networkTypes.NATIVE];
 
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {

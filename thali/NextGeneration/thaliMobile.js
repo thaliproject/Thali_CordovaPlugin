@@ -4,6 +4,7 @@ var EventEmitter = require('events').EventEmitter;
 var assert = require('assert');
 var logger = require('../ThaliLogger')('thaliMobile');
 var platform = require('./utils/platform');
+var format = require('util').format;
 
 var thaliConfig = require('./thaliConfig');
 
@@ -367,9 +368,11 @@ module.exports.stopAdvertisingAndListening = function () {
   return promiseQueue.enqueue(function (resolve) {
     thaliMobileStates.advertising = false;
 
-    getWifiOrNativeMethodByNetworkType('stopAdvertisingAndListening',
-       thaliMobileStates.networkType)()
-      .then(resolve);
+    var stopAdvertisingAndListening = getWifiOrNativeMethodByNetworkType(
+      'stopAdvertisingAndListening',
+      thaliMobileStates.networkType
+    );
+    stopAdvertisingAndListening().then(resolve);
   });
 };
 
@@ -1088,9 +1091,11 @@ var verifyDiscoveryAdvertisingState = function (state) {
   var advertising = thaliMobileStates.advertising;
   if (listening !== state.discoveryActive ||
       advertising !== state.advertisingActive) {
-    logger.info('Received state did not match with target: %s',
-      JSON.stringify(getDiscoveryAdvertisingState())
-    );
+    logger.info(format(
+      'Received state (%j) did not match with target (%j)',
+      state,
+      thaliMobileStates
+    ));
   }
 };
 
@@ -1152,24 +1157,24 @@ var emitDiscoveryAdvertisingStateUpdate = function () {
 
 ThaliMobileNativeWrapper.emitter.on(
   'discoveryAdvertisingStateUpdateNonTCP',
-  function (discoveryAdvertisingStateUpdateValue) {
+  function (newState) {
     discoveryAdvertisingState.nonTCPDiscoveryActive =
-      discoveryAdvertisingStateUpdateValue.discoveryActive;
+      newState.discoveryActive;
     discoveryAdvertisingState.nonTCPAdvertisingActive =
-      discoveryAdvertisingStateUpdateValue.advertisingActive;
-    verifyDiscoveryAdvertisingState(discoveryAdvertisingStateUpdateValue);
+      newState.advertisingActive;
+    verifyDiscoveryAdvertisingState(newState);
     emitDiscoveryAdvertisingStateUpdate();
   }
 );
 
 thaliWifiInfrastructure.on(
   'discoveryAdvertisingStateUpdateWifiEvent',
-  function (discoveryAdvertisingStateUpdateValue) {
+  function (newState) {
     discoveryAdvertisingState.wifiDiscoveryActive =
-      discoveryAdvertisingStateUpdateValue.discoveryActive;
+      newState.discoveryActive;
     discoveryAdvertisingState.wifiAdvertisingActive =
-      discoveryAdvertisingStateUpdateValue.advertisingActive;
-    verifyDiscoveryAdvertisingState(discoveryAdvertisingStateUpdateValue);
+      newState.advertisingActive;
+    verifyDiscoveryAdvertisingState(newState);
     emitDiscoveryAdvertisingStateUpdate();
   }
 );
