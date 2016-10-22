@@ -90,8 +90,8 @@ ThaliPeerPoolOneAtATime.prototype._startAction = function (peerAction) {
     return null;
   })
   .catch(function (err) {
-    logger.debug('action returned with error from start' + err + ' - ' +
-      peerAction.loggingDescription());
+    logger.debug('action returned with error from start' + err +
+      ' - ' + peerAction.loggingDescription());
     return null;
   });
 };
@@ -114,8 +114,9 @@ ThaliPeerPoolOneAtATime.prototype._wifiEnqueue = function (peerAction) {
       break;
     }
     case 1: {
-      self._wifiReplicationCount[peerId] = 2;
-      break;
+      return peerAction.kill();
+      //self._wifiReplicationCount[peerId] = 2;
+      //break;
     }
     case 2: {
       return peerAction.kill();
