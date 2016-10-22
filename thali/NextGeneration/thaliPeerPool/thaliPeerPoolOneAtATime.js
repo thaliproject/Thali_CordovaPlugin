@@ -115,8 +115,8 @@ ThaliPeerPoolOneAtATime.prototype._wifiEnqueue = function (peerAction) {
     }
     case 1: {
       return peerAction.kill();
-      //self._wifiReplicationCount[peerId] = 2;
-      //break;
+      self._wifiReplicationCount[peerId] = 2;
+      break;
     }
     case 2: {
       return peerAction.kill();
