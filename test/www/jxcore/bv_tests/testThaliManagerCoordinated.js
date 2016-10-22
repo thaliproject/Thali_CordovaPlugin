@@ -78,8 +78,8 @@ function waitForRemoteDocs(pouchDB, localDoc, oldRemoteDocs, newRemoteDocs) {
 
   function allDocsFound() {
     return !localDocString &&
-      newRemoteDocStrings.length === 0 &&
-      oldRemoteDocStrings.length === 0;
+      newRemoteDocStrings.length === 0;// &&
+      //oldRemoteDocStrings.length === 0;
   }
 
   function verifyDoc(doc) {
@@ -136,6 +136,7 @@ function waitForRemoteDocs(pouchDB, localDoc, oldRemoteDocs, newRemoteDocs) {
         }
       } catch (_error) {
         error = _error;
+        console.log('Attempt to cancel changes feed failed with ' + error);
         changesFeed.cancel();
       }
     })
