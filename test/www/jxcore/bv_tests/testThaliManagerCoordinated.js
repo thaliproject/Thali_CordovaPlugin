@@ -60,7 +60,7 @@ var test = tape({
 // We have 'localDoc' and 'oldRemoteDocs' already in DB.
 // We are waiting until 'newRemoteDocs' will appears in DB.
 // We are waiting for confirmation that 'localDoc' and 'oldRemoteDocs' is in DB too.
-function waitForRemoteDocs(pouchDB, localDoc, oldRemoteDocs, newRemoteDocs) {
+function waitForRemoteDocs (pouchDB, localDoc, oldRemoteDocs, newRemoteDocs) {
   // We can remove '_rev' key from compared values.
   // We can just stringify docs, they wont be circular.
   function toString(doc) {
@@ -77,9 +77,8 @@ function waitForRemoteDocs(pouchDB, localDoc, oldRemoteDocs, newRemoteDocs) {
   var newRemoteDocStrings = newRemoteDocs.map(toString);
 
   function allDocsFound() {
-    return !localDocString &&
-      newRemoteDocStrings.length === 0;// &&
-      //oldRemoteDocStrings.length === 0;
+    return !localDocString && newRemoteDocStrings.length === 0;
+      // oldRemoteDocStrings.length === 0 // We should not wait for old documents.
   }
 
   function verifyDoc(doc) {
@@ -153,7 +152,7 @@ function waitForRemoteDocs(pouchDB, localDoc, oldRemoteDocs, newRemoteDocs) {
   });
 }
 
-test ('clean infinite test', function (t) {
+test('clean infinite test', function (t) {
   // This function will return all participant's public keys
   // except local 'publicKeyForLocalDevice' one.
   var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
@@ -166,13 +165,15 @@ test ('clean infinite test', function (t) {
   var oldDocs = [];
   var newDocs = [];
   var localDoc = {
-    _id: publicBase64KeyForLocalDevice,
+    _id: publicBase64KeyForLocalDevice
   };
+
   function sendData(index) {
     var name = 'test' + index;
 
     console.log('Calling sync for index: %d', index);
     return t.sync()
+
       .then(function () {
         console.log('sending data for index: %d', index);
         localDoc[name] = true;
@@ -180,8 +181,9 @@ test ('clean infinite test', function (t) {
         return pouchDB.put(localDoc)
           .then(function (response) {
             localDoc._rev = response.rev;
-          })
+          });
       })
+
       .then(function () {
         if (oldDocs.length === 0) {
           newDocs = partnerKeys.map(function (partnerKey) {
@@ -197,12 +199,14 @@ test ('clean infinite test', function (t) {
             return doc;
           });
         }
+
         console.log('waiting data for index: %d', index);
         return waitForRemoteDocs(pouchDB, localDoc, oldDocs, newDocs)
           .then(function () {
             oldDocs = newDocs;
           });
       })
+
       .then(function () {
         console.log('sent data for index: %d', index);
 
@@ -215,6 +219,7 @@ test ('clean infinite test', function (t) {
         });
       });
   }
+
   thaliManager = new ThaliManager(
     ExpressPouchDB,
     PouchDB,
@@ -223,11 +228,21 @@ test ('clean infinite test', function (t) {
     new ThaliPeerPoolOneAtATime(),
     global.NETWORK_TYPE
   );
+
   return thaliManager.start(partnerKeys)
     .then(function () {
-      sendData(0);
+      return sendData(0);
+    })
+    .then(function () {
+      t.pass('finished');
+      t.end();
+    })
+    .catch(function (error) {
+      t.fail('Got error ' + error.toString());
+      t.end();
     });
 });
+
 //
 // test('test write', function (t) {
 //   testUtils.testTimeout(t, TEST_TIMEOUT);
