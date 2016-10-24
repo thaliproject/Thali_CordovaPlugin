@@ -62,6 +62,15 @@ saved that file.
 jx npm init
 ```
 
+We are still inside of FooBar/www/jxcore and now we are running the script
+that MUST be run before installing thali since a bug in our installer.
+In other case install will fail. This script will go away as soon as 
+installed fixed.
+
+```
+../../../Thali_CordovaPlugin/thali/install/setUpDesktop.sh
+```
+
 We are still inside of FooBar/www/jxcore and now we are dealing with creating a
 package.json. If you don't already have a package.json, this will create one for
 you. If you already have a package.json then you can skip the previous command.
