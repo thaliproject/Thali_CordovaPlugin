@@ -2,9 +2,6 @@
 
 // Issue #419
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
-if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
-  return;
-}
 
 var net = require('net');
 var randomstring = require('randomstring');
@@ -50,7 +47,20 @@ var test = tape({
   }
 });
 
-test('Can call start/stopListeningForAdvertisements', function (t) {
+var isWifi = function () {
+  return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
+};
+
+var nativeTest = function (testName, testBody) {
+  // skip wifi network type
+  if (arguments.length !== 2) {
+    throw new Error('Use `test` directly to add custom skip function');
+  }
+  return test(testName, isWifi, testBody);
+};
+
+
+nativeTest('Can call start/stopListeningForAdvertisements', function (t) {
   Mobile('startListeningForAdvertisements').callNative(function (err) {
     t.notOk(err, 'Can call startListeningForAdvertisements without error');
     Mobile('stopListeningForAdvertisements').callNative(function (err) {
@@ -60,8 +70,8 @@ test('Can call start/stopListeningForAdvertisements', function (t) {
   });
 });
 
-test('Calling startListeningForAdvertisements twice is NOT an error',
-function (t) {
+nativeTest('Calling startListeningForAdvertisements twice is NOT an error',
+  function (t) {
   Mobile('startListeningForAdvertisements').callNative(function (err) {
     t.notOk(err, 'Can call startListeningForAdvertisements without error');
     Mobile('startListeningForAdvertisements').callNative(function (err) {
@@ -74,8 +84,8 @@ function (t) {
   });
 });
 
-test('Calling stopListeningForAdvertisements without calling start is NOT ' +
-  'an error', function (t) {
+nativeTest('Calling stopListeningForAdvertisements without calling start is ' +
+  'NOT an error', function (t) {
   Mobile('stopListeningForAdvertisements').callNative(function (err) {
     t.notOk(err, 'Can call stopListeningForAdvertisements without error');
     Mobile('stopListeningForAdvertisements').callNative(function (err) {
@@ -85,7 +95,7 @@ test('Calling stopListeningForAdvertisements without calling start is NOT ' +
   });
 });
 
-test('Can call start/stopUpdateAdvertisingAndListening', function (t) {
+nativeTest('Can call start/stopUpdateAdvertisingAndListening', function (t) {
   Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
     t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
     Mobile('stopAdvertisingAndListening').callNative(function (err) {
@@ -97,8 +107,8 @@ test('Can call start/stopUpdateAdvertisingAndListening', function (t) {
   });
 });
 
-test('Calling startUpdateAdvertisingAndListening twice is NOT an error',
-function (t) {
+nativeTest('Calling startUpdateAdvertisingAndListening twice is NOT an error',
+  function (t) {
   Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
     t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
     Mobile('startUpdateAdvertisingAndListening').callNative(4243,
@@ -112,8 +122,8 @@ function (t) {
   });
 });
 
-test('Can call stopUpdateAdvertisingAndListening twice without start and ' +
-  'it is not an error', function (t) {
+nativeTest('Can call stopUpdateAdvertisingAndListening twice without start ' +
+  'and it is not an error', function (t) {
   Mobile('stopAdvertisingAndListening').callNative(function (err) {
     t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
     Mobile('stopAdvertisingAndListening').callNative(function (err) {
@@ -123,8 +133,8 @@ test('Can call stopUpdateAdvertisingAndListening twice without start and ' +
   });
 });
 
-test('cannot call connect when start listening for advertisements is not ' +
-  'active', function (t) {
+nativeTest('cannot call connect when start listening for advertisements is ' +
+  'not active', function (t) {
   Mobile('connect').callNative('foo', function (err) {
     t.equal(err, 'startListeningForAdvertisements is not active',
       'got right error');
@@ -136,7 +146,7 @@ if (!tape.coordinated) {
   return;
 }
 
-test('peerAvailabilityChange is called', function (t) {
+nativeTest('peerAvailabilityChange is called', function (t) {
   var complete = false;
   Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
     if (!complete)
@@ -352,7 +362,7 @@ function startAndGetConnection(t, server, onConnectSuccess, onConnectFailure) {
   });
 }
 
-test('Can connect to a remote peer', function (t) {
+nativeTest('Can connect to a remote peer', function (t) {
   var connecting = false;
 
   var echoServer = net.createServer(function (socket) {
@@ -483,7 +493,7 @@ function getConnectionToOnePeerAndTest(t, connectTest) {
   });
 }
 
-test('Get error when trying to double connect to a peer', function (t) {
+nativeTest('Get error when trying to double connect to a peer', function (t) {
   /*
   We call connect twice in a row synchronously and one should connect and
   the other should get an error
@@ -514,7 +524,7 @@ test('Get error when trying to double connect to a peer', function (t) {
   });
 });
 
-test('Connect port dies if not connected to in time', function (t) {
+nativeTest('Connect port dies if not connected to in time', function (t) {
   /*
   If we don't connect to the port returned by the connect call in time
   then it should close down and we should get a connection error.
@@ -541,7 +551,7 @@ test('Connect port dies if not connected to in time', function (t) {
   }
 });
 
-test('Can shift large amounts of data', function (t) {
+nativeTest('Can shift large amounts of data', function (t) {
   var connecting = false;
 
   var sockets = {};
@@ -787,12 +797,12 @@ function killRemote(t, end) {
     });
 }
 
-test('#startUpdateAdvertisingAndListening - ending remote peers connection ' +
-  'kills the local connection', function (t) {
-    killRemote(t, true);
-  });
+nativeTest('#startUpdateAdvertisingAndListening - ending remote peers ' +
+  'connection kills the local connection', function (t) {
+  killRemote(t, true);
+});
 
-test('#startUpdateAdvertisingAndListening - destroying remote peers ' +
+nativeTest('#startUpdateAdvertisingAndListening - destroying remote peers ' +
   'connection kills the local connection', function (t) {
   killRemote(t, false);
 });
@@ -851,13 +861,13 @@ function killLocal(t, end) {
     });
 }
 
-test('#startUpdateAdvertisingAndListening - destroying the local connection ' +
-  'kills the connection to the remote peer', function (t) {
+nativeTest('#startUpdateAdvertisingAndListening - destroying the local ' +
+  'connection kills the connection to the remote peer', function (t) {
   killLocal(t, false);
 });
 
-test('#startUpdateAdvertisingAndListening - ending the local connection ' +
-  'kills the connection to the remote peer', function (t) {
+nativeTest('#startUpdateAdvertisingAndListening - ending the local ' +
+  'connection kills the connection to the remote peer', function (t) {
   killLocal(t, true);
 });
 
@@ -871,8 +881,8 @@ function findSmallestParticipant(participants) {
   return smallest;
 }
 
-test('We do not emit peerAvailabilityChanged events until one of the start ' +
-  'methods is called', function (t) {
+nativeTest('We do not emit peerAvailabilityChanged events until one of the ' +
+  'start methods is called', function (t) {
   // the node with the smallest UUID will be the one who waits 2 seconds
   // before listening for advertisements and making sure it gets some.
   // Everyone else will just start advertising immediately and end the
@@ -1291,7 +1301,8 @@ function setUpPretendLocalMux() {
   return pretendLocalMux;
 }
 
-test('Test updating advertising and parallel data transfer', function (t) {
+nativeTest('Test updating advertising and parallel data transfer',
+  function (t) {
   var pretendLocalMux = setUpPretendLocalMux();
   var clientQuitSignal = new QuitSignal();
   var serverQuitSignal = new QuitSignal();

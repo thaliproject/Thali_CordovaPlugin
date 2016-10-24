@@ -1,10 +1,6 @@
 'use strict';
 
-// Issue #419
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
-if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
-  return;
-}
 
 var express = require('express');
 var net = require('net');
@@ -42,6 +38,18 @@ var test = tape({
   }
 });
 
+var isWifi = function () {
+  return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
+};
+
+var nativeTest = function (testName, testBody) {
+  // skip wifi network type
+  if (arguments.length !== 2) {
+    throw new Error('Use `test` directly to add custom skip function');
+  }
+  return test(testName, isWifi, testBody);
+};
+
 var testIdempotentFunction = function (t, functionName) {
   thaliMobileNativeWrapper.start(express.Router())
   .then(function () {
@@ -73,43 +81,45 @@ var testFunctionBeforeStart = function (t, functionName) {
   });
 };
 
-test('#startListeningForAdvertisements should fail if start not called',
+nativeTest('#startListeningForAdvertisements should fail if start not called',
   function (t) {
     testFunctionBeforeStart(t, 'startListeningForAdvertisements');
   }
 );
 
-test('#startUpdateAdvertisingAndListening should fail if start not called',
+nativeTest('#startUpdateAdvertisingAndListening should fail if start not ' +
+  'called',
   function (t) {
     testFunctionBeforeStart(t, 'startUpdateAdvertisingAndListening');
   }
 );
 
-test('should be able to call #stopListeningForAdvertisements many times',
+nativeTest('should be able to call #stopListeningForAdvertisements many times',
   function (t) {
     testIdempotentFunction(t, 'stopListeningForAdvertisements');
   }
 );
 
-test('should be able to call #startListeningForAdvertisements many times',
+nativeTest('should be able to call #startListeningForAdvertisements many times',
   function (t) {
     testIdempotentFunction(t, 'startListeningForAdvertisements');
   }
 );
 
-test('should be able to call #startUpdateAdvertisingAndListening many times',
+nativeTest('should be able to call #startUpdateAdvertisingAndListening many ' +
+  'times',
   function (t) {
     testIdempotentFunction(t, 'startUpdateAdvertisingAndListening');
   }
 );
 
-test('should be able to call #stopAdvertisingAndListening many times',
+nativeTest('should be able to call #stopAdvertisingAndListening many times',
   function (t) {
     testIdempotentFunction(t, 'stopAdvertisingAndListening');
   }
 );
 
-test('can get the network status before starting', function (t) {
+nativeTest('can get the network status before starting', function (t) {
   thaliMobileNativeWrapper.getNonTCPNetworkStatus()
   .then(function (networkChangedValue) {
     t.doesNotThrow(function () {
@@ -129,7 +139,7 @@ test('can get the network status before starting', function (t) {
   });
 });
 
-test('error returned with bad router', function (t) {
+nativeTest('error returned with bad router', function (t) {
   thaliMobileNativeWrapper.start('bad router')
   .then(function () {
     t.fail('should not succeed');
@@ -223,7 +233,7 @@ var connectionTester = function (port, callback) {
   });
 };
 
-test('all services are stopped when we call stop', function (t) {
+nativeTest('all services are stopped when we call stop', function (t) {
   var stopped = false;
   var serversManagerLocalPort = 0;
   var routerServerPort = 0;
@@ -331,40 +341,42 @@ var verifyCallWithArguments = function (t, callName, parameters) {
   });
 };
 
-test('make sure terminateConnection is properly hooked up', function (t) {
+nativeTest('make sure terminateConnection is properly hooked up', function (t) {
   verifyCallWithArguments(t, '_terminateConnection', ['connection-id']);
 });
 
-test('make sure terminateListener is properly hooked up', function (t) {
+nativeTest('make sure terminateListener is properly hooked up', function (t) {
   verifyCallWithArguments(t, 'terminateListener', ['peer-id', 8080]);
 });
 
-test('make sure we actually call kill connections properly', function (t) {
-  thaliMobileNativeWrapper.killConnections()
-  .then(function () {
-    if (platform.isAndroid) {
-      t.fail('should not succeed on Android');
-      t.end();
-    } else {
-      // TODO: Do right checks on iOS.
-      // Also implement the right behavior in the Wifi-based mock.
-      t.ok(true, 'IMPLEMENT ME!!!!!!');
-      t.end();
-    }
-  })
-  .catch(function (error) {
-    if (platform.isIOS) {
-      t.fail('should not fail on iOS');
-      t.end();
-    } else {
-      t.equals(error.message, 'Not Supported', 'specific error expected');
-      t.end();
-    }
-  });
-});
+nativeTest('make sure we actually call kill connections properly',
+  function (t) {
+    thaliMobileNativeWrapper.killConnections()
+    .then(function () {
+      if (platform.isAndroid) {
+        t.fail('should not succeed on Android');
+        t.end();
+      } else {
+        // TODO: Do right checks on iOS.
+        // Also implement the right behavior in the Wifi-based mock.
+        t.ok(true, 'IMPLEMENT ME!!!!!!');
+        t.end();
+      }
+    })
+    .catch(function (error) {
+      if (platform.isIOS) {
+        t.fail('should not fail on iOS');
+        t.end();
+      } else {
+        t.equals(error.message, 'Not Supported', 'specific error expected');
+        t.end();
+      }
+    });
+  }
+);
 
-test('thaliMobileNativeWrapper is stopped when routerPortConnectionFailed ' +
-  'is received',
+nativeTest('thaliMobileNativeWrapper is stopped when ' +
+  'routerPortConnectionFailed is received',
   function (t) {
     thaliMobileNativeWrapper.start(express.Router())
     .then(function () {
@@ -399,7 +411,7 @@ test('thaliMobileNativeWrapper is stopped when routerPortConnectionFailed ' +
   }
 );
 
-test('We repeat failedConnection event when we get it from ' +
+nativeTest('We repeat failedConnection event when we get it from ' +
   'thaliTcpServersManager',
   function (t) {
     thaliMobileNativeWrapper.start(express.Router())
@@ -434,18 +446,20 @@ if (!platform.isMobile) {
   // HTTP server we are hosting for the user. Since it is just meant for
   // debugging it is only intended to be run on a desktop. So this test really
   // needs to stay not running when we are on mobile.
-  test('can do HTTP requests between peers without coordinator', function (t) {
-    trivialEndToEndTest(t, true);
-  });
+  nativeTest('can do HTTP requests between peers without coordinator',
+    function (t) {
+      trivialEndToEndTest(t, true);
+    }
+  );
 
-  test('make sure bad PSK connections fail', function (t) {
+  nativeTest('make sure bad PSK connections fail', function (t) {
     //trivialBadEndtoEndTest(t, true);
     // TODO: Re-enable and fix
     t.ok(true, 'FIX ME, PLEASE!!!');
     t.end();
   });
 
-  test('peer changes handled from a queue', function (t) {
+  nativeTest('peer changes handled from a queue', function (t) {
     thaliMobileNativeWrapper.start(express.Router())
     .then(function () {
       var peerAvailabilityHandler;
@@ -487,7 +501,7 @@ if (!platform.isMobile) {
     });
   });
 
-  test('relaying discoveryAdvertisingStateUpdateNonTCP', function (t) {
+  nativeTest('relaying discoveryAdvertisingStateUpdateNonTCP', function (t) {
     thaliMobileNativeWrapper.start(express.Router())
     .then(function () {
       thaliMobileNativeWrapper.emitter.once(
@@ -507,7 +521,7 @@ if (!platform.isMobile) {
     });
   });
 
-  test('thaliMobileNativeWrapper is stopped when ' +
+  nativeTest('thaliMobileNativeWrapper is stopped when ' +
     'incomingConnectionToPortNumberFailed is received',
     function (t) {
       var routerPort = 0;
@@ -533,7 +547,7 @@ if (!platform.isMobile) {
   );
 }
 
-test('we successfully receive and replay discoveryAdvertisingStateUpdate',
+nativeTest('we successfully receive and replay discoveryAdvertisingStateUpdate',
   function (t) {
     var doEqualsChecks = function (value, discoveryActive, advertisingActive) {
       t.equals(
@@ -618,18 +632,18 @@ var endToEndWithStateCheck = function (t) {
   });
 };
 
-test('can do HTTP requests between peers', function (t) {
+nativeTest('can do HTTP requests between peers', function (t) {
   endToEndWithStateCheck(t);
 });
 
-test('can still do HTTP requests between peers', function (t) {
+nativeTest('can still do HTTP requests between peers', function (t) {
   endToEndWithStateCheck(t);
 });
 
 // The connection cut is implemented as a separate test instead
 // of doing it in the middle of the actual test so that the
 // step gets coordinated between peers.
-test('test to coordinate connection cut', function (t) {
+nativeTest('test to coordinate connection cut', function (t) {
   // This cuts connections on Android.
   testUtils.toggleBluetooth(false)
   .then(function () {
@@ -644,7 +658,7 @@ test('test to coordinate connection cut', function (t) {
   });
 });
 
-test('can do HTTP requests after connections are cut', function (t) {
+nativeTest('can do HTTP requests after connections are cut', function (t) {
   // Turn Bluetooth back on so that Android can operate
   // (iOS does not require separate call to operate since
   // killConnections is more like a single-shot thing).
@@ -669,14 +683,14 @@ test('can do HTTP requests after connections are cut', function (t) {
   }
 });
 
-test('will fail bad PSK connection between peers', function (t) {
+nativeTest('will fail bad PSK connection between peers', function (t) {
   //trivialBadEndtoEndTest(t, true);
   // TODO: Re-enable and fix
   t.ok(true, 'FIX ME, PLEASE!!!');
   t.end();
 });
 
-test('We provide notification when a listener dies and we recreate it',
+nativeTest('We provide notification when a listener dies and we recreate it',
   function (t) {
     var recreatedPort = null;
     trivialEndToEndTest(t, false, function (peerId) {

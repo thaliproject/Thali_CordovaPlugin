@@ -536,8 +536,11 @@ function (t) {
 });
 
 // Next test only for BLUETOOTH/BOTH network type
-if (global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI) {
-  test('can get data from all participants', function (t) {
+test('can get data from all participants',
+  function () {
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
+  },
+  function (t) {
     var uuidPath = '/uuid';
     var router = express.Router();
     // Register a handler that returns the UUID of this
@@ -578,8 +581,8 @@ if (global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI) {
         done();
       });
     });
-  });
-}
+  }
+);
 
 test('Discovered peer should be removed if no availability updates ' +
   'were received during availability timeout', function (t) {

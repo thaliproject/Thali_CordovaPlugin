@@ -403,8 +403,8 @@ test('Make an HTTP request to /NotificationBeacons (no keys)', function (t) {
   });
 });
 
-test('Make an HTTP request to /NotificationBeacons'+'' +
-  'before calling start', function (t) {
+test('Make an HTTP request to /NotificationBeacons before calling start',
+  function (t) {
 
     var httpResponseHandler = function (error, response) {
       t.equal(response.statusCode, 404, 'should be 404' );
@@ -412,4 +412,5 @@ test('Make an HTTP request to /NotificationBeacons'+'' +
     };
 
     ThaliHttpTester.runTest(globalVariables.TESTURL, httpResponseHandler);
-  });
+  }
+);
