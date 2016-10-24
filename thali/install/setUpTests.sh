@@ -62,6 +62,11 @@ prepare_project()
   else
       rsync -a --no-links $REPO_ROOT_DIR/test/www/ $TEST_PROJECT_NAME/www
   fi
+
+  cd $REPO_ROOT_DIR/thali/install/SSDPReplacer
+  npm install --no-optional
+  cd $REPO_ROOT_DIR/../$TEST_PROJECT_NAME
+  cordova plugin add $REPO_ROOT_DIR/thali/install/SSDPReplacer
 }
 
 install_thali()
@@ -91,12 +96,7 @@ install_thali()
   find . -name "*.gz" -delete
   find . -name "*.pem" -delete
 
-  cp -v $1 app.js
-
-  cd $REPO_ROOT_DIR/thali/install
-  npm install --no-optional
-  cd $TEST_PROJECT_ROOT_DIR/thaliDontCheckIn
-  node $REPO_ROOT_DIR/thali/install/setUpThaliTestIds.js
+  cp -v $1 app.jsq
 }
 
 add_android_platform()
