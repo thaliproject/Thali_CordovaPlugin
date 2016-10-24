@@ -96,7 +96,7 @@ ThaliPeerPoolInterface.prototype.enqueue = function (peerAction) {
     self._onPeerActionKilled(peerAction);
     peerAction.kill = originalKill;
     return originalKill.apply(this, arguments);
-  }
+  };
 };
 
 /**
@@ -111,7 +111,7 @@ ThaliPeerPoolInterface.prototype._onPeerActionKilled = function (peerAction) {
     'peerAction shouldn\'t escape the queue without going through kill'
   );
   delete this._inQueue[peerActionId];
-}
+};
 
 /**
  * Error messages.
@@ -131,7 +131,7 @@ ThaliPeerPoolInterface.prototype.start = function () {
     Object.getOwnPropertyNames(this._inQueue).length === 0,
     ThaliPeerPoolInterface.ERRORS.QUEUE_IS_NOT_EMPTY
   );
-}
+};
 
 /**
  * Kills all peer actions in the queue.
@@ -153,6 +153,6 @@ ThaliPeerPoolInterface.prototype.stop = function () {
   );
 
   return Promise.all(promises);
-}
+};
 
 module.exports = ThaliPeerPoolInterface;

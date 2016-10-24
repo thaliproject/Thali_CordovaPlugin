@@ -7,7 +7,7 @@
 
 var fs = require('fs-extra-promise');
 var path = require('path');
-var spawn = require('./utils/child_process').spawn;
+var exec = require('./utils/child_process').exec;
 var https = require('https');
 var unzip = require('unzip');
 var url = require('url');
@@ -219,7 +219,7 @@ function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
     }
     console.log('Trying to remove previously installed Thali Cordova plugin');
     var pluginRemoveCommand = 'cordova plugin remove org.thaliproject.p2p';
-    return spawn(pluginRemoveCommand, { cwd: appRootDirectory })
+    return exec(pluginRemoveCommand, { cwd: appRootDirectory })
       .catch(function (error) {
         console.log('Ignoring a non-critical error: ' + error);
         // Resolve the promise even if plugin removal fails, because it is
@@ -290,7 +290,7 @@ function fetchAndInstallJxCoreCordovaPlugin(
   var jxCommand = 'jx ' + jxcBin +
     ' install ' + jxCoreVersionNumber + ' --use-url ' + jxCoreUrl;
 
-  return spawn(jxCommand, { cwd: baseDir })
+  return exec(jxCommand, { cwd: baseDir })
     .catch(function (error) {
       return Promise.reject('jxc install exited with error: ' + error);
     });
@@ -327,11 +327,22 @@ module.exports = function (callback, appRootDirectory) {
                                                           thaliDepotName,
                                                           thaliBranchName);
       } else {
-        return installGitHubZip(thaliProjectName, thaliDepotName,
-                                thaliBranchName, thaliDontCheckIn);
+        var errorMessage =
+          'The magic for local deployment' +
+          MAGIC_DIRECTORY_NAME_FOR_LOCAL_DEPLOYMENT +
+          ' doesn\'t seem to exist' +
+          ' currently the installation only supports local deployment.' +
+          ' See README.md for the details.';
+
+        return Promise.reject(new Error(errorMessage));
+
+        // The lines below should be uncommented as soon as we do release
+        //
+        // return installGitHubZip(thaliProjectName, thaliDepotName,
+        //                         thaliBranchName, thaliDontCheckIn);
       }
     })
-    .then(function (thaliCordovaPluginUnZipResult){
+    .then(function (thaliCordovaPluginUnZipResult) {
       // This step is used to prepare the gradle.properties file
       // containing the btconnectorlib2 version
       var projectDir = createUnzippedDirectoryPath(
@@ -354,7 +365,7 @@ module.exports = function (callback, appRootDirectory) {
             console.log('Adding Thali Cordova plugin from: ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory);
 
-            return spawn('cordova plugins add ' +
+            return exec('cordova plugins add ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory,
               { cwd: appRootDirectory });
           })
