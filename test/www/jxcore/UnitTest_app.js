@@ -14,10 +14,14 @@ var config = require('./config.json');
 var objectAssign = require('object-assign');
 process.env = objectAssign(process.env, config.env);
 
-var logger = require('./lib/testLogger')('UnitTest_app');
-var testUtils = require('./lib/testUtils');
-var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('bluebird');
+
+var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+var platform = require('thali/NextGeneration/utils/platform');
+var testUtils = require('./lib/testUtils');
+
+var logger = require('./lib/testLogger')('UnitTest_app');
+
 var utResult = false;
 
 if (process.platform === 'android' || process.platform === 'ios') {
@@ -44,6 +48,8 @@ if (process.platform === 'android' || process.platform === 'ios') {
 if (!utResult) {
   logger.debug('Failed to execute UT.');
   global.nativeUTFailed = true;
+} else {
+  global.nativeUTFailed = false;
 }
 
 // TODO finish testing here (the node part will be omitted)
@@ -51,10 +57,19 @@ if (!utResult) {
 // return;
 
 // Issue #914
-var networkTypes = [ThaliMobile.networkTypes.WIFI];
+var networkTypes = [
+  ThaliMobile.networkTypes.WIFI,
+  ThaliMobile.networkTypes.NATIVE,
+  ThaliMobile.networkTypes.BOTH,
+];
 
-ThaliMobile.getNetworkStatus()
-.then(function (networkStatus) {
+var getDeviceName = function () {
+  return new Promise(function (resolve) {
+    Mobile('GetDeviceName').callNative(resolve);
+  });
+};
+
+ThaliMobile.getNetworkStatus().then(function (networkStatus) {
   var promiseList = [];
   if (networkStatus.wifi === 'off') {
     promiseList.push(testUtils.toggleWifi(true));
@@ -63,25 +78,26 @@ ThaliMobile.getNetworkStatus()
     promiseList.push(testUtils.toggleBluetooth(true));
   }
   Promise.all(promiseList)
+  .then(getDeviceName)
+  .then(function (name) {
+    logger.debug('My device name is: %s', name);
+    testUtils.setName(name);
+  })
   .then(function () {
-    Mobile('GetDeviceName').callNative(function (name) {
-      logger.debug('My device name is: %s', name);
-      testUtils.setName(name);
-
-      return networkTypes.reduce(function (sequence, networkType) {
-        return sequence
-          .then(function () {
-            logger.debug('Running for ' + networkType + ' network type');
-            global.NETWORK_TYPE = networkType;
-            require('./runTests.js');
-            return null;
-          });
-      }, Promise.resolve())
-      .catch(function (error) {
-        logger.error(error.message + '\n' + error.stack);
-        return null;
-      });
+    var TestRunner = require('./runTests.js');
+    var runner = new TestRunner({
+      networkTypes: networkTypes,
+      platforms: [platform.name],
+      nativeUTFailed: global.nativeUTFailed,
     });
+    return runner.runTests();
+  })
+  .then(function () {
+    process.exit(0);
+  })
+  .catch(function (error) {
+    logger.error(error.message + '\n' + error.stack);
+    process.exit(1);
   });
 });
 

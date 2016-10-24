@@ -6,7 +6,6 @@ var format = util.format;
 var objectAssign = require('object-assign');
 var tape         = require('tape-catch');
 var assert       = require('assert');
-var uuid         = require('node-uuid');
 
 var asserts = require('./utils/asserts');
 var Promise = require('./utils/Promise');
@@ -52,7 +51,7 @@ SimpleThaliTape.prototype.defaults = {
   setupTimeout:     1 * 60 * 1000,
   testTimeout:      10 * 60 * 1000,
   teardownTimeout:  1 * 60 * 1000
-}
+};
 
 SimpleThaliTape.states = {
   created: 'created',
@@ -95,7 +94,7 @@ SimpleThaliTape.prototype.addTest = function (name, canBeSkipped, fun) {
   });
 
   return this._handler;
-}
+};
 
 SimpleThaliTape.prototype._runTest = function (test) {
   var self = this;
@@ -108,7 +107,7 @@ SimpleThaliTape.prototype._runTest = function (test) {
       tape.sync = function () {
         // noop
         return Promise.resolve();
-      }
+      };
 
       var resultHandler;
       var endHandler;
@@ -122,7 +121,7 @@ SimpleThaliTape.prototype._runTest = function (test) {
           if (!result.ok) {
             success = false;
           }
-        }
+        };
         tape.on('result', resultHandler);
 
         endHandler = function () {
@@ -138,7 +137,7 @@ SimpleThaliTape.prototype._runTest = function (test) {
             logger.error(error);
             reject(new Error(error));
           }
-        }
+        };
         tape.once('end', endHandler);
       })
       .timeout(
@@ -159,7 +158,7 @@ SimpleThaliTape.prototype._runTest = function (test) {
     // Example is 'tape.createHarness' https://github.com/substack/tape/blob/master/index.js#L103
 
     tape('setup', function (tape) {
-      processResult(tape, self._options.setupTimeout)
+      processResult(tape, self._options.setupTimeout);
       self._options.setup(tape);
     });
 
@@ -198,7 +197,7 @@ SimpleThaliTape.prototype._runTest = function (test) {
       );
     }
   });
-}
+};
 
 SimpleThaliTape.prototype._begin = function () {
   var self = this;
@@ -224,14 +223,14 @@ SimpleThaliTape.prototype._begin = function () {
   .then(function () {
     return skippedTests;
   });
-}
+};
 
 // We will run 'begin' on all 'SimpleThaliTape' instances.
 SimpleThaliTape.instances = [];
 
 SimpleThaliTape.prototype._resolveInstance = function () {
   SimpleThaliTape.instances.push(this);
-}
+};
 
 // Note that version, hasRequiredHardware and nativeUTFailed fields are not used and are added
 // here for consistency with CoordinatedTape
@@ -265,6 +264,6 @@ SimpleThaliTape.begin = function (platform, version, hasRequiredHardware, native
     logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
     return Promise.reject(error);
   });
-}
+};
 
 module.exports = SimpleThaliTape;
