@@ -10,20 +10,20 @@ var Promise = require('./Promise');
 
 function exec(command, options) {
   return new Promise(function (resolve, reject) {
-    CHILD_PROCESS.exec(command, options,
-      function (error, stdout, stderr) {
-        if (error) {
-          reject(error);
-          return;
-        }
+    var childProcess = CHILD_PROCESS.exec(command, options);
 
-        // Log output even if command doesn't exit with an error,
-        // because otherwise useful debugging information might get lost.
-        if (stdout) { console.log(stdout); }
-        if (stderr) { console.log(stderr); }
-
-        resolve();
-      });
+    childProcess.stdout.on('data', function (data) {
+      console.log('' + data);
+    });
+    childProcess.stderr.on('data', function (data) {
+      console.log('' + data);
+    });
+    childProcess.on('close', function (code) {
+      if (code !== 0) {
+        return reject('`' + command + '` (exited with error code' + code + ')');
+      }
+      return resolve();
+    });
   });
 }
 
