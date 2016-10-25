@@ -95,7 +95,8 @@ class AppContextDelegateMock: NSObject, AppContextDelegate {
         self.peerAvailabilityChangedHandler = peerAvailabilityChangedHandler
     }
 
-    @objc func context(context: AppContext, didResolveMultiConnectWith paramsJSONString: String) {}
+    @objc func context(context: AppContext, didResolveMultiConnectWithSyncValue value: String,
+                       error: NSObject?, listeningPort: NSObject?) {}
     @objc func context(context: AppContext,
                        didFailMultiConnectConnectionWith paramsJSONString: String) {}
     @objc func context(context: AppContext, didChangePeerAvailability peers: String) {
@@ -152,8 +153,8 @@ class AppContextDelegateMock: NSObject, AppContextDelegate {
             XCTFail("Can not convert network status JSON string to dictionary")
         }
     }
-    @objc func context(context: AppContext, didUpdateDiscoveryAdvertisingState
-                       discoveryAdvertisingState: String) {
+    @objc func context(context: AppContext,
+                       didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String) {
         advertisingListeningState = discoveryAdvertisingState
     }
     @objc func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16) {}
@@ -252,26 +253,21 @@ class AppContextTests: XCTestCase {
 
     func testThaliCoreErrors() {
         // testing parameters count
-        var error: AppContextError?
-        do {
-            try context.multiConnectToPeer([""])
-        } catch let err as AppContextError {
-            error = err
-        } catch _ {}
-        XCTAssertEqual(error, AppContextError.badParameters)
-
+        context.multiConnectToPeer([""]) {
+            guard let err = $0 as? AppContextError else {
+                XCTFail("unexpected error \($0)")
+                return
+            }
+            XCTAssertEqual(err, AppContextError.badParameters)
+        }
         // testing parameter types
-        error = nil
-        do {
-            try context.multiConnectToPeer([2, 2])
-        } catch let err as AppContextError {
-            error = err
-        } catch _ {}
-        XCTAssertEqual(error, AppContextError.badParameters)
-    }
-
-    func testMultiConnect() {
-        // todo will be implemented as soon as we will have the whole stack working #881
+        context.multiConnectToPeer([2, 2]) {
+            guard let err = $0 as? AppContextError else {
+                XCTFail("unexpected error \($0)")
+                return
+            }
+            XCTAssertEqual(err, AppContextError.badParameters)
+        }
     }
 
     func testErrorDescription() {

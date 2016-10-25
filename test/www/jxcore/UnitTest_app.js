@@ -65,8 +65,14 @@ if (!utResult) {
   global.nativeUTFailed = true;
 }
 
+if (platform.isIOS) {
+  // Disable node tests for iOS due to issue #1343
+  console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+  return;
+}
+
 // Issue #914
-var networkTypes = [ThaliMobile.networkTypes.WIFI];
+var networkTypes = [ThaliMobile.networkTypes.NATIVE];
 
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {

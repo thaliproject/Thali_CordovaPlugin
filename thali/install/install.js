@@ -306,7 +306,7 @@ module.exports = function (callback, appRootDirectory) {
 
   var thaliProjectName, thaliDepotName, thaliBranchName, btconnectorlib2;
 
-  getReleaseConfig(thaliDontCheckIn)
+  getReleaseConfig()
     .then(function (conf) {
 
       thaliProjectName = conf.thali.projectName;

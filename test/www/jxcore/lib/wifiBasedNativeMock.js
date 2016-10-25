@@ -997,32 +997,25 @@ MobileCallInstance.prototype.multiConnectConnectionFailure =
 
 MobileCallInstance.prototype.registerToNative = function () {
   switch (this.mobileMethodName) {
-    case 'peerAvailabilityChanged':
-    {
+    case 'peerAvailabilityChanged': {
       return this.peerAvailabilityChanged(arguments[0]);
     }
-    case 'discoveryAdvertisingStateUpdateNonTCP':
-    {
+    case 'discoveryAdvertisingStateUpdateNonTCP': {
       return this.discoveryAdvertisingStateUpdateNonTCP(arguments[0]);
     }
-    case 'networkChanged':
-    {
+    case 'networkChanged': {
       return this.networkChanged(arguments[0]);
     }
-    case 'incomingConnectionToPortNumberFailed':
-    {
+    case 'incomingConnectionToPortNumberFailed': {
       return this.incomingConnectionToPortNumberFailed(arguments[0]);
     }
-    case 'multiConnectResolved':
-    {
+    case 'multiConnectResolved': {
       return this.multiConnectResolved(arguments[0]);
     }
-    case 'multiConnectConnectionFailure':
-    {
+    case 'multiConnectConnectionFailure': {
       return this.multiConnectConnectionFailure(arguments[0]);
     }
-    default:
-    {
+    default: {
       throw new Error('The supplied mobileName does not have a matching ' +
           'registerToNative method: ' + this.mobileMethodName);
     }

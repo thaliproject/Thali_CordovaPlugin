@@ -56,6 +56,10 @@ func unexpectedSocketDisconnectHandler(socket: GCDAsyncSocket) {
     XCTFail("Unexpected disconnect received on socket \(socket)")
 }
 
+func unexpectedStopListeningHandler() {
+    XCTFail("Unexpected stopped listening for connections")
+}
+
 func unexpectedAcceptConnectionHandler() {
     XCTFail("Unexpected acceptConnection received")
 }

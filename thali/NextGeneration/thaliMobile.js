@@ -27,6 +27,8 @@ var promiseResultSuccessOrFailure = function (promise) {
   return promise.then(function (success) {
     return success;
   }).catch(function (failure) {
+    // This turns the catch into a normal 'then' response so no matter
+    // what the promise outputs the result will always be a resolve
     return failure;
   });
 };
@@ -187,7 +189,12 @@ module.exports.start = function (router, pskIdToSecret, networkType) {
 
     getWifiOrNativeMethodByNetworkType('start',
       thaliMobileStates.networkType)(router, pskIdToSecret)
-      .then(resolve);
+      .then(function (result) {
+        if (result.wifiResult === null && result.nativeResult === null) {
+          return resolve(result);
+        }
+        return reject(result);
+      });
   });
 };
 

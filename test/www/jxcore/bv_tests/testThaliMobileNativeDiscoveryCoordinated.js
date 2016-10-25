@@ -10,6 +10,8 @@ if (!tape.coordinated) {
   return;
 }
 
+var platform = require('thali/NextGeneration/utils/platform');
+
 var net = require('net');
 var assert = require('assert');
 var Promise = require('lie');
@@ -36,6 +38,8 @@ function closeServer() {
         });
       });
     }
+
+    return null;
   })
   .then(function () {
     if (mobileIsListening) {
@@ -51,6 +55,8 @@ function closeServer() {
         });
       });
     }
+
+    return null;
   })
   .then(function () {
     if (mobileIsAdvertising) {
@@ -66,6 +72,8 @@ function closeServer() {
         });
       });
     }
+
+    return null;
   });
 }
 
@@ -98,13 +106,13 @@ var testTimeout = function (t) {
   t.end = function () {
     clearTimeout(timer);
     return oldEnd.apply(this, arguments);
-  }
-}
+  };
+};
 
 var server;
 
 var allPeers = {};
-var latestPeers;
+var peersFromPreviousTest;
 
 test('initial peer discovery', function (t) {
   testTimeout(t);
@@ -115,12 +123,13 @@ test('initial peer discovery', function (t) {
   });
   server = makeIntoCloseAllServer(server);
 
-  var currentPeers = latestPeers = {};
+  var currentPeers = {};
+  peersFromPreviousTest = {};
   function newPeersHandler(peers) {
     peers.forEach(function (peer) {
       if (peer.peerAvailable) {
         // We can receive each peer many times. We can just ignore this case.
-        currentPeers[peer.peerIdentifier] = true;
+        currentPeers[peer.peerIdentifier + ':' + peer.generation] = true;
       }
     });
   }
@@ -152,8 +161,8 @@ test('initial peer discovery', function (t) {
     Mobile('peerAvailabilityChanged').registerToNative(function () {});
 
     // Copying received peers to the global peers hash table.
-    peersReceived.forEach(function (uuid) {
-      allPeers[uuid] = true;
+    peersReceived.forEach(function (idAndGeneration) {
+      allPeers[idAndGeneration] = true;
     });
     t.end();
   }, STEP_TIMEOUT);
@@ -164,17 +173,18 @@ test('initial peer discovery', function (t) {
   test('update peer discovery ' + (testIndex + 1), function (t) {
     testTimeout(t);
 
-    var currentPeers = latestPeers = {};
+    var currentPeers = {};
+    peersFromPreviousTest = {};
 
     function newPeersHandler(peers) {
       peers.forEach(function (peer) {
         // We can ignore peers that we already have in global peer hash table.
-        var uuid = peer.peerIdentifier;
-        if (allPeers[uuid]) {
+        var idAndGeneration = peer.peerIdentifier + ':' + peer.generation;
+        if (allPeers[idAndGeneration]) {
           return;
         }
         if (peer.peerAvailable) {
-          currentPeers[uuid] = true;
+          currentPeers[idAndGeneration] = true;
         }
       });
     }
@@ -196,9 +206,12 @@ test('initial peer discovery', function (t) {
 
       Mobile('peerAvailabilityChanged').registerToNative(function () {});
 
-      // Copying received peers to the global peers hash table.
-      peersReceived.forEach(function (uuid) {
-        allPeers[uuid] = true;
+      peersReceived.forEach(function (idAndGeneration) {
+        // This is a new peer that only started advertising during this test
+        if (!allPeers[idAndGeneration]) {
+          allPeers[idAndGeneration] = true;
+          peersFromPreviousTest[idAndGeneration] = true;
+        }
       });
       t.end();
     }, STEP_TIMEOUT);
@@ -206,57 +219,84 @@ test('initial peer discovery', function (t) {
 
 });
 
-test('check latest peer discovery', function (t) {
-  testTimeout(t);
+test('check latest peer discovery', function() {
+    // On both Android and Wifi the native layer will constantly pump repeated
+    // peerAvailabilityChanged events for peers whose state have not changed.
+    // This is o.k. because thaliMobile cleans it up. But iOS doesn't do this
+    // and so this test isn't useful there.
+    return platform.isIOS;
+  },
+  function (t) {
+    testTimeout(t);
 
-  serverToBeClosed = server;
-  mobileIsListening = true;
-  mobileIsAdvertising = true;
+    serverToBeClosed = server;
+    mobileIsListening = true;
+    mobileIsAdvertising = true;
 
-  var currentPeers = {};
+    var currentPeers = {};
 
-  function newPeersHandler(peers) {
-    peers.forEach(function (peer) {
-      if (peer.peerAvailable) {
-        currentPeers[peer.peerIdentifier] = true;
-      }
-    });
-  }
+    function newPeersHandler(peers) {
+      peers.forEach(function (peer) {
+        if (peer.peerAvailable) {
+          currentPeers[peer.peerIdentifier + ':' + peer.generation] = true;
+        }
+      });
+    }
 
-  // After 10 seconds we will our peers again.
-  setTimeout(function () {
-    Mobile('peerAvailabilityChanged').registerToNative(newPeersHandler);
-
-    // After 10 seconds we will check whether we have all peers
-    // from the latest peer discovery.
+    // After 10 seconds we will check our peers again.
     setTimeout(function () {
-      var peersReceived = Object.getOwnPropertyNames(currentPeers);
-      t.ok(
-        peersReceived.length === t.participants.length - 1,
-        'We have received peers we expected'
-      );
+      Mobile('peerAvailabilityChanged').registerToNative(newPeersHandler);
 
-      Mobile('peerAvailabilityChanged').registerToNative(function () {});
+      // After 10 seconds we will check whether we have all peers
+      // from the latest peer discovery.
+      setTimeout(function () {
+        var peersReceived = Object.getOwnPropertyNames(currentPeers);
+        t.ok(
+          peersReceived.length === t.participants.length - 1,
+          'We have received peers we expected'
+        );
 
-      var samePeers = peersReceived.every(function (uuid) {
-        return latestPeers[uuid];
-      });
-      t.ok(
-        samePeers,
-        'We have received peers from the latest peer discovery'
-      );
+        Mobile('peerAvailabilityChanged').registerToNative(function () {});
 
-      // Copying received peers to the global peers hash table.
-      peersReceived.forEach(function (uuid) {
-        allPeers[uuid] = true;
-      });
-      t.end();
+        var samePeers = peersReceived.every(function (idAndGeneration) {
+          return peersFromPreviousTest[idAndGeneration];
+        });
+        t.ok(
+          samePeers,
+          'We have received peers from the latest peer discovery'
+        );
+
+        // Copying received peers to the global peers hash table.
+        peersReceived.forEach(function (idAndGeneration) {
+          allPeers[idAndGeneration] = true;
+        });
+        t.end();
+      }, STEP_TIMEOUT);
+
     }, STEP_TIMEOUT);
+  });
 
-  }, STEP_TIMEOUT);
-});
+test('Set up for no peer discovery test',
+  function () {
+    // no peer discovery depends on the native radios being off and being
+    // restarted here. That normally happens in 'check latest peer discovery'
+    // but we can't run that test on iOS. So we use this as a bogu test just
+    // to make sure everything gets turned off.
+    return platform.isAndroid;
+  },
+  function (t) {
+    serverToBeClosed = null;
+    mobileIsListening = true;
+    mobileIsAdvertising = true;
+    t.end();
+  });
 
-test('no peer discovery', function (t) {
+test('no peer discovery',
+  function () {
+    // disabled until #1323 will be resolved
+    return platform.isIOS;
+  },
+  function (t) {
   testTimeout(t);
 
   mobileIsListening = true;

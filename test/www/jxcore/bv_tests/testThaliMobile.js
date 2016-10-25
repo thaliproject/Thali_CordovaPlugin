@@ -133,6 +133,22 @@ test('should be able to call #stopAdvertisingAndListening many times',
   }
 );
 
+test('#start - Causing native or wifi to fail will cause a promise reject ',
+  function (t) {
+    ThaliMobile.start(null, {}, ThaliMobile.networkTypes.BOTH)
+      .then(function () {
+        t.fail('We should have failed');
+      })
+      .catch(function (result) {
+        t.notOk(result.wifiResult, 'This should not cause wifi to fail');
+        t.equal(result.nativeResult.message, 'Bad Router', 'native router ' +
+          'should be bad');
+      })
+      .then(function () {
+        t.end();
+      });
+  });
+
 test('#start should fail if called twice in a row', function (t) {
   ThaliMobile.start(express.Router())
   .then(function (combinedResult) {
@@ -229,13 +245,13 @@ test('wifi peer is marked unavailable if announcements stop', function (t) {
   thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD =
     thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 2;
   var testPeerIdentifier = uuid.v4();
-  var testSeverHostAddress = randomstring.generate({
+  var testServerHostAddress = randomstring.generate({
     charset: 'hex', // to get lowercase chars for the host address
     length: 8
   });
   var testServerPort = 8080;
   var testServer = new nodessdp.Server({
-    location: 'http://' + testSeverHostAddress + ':' + testServerPort,
+    location: 'http://' + testServerHostAddress + ':' + testServerPort,
     udn: thaliConfig.SSDP_NT,
     // Make the interval 10 times longer than expected
     // to make sure we determine the peer is gone while

@@ -224,7 +224,7 @@ Promise.all([
   replaceThaliConfig(),
   replaceConnectionHelper(),
   replaceJXcoreExtension()
-  ])
-  .then(function () {
-    console.info('We have replaced hardcoded ids with random values.');
-  });
+])
+.then(function () {
+  console.info('We have replaced hardcoded ids with random values.');
+});
