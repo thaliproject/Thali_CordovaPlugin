@@ -286,10 +286,10 @@ ThaliTcpServersManager.prototype.terminateIncomingConnection =
 ThaliTcpServersManager.prototype.terminateOutgoingConnection =
   function (peerIdentifier, port) {
     var peerServer = this._peerServers[peerIdentifier];
-    if (!peerServer || peerServer.server.address().port !== port) {
-      return Promise.resolve(null);
+    if (peerServer && peerServer.server.address().port === port) {
+      createPeerListener.closeServer(this, peerServer.server, null, false);
     }
-    createPeerListener.closeServer(this, peerServer.server, null, false);
+    return Promise.resolve(null);
   };
 
 /**
