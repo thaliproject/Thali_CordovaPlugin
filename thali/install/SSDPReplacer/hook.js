@@ -8,12 +8,14 @@ var fs     = require('fs-extra-promise');
 
 var uuid         = require('node-uuid');
 var randomString = require('randomstring');
+var Promise      = require('bluebird');
 
 // ponyfills
 var endsWith = require('end-with');
 
-var Promise = require('./Promise');
 require('./process');
+
+var THALI_DIRECTORY = './thaliDontCheckIn';
 
 
 // We want to find the first path that ends with 'name'.
@@ -31,21 +33,21 @@ function findFirstFile (name) {
       }
     }
 
-    var finder = findit('.')
-      .on('file', function (path) {
-        // We can receive here 'path': 'a/b/my-file', 'a/b/bad-my-file',
-        //  'my-file', 'bad-my-file'.
-        // Both 'a/b/my-file' and 'my-file' should be valid.
-        if (path === name || endsWith(path, '/' + name)) {
-          resultPath = path;
-          finder.stop();
-        }
-      })
-      .on('error', function (error) {
-        reject(new Error(error));
-      })
-      .on('stop', end)
-      .on('end', end);
+    var finder = findit(THALI_DIRECTORY)
+    .on('file', function (path) {
+      // We can receive here 'path': 'a/b/my-file', 'a/b/bad-my-file',
+      //  'my-file', 'bad-my-file'.
+      // Both 'a/b/my-file' and 'my-file' should be valid.
+      if (path === name || endsWith(path, '/' + name)) {
+        resultPath = path;
+        finder.stop();
+      }
+    })
+    .on('error', function (error) {
+      reject(new Error(error));
+    })
+    .on('stop', end)
+    .on('end', end);
   })
     .catch(function (error) {
       console.error(
@@ -56,7 +58,7 @@ function findFirstFile (name) {
     });
 }
 
-function replaceContent(content, replacements) {
+function replaceContent(path, content, replacements) {
   // String.prototype.replace in javascript is defected by design.
   // https://stackoverflow.com/questions/5257000/how-to-know-if-javascript-string-replace-did-anything
   function replace(string, pattern, replacement) {
@@ -77,11 +79,10 @@ function replaceContent(content, replacements) {
     });
 
     if (!isReplaced) {
-      console.log(pattern);
       throw new Error(
         format(
-          'we couldn\'t replace pattern: \'%s\' with value: \'%s\'',
-          pattern, replacement
+          'we couldn\'t replace pattern: \'%s\' with value: \'%s\' in file: \'%s\'',
+          pattern, replacement, path
         )
       );
     }
@@ -97,26 +98,25 @@ function replaceContent(content, replacements) {
 // 'replacements' will be an array:
 // [{ pattern: /pattern/, value: 'replacement' }]
 function replaceStringsInFile(name, replacements) {
-  return new Promise(function (resolve) {
-    return findFirstFile(name)
-      .then(function (path) {
-        return fs.readFileAsync(path, 'utf8')
-          .then(function (content) {
-            return replaceContent(content, replacements);
-          })
-          .then(function (content) {
-            return fs.writeFileAsync(path, content, 'utf8');
-          })
-          .then(resolve);
-      });
-  })
-    .catch(function (error) {
-      console.error(
-        'we couldn\'t replace strings in file, error: \'%s\', stack: \'%s\'',
-        error.toString(), error.stack
-      );
-      return Promise.reject(error);
+  return findFirstFile(name)
+  .then(function (path) {
+
+    return fs.readFileAsync(path, 'utf8')
+    .then(function (content) {
+      return replaceContent(path, content, replacements);
+    })
+    .then(function (content) {
+      return fs.writeFileAsync(path, content, 'utf8');
     });
+
+  })
+  .catch(function (error) {
+    console.error(
+      'we couldn\'t replace strings in file, error: \'%s\', stack: \'%s\'',
+      error.toString(), error.stack
+    );
+    return Promise.reject(error);
+  });
 }
 
 // Our task is to replace 'b' between 'a' and 'c' with other value.
@@ -160,7 +160,7 @@ function replaceConnectionHelper () {
     pattern: new RegExp(
       [
         '(',
-        ['static', 'final', 'String', 'BLE_SERVICE_UUID_AS_STRING']
+          ['static', 'final', 'String', 'BLE_SERVICE_UUID_AS_STRING']
             .join('\\s+'),
         '\\s*', '=', '\\s*',
         ')',
@@ -182,7 +182,7 @@ function replaceConnectionHelper () {
     pattern: new RegExp(
       [
         '(',
-        ['static', 'final', 'int', 'MANUFACTURER_ID'].join('\\s+'),
+          ['static', 'final', 'int', 'MANUFACTURER_ID'].join('\\s+'),
         '\\s*', '=',
         ')',
         '(',
@@ -224,7 +224,7 @@ Promise.all([
   replaceThaliConfig(),
   replaceConnectionHelper(),
   replaceJXcoreExtension()
-  ])
-  .then(function () {
-    console.info('We have replaced hardcoded ids with random values.');
-  });
+])
+.then(function () {
+  console.info('We have replaced hardcoded ids with random values.');
+});

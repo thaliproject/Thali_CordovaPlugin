@@ -317,7 +317,8 @@ extension PeerAvailability {
         self.updateListeningAdvertisingState()
     }
 
-    public func multiConnectToPeer(parameters: [AnyObject], validationCompletionHandler: (NSError?) -> Void)  {
+    public func multiConnectToPeer(parameters: [AnyObject],
+                                   validationCompletionHandler: (NSError?) -> Void) {
         guard parameters.count >= 2 else {
             validationCompletionHandler(AppContextError.badParameters as NSError)
             return
