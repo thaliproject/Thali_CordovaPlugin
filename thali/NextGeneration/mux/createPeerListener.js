@@ -18,6 +18,7 @@ var maxPeersToAdvertise =
 
 function closeServer(self, server, failedConnectionErr, canRetry)
 {
+  logger.debug('closeServer called');
   if (server._closing) {
     return;
   }
@@ -87,11 +88,13 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
         });
 
         stream.on('finish', function () {
+          logger.debug('multiplexToNativeListener.stream.finish');
           stream.destroy();
           client.end();
         });
 
         stream.on('close', function () {
+          logger.debug('multiplexToNativeListener.stream.close');
           client.destroy();
         });
 
@@ -105,10 +108,12 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
         });
 
         client.on('finish', function () {
+          logger.debug('multiplexToNativeListener.client.finish');
           stream.end();
         });
 
         client.on('close', function () {
+          logger.debug('multiplexToNativeListener.client.close');
           stream.destroy();
         });
       });
@@ -119,14 +124,17 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
       });
 
       mux.on('finish', function () {
+        logger.debug('multiplexToNativeListener.mux.finished');
         outgoing.end();
       });
 
       mux.on('close', function () {
+        logger.debug('multiplexToNativeListener.mux.close');
         outgoing.end();
       });
 
       outgoing.on('data', function () {
+        logger.debug('multiplexToNativeListener.outgoing.data');
         var peerServerEntry = self._peerServers[server._peerIdentifier];
         if (peerServerEntry) {
           peerServerEntry.lastActive = Date.now();
@@ -134,15 +142,17 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
       });
 
       outgoing.on('error', function (err) {
-        logger.debug('Got error on outgoing to native - ' + err);
+        logger.debug('multiplexToNativeListener.outgoing ' + err);
         mux.destroy();
       });
 
       outgoing.on('finish', function () {
+        logger.debug('multiplexToNativeListener.outgoing.finish');
         mux.end();
       });
 
       outgoing.on('close', function () {
+        logger.debug('multiplexToNativeListener.outgoing.close');
         mux.destroy();
       });
 
@@ -185,10 +195,12 @@ function handleForwardConnection(self, listenerOrIncomingConnection, server,
   });
 
   outgoing.on('close', function () {
+    logger.debug('Closing forward connection');
     closeServer(self, server, null, true);
   });
 
   outgoing.on('timeout', function () {
+    logger.debug('Timing out forward connection');
     outgoing.destroy();
   });
 }
@@ -253,8 +265,7 @@ function connectToRemotePeer(self, incoming, peerIdentifier, server,
       function (err, unParsedConnection) {
         if (err) {
           var error = new Error(err);
-          logger.warn(error);
-          logger.debug('failedConnection');
+          logger.warn('Connect error:' + error);
           incoming && incoming.end();
           closeServer(self, server, error, true);
           return reject(error);
@@ -478,10 +489,12 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
           });
 
           incomingStream.on('finish', function () {
+            logger.debug('incomingStream finish');
             incoming.end();
           });
 
           incomingStream.on('close', function () {
+            logger.debug('incomingStream close');
             incoming.destroy();
           });
 
@@ -491,10 +504,12 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
           });
 
           incoming.on('finish', function () {
+            logger.debug('incoming finish');
             incomingStream.end();
           });
 
           incoming.on('close', function () {
+            logger.debug('incoming close');
             incomingStream.destroy();
           });
 

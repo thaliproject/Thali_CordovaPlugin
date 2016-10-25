@@ -7,6 +7,8 @@ var PeerAction = require('../thaliPeerPool/thaliPeerAction');
 var NotificationBeacons = require('./thaliNotificationBeacons');
 var EventEmitter = require('events').EventEmitter;
 var thaliConfig = require('../thaliConfig');
+var logger = require('../../ThaliLogger')('thaliNotificationAction');
+
 
 /** @module thaliNotificationAction */
 
@@ -143,6 +145,7 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
           ThaliNotificationAction.ActionResolution.NETWORK_PROBLEM,
           null, 'Could not establish TCP connection');
       });
+      logger.debug('Calling end on http request');
       self._httpRequest.end();
     });
   });
