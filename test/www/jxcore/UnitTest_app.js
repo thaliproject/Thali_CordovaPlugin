@@ -63,6 +63,8 @@ var networkTypes = [
   ThaliMobile.networkTypes.BOTH,
 ];
 
+var testFiles = process.argv[2] || null;
+
 var getDeviceName = function () {
   return new Promise(function (resolve) {
     Mobile('GetDeviceName').callNative(resolve);
@@ -88,6 +90,7 @@ ThaliMobile.getNetworkStatus().then(function (networkStatus) {
     var runner = new TestRunner({
       networkTypes: networkTypes,
       platforms: [platform.name],
+      testFiles: testFiles,
       nativeUTFailed: global.nativeUTFailed,
     });
     return runner.runTests();

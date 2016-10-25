@@ -1,16 +1,16 @@
 'use strict';
 
-// Issue #419
-var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 
 var net = require('net');
 var randomstring = require('randomstring');
-var tape = require('../lib/thaliTape');
-var platform = require('thali/NextGeneration/utils/platform');
-var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var Promise = require('lie');
 var assert = require('assert');
 
+var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+var platform = require('thali/NextGeneration/utils/platform');
+var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
+
+var tape = require('../lib/thaliTape');
 var logger = require('../lib/testLogger')('testThaliMobileNative');
 
 // jshint -W064

@@ -2,10 +2,12 @@
 
 var net = require('net');
 var multiplex = require('multiplex');
-var tape = require('../lib/thaliTape');
+var Promise = require('lie');
+
 var ThaliTCPServersManager = require('thali/NextGeneration/mux/thaliTcpServersManager');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-var Promise = require('lie');
+
+var tape = require('../lib/thaliTape');
 
 // Every call to Mobile trips this warning
 /* jshint -W064 */

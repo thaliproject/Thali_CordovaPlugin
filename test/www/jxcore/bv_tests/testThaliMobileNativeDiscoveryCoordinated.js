@@ -1,9 +1,5 @@
 'use strict';
 
-var ThaliMobile = require('thali/NextGeneration/thaliMobile');
-if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
-  return;
-}
 
 var tape = require('../lib/thaliTape');
 if (!tape.coordinated) {
@@ -14,6 +10,7 @@ var net = require('net');
 var assert = require('assert');
 var Promise = require('lie');
 
+var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 
 var logger = require('../lib/testLogger')('testThaliMobileNativeDiscoveryCoordinated');
@@ -84,6 +81,18 @@ var test = tape({
   }
 });
 
+var isWifi = function () {
+  return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
+};
+
+var nativeTest = function (testName, testBody) {
+  // skip wifi network type
+  if (arguments.length !== 2) {
+    throw new Error('Use `test` directly to add custom skip function');
+  }
+  return test(testName, isWifi, testBody);
+};
+
 var TEST_TIMEOUT = 1 * 60 * 1000;
 var STEP_TIMEOUT = 10 * 1000;
 
@@ -99,14 +108,14 @@ var testTimeout = function (t) {
     clearTimeout(timer);
     return oldEnd.apply(this, arguments);
   }
-}
+};
 
 var server;
 
 var allPeers = {};
 var latestPeers;
 
-test('initial peer discovery', function (t) {
+nativeTest('initial peer discovery', function (t) {
   testTimeout(t);
 
   server = net.createServer();
@@ -161,7 +170,7 @@ test('initial peer discovery', function (t) {
 
 [0,1].forEach(function(testIndex) {
 
-  test('update peer discovery ' + (testIndex + 1), function (t) {
+  nativeTest('update peer discovery ' + (testIndex + 1), function (t) {
     testTimeout(t);
 
     var currentPeers = latestPeers = {};
@@ -206,7 +215,7 @@ test('initial peer discovery', function (t) {
 
 });
 
-test('check latest peer discovery', function (t) {
+nativeTest('check latest peer discovery', function (t) {
   testTimeout(t);
 
   serverToBeClosed = server;
@@ -256,7 +265,7 @@ test('check latest peer discovery', function (t) {
   }, STEP_TIMEOUT);
 });
 
-test('no peer discovery', function (t) {
+nativeTest('no peer discovery', function (t) {
   testTimeout(t);
 
   mobileIsListening = true;
