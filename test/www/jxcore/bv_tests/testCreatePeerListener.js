@@ -9,7 +9,6 @@ var ThaliTCPServersManager = require('thali/NextGeneration/mux/thaliTcpServersMa
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var Promise = require('lie');
 
-var testUtils = require('../lib/testUtils');
 var logger    = require('../lib/testLogger')('testCreatePeerListener');
 
 // Every call to Mobile trips this warning

@@ -1,6 +1,8 @@
 'use strict';
 
 var Promise = require('lie');
+var util = require('util');
+var urlsafeBase64 = require('urlsafe-base64');
 
 /** @module thaliPeerAction */
 
@@ -30,7 +32,7 @@ var peerActionCounter = 0;
  * @param {Buffer} pskKey
  */
 function PeerAction (peerIdentifier, connectionType, actionType, pskIdentity,
-                      pskKey)
+                     pskKey)
 {
   this._peerIdentifier = peerIdentifier;
   this._connectionType = connectionType;
@@ -58,6 +60,11 @@ PeerAction.actionState = {
   KILLED: 'killed'
 };
 
+PeerAction.prototype.loggingDescription = function () {
+  return util.format('Action ID: %d, Action Type: %s, Connection Type: %s, ' +
+    'Peer Identifier: %s', this.getId(), this.getActionType(),
+    this.getConnectionType(), urlsafeBase64.encode(this.getPeerIdentifier()));
+};
 
 /**
  * The remote peer this action targets
