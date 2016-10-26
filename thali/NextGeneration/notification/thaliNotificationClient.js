@@ -371,7 +371,7 @@ ThaliNotificationClient.prototype._resolved =
             this._createNewAction(
               entry,
               peerId,
-              entry.notificationAction.getConnectionInformation());
+              entry.notificationAction.getConnectionType());
           } else {
             assert(false, 'unknown state should be WAITING');
           }
