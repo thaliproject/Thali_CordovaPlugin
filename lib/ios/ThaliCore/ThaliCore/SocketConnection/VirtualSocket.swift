@@ -28,12 +28,18 @@ class VirtualSocket: NSObject {
     private var outputStreamOpened = false
 
     let maxReadBufferLength = 1024
-    private var pendingDataToWrite: NSMutableData?
+    let maxDataToWriteLength = 1024
+
+    private var bufferToWrite: Atomic<NSMutableData>
+
+    private let _workQueue: dispatch_queue_t
 
     // MARK: - Initialize
     init(with inputStream: NSInputStream, outputStream: NSOutputStream) {
         self.inputStream = inputStream
         self.outputStream = outputStream
+        bufferToWrite = Atomic(NSMutableData())
+        _workQueue = dispatch_queue_create(nil, DISPATCH_QUEUE_SERIAL)
         super.init()
     }
 
@@ -41,19 +47,17 @@ class VirtualSocket: NSObject {
     func openStreams() {
         if !opened {
             opened = true
-            let queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
-            dispatch_async(queue, {
+
+            dispatch_async(_workQueue, {
                 self.inputStream.delegate = self
-                self.inputStream.scheduleInRunLoop(NSRunLoop.currentRunLoop(),
-                    forMode: NSDefaultRunLoopMode)
+                self.inputStream.scheduleInRunLoop(NSRunLoop.myRunLoop(),
+                                                   forMode: NSDefaultRunLoopMode)
                 self.inputStream.open()
 
                 self.outputStream.delegate = self
-                self.outputStream.scheduleInRunLoop(NSRunLoop.currentRunLoop(),
-                    forMode: NSDefaultRunLoopMode)
+                self.outputStream.scheduleInRunLoop(NSRunLoop.myRunLoop(),
+                                                    forMode: NSDefaultRunLoopMode)
                 self.outputStream.open()
-
-                NSRunLoop.currentRunLoop().runUntilDate(NSDate.distantFuture())
             })
         }
     }
@@ -62,8 +66,12 @@ class VirtualSocket: NSObject {
         if opened {
             opened = false
 
+            inputStream.delegate = nil
+
             inputStream.close()
             inputStreamOpened = false
+
+            outputStream.delegate = nil
 
             outputStream.close()
             outputStreamOpened = false
@@ -73,31 +81,38 @@ class VirtualSocket: NSObject {
     }
 
     func writeDataToOutputStream(data: NSData) {
-
-        if !outputStream.hasSpaceAvailable {
-            pendingDataToWrite?.appendData(data)
-            return
+        self.bufferToWrite.modify {
+            $0.appendData(data)
         }
 
-        let dataLength = data.length
-        let buffer: [UInt8] = Array(
-                                UnsafeBufferPointer(start: UnsafePointer<UInt8>(data.bytes),
-                                                    count: dataLength)
-                              )
-
-        let bytesWritten = outputStream.write(buffer, maxLength: dataLength)
-        if bytesWritten < 0 {
-            closeStreams()
-        }
+        dispatch_async(_workQueue, {
+            self.writePendingDataFromBuffer()
+        })
     }
 
-    func writePendingData() {
-        guard let dataToWrite = pendingDataToWrite else {
+    // MARK: - Private methods
+    @objc private func writePendingDataFromBuffer() {
+        let bufferLength = bufferToWrite.value.length
+
+        guard bufferLength > 0 else {
             return
         }
 
-        pendingDataToWrite = nil
-        writeDataToOutputStream(dataToWrite)
+        let dataToBeWrittenLength = min(bufferLength, maxDataToWriteLength)
+
+        var buffer = [UInt8](count: dataToBeWrittenLength, repeatedValue: 0)
+        bufferToWrite.value.getBytes(&buffer, length: dataToBeWrittenLength)
+
+        let bytesWritten = outputStream.write(buffer, maxLength: dataToBeWrittenLength)
+
+        if bytesWritten < 0 {
+            closeStreams()
+        } else if bytesWritten > 0 {
+            let writtenBytesRange = NSRange(location: 0, length: bytesWritten)
+            bufferToWrite.modify {
+                $0.replaceBytesInRange(writtenBytesRange, withBytes: nil, length: 0)
+            }
+        }
     }
 
     private func readDataFromInputStream() {
@@ -110,6 +125,10 @@ class VirtualSocket: NSObject {
         } else {
             closeStreams()
         }
+    }
+
+    deinit {
+        closeStreams()
     }
 }
 
@@ -128,15 +147,21 @@ extension VirtualSocket: NSStreamDelegate {
         }
     }
 
+    // MARK: - Private helpers
     private func handleEventOnInputStream(eventCode: NSStreamEvent) {
         switch eventCode {
         case NSStreamEvent.OpenCompleted:
             inputStreamOpened = true
             didOpenStreamHandler()
         case NSStreamEvent.HasBytesAvailable:
-            readDataFromInputStream()
+            dispatch_async(_workQueue, {
+                [weak self] in
+                guard let strongSelf = self else { return }
+
+                strongSelf.readDataFromInputStream()
+            })
         case NSStreamEvent.HasSpaceAvailable:
-            closeStreams()
+            break
         case NSStreamEvent.ErrorOccurred:
             closeStreams()
         case NSStreamEvent.EndEncountered:
@@ -152,9 +177,14 @@ extension VirtualSocket: NSStreamDelegate {
             outputStreamOpened = true
             didOpenStreamHandler()
         case NSStreamEvent.HasBytesAvailable:
-            readDataFromInputStream()
+            break
         case NSStreamEvent.HasSpaceAvailable:
-            writePendingData()
+            dispatch_async(_workQueue, {
+                [weak self] in
+                guard let strongSelf = self else { return }
+
+                strongSelf.writePendingDataFromBuffer()
+            })
         case NSStreamEvent.ErrorOccurred:
             closeStreams()
         case NSStreamEvent.EndEncountered:
