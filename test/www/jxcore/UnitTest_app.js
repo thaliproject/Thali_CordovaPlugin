@@ -7,7 +7,8 @@
 'use strict';
 
 if (typeof Mobile === 'undefined') {
-  global.Mobile = require('./lib/wifiBasedNativeMock.js')();
+  var mockPlatform = require('./lib/parsePlatformArg')();
+  global.Mobile = require('./lib/wifiBasedNativeMock.js')(mockPlatform);
 }
 
 var config = require('./config.json');
@@ -50,8 +51,7 @@ if (!utResult) {
 // console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
 // return;
 
-// Issue #914
-var networkTypes = [ThaliMobile.networkTypes.WIFI];
+global.NETWORK_TYPE = ThaliMobile.networkTypes.WIFI;
 
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {
@@ -62,25 +62,11 @@ ThaliMobile.getNetworkStatus()
   if (networkStatus.bluetooth === 'off') {
     promiseList.push(testUtils.toggleBluetooth(true));
   }
-  Promise.all(promiseList)
-  .then(function () {
+  Promise.all(promiseList).then(function () {
     Mobile('GetDeviceName').callNative(function (name) {
       logger.debug('My device name is: %s', name);
       testUtils.setName(name);
-
-      return networkTypes.reduce(function (sequence, networkType) {
-        return sequence
-          .then(function () {
-            logger.debug('Running for ' + networkType + ' network type');
-            global.NETWORK_TYPE = networkType;
-            require('./runTests.js');
-            return null;
-          });
-      }, Promise.resolve())
-      .catch(function (error) {
-        logger.error(error.message + '\n' + error.stack);
-        return null;
-      });
+      require('./runTests.js');
     });
   });
 });
