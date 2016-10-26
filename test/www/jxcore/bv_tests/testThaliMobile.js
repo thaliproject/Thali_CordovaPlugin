@@ -690,8 +690,9 @@ function setUpRouter() {
 }
 
 test('test for data corruption', function () {
-  return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
-}, function (t) {
+  return !platform.isAndroid;
+},
+function (t) {
   var router = setUpRouter();
   var remainingParticipants = {};
   t.participants.forEach(function (participant) {

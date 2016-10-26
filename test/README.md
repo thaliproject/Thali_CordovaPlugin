@@ -92,11 +92,10 @@ or `./setupTests.sh PerfTest_app.js` on the latest Git Bash. The script will cre
 ThaliTest and will compile it for both Android and iOS. This assumes you are
 running on a Mac with all the right tools.
 4. Go to `Thali_CordovaPlugin/test/TestServer`.
-5. Examine `UnitTestConfig.js` and make sure it is configured properly.
-6. Run `jx index.js \{\"devices\":\{\"ios\":2,\"android\":2\}\}` in that directory on your local PC to start the
+5. Run `jx index.js \{\"devices\":\{\"ios\":2,\"android\":2\}\}` in that directory on your local PC to start the
 coordination server. Obviously edit the device counts passed on the command line to reflect the actual test
 environment.
-7. Deploy and run the tests on your two Android or two iPhone devices.
+6. Deploy and run the tests on your two Android or two iPhone devices.
 
 #### Testing Doze and App Standby on Android
 
