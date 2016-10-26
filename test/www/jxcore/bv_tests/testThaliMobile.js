@@ -1669,38 +1669,42 @@ var participantState = {
   finished: 'finished'
 };
 
-test('can get data from all participants', function () {
-  // FIXME: temporarily disabled (iOS branch is not complete)
-  return true || global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
-}, function (t) {
-  var uuidPath = '/uuid';
-  var router = express.Router();
-  // Register a handler that returns the UUID of this
-  // test instance to an HTTP GET request.
-  router.get(uuidPath, function (req, res) {
-    res.send(tape.uuid);
-  });
+test('can get data from all participants',
+  function () {
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
+  },
+  function (t) {
+    var uuidPath = '/uuid';
+    var router = express.Router();
+    // Register a handler that returns the UUID of this
+    // test instance to an HTTP GET request.
+    router.get(uuidPath, function (req, res) {
+      res.send(tape.uuid);
+    });
 
-  var remainingParticipants = {};
-  t.participants.forEach(function (participant) {
-    if (participant.uuid === tape.uuid) {
-      return;
-    }
-    remainingParticipants[participant.uuid] = participantState.notRunning;
-  });
-  setupDiscoveryAndFindPeers(t, router, function (peer, done) {
-    // Try to get data only from non-TCP peers so that the test
-    // works the same way on desktop on CI where Wifi is blocked
-    // between peers.
-    if (peer.connectionType ===
-      ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE) {
-      return;
-    }
-    testUtils.get(
-      peer.hostAddress, peer.portNumber,
-      uuidPath, pskIdentity, pskKey
-    )
-    .then(function (responseBody) {
+    var remainingParticipants = {};
+    t.participants.forEach(function (participant) {
+      if (participant.uuid === tape.uuid) {
+        return;
+      }
+      remainingParticipants[participant.uuid] = participantState.notRunning;
+    });
+    setupDiscoveryAndFindPeers(t, router, function (peer, done) {
+      // Try to get data only from non-TCP peers so that the test
+      // works the same way on desktop on CI where Wifi is blocked
+      // between peers.
+      if (peer.connectionType ===
+          ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE) {
+        return;
+      }
+      ThaliMobile.getPeerHostInfo(peer.peerIdentifier, peer.connectionType)
+      .then(function (peerHostInfo) {
+        return testUtils.get(
+          peerHostInfo.hostAddress, peerHostInfo.portNumber,
+          uuidPath, pskIdentity, pskKey
+        );
+      })
+      .then(function (responseBody) {
       if (remainingParticipants[responseBody] !== participantState.notRunning) {
         return Promise.resolve(true);
       }
@@ -1712,16 +1716,17 @@ test('can get data from all participants', function () {
               participantState.finished;
           });
       if (areWeDone) {
-        t.ok(true, 'received all uuids');
+          t.ok(true, 'received all uuids');
+          done();
+        }
+      })
+      .catch(function (error) {
+        t.fail(error);
         done();
-      }
-    })
-    .catch(function (error) {
-      t.fail(error);
-      done();
+      });
     });
-  });
-});
+  }
+);
 
 // Taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
 // This is not cryptographically secure and for our purposes it doesn't matter
