@@ -1,7 +1,6 @@
 'use strict';
 
 var util = require('util');
-var format = util.format;
 
 var os = require('os');
 var tmp = require('tmp');
@@ -21,8 +20,6 @@ var notificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var express = require('express');
 var fs = require('fs-extra-promise');
-var extend = require('js-extend').extend;
-var inherits = require('inherits');
 
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
@@ -130,7 +127,7 @@ function tmpDirectory () {
     });
   }
   return tmpObject.name;
-};
+}
 module.exports.tmpDirectory = tmpDirectory;
 
 /**
@@ -227,13 +224,13 @@ module.exports.verifyCombinedResultSuccess =
       message || 'error should be null');
   };
 
-// Short, random and globally unique name can be obtained from current timestamp.
-// For example '1w8ueaswm1'
+// Short, random and globally unique name can be obtained from current
+// timestamp. For example '1w8ueaswm1'
 var getUniqueRandomName = function () {
   var time = process.hrtime();
   time = time[0] * Math.pow(10, 9) + time[1];
   return time.toString(36);
-}
+};
 module.exports.getUniqueRandomName = getUniqueRandomName;
 
 var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
@@ -259,31 +256,64 @@ module.exports.extractBeacon = function (beaconStreamWithPreAmble,
   return null;
 };
 
-module.exports._get = function (host, port, path, options) {
-  var complete = false;
+function createResponseBody(response) {
+  var completed = false;
   return new Promise(function (resolve, reject) {
-    var request = https.request(options, function (response) {
-      var responseBody = '';
-      response.on('data', function (data) {
-        responseBody += data;
-      });
-      response.on('end', function () {
-        complete = true;
-        resolve(responseBody);
-      });
-      response.on('error', function (error) {
-        if (!complete) {
-          logger.error('%j', error);
-          reject(error);
-        }
-      });
-      response.resume();
+    var responseBody = '';
+    response.on('data', function (data) {
+      responseBody += data;
     });
-    request.on('error', function (error) {
-      if (!complete) {
+    response.on('end', function () {
+      completed = true;
+      resolve(responseBody);
+    });
+    response.on('error', function (error) {
+      if (!completed) {
         logger.error('%j', error);
         reject(error);
       }
+    });
+    response.resume();
+  });
+}
+
+module.exports.put = function (host, port, path, pskIdentity, pskKey,
+                               requestBody) {
+  return new Promise(function (resolve, reject) {
+    var request = https.request({
+      hostname: host,
+      port: port,
+      path: path,
+      method: 'PUT',
+      agent: new ForeverAgent.SSL({
+        ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+        pskIdentity: pskIdentity,
+        pskKey: pskKey
+      })
+    }, function (response) {
+      createResponseBody(response)
+        .then(resolve)
+        .catch(reject);
+    });
+    request.on('error', function (error) {
+      logger.error('%j', error);
+      reject(error);
+    });
+    request.write(requestBody);
+    request.end();
+  });
+};
+
+module.exports._get = function (host, port, path, options) {
+  return new Promise(function (resolve, reject) {
+    var request = https.request(options, function (response) {
+      createResponseBody(response)
+        .then(resolve)
+        .catch(reject);
+    });
+    request.on('error', function (error) {
+      logger.error('%j', error);
+      reject(error);
     });
     // Wait for 15 seconds since the request can take a while
     // in mobile environment over a non-TCP transport.
@@ -447,7 +477,8 @@ function turnParticipantsIntoBufferArray (t, devicePublicKey) {
     }
   });
   return publicKeys;
-};
+}
+
 module.exports.turnParticipantsIntoBufferArray = turnParticipantsIntoBufferArray;
 
 module.exports.startServerInfrastructure =
@@ -489,14 +520,17 @@ module.exports.runTestOnAllParticipants = function (
     // Each participant is recorded via their public key
     // If the value is -1 then they are done
     // If the value is 0 then no test has completed
-    // If the value is greater than 0 then that is how many failures there have been.
+    // If the value is greater than 0 then that is how many failures there have
+    // been.
 
-    var participantCount = publicKeys.reduce(function (participantCount, participantPublicKey) {
+    var participantCount = publicKeys.reduce(function (participantCount,
+                                                       participantPublicKey) {
       participantCount[participantPublicKey] = 0;
       return participantCount;
     }, {});
 
-    var participantTask = publicKeys.reduce(function (participantTask, participantPublicKey) {
+    var participantTask = publicKeys.reduce(function (participantTask,
+                                                      participantPublicKey) {
       participantTask[participantPublicKey] = Promise.resolve();
       return participantTask;
     }, {});
@@ -592,8 +626,8 @@ module.exports.testTimeout = function (t, timeout, callback) {
 
     clearTimeout(timer);
     return oldEnd.apply(this, arguments);
-  }
-}
+  };
+};
 
 module.exports.checkArgs = function (t, spy, description, args) {
   t.ok(spy.calledOnce, description + ' was called once');
@@ -628,6 +662,7 @@ function getLevelDownPouchDb() {
     defaultAdapter: LeveldownMobile
   });
 };
+
 module.exports.getLevelDownPouchDb = getLevelDownPouchDb;
 
 module.exports.getRandomlyNamedTestPouchDBInstance = function () {
