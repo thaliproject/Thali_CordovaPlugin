@@ -766,31 +766,35 @@ test('Discovered peer should be removed if no availability updates ' +
     var originalThreshold = thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
     thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD = 500;
 
+    var finalizeTest = function (error) {
+      thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD =
+        originalThreshold;
+      t.end(error);
+    };
+
     ThaliMobile.start(express.Router())
-      .then(function () {
-        var availabilityHandler = function (peer) {
+    .then(function () {
+      var availabilityHandler = function (peer) {
+        if (peer.peerIdentifier !== peerIdentifier) {
+          return;
+        }
+
+        ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+          availabilityHandler);
+
+        var unavailabilityHandler = function (peer) {
           if (peer.peerIdentifier !== peerIdentifier) {
             return;
           }
-
           ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
-            availabilityHandler);
-
-          var unavailabilityHandler = function (peer) {
-            if (peer.peerIdentifier !== peerIdentifier) {
-              return;
-            }
-            ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
-              unavailabilityHandler);
-
-            thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD =
-              originalThreshold;
-            t.end();
-          };
-
-          ThaliMobile.emitter.on('peerAvailabilityChanged',
             unavailabilityHandler);
+
+          finalizeTest(null);
         };
+
+        ThaliMobile.emitter.on('peerAvailabilityChanged',
+          unavailabilityHandler);
+      };
 
       ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
 
@@ -800,5 +804,8 @@ test('Discovered peer should be removed if no availability updates ' +
           portNumber: portNumber
         }
       );
+    })
+    .catch(function (error) {
+      finalizeTest(error);
     });
 });
