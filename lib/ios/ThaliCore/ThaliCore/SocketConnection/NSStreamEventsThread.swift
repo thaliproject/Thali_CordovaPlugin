@@ -11,11 +11,11 @@ import Foundation
 
 class NSStreamEventsThread: NSThread {
 
-    private let _runLoopReadyGroup: dispatch_group_t
+    private let runLoopReadyGroup: dispatch_group_t
     private var _runLoop: NSRunLoop
     internal var runLoop: NSRunLoop {
         get {
-            dispatch_group_wait(_runLoopReadyGroup, DISPATCH_TIME_FOREVER)
+            dispatch_group_wait(runLoopReadyGroup, DISPATCH_TIME_FOREVER)
             return _runLoop
         }
     }
@@ -30,9 +30,8 @@ class NSStreamEventsThread: NSThread {
         }
 
         dispatch_once(&Static.onceToken) {
-            print("DIS")
             Static.thread = NSStreamEventsThread()
-            Static.thread?.name = "com.THALI.SocketRocket.NetworkThread"
+            Static.thread?.name = "com.thaliproject.NSStreamEventsThread"
             Static.thread?.start()
         }
 
@@ -41,14 +40,14 @@ class NSStreamEventsThread: NSThread {
 
     override init() {
         _runLoop = NSRunLoop()
-        _runLoopReadyGroup = dispatch_group_create()
-        dispatch_group_enter(_runLoopReadyGroup)
+        runLoopReadyGroup = dispatch_group_create()
+        dispatch_group_enter(runLoopReadyGroup)
     }
 
     override func main() {
         autoreleasepool {
             _runLoop = NSRunLoop.currentRunLoop()
-            dispatch_group_leave(_runLoopReadyGroup)
+            dispatch_group_leave(runLoopReadyGroup)
 
             // Prevent runloop from spinning
             var sourceCtx = CFRunLoopSourceContext(version: 0,

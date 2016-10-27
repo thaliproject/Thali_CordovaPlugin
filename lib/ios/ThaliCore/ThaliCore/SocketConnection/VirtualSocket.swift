@@ -32,14 +32,14 @@ class VirtualSocket: NSObject {
 
     private var bufferToWrite: Atomic<NSMutableData>
 
-    private let _workQueue: dispatch_queue_t
+    private let workQueue: dispatch_queue_t
 
     // MARK: - Initialize
     init(with inputStream: NSInputStream, outputStream: NSOutputStream) {
         self.inputStream = inputStream
         self.outputStream = outputStream
         bufferToWrite = Atomic(NSMutableData())
-        _workQueue = dispatch_queue_create(nil, DISPATCH_QUEUE_SERIAL)
+        workQueue = dispatch_queue_create(nil, DISPATCH_QUEUE_SERIAL)
         super.init()
     }
 
@@ -48,17 +48,15 @@ class VirtualSocket: NSObject {
         if !opened {
             opened = true
 
-            dispatch_async(_workQueue, {
-                self.inputStream.delegate = self
-                self.inputStream.scheduleInRunLoop(NSRunLoop.myRunLoop(),
-                                                   forMode: NSDefaultRunLoopMode)
-                self.inputStream.open()
+            self.inputStream.delegate = self
+            self.inputStream.scheduleInRunLoop(NSRunLoop.myRunLoop(),
+                                               forMode: NSDefaultRunLoopMode)
+            self.inputStream.open()
 
-                self.outputStream.delegate = self
-                self.outputStream.scheduleInRunLoop(NSRunLoop.myRunLoop(),
-                                                    forMode: NSDefaultRunLoopMode)
-                self.outputStream.open()
-            })
+            self.outputStream.delegate = self
+            self.outputStream.scheduleInRunLoop(NSRunLoop.myRunLoop(),
+                                                forMode: NSDefaultRunLoopMode)
+            self.outputStream.open()
         }
     }
 
@@ -85,7 +83,7 @@ class VirtualSocket: NSObject {
             $0.appendData(data)
         }
 
-        dispatch_async(_workQueue, {
+        dispatch_async(workQueue, {
             self.writePendingDataFromBuffer()
         })
     }
@@ -154,7 +152,7 @@ extension VirtualSocket: NSStreamDelegate {
             inputStreamOpened = true
             didOpenStreamHandler()
         case NSStreamEvent.HasBytesAvailable:
-            dispatch_async(_workQueue, {
+            dispatch_async(workQueue, {
                 [weak self] in
                 guard let strongSelf = self else { return }
 
@@ -179,7 +177,7 @@ extension VirtualSocket: NSStreamDelegate {
         case NSStreamEvent.HasBytesAvailable:
             break
         case NSStreamEvent.HasSpaceAvailable:
-            dispatch_async(_workQueue, {
+            dispatch_async(workQueue, {
                 [weak self] in
                 guard let strongSelf = self else { return }
 
