@@ -7,6 +7,7 @@ var makeIntoCloseAllServer = require('./../makeIntoCloseAllServer');
 var Promise = require('lie');
 var assert = require('assert');
 var thaliConfig = require('./../thaliConfig');
+var common = require('../utils/common');
 
 /**
  * Maximum number of peers we support simultaneously advertising as being
@@ -70,7 +71,7 @@ function findMuxForReverseConnection(nativeServer, clientPort) {
 }
 
 function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
-                                   cb)
+                                   peerIdentifier, cb)
 {
   // Create an outgoing socket to the native listener via a mux
   // New streams created on this mux by the remote side are initiated
@@ -84,21 +85,27 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
         });
 
         stream.on('error', function (err) {
-          logger.debug('multiplexToNativeListener.stream ' + err);
+          logger.debug('multiplexToNativeListener.stream - %s - error %s',
+            peerIdentifier, err);
           client.destroy();
         });
 
         stream.on('finish', function () {
+          logger.debug('multiplexToNativeListener.stream - %s - finish',
+          peerIdentifier);
           stream.destroy();
           client.end();
         });
 
         stream.on('close', function () {
+          logger.debug('multiplexToNativeListener.stream - %s - close',
+          peerIdentifier);
           client.destroy();
         });
 
         client.on('error', function (err) {
-          logger.debug('multiplexToNativeListener.client ' + err);
+          logger.debug('multiplexToNativeListener.client - %s - error %s ',
+            peerIdentifier, err);
           stream.destroy();
           self.emit('routerPortConnectionFailed', {
             error: err,
@@ -107,28 +114,41 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
         });
 
         client.on('finish', function () {
+          logger.debug('multiplexToNativeListener.client - %s - finish',
+            peerIdentifier);
           stream.end();
         });
 
         client.on('close', function () {
+          logger.debug('multiplexToNativeListener.client - %s - close',
+            peerIdentifier);
           stream.destroy();
         });
       });
 
       mux.on('error', function (err) {
-        logger.debug('multiplexToNativeListener.mux ' + err);
+        logger.debug('multiplexToNativeListener.mux  - %s - err %s',
+            peerIdentifier, err);
         outgoing.destroy();
       });
 
       mux.on('finish', function () {
+        logger.debug('multiplexToNativeListener.mux - %s - finish',
+          peerIdentifier);
         outgoing.end();
       });
 
       mux.on('close', function () {
+        logger.debug('multiplexToNativeListener.mux - %s - close',
+          peerIdentifier);
         outgoing.end();
       });
 
-      outgoing.on('data', function () {
+      outgoing.on('data', function (data) {
+        if (logger.level === 'silly') {
+          logger.silly('multiplexToNativeListener.mux - %s - data: %s',
+            peerIdentifier, common.bufferToAscii(data));
+        }
         var peerServerEntry = self._peerServers[server._peerIdentifier];
         if (peerServerEntry) {
           peerServerEntry.lastActive = Date.now();
@@ -136,16 +156,26 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
       });
 
       outgoing.on('error', function (err) {
-        logger.debug('Got error on outgoing to native - ' + err);
+        logger.warn('multiplexToNativeListener.mux - %s -  error %s',
+          peerIdentifier, err);
+
         mux.destroy();
       });
 
       outgoing.on('finish', function () {
+        logger.debug('multiplexToNativeListener.mux - %s - finish',
+          peerIdentifier);
         mux.end();
       });
 
       outgoing.on('close', function () {
+        logger.debug('multiplexToNativeListener.mux - %s - close',
+          peerIdentifier);
         mux.destroy();
+      });
+
+      outgoing.on('timeout', function () {
+        logger.debug('multiplexToNativeListener.timeout - %s - timeout');
       });
 
       outgoing.pipe(mux).pipe(outgoing);
@@ -162,21 +192,21 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
 }
 
 function handleForwardConnection(self, listenerOrIncomingConnection, server,
-                                 resolve, reject) {
-  logger.debug('forward connection');
+                                 peerIdentifier, resolve, reject) {
+  logger.debug('Creating outgoing connection to native layer for ' +
+    'peerID ' + peerIdentifier);
   var promiseResolved = false;
 
   // Connect to the native listener and mux the connection
   // When the other side creates a stream, send it to the application
   var outgoing = multiplexToNativeListener(self, listenerOrIncomingConnection,
-    server,
+    server, peerIdentifier,
     function onConnection() {
       promiseResolved = true;
       resolve();
     });
 
   outgoing.on('error', function (err) {
-    logger.warn(err);
     var error = new Error('Cannot Connect To Peer');
     error.outgoingError = err;
     closeServer(self, server, error, true);
@@ -300,7 +330,7 @@ function connectToRemotePeer(self, incoming, peerIdentifier, server,
         }
         else {
           handleForwardConnection(self, listenerOrIncomingConnection, server,
-                                  resolve, reject);
+                                  peerIdentifier, resolve, reject);
         }
       });
   });
@@ -475,30 +505,42 @@ function createPeerListener(self, peerIdentifier, pleaseConnect) {
           var incomingStream = server._mux.createStream();
 
           incomingStream.on('error', function (err) {
-            logger.debug('error on incoming stream - ' + err);
+            logger.debug('incomingStream - %s - error: %s', peerIdentifier,
+              err);
             incoming.destroy();
           });
 
           incomingStream.on('finish', function () {
+            logger.debug('incomingStream - %s - finish', peerIdentifier);
             incoming.end();
           });
 
           incomingStream.on('close', function () {
+            logger.debug('incomingStream - %s - close', peerIdentifier);
             incoming.destroy();
           });
 
           incoming.on('error', function (err) {
-            logger.debug('error on incoming socket - ' + err);
+            logger.debug('incoming - %s - error: %s', peerIdentifier, err);
             incomingStream.destroy();
           });
 
           incoming.on('finish', function () {
+            logger.debug('incoming - %s - finish', peerIdentifier);
             incomingStream.end();
           });
 
           incoming.on('close', function () {
+            logger.debug('incoming - %s - close', peerIdentifier);
             incomingStream.destroy();
           });
+
+          if (logger.level === 'silly') {
+            incoming.on('data', function (buffer) {
+              logger.silly('incoming - %s - data: %s', peerIdentifier,
+                common.bufferToAscii(buffer));
+            });
+          }
 
           incomingStream.pipe(incoming).pipe(incomingStream);
         })
