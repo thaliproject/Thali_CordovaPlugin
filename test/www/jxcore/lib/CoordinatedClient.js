@@ -19,6 +19,7 @@ var serverAddress = require('../server-address');
 
 var logger = require('./testLogger')('CoordinatedClient');
 
+var DEFAULT_SERVER_PORT = Number(process.env.COORDINATED_PORT) || 3000;
 
 function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware, nativeUTFailed) {
   asserts.isArray(tests);
@@ -66,7 +67,7 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware, 
   this._state = CoordinatedClient.states.created;
 
   this._io = SocketIOClient(
-    'http://' + serverAddress + ':' + 3000 + '/',
+    'http://' + serverAddress + ':' + DEFAULT_SERVER_PORT + '/',
     {
       reconnection: true,
       reconnectionAttempts: 15,

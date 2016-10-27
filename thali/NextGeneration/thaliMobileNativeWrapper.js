@@ -629,7 +629,7 @@ module.exports._disconnect = function (peerIdentifier) {
  * Terminates a connection with the named peer. If there is no such connection
  * then the method will still return success.
  *
- * On 'connect' platforms this calls _terminateConnection method and on
+ * On 'connect' platforms this calls terminateListener method and on
  * `multiConnect` platforms this calls _disconnect.
  *
  * @param {string} peerIdentifier The value taken from a peerAvailabilityChanged
@@ -640,7 +640,7 @@ module.exports._disconnect = function (peerIdentifier) {
  */
 module.exports.disconnect = function(peerIdentifier) {
   return Promise.reject(new Error('Not yet implemented'));
-}
+};
 
 /**
  * Used on `connect` platforms to terminate a TCP/IP listener waiting for
@@ -660,7 +660,7 @@ module.exports.disconnect = function(peerIdentifier) {
  */
 module.exports.terminateListener = function (peerIdentifier, port) {
   return gPromiseQueue.enqueue(function (resolve, reject) {
-    gServersManager.terminateListener(peerIdentifier, port)
+    gServersManager.terminateOutgoingConnection(peerIdentifier, port)
     .then(function () {
       resolve();
     })
