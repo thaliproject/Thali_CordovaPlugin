@@ -22,6 +22,7 @@ const versions =
   ruby: '2.3.0p0',
   wget: '1.18',
   jxcore: '0.3.1.5',
+  androidHome: ' ',
   androidBuildTools: '23.0.3',
   androidPlatform: 'android-23',
   // We don't have an easy way to identify the version of the support libraries
@@ -138,6 +139,17 @@ const commandsAndResults =
     versionValidate:
       (result, version) => boolToPromise('v' + version === result.trim())
   },
+  androidHome: {
+    versionCheck: () => process.env.ANDROID_HOME,
+    versionValidate:
+      (result, version) => {
+        if (result) {
+          return fs.readdirAsync(result);
+        } else {
+          return Promise.reject();
+        }
+      }
+  },
   androidBuildTools: {
     versionCheck: () => fs.readdirAsync(path.join(process.env.ANDROID_HOME,
       'build-tools')),
@@ -252,6 +264,14 @@ function execAndCheck(command, checkStdErr, version, validator) {
     .catch(() => Promise.reject(new Error('Command: ' + command + ' failed')));
 }
 
+function promiseTry(fn) {
+  try {
+    return Promise.resolve(fn());
+  } catch (error) {
+    return Promise.reject(error);
+  }
+}
+
 /**
  * Checks if the named object is installed with the named version, if any. If
  * versionNumber isn't given then we default to checking the versions global
@@ -280,7 +300,7 @@ function checkVersion(objectName, versionNumber) {
       'this platform'));
   }
   if (typeof commandAndResult.versionCheck === 'function') {
-    return commandAndResult.versionCheck()
+    return promiseTry(commandAndResult.versionCheck)
       .catch(() =>
         Promise.reject(new Error('Version Check failed on ' + objectName)))
       .then((versionCheckResult) =>
