@@ -286,9 +286,15 @@ module.exports.put = function (host, port, path, pskIdentity, pskKey,
       path: path,
       method: 'PUT',
       agent: new ForeverAgent.SSL({
+        rejectUnauthorized: false,
+        keepAlive: true,
+        keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
+        maxSockets: Infinity,
+        maxFreeSockets: 256,
         ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
         pskIdentity: pskIdentity,
-        pskKey: pskKey
+        pskKey: pskKey,
+        secureOptions: pskIdentity + host + port + path
       })
     }, function (response) {
       createResponseBody(response)
@@ -328,6 +334,10 @@ module.exports.get = function (host, port, path, pskIdentity, pskKey) {
     port: port,
     path: path,
     agent: new ForeverAgent.SSL({
+      keepAlive: true,
+      keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
+      maxSockets: Infinity,
+      maxFreeSockets: 256,
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
       pskIdentity: pskIdentity,
       pskKey: pskKey
@@ -479,7 +489,8 @@ function turnParticipantsIntoBufferArray (t, devicePublicKey) {
   return publicKeys;
 }
 
-module.exports.turnParticipantsIntoBufferArray = turnParticipantsIntoBufferArray;
+module.exports.turnParticipantsIntoBufferArray =
+  turnParticipantsIntoBufferArray;
 
 module.exports.startServerInfrastructure =
   function (thaliNotificationServer, publicKeys, ThaliMobile, router) {
@@ -566,7 +577,7 @@ module.exports.runTestOnAllParticipants = function (
       if (count >= MAX_FAILURE) {
         completed = true;
         clearTimeout(timerCancel);
-        reject(err);
+        reject(error);
       }
     }
 
@@ -661,7 +672,7 @@ function getLevelDownPouchDb() {
   return PouchDBGenerator(PouchDB, defaultDirectory, {
     defaultAdapter: LeveldownMobile
   });
-};
+}
 
 module.exports.getLevelDownPouchDb = getLevelDownPouchDb;
 
