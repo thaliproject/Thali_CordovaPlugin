@@ -20,7 +20,8 @@ var serverAddress = require('../server-address');
 var logger = require('./testLogger')('CoordinatedClient');
 
 
-function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware, nativeUTFailed) {
+function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware,
+                           nativeUTFailed) {
   asserts.isArray(tests);
   tests.forEach(function (test) {
     asserts.isString(test.name);
@@ -104,7 +105,7 @@ CoordinatedClient.prototype._bind = function () {
   .on  ('disconnect',        this._disconnect.bind(this))
   .on  ('error',             this._error.bind(this))
   .once('complete',          this._complete.bind(this));
-}
+};
 
 // We are having similar logic in both connect reconnect
 // events, because socket.io seems to behave so that sometimes
@@ -113,11 +114,11 @@ CoordinatedClient.prototype._bind = function () {
 CoordinatedClient.prototype._connect = function () {
   logger.debug('connected to the test server');
   this._newConnection();
-}
+};
 CoordinatedClient.prototype._reconnect = function () {
   logger.debug('reconnected to the test server');
   this._newConnection();
-}
+};
 
 CoordinatedClient.prototype._newConnection = function () {
   assert(
@@ -137,7 +138,7 @@ CoordinatedClient.prototype._newConnection = function () {
     hasRequiredHardware: this._hasRequiredHardware,
     nativeUTFailed: this._nativeUTFailed
   });
-}
+};
 
 CoordinatedClient.prototype._schedule = function (data) {
   var self = this;
@@ -159,7 +160,7 @@ CoordinatedClient.prototype._schedule = function (data) {
     );
     self._failed(error);
   });
-}
+};
 
 CoordinatedClient.prototype._discard = function (data) {
   var self = this;
@@ -171,7 +172,7 @@ CoordinatedClient.prototype._discard = function (data) {
 
   // We are waiting for 'disconnect' event.
   self._state = CoordinatedClient.states.completed;
-}
+};
 
 CoordinatedClient.prototype._disqualify = function (data) {
   var self = this;
@@ -180,7 +181,8 @@ CoordinatedClient.prototype._disqualify = function (data) {
   .then(function () {
     if (data) {
       var errorText = CoordinatedClient.getData(data);
-      logger.error('device disqualified from the test server, reason: \'%s\'', errorText);
+      logger.error('device disqualified from the test server, reason: \'%s\'',
+        errorText);
       self._failed(new Error(
         'Test client failed: ' + errorText
       ));
@@ -202,7 +204,7 @@ CoordinatedClient.prototype._disqualify = function (data) {
     // We are waiting for 'disconnect' event.
     self._state = CoordinatedClient.states.completed;
   }
-}
+};
 
 CoordinatedClient.prototype._disconnect = function () {
   if (this._state === CoordinatedClient.states.completed) {
@@ -212,7 +214,7 @@ CoordinatedClient.prototype._disconnect = function () {
     // Just log the error since socket.io will try to reconnect.
     logger.debug('device disconnected from the test server');
   }
-}
+};
 
 CoordinatedClient.prototype._error = function (error) {
   logger.error(
@@ -220,7 +222,7 @@ CoordinatedClient.prototype._error = function (error) {
     error.toString(), error.stack
   );
   this._failed(error);
-}
+};
 
 CoordinatedClient.prototype._complete = function (data) {
   var self = this;
@@ -232,19 +234,19 @@ CoordinatedClient.prototype._complete = function (data) {
 
   // We are waiting for 'disconnect' event.
   self._state = CoordinatedClient.states.completed;
-}
+};
 
 CoordinatedClient.prototype._succeed = function () {
   logger.debug('test client succeed');
   this._io.close();
   this.emit('finished');
-}
+};
 
 CoordinatedClient.prototype._failed = function (error) {
   logger.debug('test client failed');
   this._io.close();
   this.emit('finished', error);
-}
+};
 
 // Emitting message to 'connected' socket without confirmation.
 // We will just check that socket is 'connected'.
@@ -285,7 +287,7 @@ CoordinatedClient.prototype._emit = function (event, data, externalOptions) {
   .finally(function () {
     clearTimeout(timeout);
   });
-}
+};
 
 CoordinatedClient.prototype._scheduleTest = function (test) {
   var self = this;
@@ -340,7 +342,7 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
           if (!result.ok) {
             success = false;
           }
-        }
+        };
         tape.on('result', resultHandler);
 
         endHandler = function () {
@@ -366,7 +368,7 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
             }
           })
           .catch(reject);
-        }
+        };
         tape.once('end', endHandler);
 
         fun(tape);
@@ -412,7 +414,8 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
     tape('setup', function (tape) {
       tape.sync = sync.bind(undefined, tape, test.options.setupTimeout);
 
-      processEvent(tape, 'setup_' + test.name, test.options.setup, test.options.setupTimeout)
+      processEvent(tape, 'setup_' + test.name, test.options.setup,
+        test.options.setupTimeout)
       .catch(reject);
     });
 
@@ -431,7 +434,8 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
           logger.info('test was skipped, name: \'%s\'', test.name);
           return skipEvent(tape, 'run_' + test.name, test.options.testTimeout);
         } else {
-          return processEvent(tape, 'run_' + test.name, test.fun, test.options.testTimeout);
+          return processEvent(tape, 'run_' + test.name, test.fun,
+            test.options.testTimeout);
         }
       })
       .catch(reject);
@@ -440,13 +444,14 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
     tape('teardown', function (tape) {
       tape.sync = sync.bind(undefined, tape, test.options.teardownTimeout);
 
-      processEvent(tape, 'teardown_' + test.name, test.options.teardown, test.options.teardownTimeout)
+      processEvent(tape, 'teardown_' + test.name, test.options.teardown,
+        test.options.teardownTimeout)
       // We should exit after test teardown.
       .then(resolve)
       .catch(reject);
     });
   });
-}
+};
 
 // We should remove prefix (uuid.v4) from data.
 CoordinatedClient.getData = function (data) {
@@ -455,6 +460,6 @@ CoordinatedClient.getData = function (data) {
     'we should have a valid uuid.v4'
   );
   return data.content;
-}
+};
 
 module.exports = CoordinatedClient;

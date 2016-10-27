@@ -918,7 +918,8 @@ var getExtendedPeer = function (peer, connectionType) {
     timeout = thaliConfig.TCP_TIMEOUT_WIFI;
   } else if (connectionType === connectionTypes.BLUETOOTH) {
     timeout = thaliConfig.TCP_TIMEOUT_BLUETOOTH;
-  } else if (connectionType === connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK) {
+  } else if (connectionType ===
+              connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK) {
     timeout = thaliConfig.TCP_TIMEOUT_MPCF;
   }
   assert(timeout !== null, 'timeout value must have been set');

@@ -10,7 +10,6 @@ require('./utils/process');
 var logger = require('./utils/ThaliLogger')('TestServer');
 
 var HttpServer        = require('./HttpServer');
-var TestDevice        = require('./TestDevice');
 var UnitTestFramework = require('./UnitTestFramework');
 
 
@@ -47,7 +46,7 @@ var timer = setTimeout(function () {
 }, WAITING_FOR_DEVICES_TIMEOUT);
 
 unitTestManager
-.once('started', function (results) {
+.once('started', function () {
   clearTimeout(timer);
 })
 .once('completed', function (results) {
