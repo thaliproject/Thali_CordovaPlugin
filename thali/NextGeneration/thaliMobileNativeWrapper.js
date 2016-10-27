@@ -9,6 +9,7 @@ var express = require('express');
 var TCPServersManager = require('./mux/thaliTcpServersManager');
 var https = require('https');
 var thaliConfig = require('./thaliConfig');
+var platform = require('./utils/platform');
 
 var states = {
   started: false
@@ -708,9 +709,34 @@ module.exports.killConnections = function () {
   });
 };
 
-/*
-        EVENTS
+/**
+ * This method is to enable/disable wifi.
+ *
+ * @returns {Promise<?Error>}
  */
+module.exports.setWifiRadioState = function (value) {
+  if (platform.isIOS) {
+    var error = 'Mobile(\'setWifiRadioState\') is not implemented on ios';
+    console.error(error);
+    return Promise.reject(new Error(error));
+  }
+
+  return gPromiseQueue.enqueue(function (resolve, reject) {
+    Mobile('setWifiRadioState').callNative(value, function (error) {
+      if (error) {
+        logger.error(
+          'Mobile(\'setWifiRadioState\') returned an error: \'%s\', stack: \'%s\'',
+          error.toString(), error.stack
+        );
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+/* EVENTS */
 
 /**
  * Enum to define the types of connections

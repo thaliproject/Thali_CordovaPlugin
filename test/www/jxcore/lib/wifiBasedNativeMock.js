@@ -718,6 +718,10 @@ MobileCallInstance.prototype.didRegisterToNative = function (method, callback) {
   setImmediate(callback);
 };
 
+MobileCallInstance.prototype.setWifiRadioState = function (setting, callback) {
+  doToggle(setting, 'wifi', callback);
+};
+
 /**
  * Handles processing callNative requests. The actual params differ based on
  * the particular Mobile method that is being called.
@@ -757,6 +761,10 @@ MobileCallInstance.prototype.callNative = function () {
     case 'didRegisterToNative':
     {
       return this.didRegisterToNative(arguments[0], arguments[1]);
+    }
+    case 'setWifiRadioState':
+    {
+      return this.setWifiRadioState(arguments[0], arguments[1]);
     }
     default:
     {
@@ -959,26 +967,6 @@ function toggleBluetooth () {
   };
 }
 
-// jscs:disable jsDoc
-/**
- * If we are on Android then then is a NOOP since we don't care (although to
- * be good little programmers we should still fire a network changed event). We
- * won't be using Wifi for discovery or connectivity in the near future.
- *
- * __Open Issue:__ I believe that JXCore will treat this as a NOOP if called
- * on iOS. We need to check and emulate their behavior.
- *
- * @param {platformChoice} platform
- * @param {ThaliWifiInfrastructure} thaliWifiInfrastructure
- * @returns {Function}
- */
-// jscs:enable jsDoc
-function toggleWiFi() {
-  return function (setting, callback) {
-    doToggle(setting, 'wifi', callback);
-  };
-}
-
 function firePeerAvailabilityChanged() {
   return function (peers) {
     peerAvailabilityChangedCallback(peers);
@@ -1059,10 +1047,6 @@ function WifiBasedNativeMock(platform, router) {
 
   mobileHandler.toggleBluetooth =
     toggleBluetooth(platform, thaliWifiInfrastructure);
-
-  mobileHandler.setWifiRadioState = {
-    callNative: toggleWiFi(platform, thaliWifiInfrastructure)
-  };
 
   mobileHandler.firePeerAvailabilityChanged =
     firePeerAvailabilityChanged(platform, thaliWifiInfrastructure);

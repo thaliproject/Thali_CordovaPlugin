@@ -292,7 +292,6 @@ test('network changes emitted correctly', function (t) {
   .then(function () {
     return ThaliMobile.start(express.Router());
   })
-
   .then(function () {
     return new Promise(function (resolve) {
       function networkChangedHandler (networkStatus) {
@@ -305,7 +304,6 @@ test('network changes emitted correctly', function (t) {
       testUtils.toggleWifi(false);
     });
   })
-
   .then(function () {
     return new Promise(function (resolve) {
       function networkChangedHandler (networkStatus) {
@@ -324,7 +322,6 @@ test('network changes emitted correctly', function (t) {
       testUtils.toggleWifi(true);
     });
   })
-
   .then(function () {
     return testUtils.ensureWifi(true);
   })

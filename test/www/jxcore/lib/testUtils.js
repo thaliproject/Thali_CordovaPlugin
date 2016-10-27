@@ -52,13 +52,16 @@ function toggleWifi (value) {
     return Promise.resolve();
   }
   if (platform.isIOS) {
-    logger.warn('\'setWifiRadioState\' is not implemented on ios');
+    logger.warn('Mobile(\'setWifiRadioState\') is not implemented on ios');
     return Promise.resolve();
   }
   return new Promise(function (resolve, reject) {
-    Mobile.setWifiRadioState.callNative(value, function (error) {
+    Mobile('setWifiRadioState').callNative(value, function (error) {
       if (error) {
-        logger.warn('Mobile.setWifiRadioState returned an error: \'%s\'', error.toString());
+        logger.error(
+          'Mobile(\'setWifiRadioState\') returned an error: \'%s\', stack: \'%s\'',
+          error.toString(), error.stack
+        );
         reject(error);
       } else {
         resolve();
