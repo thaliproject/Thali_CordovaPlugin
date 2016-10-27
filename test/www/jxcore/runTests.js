@@ -39,12 +39,12 @@ var loadFile = function (filePath) {
   try {
     require(filePath);
   } catch (error) {
-    error = format(
+    var err = format(
       'test load failed, filePath: \'%s\', error: \'%s\', stack: \'%s\'',
       filePath, error.toString(), error.stack
     );
-    logger.error(error);
-    throw new Error(error);
+    logger.error(err);
+    throw new Error(err);
   }
 };
 
@@ -73,8 +73,9 @@ testUtils.hasRequiredHardware()
 .then(function (hasRequiredHardware) {
   return testUtils.getOSVersion()
   .then(function (version) {
-    return thaliTape.begin(currentPlatform, version, hasRequiredHardware, global.nativeUTFailed);
-  })
+    return thaliTape.begin(currentPlatform, version, hasRequiredHardware,
+      global.nativeUTFailed);
+  });
 })
 .then(function () {
   process.exit(0);
