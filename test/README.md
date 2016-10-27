@@ -181,6 +181,26 @@ starting the coordinated test from the command line but passing in the parameter
 it runs with the assumption that one will then run `jx UnitTest_app.js` from
 inside an IDE to debug.
 
+By default tests are running with mocked android native API and with WiFi
+network type. It is possible to change it via `--networkType=<wifi|both|native>`
+and `--platform=<ios|android>` parameters, for example:
+
+```
+$ jx runCoordinatedTests.js --platform=ios --networkType=both
+```
+
+Also it is possible to run multiple coordinated tests simultaneously on the same
+machine. Use `COORDINATED_PORT` environment variable to set different port for
+each test runner, for example:
+
+```
+COORDINATED_PORT=12345 jx runCoordinatedTests.js --platform=ios &> ios.log & \
+COORDINATED_PORT=54321 jx runCoordinatedTests.js --platform=android &> android.log &
+```
+
+This example will start iOS tests and android tests in parallel in background
+and write entire output to the ios.log and android.log respectively.
+
 ### Writing Unit Tests
 The Unit Tests are kept in Thali_CordovaPlugin/test/www/jxcore/bv_tests. So please put new tests there.
 
