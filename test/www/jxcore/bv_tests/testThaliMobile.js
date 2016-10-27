@@ -689,7 +689,7 @@ function setUpRouter() {
   return router;
 }
 
-test.only('test for data corruption', function () {
+test('test for data corruption', function () {
   // We don't have platform properly set up on desktop to emulate Android or
   // iOS. Those fixes are in the iOS branch. So until they make it to master
   // we just check for Wifi. If it is wifi then we don't run. If it isn't wifi
