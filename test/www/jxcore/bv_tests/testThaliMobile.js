@@ -8,7 +8,6 @@ var ThaliMobile = proxyquire('thali/NextGeneration/thaliMobile', {
 });
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
-var platform = require('thali/NextGeneration/utils/platform');
 var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils.js');
 var express = require('express');
@@ -700,6 +699,7 @@ test.only('test for data corruption', function () {
 function (t) {
   var router = setUpRouter();
   var participantsState = {};
+  var peerIDToUUIDMap = {};
   var areWeDone = false;
   var promiseQueue = new PromiseQueue();
   t.participants.forEach(function (participant) {
@@ -716,6 +716,11 @@ function (t) {
       ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE) {
       return;
     }
+    if (peerIDToUUIDMap[peer.peerIdentifier] &&
+        participantsState[peerIDToUUIDMap[peer.peerIdentifier] ===
+          participantState.finished]) {
+      return;
+    }
     promiseQueue.enqueue(function (resolve) {
       if (areWeDone) {
         return resolve(null);
@@ -730,6 +735,7 @@ function (t) {
       )
       .then(function (responseBody) {
         uuid = responseBody;
+        peerIDToUUIDMap[peer.peerIdentifier] = uuid;
         logger.debug('Got uuid back from GET - ' + uuid);
         if (participantsState[uuid] !== participantState.notRunning) {
           logger.debug('Participant is already done - ' + uuid);
