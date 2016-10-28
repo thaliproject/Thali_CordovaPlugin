@@ -2,10 +2,8 @@
  * See the license file delivered with this project for further information.
  */
 package io.jxcore.node;
-
 import android.os.CountDownTimer;
 import android.util.Log;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
