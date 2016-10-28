@@ -18,22 +18,22 @@ class TCPListener: NSObject {
   }
 
   // MARK: - Private state
-  private let socket: GCDAsyncSocket
-  private var listening = false
+  fileprivate let socket: GCDAsyncSocket
+  fileprivate var listening = false
 
-  private let socketQueue = dispatch_queue_create("org.thaliproject.GCDAsyncSocket.delegateQueue",
-                                                  DISPATCH_QUEUE_CONCURRENT)
-  private let activeConnections: Atomic<[GCDAsyncSocket]> = Atomic([])
+  fileprivate let socketQueue = DispatchQueue(label: "org.thaliproject.GCDAsyncSocket.delegateQueue",
+                                              attributes: DispatchQueue.Attributes.concurrent)
+  fileprivate let activeConnections: Atomic<[GCDAsyncSocket]> = Atomic([])
 
-  private var didAcceptConnectionHandler: ((GCDAsyncSocket) -> Void)?
-  private let didReadDataFromSocketHandler: ((GCDAsyncSocket, NSData) -> Void)
-  private let didSocketDisconnectHandler: ((GCDAsyncSocket) -> Void)
-  private let didStoppedListeningHandler: () -> Void
+  fileprivate var didAcceptConnectionHandler: ((GCDAsyncSocket) -> Void)?
+  fileprivate let didReadDataFromSocketHandler: ((GCDAsyncSocket, Data) -> Void)
+  fileprivate let didSocketDisconnectHandler: ((GCDAsyncSocket) -> Void)
+  fileprivate let didStoppedListeningHandler: () -> Void
 
   // MARK: - Initialization
-  required init(with didReadDataFromSocket: (GCDAsyncSocket, NSData) -> Void,
-                     socketDisconnected: (GCDAsyncSocket) -> Void,
-                     stoppedListening: () -> Void) {
+  required init(with didReadDataFromSocket: @escaping (GCDAsyncSocket, Data) -> Void,
+                socketDisconnected: @escaping (GCDAsyncSocket) -> Void,
+                stoppedListening: @escaping () -> Void) {
     socket = GCDAsyncSocket()
     didReadDataFromSocketHandler = didReadDataFromSocket
     didSocketDisconnectHandler = socketDisconnected
@@ -45,17 +45,17 @@ class TCPListener: NSObject {
 
   // MARK: - Internal methods
   func startListeningForConnections(on port: UInt16,
-                                       connectionAccepted: (GCDAsyncSocket) -> Void,
-                                       completion: (port: UInt16?, error: ErrorType?) -> Void) {
+                                    connectionAccepted: @escaping (GCDAsyncSocket) -> Void,
+                                    completion: (_ port: UInt16?, _ error: Error?) -> Void) {
     if !listening {
       do {
-        try socket.acceptOnPort(port)
+        try socket.accept(onPort: port)
         listening = true
         didAcceptConnectionHandler = connectionAccepted
-        completion(port: socket.localPort, error: nil)
+        completion(socket.localPort, nil)
       } catch _ {
         listening = false
-        completion(port: 0, error: ThaliCoreError.ConnectionFailed)
+        completion(0, ThaliCoreError.ConnectionFailed)
       }
     }
   }
@@ -71,7 +71,7 @@ class TCPListener: NSObject {
 // MARK: - GCDAsyncSocketDelegate - Handling socket events
 extension TCPListener: GCDAsyncSocketDelegate {
 
-  func socketDidDisconnect(sock: GCDAsyncSocket, withError err: NSError?) {
+  func socketDidDisconnect(_ sock: GCDAsyncSocket, withError err: Error?) {
     if sock == socket {
       socket.delegate = nil
       socket.delegateQueue = nil
@@ -82,21 +82,21 @@ extension TCPListener: GCDAsyncSocketDelegate {
       didStoppedListeningHandler()
     } else {
       activeConnections.modify {
-        if let indexOfDisconnectedSocket = $0.indexOf(sock) {
-          $0.removeAtIndex(indexOfDisconnectedSocket)
+        if let indexOfDisconnectedSocket = $0.index(of: sock) {
+          $0.remove(at: indexOfDisconnectedSocket)
         }
       }
       didSocketDisconnectHandler(sock)
     }
   }
 
-  func socket(sock: GCDAsyncSocket, didAcceptNewSocket newSocket: GCDAsyncSocket) {
+  func socket(_ sock: GCDAsyncSocket, didAcceptNewSocket newSocket: GCDAsyncSocket) {
     activeConnections.modify { $0.append(newSocket) }
     didAcceptConnectionHandler?(newSocket)
   }
 
-  func socket(sock: GCDAsyncSocket, didReadData data: NSData, withTag tag: Int) {
+  func socket(_ sock: GCDAsyncSocket, didRead data: Data, withTag tag: Int) {
     didReadDataFromSocketHandler(sock, data)
-    sock.readDataWithTimeout(-1, tag: 0)
+    sock.readData(withTimeout: -1, tag: 0)
   }
 }

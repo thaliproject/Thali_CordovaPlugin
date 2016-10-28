@@ -26,12 +26,12 @@ public final class AdvertiserManager {
   /**
    Active `Advertiser` objects.
    */
-  internal private(set) var advertisers: Atomic<[Advertiser]> = Atomic([])
+  internal fileprivate(set) var advertisers: Atomic<[Advertiser]> = Atomic([])
 
   /**
    Active `Relay` objects.
    */
-  internal private(set) var activeRelays: Atomic<[String: AdvertiserRelay]> = Atomic([:])
+  internal fileprivate(set) var activeRelays: Atomic<[String: AdvertiserRelay]> = Atomic([:])
 
   /**
    Handle disposing advertiser after timeout.
@@ -43,17 +43,17 @@ public final class AdvertiserManager {
   /**
    Currently active `Advertiser` object.
    */
-  private var currentAdvertiser: Advertiser?
+  fileprivate var currentAdvertiser: Advertiser?
 
   /**
    The type of service to advertise.
    */
-  private let serviceType: String
+  fileprivate let serviceType: String
 
   /**
    Timeout after which advertiser gets disposed of.
    */
-  private let disposeTimeout: NSTimeInterval
+  fileprivate let disposeTimeout: TimeInterval
 
   // MARK: - Initialization
 
@@ -70,7 +70,7 @@ public final class AdvertiserManager {
    - returns:
    An initialized `AdvertiserManager` object.
    */
-  public init(serviceType: String, disposeAdvertiserTimeout: NSTimeInterval) {
+  public init(serviceType: String, disposeAdvertiserTimeout: TimeInterval) {
     self.serviceType = serviceType
     self.disposeTimeout = disposeAdvertiserTimeout
   }
@@ -93,7 +93,7 @@ public final class AdvertiserManager {
        Called when startUpdateAdvertisingAndListening fails.
    */
   public func startUpdateAdvertisingAndListening(onPort port: UInt16,
-                                                 errorHandler: ErrorType -> Void) {
+                                                 errorHandler: @escaping (Error) -> Void) {
     if let currentAdvertiser = currentAdvertiser {
       disposeOfAdvertiserAfterTimeoutToFinishInvites(currentAdvertiser)
     }
@@ -119,7 +119,7 @@ public final class AdvertiserManager {
                                     if let relay = $0[newPeer.uuid] {
                                       relay.closeRelay()
                                     }
-                                    $0.removeValueForKey(newPeer.uuid)
+                                    $0.removeValue(forKey: newPeer.uuid)
                                   }
                                 })
 
@@ -144,6 +144,7 @@ public final class AdvertiserManager {
       $0.forEach { $0.stopAdvertising() }
       $0.removeAll()
     }
+
     currentAdvertiser = nil
   }
 
@@ -176,22 +177,22 @@ public final class AdvertiserManager {
      - advertiserToBeDisposedOf:
        `Advertiser` object that should be disposed of after `disposeTimeout`.
    */
-  private func disposeOfAdvertiserAfterTimeoutToFinishInvites(
-    advertiserToBeDisposedOf: Advertiser) {
+  fileprivate func disposeOfAdvertiserAfterTimeoutToFinishInvites(
+    _ advertiserShouldBeDisposed: Advertiser) {
 
-    let disposeTimeout = dispatch_time(DISPATCH_TIME_NOW,
-                                       Int64(self.disposeTimeout * Double(NSEC_PER_SEC)))
+    let disposeTimeout = DispatchTime.now() +
+      Double(Int64(self.disposeTimeout * Double(NSEC_PER_SEC))) / Double(NSEC_PER_SEC)
 
-    dispatch_after(disposeTimeout, dispatch_get_main_queue()) {
+    DispatchQueue.main.asyncAfter(deadline: disposeTimeout) {
       [weak self,
-      weak advertiserToBeDisposedOf] in
+      weak advertiserShouldBeDisposed] in
       guard let strongSelf = self else { return }
-      guard let advertiserShouldBeDisposed = advertiserToBeDisposedOf else { return }
+      guard let advertiserShouldBeDisposed = advertiserShouldBeDisposed else { return }
 
       strongSelf.advertisers.modify {
         advertiserShouldBeDisposed.stopAdvertising()
-        if let indexOfDisposingAdvertiser = $0.indexOf(advertiserShouldBeDisposed) {
-          $0.removeAtIndex(indexOfDisposingAdvertiser)
+        if let indexOfDisposingAdvertiser = $0.index(of: advertiserShouldBeDisposed) {
+          $0.remove(at: indexOfDisposingAdvertiser)
         }
       }
 

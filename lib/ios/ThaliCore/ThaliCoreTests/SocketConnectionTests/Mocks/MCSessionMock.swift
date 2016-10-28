@@ -15,13 +15,12 @@ class MCSessionMock: MCSession {
   var errorOnStartStream = false
 
   // MARK: - Overrided methods
-  override func startStreamWithName(streamName: String,
-                                    toPeer peerID: MCPeerID) throws
-                                    -> NSOutputStream {
+  override func startStream(withName streamName: String,
+                            toPeer peerID: MCPeerID) throws -> OutputStream {
     guard !errorOnStartStream else {
       throw NSError(domain: "org.thaliproject.test", code: 42, userInfo: nil)
     }
 
-    return NSOutputStream(toBuffer: nil, capacity: 0)
+    return OutputStream(toBuffer: UnsafeMutablePointer.allocate(capacity: 0), capacity: 0)
   }
 }

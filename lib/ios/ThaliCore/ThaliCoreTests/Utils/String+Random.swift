@@ -22,14 +22,14 @@ extension String {
    - returns:
      Randomly generated string.
    */
-  static func random(length length: Int) -> String {
+  static func random(length: Int) -> String {
     let letters: String = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUWXYZ"
     var randomString = ""
 
     let lettersLength = UInt32(letters.characters.count)
     for _ in 0..<length {
       let rand = Int(arc4random_uniform(lettersLength))
-      let char = letters[letters.startIndex.advancedBy(rand)]
+      let char = letters[letters.characters.index(letters.startIndex, offsetBy: rand)]
       randomString.append(char)
     }
     return randomString
@@ -53,7 +53,7 @@ extension String {
     let alphabetLength = UInt32(validAlphabet.characters.count)
     for _ in 0..<length {
       let rand = Int(arc4random_uniform(alphabetLength))
-      let char = validAlphabet[validAlphabet.startIndex.advancedBy(rand)]
+      let char = validAlphabet[validAlphabet.characters.index(validAlphabet.startIndex, offsetBy: rand)]
       randomString.append(char)
     }
     return randomString
@@ -63,7 +63,7 @@ extension String {
 // MARK: - Manipulating service type in Bonjour format
 extension String {
 
-  static func randomValidServiceType(length length: Int) -> String {
+  static func randomValidServiceType(length: Int) -> String {
     let asciiLetters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUWXYZ"
     let digits = "0123456789"
     let hyphen = "-"
@@ -78,23 +78,23 @@ extension String {
       let isLastCharachter = (i == length - 1)
 
       var rand = Int(arc4random_uniform(alphabetLength))
-      var char = validAlphabet[validAlphabet.startIndex.advancedBy(rand)]
+      var char = validAlphabet[validAlphabet.characters.index(validAlphabet.startIndex, offsetBy: rand)]
 
       if isFirstCharachter {
         let allowedAlphabet = asciiLetters + digits
         let allowedAlphabetLength = UInt32(allowedAlphabet.characters.count)
         rand = Int(arc4random_uniform(allowedAlphabetLength))
-        char = allowedAlphabet[allowedAlphabet.startIndex.advancedBy(rand)]
+        char = allowedAlphabet[allowedAlphabet.characters.index(allowedAlphabet.startIndex, offsetBy: rand)]
       } else if isLastCharachter {
         let allowedAlphabet = asciiLetters
         let allowedAlphabetLength = UInt32(allowedAlphabet.characters.count)
         rand = Int(arc4random_uniform(allowedAlphabetLength))
-        char = allowedAlphabet[allowedAlphabet.startIndex.advancedBy(rand)]
+        char = allowedAlphabet[allowedAlphabet.characters.index(allowedAlphabet.startIndex, offsetBy: rand)]
       } else {
         if previousCharacterWasHyphen {
           while char == Character(hyphen) {
             rand = Int(arc4random_uniform(alphabetLength))
-            char = validAlphabet[validAlphabet.startIndex.advancedBy(rand)]
+            char = validAlphabet[validAlphabet.characters.index(validAlphabet.startIndex, offsetBy: rand)]
           }
           previousCharacterWasHyphen = false
         } else if char == Character(hyphen) {
@@ -118,7 +118,7 @@ extension String {
    - returns:
      Bool parameter. `true` if given string is valid serviceType, otherwise `false`.
    */
-  static func isValidServiceType(string: String) -> Bool {
+  static func isValidServiceType(_ string: String) -> Bool {
     let minChars = 0
     let maxChars = 15
     guard string.characters.count >= minChars && string.characters.count <= maxChars else {
@@ -129,25 +129,24 @@ extension String {
     let digits = "0123456789"
     let hyphen = "-"
     let validAlphabet = asciiLetters + digits + hyphen
-    let invalidCharacterSet = NSCharacterSet(charactersInString: validAlphabet).invertedSet
+    let invalidCharacterSet = CharacterSet(charactersIn: validAlphabet).inverted
 
-    guard string.rangeOfCharacterFromSet(invalidCharacterSet) == nil else {
+    guard string.rangeOfCharacter(from: invalidCharacterSet) == nil else {
       return false
     }
 
-    let asciiLettersCharacterSet = NSCharacterSet(charactersInString: asciiLetters)
-    guard string.rangeOfCharacterFromSet(asciiLettersCharacterSet) != nil else {
+    let asciiLettersCharacterSet = CharacterSet(charactersIn: asciiLetters)
+    guard string.rangeOfCharacter(from: asciiLettersCharacterSet) != nil else {
       return false
     }
 
-    guard
-      string.characters.first != Character(hyphen) &&
-        string.characters.last != Character(hyphen) else {
+    guard string.characters.first != Character(hyphen) &&
+          string.characters.last != Character(hyphen) else {
           return false
     }
 
     let adjacentHyphens = hyphen + hyphen
-    guard string.rangeOfString(adjacentHyphens) == nil else {
+    guard string.range(of: adjacentHyphens) == nil else {
       return false
     }
 

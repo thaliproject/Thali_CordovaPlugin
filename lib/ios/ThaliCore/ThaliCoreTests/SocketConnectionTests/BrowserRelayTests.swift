@@ -22,14 +22,14 @@ class BrowserRelayTests: XCTestCase {
   var randomMessage: String!
   let anyAvailalbePort: UInt16 = 0
 
-  let browserFindPeerTimeout: NSTimeInterval = 5.0
-  let browserConnectTimeout: NSTimeInterval = 5.0
-  let streamReceivedTimeout: NSTimeInterval = 5.0
-  let clientConnectTimeout: NSTimeInterval = 5.0
-  let clientDisconnectTimeout: NSTimeInterval = 5.0
-  let openRelayTimeout: NSTimeInterval = 5.0
-  let disposeTimeout: NSTimeInterval = 30.0
-  let receiveMessageTimeout: NSTimeInterval = 5.0
+  let browserFindPeerTimeout: TimeInterval = 5.0
+  let browserConnectTimeout: TimeInterval = 5.0
+  let streamReceivedTimeout: TimeInterval = 5.0
+  let clientConnectTimeout: TimeInterval = 5.0
+  let clientDisconnectTimeout: TimeInterval = 5.0
+  let openRelayTimeout: TimeInterval = 5.0
+  let disposeTimeout: TimeInterval = 30.0
+  let receiveMessageTimeout: TimeInterval = 5.0
 
   // MARK: - Setup & Teardown
   override func setUp() {
@@ -64,7 +64,7 @@ class BrowserRelayTests: XCTestCase {
                              createVirtualSocketTimeout: streamReceivedTimeout)
 
     // When
-    TCPPortIsReturned = expectationWithDescription("TCP port is returned")
+    TCPPortIsReturned = expectation(description: "TCP port is returned")
     relay.openRelay {
       port, error in
       XCTAssertNil(error, "Error during opening relay")
@@ -73,7 +73,7 @@ class BrowserRelayTests: XCTestCase {
     }
 
     // Then
-    waitForExpectationsWithTimeout(openRelayTimeout) {
+    waitForExpectations(timeout: openRelayTimeout) {
       error in
       TCPPortIsReturned = nil
     }
@@ -86,7 +86,7 @@ class BrowserRelayTests: XCTestCase {
 
     // Given
     // Open
-    TCPPortIsReturned = expectationWithDescription("TCP port is returned")
+    TCPPortIsReturned = expectation(description: "TCP port is returned")
     var listenerPort: UInt16 = 0
     let relay = BrowserRelay(with: nonTCPSession, createVirtualSocketTimeout: streamReceivedTimeout)
 
@@ -103,7 +103,7 @@ class BrowserRelayTests: XCTestCase {
       TCPPortIsReturned?.fulfill()
     }
 
-    waitForExpectationsWithTimeout(streamReceivedTimeout) {
+    waitForExpectations(timeout: streamReceivedTimeout) {
       error in
       TCPPortIsReturned = nil
     }
@@ -111,7 +111,7 @@ class BrowserRelayTests: XCTestCase {
     // When
     // Mock client trying to connect to the port returned by Relay
     сlientConnectedToListenerPort =
-      expectationWithDescription("Mock client is connected to listener port")
+      expectation(description: "Mock client is connected to listener port")
     let clientMock = TCPClientMock(didReadData: unexpectedReadDataHandler,
                                    didConnect: {
                                      сlientConnectedToListenerPort?.fulfill()
@@ -120,7 +120,7 @@ class BrowserRelayTests: XCTestCase {
     clientMock.connectToLocalHost(on: listenerPort, errorHandler: unexpectedErrorHandler)
 
     // Then
-    waitForExpectationsWithTimeout(clientConnectTimeout) {
+    waitForExpectations(timeout: clientConnectTimeout) {
       error in
       сlientConnectedToListenerPort = nil
     }
@@ -133,7 +133,7 @@ class BrowserRelayTests: XCTestCase {
 
     // Given
     // Open relay and get listener port
-    TCPPortIsReturned = expectationWithDescription("TCP port is returned")
+    TCPPortIsReturned = expectation(description: "TCP port is returned")
 
     var listenerPort: UInt16 = 0
     let relay = BrowserRelay(with: nonTCPSession,
@@ -151,7 +151,7 @@ class BrowserRelayTests: XCTestCase {
       TCPPortIsReturned?.fulfill()
     }
 
-    waitForExpectationsWithTimeout(openRelayTimeout) {
+    waitForExpectations(timeout: openRelayTimeout) {
       error in
       TCPPortIsReturned = nil
     }
@@ -159,7 +159,7 @@ class BrowserRelayTests: XCTestCase {
     // When
     // Close relay and trying to connect to the listener port
     clientCantConnectToListener =
-      expectationWithDescription("Mock client can't connect to listener port")
+      expectation(description: "Mock client can't connect to listener port")
     relay.closeRelay()
 
     let clientMock = TCPClientMock(didReadData: unexpectedReadDataHandler,
@@ -171,7 +171,7 @@ class BrowserRelayTests: XCTestCase {
     clientMock.connectToLocalHost(on: listenerPort, errorHandler: unexpectedErrorHandler)
 
     // Then
-    waitForExpectationsWithTimeout(clientDisconnectTimeout) {
+    waitForExpectations(timeout: clientDisconnectTimeout) {
       error in
       clientCantConnectToListener = nil
     }
@@ -197,7 +197,7 @@ class BrowserRelayTests: XCTestCase {
 
     // Prepare pair of advertiser and browser
     MPCFBrowserFoundAdvertiser =
-      expectationWithDescription("Browser peer found Advertiser peer")
+      expectation(description: "Browser peer found Advertiser peer")
 
     // Start listening for advertisements on Browser's side
     let browserManager = BrowserManager(serviceType: randomlyGeneratedServiceType,
@@ -220,7 +220,7 @@ class BrowserRelayTests: XCTestCase {
     advertiserManager.startUpdateAdvertisingAndListening(onPort: advertiserNodeListenerPort,
                                                          errorHandler: unexpectedErrorHandler)
 
-    waitForExpectationsWithTimeout(browserFindPeerTimeout) {
+    waitForExpectations(timeout: browserFindPeerTimeout) {
       error in
       MPCFBrowserFoundAdvertiser = nil
     }
@@ -233,7 +233,7 @@ class BrowserRelayTests: XCTestCase {
 
     // Connect method invocation
     browserManagerConnected =
-      expectationWithDescription("BrowserManager is connected")
+      expectation(description: "BrowserManager is connected")
 
     var browserNativeTCPListenerPort: UInt16 = 0
     browserManager.connectToPeer(peerToConnect.uuid, syncValue: "0") {
@@ -248,7 +248,7 @@ class BrowserRelayTests: XCTestCase {
       browserManagerConnected?.fulfill()
     }
 
-    waitForExpectationsWithTimeout(browserConnectTimeout) {
+    waitForExpectations(timeout: browserConnectTimeout) {
       error in
       guard error == nil else {
         XCTFail("Browser could not connect to peer")
@@ -261,9 +261,9 @@ class BrowserRelayTests: XCTestCase {
     // Check if relay objectes are valid
     guard
       let browserRelayInfo: (uuid: String, relay: BrowserRelay) =
-      browserManager.activeRelays.value.first,
+      browserManager.activeRelays.value.first as! (uuid: String, relay: BrowserRelay)?,
       let advertiserRelayInfo: (uuid: String, relay: AdvertiserRelay) =
-      advertiserManager.activeRelays.value.first
+      advertiserManager.activeRelays.value.first as! (uuid: String, relay: AdvertiserRelay)?
       else {
         return
     }
@@ -284,7 +284,7 @@ class BrowserRelayTests: XCTestCase {
 
                                                 let receivedMessage = String(
                                                   data: data,
-                                                  encoding: NSUTF8StringEncoding
+                                                  encoding: String.Encoding.utf8
                                                 )
 
                                                 XCTAssertEqual(strongSelf.randomMessage,
@@ -302,11 +302,11 @@ class BrowserRelayTests: XCTestCase {
     // When
     // Send message from advertiser's node mock server to browser's node mock client
     browserNodeClientReceivedMessage =
-      expectationWithDescription("Browser's mock node client received a message")
+      expectation(description: "Browser's mock node client received a message")
     advertiserNodeMock.send(self.randomMessage)
 
     // Then
-    waitForExpectationsWithTimeout(receiveMessageTimeout) {
+    waitForExpectations(timeout: receiveMessageTimeout) {
       error in
       browserNodeClientReceivedMessage = nil
     }
