@@ -157,10 +157,11 @@ module.exports = function (self) {
     self._nativeServer._incoming = [];
 
     self._nativeServer.on('error', function (err) {
-      logger.debug(err);
+      logger.debug('native server error: ' + err);
     });
 
     self._nativeServer.on('close', function () {
+      logger.debug('native server close');
       // this == self._nativeServer (which is already null by
       // the time this handler is called)
       this._incoming.forEach(function (i) {
@@ -181,7 +182,7 @@ module.exports = function (self) {
       // side and should be connected to the application server port.
 
       incoming.on('error', function (err) {
-        logger.debug(err);
+        logger.debug('nativeServer.incoming error' + err);
       });
 
       incoming.setTimeout(thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD);
@@ -211,15 +212,16 @@ module.exports = function (self) {
         // to the application server
 
         stream.on('error', function (err) {
-          logger.debug(err);
+          logger.debug('mux.stream error' + err);
         });
 
         stream.on('finish', function () {
+          logger.debug('mux.stream.finish');
           stream.destroy(); // Guarantees that close event will fire
         });
 
         stream.on('close', function () {
-          logger.debug('stream close:', stream);
+          logger.debug('mux.stream.close:', stream);
           stream._outgoing.end();
           if (!removeArrayElement(mux._streams, stream)) {
             logger.debug('stream not found in mux');
@@ -230,6 +232,7 @@ module.exports = function (self) {
           if (!stream.destroyed && !outgoing.destroyed) {
             stream.pipe(outgoing).pipe(stream);
           } else {
+            logger.debug('Calling destroy on stream and outgoing');
             !stream.destroyed && stream.destroy();
             !outgoing.destroyed && outgoing.destroy();
           }
@@ -238,12 +241,13 @@ module.exports = function (self) {
         stream._outgoing = outgoing;
 
         outgoing.on('close', function () {
+          logger.debug('mux.outgoing.close');
           stream.destroy();
           removeArrayElement(mux._streams, stream);
         });
 
         outgoing.on('error', function (err) {
-          logger.debug(err);
+          logger.debug('mux.outgoing.error' + err);
           self.emit(self.ROUTER_PORT_CONNECTION_FAILED,
             {
               error: err,

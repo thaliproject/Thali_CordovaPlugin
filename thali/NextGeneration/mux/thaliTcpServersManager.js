@@ -5,6 +5,8 @@ var Promise = require('lie');
 var EventEmitter = require('events').EventEmitter;
 var createNativeListener = require('./createNativeListener');
 var createPeerListener = require('./createPeerListener');
+var logger = require('../../ThaliLogger')('thaliTcpServersManager');
+
 
 /** @module TCPServersManager */
 
@@ -251,6 +253,7 @@ ThaliTcpServersManager.prototype.createPeerListener = function (peerIdentifier,
  */
 ThaliTcpServersManager.prototype.terminateIncomingConnection =
   function (incomingConnectionId) {
+    logger.debug('Terminating incoming connection');
     return new Promise(function (resolve) {
       if (incomingConnectionId.destroyed) {
         return resolve();
