@@ -27,7 +27,7 @@ class PeerTests: XCTestCase {
 
   func testStringValueHasCorrectForm() {
     for i in 0...0xF {
-      let uuid = NSUUID().UUIDString
+      let uuid = UUID().uuidString
       let string = "\(uuid):\(String(i, radix: 16))"
       let peer = try? Peer(stringValue: string)
       XCTAssertEqual(peer?.uuid, uuid)
