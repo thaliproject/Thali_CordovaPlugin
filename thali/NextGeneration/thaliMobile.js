@@ -4,6 +4,7 @@ var EventEmitter = require('events').EventEmitter;
 var assert = require('assert');
 var logger = require('../ThaliLogger')('thaliMobile');
 var platform = require('./utils/platform');
+var format = require('util').format;
 
 var thaliConfig = require('./thaliConfig');
 
@@ -366,9 +367,11 @@ module.exports.stopAdvertisingAndListening = function () {
   return promiseQueue.enqueue(function (resolve) {
     thaliMobileStates.advertising = false;
 
-    getWifiOrNativeMethodByNetworkType('stopAdvertisingAndListening',
-       thaliMobileStates.networkType)()
-      .then(resolve);
+    var stopAdvertisingAndListening = getWifiOrNativeMethodByNetworkType(
+      'stopAdvertisingAndListening',
+      thaliMobileStates.networkType
+    );
+    stopAdvertisingAndListening().then(resolve);
   });
 };
 
@@ -857,16 +860,17 @@ module.exports.disconnect = function () {
 
 
 var emitPeerUnavailable = function (peerIdentifier, connectionType) {
-  module.exports.emitter.emit('peerAvailabilityChanged',
-    getExtendedPeer(
-      {
-        peerIdentifier: peerIdentifier,
-        hostAddress: null,
-        portNumber: null
-      },
-      connectionType
-    )
+  var peer = getExtendedPeer(
+    {
+      peerIdentifier: peerIdentifier,
+      hostAddress: null,
+      portNumber: null
+    },
+    connectionType
   );
+  logger.debug('Emitting peerAvailabilityChanged from emitPeerUnavaiable %s',
+    JSON.stringify(peer));
+  module.exports.emitter.emit('peerAvailabilityChanged', peer);
 };
 
 var peerAvailabilities = {};
@@ -942,6 +946,8 @@ var handlePeer = function (peer, connectionType) {
   } else {
     changeCachedPeerAvailable(peer);
   }
+  logger.debug('Emitting peerAvailabilityChanged from handlePeer %s',
+    JSON.stringify(peer));
   module.exports.emitter.emit('peerAvailabilityChanged', peer);
 };
 
@@ -964,7 +970,8 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (peer) {
 });
 
 var peerAvailabilityWatchers = {};
-peerAvailabilityWatchers[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = {};
+peerAvailabilityWatchers[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] =
+  {};
 peerAvailabilityWatchers[connectionTypes.BLUETOOTH] = {};
 peerAvailabilityWatchers[connectionTypes.TCP_NATIVE] = {};
 
@@ -1088,9 +1095,11 @@ var verifyDiscoveryAdvertisingState = function (state) {
   var advertising = thaliMobileStates.advertising;
   if (listening !== state.discoveryActive ||
       advertising !== state.advertisingActive) {
-    logger.info('Received state did not match with target: %s',
-      JSON.stringify(getDiscoveryAdvertisingState())
-    );
+    logger.info(format(
+      'Received state (%j) did not match with target (%j)',
+      state,
+      thaliMobileStates
+    ));
   }
 };
 
@@ -1151,25 +1160,25 @@ var emitDiscoveryAdvertisingStateUpdate = function () {
 
 
 ThaliMobileNativeWrapper.emitter.on(
-  'discoveryAdvertisingStateUpdateNonTCPEvent',
-  function (discoveryAdvertisingStateUpdateValue) {
+  'discoveryAdvertisingStateUpdateNonTCP',
+  function (newState) {
     discoveryAdvertisingState.nonTCPDiscoveryActive =
-      discoveryAdvertisingStateUpdateValue.discoveryActive;
+      newState.discoveryActive;
     discoveryAdvertisingState.nonTCPAdvertisingActive =
-      discoveryAdvertisingStateUpdateValue.advertisingActive;
-    verifyDiscoveryAdvertisingState(discoveryAdvertisingStateUpdateValue);
+      newState.advertisingActive;
+    verifyDiscoveryAdvertisingState(newState);
     emitDiscoveryAdvertisingStateUpdate();
   }
 );
 
 thaliWifiInfrastructure.on(
   'discoveryAdvertisingStateUpdateWifiEvent',
-  function (discoveryAdvertisingStateUpdateValue) {
+  function (newState) {
     discoveryAdvertisingState.wifiDiscoveryActive =
-      discoveryAdvertisingStateUpdateValue.discoveryActive;
+      newState.discoveryActive;
     discoveryAdvertisingState.wifiAdvertisingActive =
-      discoveryAdvertisingStateUpdateValue.advertisingActive;
-    verifyDiscoveryAdvertisingState(discoveryAdvertisingStateUpdateValue);
+      newState.advertisingActive;
+    verifyDiscoveryAdvertisingState(newState);
     emitDiscoveryAdvertisingStateUpdate();
   }
 );

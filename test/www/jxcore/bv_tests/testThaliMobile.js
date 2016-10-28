@@ -1,11 +1,6 @@
 'use strict';
 
-var proxyquire = require('proxyquire');
-var ThaliMobile = proxyquire('thali/NextGeneration/thaliMobile', {
-  './thaliConfig': {
-    NON_TCP_PEER_UNAVAILABILITY_THRESHOLD: 500
-  }
-});
+var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var tape = require('../lib/thaliTape');
@@ -143,45 +138,49 @@ test('#start should fail if called twice in a row', function (t) {
   });
 });
 
-test('does not emit duplicate discoveryAdvertisingStateUpdate', function (t) {
-  var spy = sinon.spy();
-  ThaliMobile.start(express.Router())
-  .then(function () {
-    return ThaliMobile.startListeningForAdvertisements();
-  })
-  .then(function () {
-    return ThaliMobile.startUpdateAdvertisingAndListening();
-  })
-  .then(function () {
-    var stateUpdateHandler = function (discoveryAdvertisingStatus) {
-      spy();
-      t.equals(spy.callCount, 1, 'called only once');
-      t.equals(discoveryAdvertisingStatus.nonTCPDiscoveryActive, true,
-        'discovery state matches');
-      t.equals(discoveryAdvertisingStatus.nonTCPAdvertisingActive, true,
-        'advertising state matches');
-      process.nextTick(function () {
-        ThaliMobile.emitter.removeListener(
-          'discoveryAdvertisingStateUpdate', stateUpdateHandler
-        );
-        t.end();
-      });
-    };
-    ThaliMobile.emitter.on('discoveryAdvertisingStateUpdate',
-      stateUpdateHandler);
-    var testStatus = {
-      discoveryActive: true,
-      advertisingActive: true
-    };
-    // Emit the same status twice.
-    ThaliMobileNativeWrapper.emitter.emit(
-      'discoveryAdvertisingStateUpdateNonTCPEvent', testStatus
-    );
-    ThaliMobileNativeWrapper.emitter.emit(
-      'discoveryAdvertisingStateUpdateNonTCPEvent', testStatus
-    );
-  });
-});
+test('does not emit duplicate discoveryAdvertisingStateUpdate',
+  function () {
+    // test is not for native transport because it fires artificial events from
+    // the native layer
+    return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
+  },
+  function (t) {
+    var spy = sinon.spy();
+    ThaliMobile.start(express.Router()).then(function () {
+      return ThaliMobile.startListeningForAdvertisements();
+    }).then(function () {
+      return ThaliMobile.startUpdateAdvertisingAndListening();
+    }).then(function () {
+      var stateUpdateHandler = function (discoveryAdvertisingStatus) {
+        spy();
+        t.equals(spy.callCount, 1, 'called only once');
+        t.equals(discoveryAdvertisingStatus.nonTCPDiscoveryActive, true,
+          'discovery state matches');
+        t.equals(discoveryAdvertisingStatus.nonTCPAdvertisingActive, true,
+          'advertising state matches');
+        process.nextTick(function () {
+          ThaliMobile.emitter.removeListener(
+            'discoveryAdvertisingStateUpdate', stateUpdateHandler
+          );
+          t.end();
+        });
+      };
+      ThaliMobile.emitter.on('discoveryAdvertisingStateUpdate',
+        stateUpdateHandler);
+      var testStatus = {
+        discoveryActive: true,
+        advertisingActive: true
+      };
+      // Emit the same status twice.
+      ThaliMobileNativeWrapper.emitter.emit(
+        'discoveryAdvertisingStateUpdateNonTCP', testStatus
+      );
+      ThaliMobileNativeWrapper.emitter.emit(
+        'discoveryAdvertisingStateUpdateNonTCP', testStatus
+      );
+    });
+  }
+);
 
 test('does not send duplicate availability changes', function (t) {
   var dummyPeer = {
@@ -229,63 +228,64 @@ test('wifi peer is marked unavailable if announcements stop',
     return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
   },
   function (t) {
-  // Store the original threshold so that it can be restored
-  // at the end of the test.
-  var originalThreshold = thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
-  // Make the threshold a bit shorter so that the test doesn't
-  // have to wait for so long.
-  thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD =
-    thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 2;
-  var testPeerIdentifier = 'urn:uuid:' + uuid.v4();
-  var testSeverHostAddress = randomstring.generate({
-    charset: 'hex', // to get lowercase chars for the host address
-    length: 8
-  });
-  var testServerPort = 8080;
-  var testServer = new nodessdp.Server({
-    location: 'http://' + testSeverHostAddress + ':' + testServerPort,
-    udn: thaliConfig.SSDP_NT,
-    // Make the interval 10 times longer than expected
-    // to make sure we determine the peer is gone while
-    // waiting for the advertisement.
-    adInterval: thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 10
-  });
-  testServer.setUSN(testPeerIdentifier);
-
-  var spy = sinon.spy();
-  var availabilityChangedHandler = function (peer) {
-    if (peer.peerIdentifier !== testPeerIdentifier) {
-      return;
-    }
-    spy();
-    if (spy.calledOnce) {
-      t.equal(peer.hostAddress, testSeverHostAddress,
-        'host address should match');
-      t.equal(peer.portNumber, testServerPort, 'port should match');
-    } else if (spy.calledTwice) {
-      t.equal(peer.hostAddress, null, 'host address should be null');
-      t.equal(peer.portNumber, null, 'port should should be null');
-
-      ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
-        availabilityChangedHandler);
-      testServer.stop(function () {
-        thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD = originalThreshold;
-        t.end();
-      });
-    }
-  };
-  ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityChangedHandler);
-
-  ThaliMobile.start(express.Router())
-  .then(function () {
-    return ThaliMobile.startListeningForAdvertisements();
-  })
-  .then(function () {
-    testServer.start(function () {
-      // Handler above should get called.
+    // Store the original threshold so that it can be restored
+    // at the end of the test.
+    var originalThreshold = thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
+    // Make the threshold a bit shorter so that the test doesn't
+    // have to wait for so long.
+    thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD =
+      thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 2;
+    var testPeerIdentifier = 'urn:uuid:' + uuid.v4();
+    var testSeverHostAddress = randomstring.generate({
+      charset: 'hex', // to get lowercase chars for the host address
+      length: 8
     });
-  });
-});
+    var testServerPort = 8080;
+    var testServer = new nodessdp.Server({
+      location: 'http://' + testSeverHostAddress + ':' + testServerPort,
+      udn: thaliConfig.SSDP_NT,
+      // Make the interval 10 times longer than expected
+      // to make sure we determine the peer is gone while
+      // waiting for the advertisement.
+      adInterval: thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 10
+    });
+    testServer.setUSN(testPeerIdentifier);
+
+    var spy = sinon.spy();
+    var availabilityChangedHandler = function (peer) {
+      if (peer.peerIdentifier !== testPeerIdentifier) {
+        return;
+      }
+      spy();
+      if (spy.calledOnce) {
+        t.equal(peer.hostAddress, testSeverHostAddress,
+          'host address should match');
+        t.equal(peer.portNumber, testServerPort, 'port should match');
+      } else if (spy.calledTwice) {
+        t.equal(peer.hostAddress, null, 'host address should be null');
+        t.equal(peer.portNumber, null, 'port should should be null');
+
+        ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+          availabilityChangedHandler);
+        testServer.stop(function () {
+          thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD = originalThreshold;
+          t.end();
+        });
+      }
+    };
+    ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityChangedHandler);
+
+    ThaliMobile.start(express.Router())
+    .then(function () {
+      return ThaliMobile.startListeningForAdvertisements();
+    })
+    .then(function () {
+      testServer.start(function () {
+        // Handler above should get called.
+      });
+    });
+  }
+);
 
 test('network changes emitted correctly',
   function () {
@@ -792,29 +792,38 @@ test('Discovered peer should be removed if no availability updates ' +
     var peerIdentifier = 'urn:uuid:' + uuid.v4();
     var portNumber = 8080;
 
+    var originalThreshold = thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
+    thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD = 500;
+
+    var finalizeTest = function (error) {
+      thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD =
+        originalThreshold;
+      t.end(error);
+    };
+
     ThaliMobile.start(express.Router())
-      .then(function () {
-        var availabilityHandler = function (peer) {
+    .then(function () {
+      var availabilityHandler = function (peer) {
+        if (peer.peerIdentifier !== peerIdentifier) {
+          return;
+        }
+
+        ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+          availabilityHandler);
+
+        var unavailabilityHandler = function (peer) {
           if (peer.peerIdentifier !== peerIdentifier) {
             return;
           }
-
           ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
-            availabilityHandler);
-
-          var unavailabilityHandler = function (peer) {
-            if (peer.peerIdentifier !== peerIdentifier) {
-              return;
-            }
-            ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
-              unavailabilityHandler);
-
-            t.end();
-          };
-
-          ThaliMobile.emitter.on('peerAvailabilityChanged',
             unavailabilityHandler);
+
+          finalizeTest(null);
         };
+
+        ThaliMobile.emitter.on('peerAvailabilityChanged',
+          unavailabilityHandler);
+      };
 
       ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
 
@@ -824,5 +833,8 @@ test('Discovered peer should be removed if no availability updates ' +
           portNumber: portNumber
         }
       );
+    })
+    .catch(function (error) {
+      finalizeTest(error);
     });
 });

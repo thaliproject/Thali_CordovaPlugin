@@ -964,6 +964,8 @@ module.exports._registerToNative = function () {
   };
 
   registerToNative('peerAvailabilityChanged', function (peers) {
+    logger.debug('Received peerAvailabilityChanged event from native ' +
+      'layer %j', peers);
     if (typeof peers.forEach !== 'function') {
       peers = [peers];
     }
