@@ -17,11 +17,11 @@ class TCPListenerTests: XCTestCase {
 
     let anyAvailablePort: UInt16 = 0
 
-    let startListeningTimeout: NSTimeInterval = 5.0
-    let stopListeningTimeout: NSTimeInterval = 5.0
-    let acceptConnectionTimeout: NSTimeInterval = 5.0
-    let readDataTimeout: NSTimeInterval = 5.0
-    let disconnectTimeout: NSTimeInterval = 5.0
+    let startListeningTimeout: TimeInterval = 5.0
+    let stopListeningTimeout: TimeInterval = 5.0
+    let acceptConnectionTimeout: TimeInterval = 5.0
+    let readDataTimeout: TimeInterval = 5.0
+    let disconnectTimeout: TimeInterval = 5.0
 
     // MARK: - Setup
     override func setUp() {
@@ -35,7 +35,7 @@ class TCPListenerTests: XCTestCase {
         var acceptNewConnectionHandlerInvoked: XCTestExpectation?
 
         // Given
-        TCPListenerIsListening = expectationWithDescription("TCP Listener is listenining")
+        TCPListenerIsListening = expectation(description: "TCP Listener is listenining")
 
         var listenerPort: UInt16? = nil
         let tcpListener = TCPListener(with: unexpectedReadDataHandler,
@@ -53,14 +53,14 @@ class TCPListenerTests: XCTestCase {
             TCPListenerIsListening?.fulfill()
         }
 
-        waitForExpectationsWithTimeout(startListeningTimeout) {
+        waitForExpectations(timeout: startListeningTimeout) {
             error in
             TCPListenerIsListening = nil
         }
 
         // Connecting to listener with TCP mock client
         acceptNewConnectionHandlerInvoked =
-            expectationWithDescription("acceptNewConnectionHandler invoked")
+            expectation(description: "acceptNewConnectionHandler invoked")
 
         guard let portToConnect = listenerPort else {
             XCTFail("Listener port is nil")
@@ -74,7 +74,7 @@ class TCPListenerTests: XCTestCase {
         clientMock.connectToLocalHost(on: portToConnect, errorHandler: unexpectedErrorHandler)
 
         // Then
-        waitForExpectationsWithTimeout(acceptConnectionTimeout) {
+        waitForExpectations(timeout: acceptConnectionTimeout) {
             error in
             acceptNewConnectionHandlerInvoked = nil
         }
@@ -87,14 +87,14 @@ class TCPListenerTests: XCTestCase {
         var readDataHandlerInvoked: XCTestExpectation?
 
         // Given
-        TCPListenerIsListening = expectationWithDescription("TCP Listener is listenining")
+        TCPListenerIsListening = expectation(description: "TCP Listener is listenining")
 
         var listenerPort: UInt16? = nil
         let tcpListener = TCPListener(with: {
                                         socket, data in
 
                                         let receivedMessage = String(data: data,
-                                                                     encoding: NSUTF8StringEncoding)
+                                                                     encoding: String.Encoding.utf8)
                                         XCTAssertEqual(self.randomMessage,
                                                        receivedMessage,
                                                        "Received message is wrong")
@@ -106,7 +106,7 @@ class TCPListenerTests: XCTestCase {
         tcpListener.startListeningForConnections(on: anyAvailablePort,
                                                  connectionAccepted: {
                                                      socket in
-                                                     socket.readDataWithTimeout(-1, tag: 0)
+                                                     socket.readData(withTimeout: -1, tag: 0)
                                                      acceptNewConnectionHandlerInvoked?.fulfill()
                                                  }) {
             port, error in
@@ -116,14 +116,14 @@ class TCPListenerTests: XCTestCase {
             TCPListenerIsListening?.fulfill()
         }
 
-        waitForExpectationsWithTimeout(acceptConnectionTimeout) {
+        waitForExpectations(timeout: acceptConnectionTimeout) {
             error in
             TCPListenerIsListening = nil
         }
 
         // Connecting to listener with TCP mock client
         acceptNewConnectionHandlerInvoked =
-            expectationWithDescription("acceptNewConnectionHandler invoked")
+            expectation(description: "acceptNewConnectionHandler invoked")
 
         guard let portToConnect = listenerPort else {
             XCTFail("Listener port is nil")
@@ -136,19 +136,19 @@ class TCPListenerTests: XCTestCase {
 
         clientMock.connectToLocalHost(on: portToConnect, errorHandler: unexpectedErrorHandler)
 
-        waitForExpectationsWithTimeout(acceptConnectionTimeout) {
+        waitForExpectations(timeout: acceptConnectionTimeout) {
             error in
             acceptNewConnectionHandlerInvoked = nil
         }
 
         // Send some data into socket
-        readDataHandlerInvoked = expectationWithDescription("readDataHandler invoked")
+        readDataHandlerInvoked = expectation(description: "readDataHandler invoked")
 
         // When
         clientMock.send(randomMessage)
 
         // Then
-        waitForExpectationsWithTimeout(readDataTimeout) {
+        waitForExpectations(timeout: readDataTimeout) {
             error in
             readDataHandlerInvoked = nil
         }
@@ -161,7 +161,7 @@ class TCPListenerTests: XCTestCase {
         var disconnectHandlerInvoked: XCTestExpectation?
 
         // Given
-        TCPListenerIsListening = expectationWithDescription("TCP Listener is listenining")
+        TCPListenerIsListening = expectation(description: "TCP Listener is listenining")
 
         var listenerPort: UInt16? = nil
         let tcpListener = TCPListener(with: unexpectedReadDataHandler,
@@ -182,14 +182,14 @@ class TCPListenerTests: XCTestCase {
             TCPListenerIsListening?.fulfill()
         }
 
-        waitForExpectationsWithTimeout(startListeningTimeout) {
+        waitForExpectations(timeout: startListeningTimeout) {
             error in
             TCPListenerIsListening = nil
         }
 
         // Connecting to listener with TCP mock client
         acceptNewConnectionHandlerInvoked =
-            expectationWithDescription("acceptNewConnectionHandler invoked")
+            expectation(description: "acceptNewConnectionHandler invoked")
 
         guard let portToConnect = listenerPort else {
             XCTFail("Listener port is nil")
@@ -202,19 +202,19 @@ class TCPListenerTests: XCTestCase {
 
         clientMock.connectToLocalHost(on: portToConnect, errorHandler: unexpectedErrorHandler)
 
-        waitForExpectationsWithTimeout(acceptConnectionTimeout) {
+        waitForExpectations(timeout: acceptConnectionTimeout) {
             error in
             acceptNewConnectionHandlerInvoked = nil
         }
 
         // Client initiate disconnect
-        disconnectHandlerInvoked = expectationWithDescription("disconnectHandler invoked")
+        disconnectHandlerInvoked = expectation(description: "disconnectHandler invoked")
 
         // When
         clientMock.disconnect()
 
         // Then
-        waitForExpectationsWithTimeout(disconnectTimeout) {
+        waitForExpectations(timeout: disconnectTimeout) {
             error in
             disconnectHandlerInvoked = nil
         }
@@ -227,7 +227,7 @@ class TCPListenerTests: XCTestCase {
 
         // Given
         TCPListenerIsListening =
-            expectationWithDescription("TCP Listener is listenining")
+            expectation(description: "TCP Listener is listenining")
 
         var listenerPort: UInt16? = nil
         let firstTcpListener = TCPListener(with: unexpectedReadDataHandler,
@@ -243,7 +243,7 @@ class TCPListenerTests: XCTestCase {
             TCPListenerIsListening?.fulfill()
         }
 
-        waitForExpectationsWithTimeout(startListeningTimeout) {
+        waitForExpectations(timeout: startListeningTimeout) {
             error in
             TCPListenerIsListening = nil
         }
@@ -255,7 +255,7 @@ class TCPListenerTests: XCTestCase {
 
         // Trying start listening on busy port
         TCPListenerCantStartListening =
-            expectationWithDescription("TCP Listener can't start listener")
+            expectation(description: "TCP Listener can't start listener")
 
         let secondTcpListener = TCPListener(with: unexpectedReadDataHandler,
                                             socketDisconnected: unexpectedSocketDisconnectHandler,
@@ -272,7 +272,7 @@ class TCPListenerTests: XCTestCase {
         }
 
         // Then
-        waitForExpectationsWithTimeout(startListeningTimeout) {
+        waitForExpectations(timeout: startListeningTimeout) {
             error in
             TCPListenerCantStartListening = nil
         }
@@ -284,7 +284,7 @@ class TCPListenerTests: XCTestCase {
         var TCPListenerIsStopped: XCTestExpectation?
 
         // Given
-        TCPListenerIsListening = expectationWithDescription("TCP Listener is listenining")
+        TCPListenerIsListening = expectation(description: "TCP Listener is listenining")
 
         var listenerPort: UInt16? = nil
         let firstTcpListener = TCPListener(with: unexpectedReadDataHandler,
@@ -302,14 +302,14 @@ class TCPListenerTests: XCTestCase {
             TCPListenerIsListening?.fulfill()
         }
 
-        waitForExpectationsWithTimeout(startListeningTimeout) {
+        waitForExpectations(timeout: startListeningTimeout) {
             error in
             TCPListenerIsListening = nil
         }
 
-        TCPListenerIsStopped = expectationWithDescription("TCP Listener is stopped")
+        TCPListenerIsStopped = expectation(description: "TCP Listener is stopped")
         firstTcpListener.stopListeningForConnectionsAndDisconnectClients()
-        waitForExpectationsWithTimeout(stopListeningTimeout) {
+        waitForExpectations(timeout: stopListeningTimeout) {
             error in
             TCPListenerIsStopped = nil
         }
@@ -320,7 +320,7 @@ class TCPListenerTests: XCTestCase {
         }
 
         // Trying to connect to busy port
-        TCPListenerIsListening = expectationWithDescription("TCP Listener is listenining")
+        TCPListenerIsListening = expectation(description: "TCP Listener is listenining")
 
         let secondTcpListener = TCPListener(with: unexpectedReadDataHandler,
                                             socketDisconnected: unexpectedSocketDisconnectHandler,
@@ -337,7 +337,7 @@ class TCPListenerTests: XCTestCase {
         }
 
         // Then
-        waitForExpectationsWithTimeout(startListeningTimeout) {
+        waitForExpectations(timeout: startListeningTimeout) {
             error in
             TCPListenerIsListening = nil
         }
@@ -350,7 +350,7 @@ class TCPListenerTests: XCTestCase {
         var clientDisconnectHandlerInvoked: XCTestExpectation?
 
         // Given
-        TCPListenerIsListening = expectationWithDescription("TCP Listener is listenining")
+        TCPListenerIsListening = expectation(description: "TCP Listener is listenining")
 
         var listenerPort: UInt16? = nil
         let tcpListener = TCPListener(with: unexpectedReadDataHandler,
@@ -370,14 +370,14 @@ class TCPListenerTests: XCTestCase {
             TCPListenerIsListening?.fulfill()
         }
 
-        waitForExpectationsWithTimeout(startListeningTimeout) {
+        waitForExpectations(timeout: startListeningTimeout) {
             error in
             TCPListenerIsListening = nil
         }
 
         // Connecting to listener with TCP mock client
         acceptNewConnectionHandlerInvoked =
-            expectationWithDescription("acceptNewConnectionHandler invoked")
+            expectation(description: "acceptNewConnectionHandler invoked")
 
         guard let portToConnect = listenerPort else {
             XCTFail("Listener port is nil")
@@ -392,19 +392,19 @@ class TCPListenerTests: XCTestCase {
 
         clientMock.connectToLocalHost(on: portToConnect, errorHandler: unexpectedErrorHandler)
 
-        waitForExpectationsWithTimeout(acceptConnectionTimeout) {
+        waitForExpectations(timeout: acceptConnectionTimeout) {
             error in
             acceptNewConnectionHandlerInvoked = nil
         }
 
         clientDisconnectHandlerInvoked =
-            expectationWithDescription("Client's didDisconnect invoked")
+            expectation(description: "Client's didDisconnect invoked")
 
         // When
         tcpListener.stopListeningForConnectionsAndDisconnectClients()
 
         // Then
-        waitForExpectationsWithTimeout(disconnectTimeout) {
+        waitForExpectations(timeout: disconnectTimeout) {
             error in
             clientDisconnectHandlerInvoked = nil
         }
@@ -417,7 +417,7 @@ class TCPListenerTests: XCTestCase {
         var clientDisconnectHandlerInvoked: XCTestExpectation?
 
         // Given
-        TCPListenerIsListening = expectationWithDescription("TCP Listener is listenining")
+        TCPListenerIsListening = expectation(description: "TCP Listener is listenining")
 
         var listenerPort: UInt16? = nil
         let tcpListener = TCPListener(with: unexpectedReadDataHandler,
@@ -437,14 +437,14 @@ class TCPListenerTests: XCTestCase {
             TCPListenerIsListening?.fulfill()
         }
 
-        waitForExpectationsWithTimeout(startListeningTimeout) {
+        waitForExpectations(timeout: startListeningTimeout) {
             error in
             TCPListenerIsListening = nil
         }
 
         // Connecting to listener with TCP mock client
         acceptNewConnectionHandlerInvoked =
-            expectationWithDescription("acceptNewConnectionHandler invoked")
+            expectation(description: "acceptNewConnectionHandler invoked")
 
         guard let portToConnect = listenerPort else {
             XCTFail("Listener port is nil")
@@ -459,20 +459,20 @@ class TCPListenerTests: XCTestCase {
 
         clientMock.connectToLocalHost(on: portToConnect, errorHandler: unexpectedErrorHandler)
 
-        waitForExpectationsWithTimeout(acceptConnectionTimeout) {
+        waitForExpectations(timeout: acceptConnectionTimeout) {
             error in
             acceptNewConnectionHandlerInvoked = nil
         }
 
         clientDisconnectHandlerInvoked =
-            expectationWithDescription("Client's didDisconnect invoked")
+            expectation(description: "Client's didDisconnect invoked")
 
         // When
         tcpListener.stopListeningForConnectionsAndDisconnectClients()
         tcpListener.stopListeningForConnectionsAndDisconnectClients()
 
         // Then
-        waitForExpectationsWithTimeout(disconnectTimeout) {
+        waitForExpectations(timeout: disconnectTimeout) {
             error in
             clientDisconnectHandlerInvoked = nil
         }
@@ -482,8 +482,8 @@ class TCPListenerTests: XCTestCase {
 // MARK: - GCDAsyncSocketDelegate
 extension TCPListenerTests: GCDAsyncSocketDelegate {
 
-    func socket(sock: GCDAsyncSocket, didConnectToHost host: String, port: UInt16) {}
-    func socketDidDisconnect(sock: GCDAsyncSocket, withError err: NSError?) {}
-    func socket(sock: GCDAsyncSocket, didWriteDataWithTag tag: Int) {}
-    func socketDidCloseReadStream(sock: GCDAsyncSocket) {}
+    func socket(_ sock: GCDAsyncSocket, didConnectToHost host: String, port: UInt16) {}
+    func socketDidDisconnect(_ sock: GCDAsyncSocket, withError err: NSError?) {}
+    func socket(_ sock: GCDAsyncSocket, didWriteDataWithTag tag: Int) {}
+    func socketDidCloseReadStream(_ sock: GCDAsyncSocket) {}
 }

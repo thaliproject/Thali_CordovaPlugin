@@ -18,24 +18,24 @@ public final class AdvertiserManager {
     }
 
     // MARK: - Internal state
-    internal private(set) var advertisers: Atomic<[Advertiser]> = Atomic([])
-    internal private(set) var activeRelays: Atomic<[String: AdvertiserRelay]> = Atomic([:])
+    internal fileprivate(set) var advertisers: Atomic<[Advertiser]> = Atomic([])
+    internal fileprivate(set) var activeRelays: Atomic<[String: AdvertiserRelay]> = Atomic([:])
     internal var didDisposeAdvertiserForPeerHandler: ((Peer) -> Void)?
 
     // MARK: - Private state
-    private var currentAdvertiser: Advertiser?
-    private let serviceType: String
-    private let disposeTimeout: NSTimeInterval
+    fileprivate var currentAdvertiser: Advertiser?
+    fileprivate let serviceType: String
+    fileprivate let disposeTimeout: TimeInterval
 
     // MARK: - Initialization
-    public init(serviceType: String, disposeAdvertiserTimeout: NSTimeInterval) {
+    public init(serviceType: String, disposeAdvertiserTimeout: TimeInterval) {
         self.serviceType = serviceType
         self.disposeTimeout = disposeAdvertiserTimeout
     }
 
     // MARK: - Public methods
     public func startUpdateAdvertisingAndListening(onPort port: UInt16,
-                                                          errorHandler: ErrorType -> Void) {
+                                                          errorHandler: @escaping (Error) -> Void) {
         if let currentAdvertiser = currentAdvertiser {
             disposeAdvertiserAfterTimeoutToFinishInvites(currentAdvertiser)
         }
@@ -61,11 +61,11 @@ public final class AdvertiserManager {
                                             if let relay = $0[newPeer.uuid] {
                                                 relay.closeRelay()
                                             }
-                                            $0.removeValueForKey(newPeer.uuid)
+                                            $0.removeValue(forKey: newPeer.uuid)
                                         }
                                     })
         guard let newAdvertiser = advertiser else {
-            errorHandler(ThaliCoreError.ConnectionFailed)
+            errorHandler(ThaliCoreError.ConnectionFailed as Error)
             return
         }
 
@@ -91,13 +91,13 @@ public final class AdvertiserManager {
     }
 
     // MARK: - Private methods
-    private func disposeAdvertiserAfterTimeoutToFinishInvites(
-        advertiserShouldBeDisposed: Advertiser) {
+    fileprivate func disposeAdvertiserAfterTimeoutToFinishInvites(
+        _ advertiserShouldBeDisposed: Advertiser) {
 
-        let disposeTimeout = dispatch_time(DISPATCH_TIME_NOW,
-                                           Int64(self.disposeTimeout * Double(NSEC_PER_SEC)))
+        let disposeTimeout = DispatchTime.now() +
+            Double(Int64(self.disposeTimeout * Double(NSEC_PER_SEC))) / Double(NSEC_PER_SEC)
 
-        dispatch_after(disposeTimeout, dispatch_get_main_queue()) {
+        DispatchQueue.main.asyncAfter(deadline: disposeTimeout) {
             [weak self,
              weak advertiserShouldBeDisposed] in
             guard let strongSelf = self else { return }
@@ -105,8 +105,8 @@ public final class AdvertiserManager {
 
             strongSelf.advertisers.modify {
                 advertiserShouldBeDisposed.stopAdvertising()
-                if let indexOfDisposingAdvertiser = $0.indexOf(advertiserShouldBeDisposed) {
-                    $0.removeAtIndex(indexOfDisposingAdvertiser)
+                if let indexOfDisposingAdvertiser = $0.index(of: advertiserShouldBeDisposed) {
+                    $0.remove(at: indexOfDisposingAdvertiser)
                 }
             }
 

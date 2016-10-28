@@ -104,7 +104,7 @@ class BrowserManagerTests: XCTestCase {
                                             inputStreamReceiveTimeout: 1) { peers in }
 
         let getStartListeningNotActiveError =
-            expectationWithDescription("got startListening not active error")
+            expectation(description: "got startListening not active error")
         var connectionError: ThaliCoreError?
 
         XCTAssertFalse(browserManager.listening)
@@ -119,8 +119,8 @@ class BrowserManagerTests: XCTestCase {
         }
 
         // Then
-        let getErrorOnStartListeningTimeout: NSTimeInterval = 5
-        waitForExpectationsWithTimeout(getErrorOnStartListeningTimeout, handler: nil)
+        let getErrorOnStartListeningTimeout: TimeInterval = 5
+        waitForExpectations(timeout: getErrorOnStartListeningTimeout, handler: nil)
         XCTAssertEqual(connectionError, .StartListeningNotActive)
     }
 
@@ -128,7 +128,7 @@ class BrowserManagerTests: XCTestCase {
         // Given
         let browserManager = BrowserManager(serviceType: serviceType,
                                             inputStreamReceiveTimeout: 1) { peers in }
-        let getIllegalPeerIDError = expectationWithDescription("get Illegal Peer")
+        let getIllegalPeerIDError = expectation(description: "get Illegal Peer")
         var connectionError: ThaliCoreError?
 
         browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
@@ -144,8 +144,8 @@ class BrowserManagerTests: XCTestCase {
         }
 
         // Then
-        let getIllegalPeerTimeout: NSTimeInterval = 5
-        waitForExpectationsWithTimeout(getIllegalPeerTimeout, handler: nil)
+        let getIllegalPeerTimeout: TimeInterval = 5
+        waitForExpectations(timeout: getIllegalPeerTimeout, handler: nil)
         XCTAssertEqual(connectionError, .ConnectionFailed)
     }
 
@@ -157,7 +157,7 @@ class BrowserManagerTests: XCTestCase {
         let disposeTimeout = 2.0
         var foundedAdvertisersCount = 0
         let expectedAdvertisersCount = 2
-        let foundTwoAdvertisers = expectationWithDescription("found two advertisers")
+        let foundTwoAdvertisers = expectation(description: "found two advertisers")
 
         let advertiserManager = AdvertiserManager(serviceType: serviceType,
                                                   disposeAdvertiserTimeout: disposeTimeout)
@@ -188,8 +188,7 @@ class BrowserManagerTests: XCTestCase {
                 [weak foundTwoAdvertisers] peerAvailability in
 
                 if let
-                    availability = peerAvailability.first
-                    where
+                    availability = peerAvailability.first,
                         availability.peerIdentifier == secondGenerationAdvertiserIdentifier.uuid {
                             foundedAdvertisersCount += 1
                             if foundedAdvertisersCount == expectedAdvertisersCount {
@@ -202,7 +201,7 @@ class BrowserManagerTests: XCTestCase {
         browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
 
         // Then
-        waitForExpectationsWithTimeout(disposeTimeout, handler: nil)
+        waitForExpectations(timeout: disposeTimeout, handler: nil)
         let lastGenerationOfAdvertiserPeer =
             browserManager.lastGenerationPeer(for: firstGenerationAdvertiserIdentifier.uuid)
 
@@ -212,7 +211,7 @@ class BrowserManagerTests: XCTestCase {
 
     func testReceivedPeerAvailabilityEventAfterFoundAdvertiser() {
         // Given
-        let foundPeer = expectationWithDescription("found peer advertiser's identifier")
+        let foundPeer = expectation(description: "found peer advertiser's identifier")
 
         var advertiserPeerAvailability: PeerAvailability? = nil
         let disposeAdvertiserTimeout = 2.0
@@ -233,7 +232,7 @@ class BrowserManagerTests: XCTestCase {
         browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
 
         // Then
-        waitForExpectationsWithTimeout(disposeAdvertiserTimeout, handler: nil)
+        waitForExpectations(timeout: disposeAdvertiserTimeout, handler: nil)
 
         if let advertiser = advertiserManager.advertisers.value.first {
             XCTAssertEqual(advertiserPeerAvailability?.available, true)
@@ -246,7 +245,7 @@ class BrowserManagerTests: XCTestCase {
     func testIncrementAvailablePeersWhenFoundPeer() {
         // Given
         let MPCFConnectionCreated =
-            expectationWithDescription("MPCF connection is created")
+            expectation(description: "MPCF connection is created")
 
         let (advertiserManager, browserManager) = createMPCFPeers {
             peerAvailability in
@@ -255,7 +254,7 @@ class BrowserManagerTests: XCTestCase {
 
         // When
         let creatingMPCFSessionTimeout = 5.0
-        waitForExpectationsWithTimeout(creatingMPCFSessionTimeout, handler: nil)
+        waitForExpectations(timeout: creatingMPCFSessionTimeout, handler: nil)
 
         // Then
         XCTAssertEqual(1,
@@ -269,7 +268,7 @@ class BrowserManagerTests: XCTestCase {
     func testPeerAvailabilityChangedAfterStartAdvertising() {
         // Given
         let peerAvailabilityChangedToTrue =
-            expectationWithDescription("PeerAvailability changed to true")
+            expectation(description: "PeerAvailability changed to true")
 
         var advertiserPeerAvailability: PeerAvailability? = nil
 
@@ -297,7 +296,7 @@ class BrowserManagerTests: XCTestCase {
 
         // Then
         let peerAvailabilityHandlerTimeout = 10.0
-        waitForExpectationsWithTimeout(peerAvailabilityHandlerTimeout, handler: nil)
+        waitForExpectations(timeout: peerAvailabilityHandlerTimeout, handler: nil)
         XCTAssertEqual(advertiserManager.advertisers.value.first!.peer.uuid,
                        advertiserPeerAvailability?.peerIdentifier)
     }
@@ -305,7 +304,7 @@ class BrowserManagerTests: XCTestCase {
     func testPeerAvailabilityChangedAfterStopAdvertising() {
         // Given
         let peerAvailabilityChangedToFalse =
-            expectationWithDescription("PeerAvailability changed to false")
+            expectation(description: "PeerAvailability changed to false")
 
         var advertiserPeerAvailability: PeerAvailability? = nil
 
@@ -336,13 +335,13 @@ class BrowserManagerTests: XCTestCase {
 
         // Then
         let peerAvailabilityHandlerTimeout = 10.0
-        waitForExpectationsWithTimeout(peerAvailabilityHandlerTimeout, handler: nil)
+        waitForExpectations(timeout: peerAvailabilityHandlerTimeout, handler: nil)
     }
 
     func testConnectToPeerMethodReturnsTCPPort() {
         // Given
         var MPCFConnectionCreated: XCTestExpectation? =
-            expectationWithDescription("MPCF connection is created")
+            expectation(description: "MPCF connection is created")
 
         let (advertiserManager, browserManager) = createMPCFPeers {
             peerAvailability in
@@ -350,13 +349,13 @@ class BrowserManagerTests: XCTestCase {
         }
 
         let creatingMPCFSessionTimeout = 5.0
-        waitForExpectationsWithTimeout(creatingMPCFSessionTimeout) {
+        waitForExpectations(timeout: creatingMPCFSessionTimeout) {
             error in
             MPCFConnectionCreated = nil
         }
 
         var TCPSocketSuccessfullyCreated: XCTestExpectation? =
-            expectationWithDescription("Waiting until TCP socket created")
+            expectation(description: "Waiting until TCP socket created")
 
         // When
         let peerToConnect = browserManager.availablePeers.value.first!
@@ -373,7 +372,7 @@ class BrowserManagerTests: XCTestCase {
 
         // Then
         let creatingTCPSocketTimeout = 10.0
-        waitForExpectationsWithTimeout(creatingTCPSocketTimeout) {
+        waitForExpectations(timeout: creatingTCPSocketTimeout) {
             error in
             TCPSocketSuccessfullyCreated = nil
         }

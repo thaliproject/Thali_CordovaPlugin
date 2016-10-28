@@ -13,9 +13,9 @@
 class VirtualSocketBuilder {
 
     // MARK: - Private state
-    private let nonTCPsession: Session
-    private var outputStream: NSOutputStream?
-    private var inputStream: NSInputStream?
+    fileprivate let nonTCPsession: Session
+    fileprivate var outputStream: OutputStream?
+    fileprivate var inputStream: InputStream?
 
     // MARK: - Initialization
     init(with nonTCPsession: Session) {
@@ -29,35 +29,34 @@ class VirtualSocketBuilder {
 final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
 
     // MARK: - Internal state
-    internal private(set) var streamName: String
+    internal fileprivate(set) var streamName: String
 
     // MARK: - Private state
-    private let streamReceivedBackTimeout: NSTimeInterval
-    private var completion: ((VirtualSocket?, ErrorType?) -> Void)?
-    private var streamReceivedBack = Atomic(false)
+    fileprivate let streamReceivedBackTimeout: TimeInterval
+    fileprivate var completion: ((VirtualSocket?, Error?) -> Void)?
+    fileprivate var streamReceivedBack = Atomic(false)
 
     // MARK: - Initialization
     init(with nonTCPsession: Session,
               streamName: String,
-              streamReceivedBackTimeout: NSTimeInterval) {
+              streamReceivedBackTimeout: TimeInterval) {
         self.streamName = streamName
         self.streamReceivedBackTimeout = streamReceivedBackTimeout
         super.init(with: nonTCPsession)
     }
 
     // MARK: - Internal methods
-    func startBuilding(with completion: (VirtualSocket?, ErrorType?) -> Void) {
+    func startBuilding(with completion: @escaping (VirtualSocket?, Error?) -> Void) {
         self.completion = completion
 
         do {
             let outputStream = try nonTCPsession.startOutputStream(with: streamName)
             self.outputStream = outputStream
 
-            let streamReceivedBackTimeout = dispatch_time(
-                DISPATCH_TIME_NOW,
-                Int64(self.streamReceivedBackTimeout * Double(NSEC_PER_SEC))
-            )
-            dispatch_after(streamReceivedBackTimeout, dispatch_get_main_queue()) {
+            let streamReceivedBackTimeout = DispatchTime.now() +
+                Double(Int64(self.streamReceivedBackTimeout * Double(NSEC_PER_SEC))) /
+                Double(NSEC_PER_SEC)
+            DispatchQueue.main.asyncAfter(deadline: streamReceivedBackTimeout) {
                 [weak self] in
                 guard let strongSelf = self else { return }
 
@@ -71,7 +70,7 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
         }
     }
 
-    func completeVirtualSocket(with inputStream: NSInputStream) {
+    func completeVirtualSocket(with inputStream: InputStream) {
 
         streamReceivedBack.modify { $0 = true }
 
@@ -93,17 +92,17 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
 final class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
 
     // MARK: - Private state
-    private var completion: (VirtualSocket?, ErrorType?) -> Void
+    fileprivate var completion: (VirtualSocket?, Error?) -> Void
 
     // MARK: - Initialization
     required init(with nonTCPsession: Session,
-                       completion: ((VirtualSocket?, ErrorType?) -> Void)) {
+                       completion: @escaping ((VirtualSocket?, Error?) -> Void)) {
         self.completion = completion
         super.init(with: nonTCPsession)
     }
 
     // MARK: - Internal methods
-    func createVirtualSocket(with inputStream: NSInputStream, inputStreamName: String) {
+    func createVirtualSocket(with inputStream: InputStream, inputStreamName: String) {
         do {
             let outputStream = try nonTCPsession.startOutputStream(with: inputStreamName)
             let virtualNonTCPSocket = VirtualSocket(with: inputStream,

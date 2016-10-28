@@ -18,9 +18,9 @@ class VirtualSocketTests: XCTestCase {
     var mcSessionMock: MCSessionMock!
     var nonTCPSession: Session!
 
-    let streamReceivedTimeout: NSTimeInterval = 5.0
-    let virtualSocketOpenTimeout: NSTimeInterval = 5.0
-    let virtualSocketCloseTimeout: NSTimeInterval = 5.0
+    let streamReceivedTimeout: TimeInterval = 5.0
+    let virtualSocketOpenTimeout: TimeInterval = 5.0
+    let virtualSocketCloseTimeout: TimeInterval = 5.0
 
     // MARK: - Setup
     override func setUp() {
@@ -38,8 +38,8 @@ class VirtualSocketTests: XCTestCase {
         do {
             let ouputStream = try nonTCPSession.startOutputStream(with: "test")
 
-            let emptyData = NSData(bytes: nil, length: 0)
-            let inputStream = NSInputStream(data: emptyData)
+            let emptyData = Data(bytes: [], count: 0)
+            let inputStream = InputStream(data: emptyData)
 
             // When
             let virtualSocket = VirtualSocket(with: inputStream, outputStream: ouputStream)
@@ -56,8 +56,8 @@ class VirtualSocketTests: XCTestCase {
         do {
             let ouputStream = try nonTCPSession.startOutputStream(with: "test")
 
-            let emptyData = NSData(bytes: nil, length: 0)
-            let inputStream = NSInputStream(data: emptyData)
+            let emptyData = Data(bytes: [], count: 0)
+            let inputStream = InputStream(data: emptyData)
 
             let virtualSocket = VirtualSocket(with: inputStream, outputStream: ouputStream)
             XCTAssertFalse(virtualSocket.opened)
@@ -76,8 +76,8 @@ class VirtualSocketTests: XCTestCase {
         do {
             let ouputStream = try nonTCPSession.startOutputStream(with: "test")
 
-            let emptyData = NSData(bytes: nil, length: 0)
-            let inputStream = NSInputStream(data: emptyData)
+            let emptyData = Data(bytes: [], count: 0)
+            let inputStream = InputStream(data: emptyData)
 
             let virtualSocket = VirtualSocket(with: inputStream, outputStream: ouputStream)
             XCTAssertFalse(virtualSocket.opened)
@@ -99,8 +99,8 @@ class VirtualSocketTests: XCTestCase {
         do {
             let ouputStream = try nonTCPSession.startOutputStream(with: "test")
 
-            let emptyData = NSData(bytes: nil, length: 0)
-            let inputStream = NSInputStream(data: emptyData)
+            let emptyData = Data(bytes: [], count: 0)
+            let inputStream = InputStream(data: emptyData)
 
             let virtualSocket = VirtualSocket(with: inputStream, outputStream: ouputStream)
             XCTAssertFalse(virtualSocket.opened)
@@ -122,8 +122,8 @@ class VirtualSocketTests: XCTestCase {
         do {
             let ouputStream = try nonTCPSession.startOutputStream(with: "test")
 
-            let emptyData = NSData(bytes: nil, length: 0)
-            let inputStream = NSInputStream(data: emptyData)
+            let emptyData = Data(bytes: [], count: 0)
+            let inputStream = InputStream(data: emptyData)
 
             let virtualSocket = VirtualSocket(with: inputStream, outputStream: ouputStream)
             XCTAssertFalse(virtualSocket.opened)

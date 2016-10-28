@@ -16,15 +16,15 @@ import MultipeerConnectivity
 final class Browser: NSObject {
 
     // MARK: - Internal state
-    internal private(set) var listening: Bool = false
-    internal let invitePeerTimeout: NSTimeInterval = 30.0
+    internal fileprivate(set) var listening: Bool = false
+    internal let invitePeerTimeout: TimeInterval = 30.0
 
     // MARK: - Private state
-    private let browser: MCNearbyServiceBrowser
-    private var availablePeers: Atomic<[Peer: MCPeerID]> = Atomic([:])
-    private let didFindPeerHandler: (Peer) -> Void
-    private let didLosePeerHandler: (Peer) -> Void
-    private var startBrowsingErrorHandler: (ErrorType -> Void)? = nil
+    fileprivate let browser: MCNearbyServiceBrowser
+    fileprivate var availablePeers: Atomic<[Peer: MCPeerID]> = Atomic([:])
+    fileprivate let didFindPeerHandler: (Peer) -> Void
+    fileprivate let didLosePeerHandler: (Peer) -> Void
+    fileprivate var startBrowsingErrorHandler: ((Error) -> Void)? = nil
 
     // MARK: - Initialization
 
@@ -52,13 +52,13 @@ final class Browser: NSObject {
      due to invalid `serviceType` format.
      */
     required init?(serviceType: String,
-                   foundPeer: (Peer) -> Void,
-                   lostPeer: (Peer) -> Void) {
+                   foundPeer: @escaping (Peer) -> Void,
+                   lostPeer: @escaping (Peer) -> Void) {
         if !String.isValidServiceType(serviceType) {
             return nil
         }
 
-        let mcPeerID = MCPeerID(displayName: NSUUID().UUIDString)
+        let mcPeerID = MCPeerID(displayName: UUID().uuidString)
         browser = MCNearbyServiceBrowser(peer: mcPeerID, serviceType: serviceType)
         didFindPeerHandler = foundPeer
         didLosePeerHandler = lostPeer
@@ -76,7 +76,7 @@ final class Browser: NSObject {
        - startListeningErrorHandler:
          Called when a browser failed to start browsing for peers.
      */
-    func startListening(startListeningErrorHandler: ErrorType -> Void) {
+    func startListening(_ startListeningErrorHandler: @escaping (Error) -> Void) {
         if !listening {
             startBrowsingErrorHandler = startListeningErrorHandler
             browser.delegate = self
@@ -112,9 +112,9 @@ final class Browser: NSObject {
 
      - returns: Session object that manages MCSession between peers
      */
-    func inviteToConnect(peer: Peer,
-                         sessionConnected: () -> Void,
-                         sessionNotConnected: () -> Void) throws -> Session {
+    func inviteToConnect(_ peer: Peer,
+                         sessionConnected: @escaping () -> Void,
+                         sessionNotConnected: @escaping () -> Void) throws -> Session {
 
         let mcSession = MCSession(peer: browser.myPeerID)
 
@@ -128,7 +128,7 @@ final class Browser: NSObject {
                               notConnected: sessionNotConnected)
 
         browser.invitePeer(mcPeerID,
-                           toSession: mcSession,
+                           to: mcSession,
                            withContext: nil,
                            timeout: invitePeerTimeout)
         return session
@@ -138,7 +138,7 @@ final class Browser: NSObject {
 // MARK: - MCNearbyServiceBrowserDelegate
 extension Browser: MCNearbyServiceBrowserDelegate {
 
-    func browser(browser: MCNearbyServiceBrowser,
+    func browser(_ browser: MCNearbyServiceBrowser,
                  foundPeer peerID: MCPeerID,
                  withDiscoveryInfo info: [String: String]?) {
         do {
@@ -150,17 +150,17 @@ extension Browser: MCNearbyServiceBrowserDelegate {
         }
     }
 
-    func browser(browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
+    func browser(_ browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
         do {
             let peer = try Peer(mcPeerID: peerID)
-            availablePeers.modify { $0.removeValueForKey(peer) }
+            availablePeers.modify { $0.removeValue(forKey: peer) }
             didLosePeerHandler(peer)
         } catch let error {
             print("cannot parse identifier \"\(peerID.displayName)\" because of error: \(error)")
         }
     }
 
-    func browser(browser: MCNearbyServiceBrowser, didNotStartBrowsingForPeers error: NSError) {
+    func browser(_ browser: MCNearbyServiceBrowser, didNotStartBrowsingForPeers error: Error) {
         stopListening()
         startBrowsingErrorHandler?(error)
     }

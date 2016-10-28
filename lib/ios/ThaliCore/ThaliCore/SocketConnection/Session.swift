@@ -15,21 +15,21 @@ import MultipeerConnectivity
 class Session: NSObject {
 
     // MARK: - Internal state
-    internal private(set) var sessionState: Atomic<MCSessionState> = Atomic(.NotConnected)
+    internal fileprivate(set) var sessionState: Atomic<MCSessionState> = Atomic(.notConnected)
     internal var didChangeStateHandler: ((MCSessionState) -> Void)?
-    internal var didReceiveInputStreamHandler: ((NSInputStream, String) -> Void)?
+    internal var didReceiveInputStreamHandler: ((InputStream, String) -> Void)?
 
     // MARK: - Private state
-    private let session: MCSession
-    private let identifier: MCPeerID
-    private let didConnectHandler: () -> Void
-    private let didNotConnectHandler: () -> Void
+    fileprivate let session: MCSession
+    fileprivate let identifier: MCPeerID
+    fileprivate let didConnectHandler: () -> Void
+    fileprivate let didNotConnectHandler: () -> Void
 
     // MARK: - Public methods
     init(session: MCSession,
          identifier: MCPeerID,
-         connected: () -> Void,
-         notConnected: () -> Void) {
+         connected: @escaping () -> Void,
+         notConnected: @escaping () -> Void) {
 
         self.session = session
         self.identifier = identifier
@@ -39,9 +39,9 @@ class Session: NSObject {
         self.session.delegate = self
     }
 
-    func startOutputStream(with name: String) throws -> NSOutputStream {
+    func startOutputStream(with name: String) throws -> OutputStream {
         do {
-            return try session.startStreamWithName(name, toPeer: identifier)
+            return try session.startStream(withName: name, toPeer: identifier)
         } catch {
             throw ThaliCoreError.ConnectionFailed
         }
@@ -55,7 +55,7 @@ class Session: NSObject {
 // MARK: - MCSessionDelegate - Handling events for MCSession
 extension Session: MCSessionDelegate {
 
-    func session(session: MCSession, peer peerID: MCPeerID, didChangeState state: MCSessionState) {
+    func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
         assert(identifier.displayName == peerID.displayName)
 
         sessionState.modify {
@@ -64,41 +64,41 @@ extension Session: MCSessionDelegate {
             self.didChangeStateHandler?(state)
 
             switch state {
-            case .NotConnected:
+            case .notConnected:
                 self.didNotConnectHandler()
-            case .Connected:
+            case .connected:
                 self.didConnectHandler()
-            case .Connecting:
+            case .connecting:
                 break
             }
         }
 
     }
 
-    func session(session: MCSession,
-                 didReceiveStream stream: NSInputStream,
+    func session(_ session: MCSession,
+                 didReceive stream: InputStream,
                  withName streamName: String,
                  fromPeer peerID: MCPeerID) {
         assert(identifier.displayName == peerID.displayName)
         didReceiveInputStreamHandler?(stream, streamName)
     }
 
-    func session(session: MCSession, didReceiveData data: NSData, fromPeer peerID: MCPeerID) {
+    func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
         assert(identifier.displayName == peerID.displayName)
     }
 
-    func session(session: MCSession,
+    func session(_ session: MCSession,
                  didStartReceivingResourceWithName resourceName: String,
                  fromPeer peerID: MCPeerID,
-                 withProgress progress: NSProgress) {
+                 with progress: Progress) {
         assert(identifier.displayName == peerID.displayName)
     }
 
-    func session(session: MCSession,
+    func session(_ session: MCSession,
                  didFinishReceivingResourceWithName resourceName: String,
                  fromPeer peerID: MCPeerID,
-                 atURL localURL: NSURL,
-                 withError error: NSError?) {
+                 at localURL: URL,
+                 withError error: Error?) {
         assert(identifier.displayName == peerID.displayName)
     }
 }

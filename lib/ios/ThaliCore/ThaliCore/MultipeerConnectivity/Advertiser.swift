@@ -16,14 +16,14 @@ import MultipeerConnectivity
 final class Advertiser: NSObject {
 
     // MARK: - Internal state
-    internal private(set) var advertising: Bool = false
+    internal fileprivate(set) var advertising: Bool = false
     internal let peer: Peer
 
     // MARK: - Private state
-    private let advertiser: MCNearbyServiceAdvertiser
-    private let didReceiveInvitationHandler: (session: Session) -> Void
-    private let didDisconnectHandler: () -> Void
-    private var startAdvertisingErrorHandler: (ErrorType -> Void)? = nil
+    fileprivate let advertiser: MCNearbyServiceAdvertiser
+    fileprivate let didReceiveInvitationHandler: (_ session: Session) -> Void
+    fileprivate let didDisconnectHandler: () -> Void
+    fileprivate var startAdvertisingErrorHandler: ((Error) -> Void)? = nil
 
     // MARK: - Initialization
 
@@ -55,8 +55,8 @@ final class Advertiser: NSObject {
      */
     required init?(peer: Peer,
                    serviceType: String,
-                   receivedInvitation: (session: Session) -> Void,
-                   sessionNotConnected: () -> Void) {
+                   receivedInvitation: @escaping (_ session: Session) -> Void,
+                   sessionNotConnected: @escaping () -> Void) {
 
         if !String.isValidServiceType(serviceType) {
             return nil
@@ -85,7 +85,7 @@ final class Advertiser: NSObject {
        - startAdvertisingErrorHandler:
          Called when advertisement fails.
      */
-    func startAdvertising(startAdvertisingErrorHandler: ErrorType -> Void) {
+    func startAdvertising(_ startAdvertisingErrorHandler: @escaping (Error) -> Void) {
         if !advertising {
             self.startAdvertisingErrorHandler = startAdvertisingErrorHandler
             advertiser.delegate = self
@@ -113,10 +113,10 @@ final class Advertiser: NSObject {
 // MARK: - MCNearbyServiceAdvertiserDelegate
 extension Advertiser: MCNearbyServiceAdvertiserDelegate {
 
-    func advertiser(advertiser: MCNearbyServiceAdvertiser,
+    func advertiser(_ advertiser: MCNearbyServiceAdvertiser,
                     didReceiveInvitationFromPeer peerID: MCPeerID,
-                    withContext context: NSData?,
-                    invitationHandler: (Bool, MCSession) -> Void) {
+                    withContext context: Data?,
+                    invitationHandler: @escaping (Bool, MCSession?) -> Void) {
 
         let mcSession = MCSession(peer: advertiser.myPeerID)
 
@@ -126,12 +126,12 @@ extension Advertiser: MCNearbyServiceAdvertiserDelegate {
                               notConnected: didDisconnectHandler)
 
         invitationHandler(true, mcSession)
-        didReceiveInvitationHandler(session: session)
+        didReceiveInvitationHandler(session)
         // TODO: https://github.com/thaliproject/Thali_CordovaPlugin/issues/1040
     }
 
-    func advertiser(advertiser: MCNearbyServiceAdvertiser,
-                    didNotStartAdvertisingPeer error: NSError) {
+    func advertiser(_ advertiser: MCNearbyServiceAdvertiser,
+                    didNotStartAdvertisingPeer error: Error) {
         stopAdvertising()
         startAdvertisingErrorHandler?(error)
     }
