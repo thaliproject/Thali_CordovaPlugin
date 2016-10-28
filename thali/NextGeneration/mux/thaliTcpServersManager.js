@@ -5,6 +5,7 @@ var Promise = require('lie');
 var EventEmitter = require('events').EventEmitter;
 var createNativeListener = require('./createNativeListener');
 var createPeerListener = require('./createPeerListener');
+var logger = require('../../ThaliLogger')('thaliTcpServersManager');
 
 /** @module TCPServersManager */
 
@@ -285,6 +286,8 @@ ThaliTcpServersManager.prototype.terminateIncomingConnection =
  */
 ThaliTcpServersManager.prototype.terminateOutgoingConnection =
   function (peerIdentifier, port) {
+    logger.debug('Terminate outgoing connection called on peerID ' +
+      peerIdentifier + ' with port ' + port);
     var peerServer = this._peerServers[peerIdentifier];
     if (peerServer && peerServer.server.address().port === port) {
       createPeerListener.closeServer(this, peerServer.server, null, false);

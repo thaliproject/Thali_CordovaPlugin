@@ -50,10 +50,11 @@ if (argv.networkType) {
   switch (networkType) {
     case networkTypes.WIFI:
     case networkTypes.NATIVE:
-    case networkTypes.BOTH:
+    case networkTypes.BOTH: {
       global.NETWORK_TYPE = networkType;
       break;
-    default:
+    }
+    default: {
       logger.warn(
         'Unrecognized network type: ' + networkType + '. ' +
         'Available network types: ' + [
@@ -63,6 +64,7 @@ if (argv.networkType) {
         ].join(', ')
       );
       process.exit(1);
+    }
   }
 }
 

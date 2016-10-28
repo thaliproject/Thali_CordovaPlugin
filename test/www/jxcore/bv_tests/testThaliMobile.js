@@ -3,7 +3,6 @@
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
-var platform = require('thali/NextGeneration/utils/platform');
 var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils.js');
 var express = require('express');
@@ -14,6 +13,7 @@ var nodessdp = require('node-ssdp');
 var randomstring = require('randomstring');
 var logger = require('thali/ThaliLogger')('testThaliMobile');
 var Promise = require('lie');
+var PromiseQueue = require('thali/NextGeneration/promiseQueue');
 
 var verifyCombinedResultSuccess = testUtils.verifyCombinedResultSuccess;
 
@@ -690,16 +690,23 @@ function setUpRouter() {
 }
 
 test('test for data corruption', function () {
-  return !platform.isAndroid;
+  // We don't have platform properly set up on desktop to emulate Android or
+  // iOS. Those fixes are in the iOS branch. So until they make it to master
+  // we just check for Wifi. If it is wifi then we don't run. If it isn't wifi
+  // then we must be Android because iOS native doesn't work in master.
+  return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
 },
 function (t) {
   var router = setUpRouter();
-  var remainingParticipants = {};
+  var participantsState = {};
+  var peerIDToUUIDMap = {};
+  var areWeDone = false;
+  var promiseQueue = new PromiseQueue();
   t.participants.forEach(function (participant) {
     if (participant.uuid === tape.uuid) {
       return;
     }
-    remainingParticipants[participant.uuid] = participantState.notRunning;
+    participantsState[participant.uuid] = participantState.notRunning;
   });
   setupDiscoveryAndFindPeers(t, router, function (peer, done) {
     // Try to get data only from non-TCP peers so that the test
@@ -709,52 +716,74 @@ function (t) {
       ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE) {
       return;
     }
-    logger.debug('Found peer - ' + JSON.stringify(peer));
-    var uuid = null;
-    testUtils.get(
-      peer.hostAddress, peer.portNumber,
-      uuidPath, pskIdentity, pskKey
-    )
+    if (peerIDToUUIDMap[peer.peerIdentifier] &&
+        participantsState[peerIDToUUIDMap[peer.peerIdentifier] ===
+          participantState.finished]) {
+      return;
+    }
+    promiseQueue.enqueue(function (resolve) {
+      if (areWeDone) {
+        return resolve(null);
+      }
+
+      logger.debug('Found peer - ' + JSON.stringify(peer));
+
+      var uuid = null;
+      testUtils.get(
+        peer.hostAddress, peer.portNumber,
+        uuidPath, pskIdentity, pskKey
+      )
       .then(function (responseBody) {
         uuid = responseBody;
+        peerIDToUUIDMap[peer.peerIdentifier] = uuid;
         logger.debug('Got uuid back from GET - ' + uuid);
-        if (remainingParticipants[uuid] !== participantState.notRunning) {
-          return Promise.resolve(true);
+        if (participantsState[uuid] !== participantState.notRunning) {
+          logger.debug('Participant is already done - ' + uuid);
+          return false;
+        } else {
+          logger.debug('Participants state is ' + participantsState[uuid]);
         }
 
-        remainingParticipants[uuid] = participantState.running;
+        participantsState[uuid] = participantState.running;
 
         return numberOfParallelRequests(t, peer.hostAddress, peer.portNumber,
           echoPath, pskIdentity, pskKey)
         .then(function () {
-          logger.debug('Got back from parallel requests');
-          remainingParticipants[uuid] = participantState.finished;
-          var areWeDone = Object.getOwnPropertyNames(remainingParticipants)
+          logger.debug('Got back from parallel requests - ' + uuid);
+          participantsState[uuid] = participantState.finished;
+          areWeDone = Object.getOwnPropertyNames(participantsState)
             .every(
               function (participant) {
-                return remainingParticipants[participant] ===
+                return participantsState[participant] ===
                   participantState.finished;
               });
           if (areWeDone) {
             t.ok(true, 'received all uuids');
             done();
           }
-          return null;
+          return false;
         });
       })
       .catch(function (error) {
         logger.debug('Got an error on HTTP requests: ' + error);
+        return true;
+      })
+      .then(function (isError) {
+        if (areWeDone) {
+          return resolve(null);
+        }
         ThaliMobileNativeWrapper._getServersManager()
           .terminateOutgoingConnection(peer.peerIdentifier, peer.portNumber);
         // We have to give Android enough time to notice the killed connection
         // and recycle everything
-        return new Promise(function (resolve) {
-          setTimeout(function () {
-            remainingParticipants[uuid] = participantState.notRunning;
-            return resolve(true);
-          }, 1000);
-        });
+        setTimeout(function () {
+          if (isError) {
+            participantsState[uuid] = participantState.notRunning;
+          }
+          return resolve(null);
+        }, 1000);
       });
+    });
   });
 });
 
