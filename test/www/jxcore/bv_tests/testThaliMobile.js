@@ -14,6 +14,7 @@ var randomstring = require('randomstring');
 var logger = require('thali/ThaliLogger')('testThaliMobile');
 var Promise = require('lie');
 var PromiseQueue = require('thali/NextGeneration/promiseQueue');
+var net = require('net');
 
 var verifyCombinedResultSuccess = testUtils.verifyCombinedResultSuccess;
 
@@ -458,6 +459,62 @@ function (t) {
       }
     );
   });
+});
+
+test('We properly fire peer unavailable and then available when ' +
+  'connection fails', function(t) {
+  var somePeerIdentifier = 'urn:uuid:' + uuid.v4();
+
+  var callCounter = 0;
+  var connectionErrorReceived = false;
+  ThaliMobile.emitter.on('peerAvailabilityChanged', function (peer) {
+    ++callCounter;
+    switch(callCounter) {
+      case 1: {
+        t.equal(peer.peerIdentifier, somePeerIdentifier, 'peerIds match');
+        t.ok(peer.portNumber, 'peer has a portNumber');
+        t.ok(peer.hostAddress, 'peer has a host address');
+        var socket = net.createConnection(peer.portNumber, peer.hostAddress);
+        socket.on('connect', function () {
+          t.ok(true, 'We should have connected');
+        });
+        socket.on('error', function () {
+          connectionErrorReceived = true;
+        });
+        return;
+      }
+      case 2: {
+        t.equal(peer.peerIdentifier, somePeerIdentifier, 'still same peer IDs');
+        t.notOk(peer.portNumber, 'peer should not have a portNumber');
+        t.notOk(peer.hostAddress, 'peer should not have a host address');
+        return;
+      }
+      case 3: {
+        t.equal(peer.peerIdentifier, somePeerIdentifier, 'peerIds match again');
+        t.ok(peer.portNumber, 'peer has a portNumber again');
+        t.ok(peer.hostAddress, 'peer has a host address again');
+        t.end();
+        return;
+      }
+    }
+  });
+
+  ThaliMobile.start(express.Router(), new Buffer('foo'),
+    ThaliMobile.networkTypes.NATIVE)
+    .then(function () {
+      return ThaliMobile.startListeningForAdvertisements();
+    })
+    .then(function () {
+      return ThaliMobileNativeWrapper._handlePeerAvailabilityChanged({
+        peerIdentifier: somePeerIdentifier,
+        peerAvailable: true,
+        pleaseConnect: false
+      });
+    })
+    .catch(function (err) {
+      t.fail(err);
+      t.end();
+    });
 });
 
 if (!tape.coordinated) {

@@ -868,7 +868,7 @@ var emitPeerUnavailable = function (peerIdentifier, connectionType) {
     },
     connectionType
   );
-  logger.debug('Emitting peerAvailabilityChanged from emitPeerUnavaiable %s',
+  logger.debug('Emitting peerAvailabilityChanged from emitPeerUnavailable %s',
     JSON.stringify(peer));
   module.exports.emitter.emit('peerAvailabilityChanged', peer);
 };
@@ -907,6 +907,11 @@ var updateAndCheckChanges = function (peer) {
   if (!cachedPeer) {
     return true;
   }
+
+  if (!peer.hostAddress) {
+    return true;
+  }
+
   cachedPeer.availableSince = Date.now();
   if (cachedPeer.hostAddress !== peer.hostAddress ||
       cachedPeer.portNumber !== peer.portNumber) {

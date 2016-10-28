@@ -136,6 +136,10 @@ function listenerRecreatedAfterFailureHandler(recreateAnnouncement) {
     return;
   }
 
+  logger.debug('listenerRecreatedAfterFailureHandler - We are emitting ' +
+    'nonTCPPeerAvailabilityChangedEvent with peerIdentifier %s and ' +
+    'portNumber %d', recreateAnnouncement.peerIdentifier,
+    recreateAnnouncement.portNumber);
   module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
     peerIdentifier: recreateAnnouncement.peerIdentifier,
     portNumber: recreateAnnouncement.portNumber
@@ -817,6 +821,9 @@ var handlePeerAvailabilityChanged = function (peer) {
       // TODO: Should the created peer listener be cleaned up when
       // peer becomes unavailable and which function should be used
       // for that?
+      logger.debug('handlePeerUnavailable - Emitting ' +
+        'nonTCPPeerAvailabilityChangedEvent with ' +
+        'peerIdentifier %s and portNumber set to null', peer.peerIdentifier);
       module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
         peerIdentifier: peer.peerIdentifier,
         portNumber: null
@@ -827,6 +834,10 @@ var handlePeerAvailabilityChanged = function (peer) {
       gServersManager.createPeerListener(peer.peerIdentifier,
                                          peer.pleaseConnect)
       .then(function (portNumber) {
+        logger.debug('handlePeerAvailabilityChanged - Emitting ' +
+          'nonTCPPeerAvailabilityChanged with ' +
+          'peerIdentifier %s and portNumber %d', peer.peerIdentifier,
+          portNumber);
         module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
           peerIdentifier: peer.peerIdentifier,
           portNumber: portNumber
@@ -846,6 +857,8 @@ var handlePeerAvailabilityChanged = function (peer) {
     }
   });
 };
+
+module.exports._handlePeerAvailabilityChanged = handlePeerAvailabilityChanged;
 
 // jscs:disable maximumLineLength
 /**

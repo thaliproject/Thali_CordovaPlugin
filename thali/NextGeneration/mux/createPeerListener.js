@@ -27,6 +27,8 @@ function closeServer(self, server, failedConnectionErr, canRetry)
   server._mux = null;
   delete self._peerServers[server._peerIdentifier];
   if (failedConnectionErr) {
+    logger.debug('We are emitting failedConnection with error %s and ' +
+      'peerIdentifier %s', failedConnectionErr, server._peerIdentifier);
     self.emit('failedConnection', {
       'error': failedConnectionErr,
       'peerIdentifier': server._peerIdentifier
@@ -41,6 +43,9 @@ function closeServer(self, server, failedConnectionErr, canRetry)
     process.nextTick(function () {
       createPeerListener(self, server._peerIdentifier, false)
         .then(function (port) {
+          logger.debug('We are emitting listenerRecreatedAfterFailure with ' +
+            'peerIdentifier %s and portNumber %d', server._peerIdentifier,
+              port);
           self.emit('listenerRecreatedAfterFailure', {
             'peerIdentifier': server._peerIdentifier,
             'portNumber': port
