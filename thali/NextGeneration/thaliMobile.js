@@ -860,16 +860,17 @@ module.exports.disconnect = function () {
 
 
 var emitPeerUnavailable = function (peerIdentifier, connectionType) {
-  module.exports.emitter.emit('peerAvailabilityChanged',
-    getExtendedPeer(
-      {
-        peerIdentifier: peerIdentifier,
-        hostAddress: null,
-        portNumber: null
-      },
-      connectionType
-    )
+  var peer = getExtendedPeer(
+    {
+      peerIdentifier: peerIdentifier,
+      hostAddress: null,
+      portNumber: null
+    },
+    connectionType
   );
+  logger.debug('Emitting peerAvailabilityChanged from emitPeerUnavaiable %s',
+    JSON.stringify(peer));
+  module.exports.emitter.emit('peerAvailabilityChanged', peer);
 };
 
 var peerAvailabilities = {};
@@ -945,6 +946,8 @@ var handlePeer = function (peer, connectionType) {
   } else {
     changeCachedPeerAvailable(peer);
   }
+  logger.debug('Emitting peerAvailabilityChanged from handlePeer %s',
+    JSON.stringify(peer));
   module.exports.emitter.emit('peerAvailabilityChanged', peer);
 };
 
@@ -967,7 +970,8 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (peer) {
 });
 
 var peerAvailabilityWatchers = {};
-peerAvailabilityWatchers[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = {};
+peerAvailabilityWatchers[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] =
+  {};
 peerAvailabilityWatchers[connectionTypes.BLUETOOTH] = {};
 peerAvailabilityWatchers[connectionTypes.TCP_NATIVE] = {};
 

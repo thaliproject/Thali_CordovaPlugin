@@ -6,4 +6,4 @@ module.exports.serializePouchError = function (err) {
   } else {
     return '';
   }
-}
+};
