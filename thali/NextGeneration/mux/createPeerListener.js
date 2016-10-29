@@ -30,8 +30,9 @@ function closeServer(self, server, failedConnectionErr, canRetry)
     logger.debug('We are emitting failedConnection with error %s and ' +
       'peerIdentifier %s', failedConnectionErr, server._peerIdentifier);
     self.emit('failedConnection', {
-      'error': failedConnectionErr,
-      'peerIdentifier': server._peerIdentifier
+      error: failedConnectionErr,
+      peerIdentifier: server._peerIdentifier,
+      recreated: true
     });
   }
   if (canRetry) {
