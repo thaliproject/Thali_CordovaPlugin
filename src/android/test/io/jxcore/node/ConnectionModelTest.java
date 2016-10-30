@@ -49,7 +49,7 @@ public class ConnectionModelTest {
     @Test
     public void constructorTest() {
         ConnectionModel cm = new ConnectionModel();
-        assertThat("ConnectionHelper is properly instantiated", cm, is(notNullValue()));
+        assertThat("ConnectionHelper is properly instantiated", cm, is(nullValue()));
     }
 
     @Test
