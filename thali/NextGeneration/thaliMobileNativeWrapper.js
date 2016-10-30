@@ -813,6 +813,8 @@ module.exports.connectionTypes = connectionTypes;
 // jscs:enable maximumLineLength
 var peerAvailabilityChangedQueue = new PromiseQueue();
 var handlePeerAvailabilityChanged = function (peer) {
+  logger.debug('Received peer availability changed event with ' +
+    JSON.stringify(peer));
   if (!states.started) {
     logger.debug('Filtered out nonTCPPeerAvailabilityChangedEvent ' +
                  'due to not being in started state');

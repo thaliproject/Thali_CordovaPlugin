@@ -2,6 +2,7 @@
 
 var assert = require('assert');
 var Promise = require('lie');
+var logger = require('../ThaliLogger')('makeIntoCloseAllServer');
 
 /** @module makeIntoCloseAllServer */
 
@@ -48,6 +49,7 @@ function makeIntoCloseAllServer(server, eatNotRunning) {
    * @param {thunk} [callback]
    */
   server.closeAll = function (callback) {
+    logger.debug('closeAll called on server');
     var forceCallback = false;
     // By closing the server first we prevent any new incoming connections
     // to the server.
