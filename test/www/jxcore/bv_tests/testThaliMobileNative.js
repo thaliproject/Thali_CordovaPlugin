@@ -1291,15 +1291,14 @@ function setUpPretendLocalMux() {
   return pretendLocalMux;
 }
 
+/*
 test('Test updating advertising and parallel data transfer', function (t) {
   var pretendLocalMux = setUpPretendLocalMux();
   var clientQuitSignal = new QuitSignal();
   var serverQuitSignal = new QuitSignal();
 
-  /*
-   * Lets us change our listeners for incoming peer events between rounds.
-   * This is just to avoid having to set up another emitter
-   */
+  // Lets us change our listeners for incoming peer events between rounds.
+  // This is just to avoid having to set up another emitter
   var boundListener = {
     listener: null
   };
@@ -1336,3 +1335,4 @@ test('Test updating advertising and parallel data transfer', function (t) {
     boundListener.listener(peers);
   });
 });
+*/

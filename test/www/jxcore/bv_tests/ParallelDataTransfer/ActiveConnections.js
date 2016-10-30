@@ -4,7 +4,7 @@ var assert = require('assert');
 var Promise = require('lie');
 var extend = require('js-extend').extend;
 
-var logger = require('../../../lib/testLogger')('ActiveConnections');
+var logger = require('../../lib/testLogger')('ActiveConnections');
 
 
 // We are going to add a new connections to the list.
@@ -55,7 +55,9 @@ ActiveConnections.prototype.add = function (data) {
   assert(data.reject, '\'data.reject\' should exist');
 
   this._connections.push(data);
-  this._bind_timeout(data);
+  if (!data.timeoutBanned) {
+    this._bind_timeout(data);
+  }
   this._bind_autoremove(data);
   this._bind_connection(data);
 }
@@ -79,7 +81,9 @@ ActiveConnections.prototype._bind_autoremove = function (data) {
     }
   })
   .then(function () {
-    self._unbind_timeout(data);
+    if (!data.timeoutBanned) {
+      self._unbind_timeout(data);
+    }
 
     // Removing this data from the list on any promise result.
     var index = self._connections.indexOf(data);
@@ -106,12 +110,11 @@ ActiveConnections.prototype._bind_connection = function (data) {
   }
 
   // We are going to check whether connection dies in expected way.
-  var errorFired = false;
-  var endFired = false;
+  var errorFired  = false;
+  var endFired    = false;
   var closedFired = false;
 
   new Promise(function (resolve, reject) {
-    // TODO jxcore bug. Promise couldn't catch errors in these events.
     data.connection
     .on('error', function (error) {
       try {
@@ -212,10 +215,6 @@ ActiveConnections.prototype._kill = function () {
     return this._killPromise;
   }
 
-  this._connections.forEach(function (data) {
-    data.reject(new Error('killing connection'));
-  });
-
   this._killPromise = Promise.all(
     this._connections.map(function (data) {
       return data.promise;
@@ -233,6 +232,10 @@ ActiveConnections.prototype._kill = function () {
       'we should have empty list'
     );
     delete self._killPromise;
+  });
+
+  this._connections.forEach(function (data) {
+    data.reject(new Error('killing connection'));
   });
 
   return this._killPromise;

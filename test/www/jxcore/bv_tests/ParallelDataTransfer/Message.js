@@ -5,12 +5,10 @@ var Promise = require('lie');
 
 var objectKeysEquals = require('thali/validations').objectKeysEquals;
 
-var logger = require('../../../lib/testLogger')('Message');
+var logger = require('../../lib/testLogger')('Message');
 
 
 function Message (uuid, code, bulkData) {
-  assert(!isNaN(code), 'code should be a number');
-
   this.uuid = uuid;
   this.code = code;
   this.bulkData = bulkData || Message.bulkData;
@@ -22,15 +20,15 @@ Message.bulkData = bulkData;
 
 Message.codes = {
   // The sender is not in the same generation as the receiver
-  WRONG_GEN: 0,
+  WRONG_GEN: 'wrong generation',
   // The sender is not in the participants list for the receiver
-  WRONG_TEST: 1,
+  WRONG_TEST: 'wrong test',
   // Everything matched
-  SUCCESS: 2,
+  SUCCESS: 'success',
   // We got an old advertisement for ourselves!
-  WRONG_ME: 3,
+  WRONG_ME: 'this is me',
   // A peer on our list gave us bad syntax, no hope of test passing
-  WRONG_SYNTAX: 4
+  WRONG_SYNTAX: 'wrong syntax'
 };
 
 Message.prototype.toString = function () {
@@ -64,8 +62,6 @@ Message.fromString = function (str) {
     objectKeysEquals(data, ['uuid', 'code', 'bulkData']),
     'message should include uuid, code and bulkData and nothing else'
   );
-  assert(!isNaN(data.code), 'code should be a number');
-  data.code = parseInt(data.code, 10);
   return new Message(data.uuid, data.code, data.bulkData);
 }
 

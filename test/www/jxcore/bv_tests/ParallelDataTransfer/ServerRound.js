@@ -12,9 +12,9 @@ var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServe
 var ActiveConnections = require('./ActiveConnections');
 var Message = require('./Message');
 
-var tape = require('../../../lib/thaliTape');
+var tape = require('../../lib/thaliTape');
 
-var logger = require('../../../lib/testLogger')('ServerRound');
+var logger = require('../../lib/testLogger')('ServerRound');
 
 
 function ServerRound(tapeTest, roundNumber, quitSignal, options) {
@@ -295,8 +295,19 @@ ServerRound.prototype._validateMessage = function (message) {
     return Message.codes.WRONG_ME;
   }
 
+  // 'message.code' is a client's roundNumber.
+  // 'this.roundNumber' is a server's roundNumber.
+  // Client's round can equals server's round.
+  // Client round number can be less than server's round. Why?
+
+  // Client will increase it's round number after it received a confirmation messages from all servers.
+  // Server wont increase it's round number by itself because it won't receive confirmation that client received its confirmation.
+  // Client will increase round number of it's own server.
+
+  // What is the purpose of this test?
+  // We want to verify that new client (with greater round number) wont connect to old server (with lower round number).
   if (message.code > this.roundNumber) {
-    logger.error('this client is from bad round');
+    logger.error('new client should not try to connect to old server');
     return Message.codes.WRONG_GEN;
   }
 

@@ -1,18 +1,22 @@
 'use strict';
 
-var inherits = require('util').inherits;
+var util     = require('util');
+var format   = util.format;
+var inherits = util.inherits;
+
+
 var net = require('net');
 var assert = require('assert');
 var Promise = require('lie');
 var EventEmitter = require('events').EventEmitter;
 var extend = require('js-extend').extend;
 
-var logger = require('../../../lib/testLogger')('ClientRound');
+var logger = require('../../lib/testLogger')('ClientRound');
 
 var ActiveConnections = require('./ActiveConnections');
 var Message = require('./Message');
 
-var tape = require('../../../lib/thaliTape');
+var tape = require('../../lib/thaliTape');
 
 
 function ClientRound(tapeTest, roundNumber, quitSignal, options) {
@@ -22,7 +26,13 @@ function ClientRound(tapeTest, roundNumber, quitSignal, options) {
   this._quitSignal = quitSignal;
 
   this._state = ClientRound.states.CREATED;
+
+  // Valid peer ids will be local for each round.
+  // { peerIdentifier: undefined/true/false }, ...
   this._validPeerIds = {};
+
+  // Connected peers will be shared between rounds.
+  this._connectedPeers = {};
 
   this.options = extend({}, ClientRound.defaults, options);
 
@@ -55,6 +65,7 @@ ClientRound.prototype.setRoundNumber = function (roundNumber) {
   this._state = ClientRound.states.CREATED;
 
   this._validPeerIds = {};
+
   this.roundNumber = roundNumber;
   this._activeConnections.reset();
 }
@@ -92,10 +103,12 @@ ClientRound.prototype._peerAvailabilityChanged = function (peers) {
         'we got an unavailable peer, peerIdentifier: %s',
         peer.peerIdentifier
       );
+      delete self._connectedPeers[peer.peerIdentifier];
       return;
     }
 
     // This peer is doing it's validation now.
+    // We will assume that peer will fail with validation.
     // This will block other connection attempts to this peer for now.
     self._validPeerIds[peer.peerIdentifier] = false;
 
@@ -104,7 +117,20 @@ ClientRound.prototype._peerAvailabilityChanged = function (peers) {
       peer.peerIdentifier
     );
 
-    return self._connectToPeer(peer)
+    // We could connect to this peer in the previous round.
+    var promise;
+    var connectionData = self._connectedPeers[peer.peerIdentifier];
+    if (connectionData) {
+      promise = Promise.resolve(connectionData);
+    } else {
+      promise = self._connectToPeer(peer)
+      .then(function (connectionData) {
+        self._connectedPeers[peer.peerIdentifier] = connectionData;
+        return connectionData;
+      });
+    }
+
+    return promise
     .then(function (connectionData) {
       logger.debug(
         'peer is connected, peerIdentifier: %s, connection: %s',
@@ -113,7 +139,7 @@ ClientRound.prototype._peerAvailabilityChanged = function (peers) {
       return self._processTestMessage(connectionData);
     })
     .then(function () {
-      // Peer succeed with it's validation.
+      // Peer succeed with validation.
       self._validPeerIds[peer.peerIdentifier] = true;
     })
     .catch(function (error) {
@@ -121,6 +147,7 @@ ClientRound.prototype._peerAvailabilityChanged = function (peers) {
       // We couldn't connect to the peer or it failed with validation.
       // We are waiting until this peer will be available again.
       delete self._validPeerIds[peer.peerIdentifier];
+      delete self._connectedPeers[peer.peerIdentifier];
     });
   });
 
@@ -186,6 +213,13 @@ ClientRound._connectToPeer = function (peer) {
     data.resolve = resolve;
     data.reject  = reject;
 
+    // TODO There is no way to stop 'Mobile' from connecting.
+    // Mobile('connect') will throw 'Already connecting/connected'.
+    // So we couldn't let anyone to reject this promise without good reason.
+    // For example we couldn't reject this promise with timeout and try to reconnect.
+    // We have to wait for callback.
+    data.timeoutBanned = true;
+
     Mobile('connect').callNative(
       peer.peerIdentifier,
       function (error, connectionData) {
@@ -239,12 +273,14 @@ ClientRound.prototype._processTestMessage = function (connectionData) {
           'received peer response with code: %s',
           responseMessage.code
         );
-        self._validateMessage(responseMessage);
-        resolve();
+        try {
+          self._validateMessage(responseMessage);
+        } catch (e) {
+          reject(e);
+        }
       })
-      .catch(function (error) {
-        reject(error);
-      })
+      .then(resolve)
+      .catch(reject);
     });
     data.connection = connection;
   });
