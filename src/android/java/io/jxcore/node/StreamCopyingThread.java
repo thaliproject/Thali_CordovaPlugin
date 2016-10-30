@@ -54,6 +54,7 @@ class StreamCopyingThread extends Thread {
     private boolean mIsInputStreamDone = false;
     private boolean mDoStop = false;
     private boolean mIsClosed = false;
+    private boolean fromBluetoothToTCP = false;
 
     private ConnectionData connectionData;
 
@@ -70,12 +71,14 @@ class StreamCopyingThread extends Thread {
         Listener listener,
         InputStream inputStream, OutputStream outputStream,
         String threadName,
-        ConnectionData connectionData) {
+        ConnectionData connectionData,
+        boolean fromBluetoothToTCP) {
         mListener = listener;
         mInputStream = inputStream;
         mOutputStream = outputStream;
         mThreadName = threadName;
         this.connectionData = connectionData;
+        this.fromBluetoothToTCP = fromBluetoothToTCP;
     }
 
     public void setBufferSize(final int bufferSizeInBytes) {
@@ -141,6 +144,9 @@ class StreamCopyingThread extends Thread {
                 totalNumberOfBytesWritten += numberOfBytesRead;
 
                 if (mNotifyStreamCopyingProgress) {
+                    Log.v(TAG, mThreadName+ " " + "recieved " + numberOfBytesRead + " bytes from " +
+                            (fromBluetoothToTCP?" Bluetooth and send it to TCP":" TCP and send it to Bluetooth")
+                            + connectionData.toString());
                     mListener.onStreamCopySucceeded(this, numberOfBytesRead);
                 }
                 numberOfBytesRead = 0;
