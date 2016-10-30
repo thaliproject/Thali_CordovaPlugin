@@ -371,7 +371,8 @@ test('calls correct starts when network changes',
         networkChangedHandler);
       testUtils.toggleWifi(false);
     });
-  });
+  }
+);
 
 test('peer is marked unavailable if port number changes', function (t) {
   var somePeerIdentifier = 'urn:uuid:' + uuid.v4();
