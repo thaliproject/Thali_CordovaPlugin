@@ -7,6 +7,7 @@ install:
 - SET PATH=%PATH%;C:\Thali_CordovaPlugin\jx_win64v8
 - SET NVM_NODEJS_ORG_MIRROR=https://jxcore.azureedge.net
 - SET JX_NPM_JXB=jxb311
+- SET CORDOVA_ANDROID_GRADLE_DISTRIBUTION_URL=http://downloads.gradle.org/distributions/gradle-2.2.1-all.zip
 build_script:
 - '"C:\Program Files\Git\bin\sh.exe" --login -c "./build.sh"'
 test: off
