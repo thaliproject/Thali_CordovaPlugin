@@ -117,3 +117,5 @@ if [ $RUN_IN_CI == 0 ]; then
   rm -rf ThaliTest.app;ERROR_ABORT
   cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app;ERROR_ABORT
 fi
+
+__EXIT_WITH_ERROR_OR_PURPOSE__;ERROR_ABORT
