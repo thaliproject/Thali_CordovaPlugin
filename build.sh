@@ -63,8 +63,8 @@ jx npm run test-coordinated;ERROR_ABORT
 
 # Verify that docs can be generated
 #cd $PROJECT_ROOT/thali/;ERROR_ABORT
-#jx npm run createPublicDocs;ERROR_ABORT
-#jx npm run createInternalDocs;ERROR_ABORT
+#npm run createPublicDocs;ERROR_ABORT
+#npm run createInternalDocs;ERROR_ABORT
 
 # Make sure we are back in the project root folder
 # after the test execution

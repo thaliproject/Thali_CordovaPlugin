@@ -21,8 +21,8 @@ cd `dirname $0`
 cd ../..
 repositoryRoot=$(pwd)
 cd test/TestServer
-jx npm install --no-optional
-jx generateServerAddress.js $2
+npm install --no-optional
+node generateServerAddress.js $2
 cd $repositoryRoot/..
 cordova create ThaliTest com.test.thalitest ThaliTest
 cordovaRoot=$(pwd)/ThaliTest
@@ -43,8 +43,9 @@ cd ThaliTest
 #cordova platform add ios
 cordova platform add android
 cd www/jxcore
-jx installCustomPouchDB.js
-jx npm install $repositoryRoot/thali --save --no-optional --autoremove "*.gz"
+node installCustomPouchDB.js
+npm install $repositoryRoot/thali --save --no-optional --production
+find . -name "*.gz" -delete
 
 if [ $runningInMinGw == true ]; then
     # On Windows the package.json file will contain an invalid local file URI for Thali,
@@ -58,7 +59,7 @@ fi
 # SuperTest which is used by some of the BVTs include a PEM file (for private
 # keys) that makes Android unhappy so we remove it below in addition to the gz
 # files.
-jx npm install --no-optional --autoremove "*.gz,*.pem"
+npm install --no-optional --production
 
 # In case autoremove fails to delete the files, delete them explicitly.
 find . -name "*.gz" -delete
@@ -82,4 +83,4 @@ cordova build android --release --device
 #    cordova build ios --device
 #fi
 
-echo "Remember to start the test coordination server by running jx index.js"
+echo "Remember to start the test coordination server by running node index.js"

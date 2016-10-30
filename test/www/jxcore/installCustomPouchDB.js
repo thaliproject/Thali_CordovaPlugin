@@ -21,9 +21,9 @@ function getPackageJsonVersion(packageName) {
 
 function installPackage(packageName, version, callback) {
   var packageVersion = packageName + '@' + version;
-  exec('jx install ' + packageVersion, function (error, stdout, stderr) {
+  exec('npm install ' + packageVersion, function (error, stdout, stderr) {
     if (error) {
-      console.log('jx install of ' + packageVersion + ' failed with error ' +
+      console.log('npm install of ' + packageVersion + ' failed with error ' +
         error + ', stdout: ' + stdout + ', stderr: ' + stderr);
       return callback(error);
     }
