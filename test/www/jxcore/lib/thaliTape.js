@@ -335,9 +335,9 @@ thaliTape.begin = function (version, hasRequiredHardware, nativeUTFailed) {
   return new Promise(function (resolve, reject) {
     testServer.once('complete', function () {
       if (allSuccess) {
-        resolve('Successfully completed');
+        resolve();
       } else {
-        reject('Completed with errors');
+        reject('Some of TAP tests failed. See logs for more details.');
       }
     });
   });

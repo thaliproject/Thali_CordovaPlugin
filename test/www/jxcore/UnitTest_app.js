@@ -10,6 +10,7 @@ if (typeof Mobile === 'undefined') {
   global.Mobile = require('./lib/wifiBasedNativeMock.js')();
 }
 
+var thaliTestRunner = require('./runner');
 var testUtils = require('./lib/testUtils');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var Promise = require('lie');
@@ -72,9 +73,7 @@ ThaliMobile.getNetworkStatus()
       testUtils.setName(name);
 
       console.log('Running for ' + global.NETWORK_TYPE + ' network type');
-      setImmediate(function () {
-        require('./runTests.js');
-      });
+      thaliTestRunner.run();
     });
   });
 });
