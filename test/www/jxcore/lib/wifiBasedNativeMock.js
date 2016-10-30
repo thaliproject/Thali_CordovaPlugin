@@ -454,6 +454,148 @@ function (callBack) {
     });
 };
 
+MobileCallInstance.prototype._disconnect =
+  function (peerIdentifier, callback) {
+    var connection = peerConnections[peerIdentifier];
+    var socket = peerProxySockets[peerIdentifier];
+    var server = peerProxyServers[peerIdentifier];
+
+    if (connection) {
+      connection.destroy();
+      delete peerConnections[peerIdentifier];
+    }
+    if (socket) {
+      socket.destroy();
+      delete peerProxySockets[peerIdentifier];
+    }
+    if (server) {
+      server.closeAllPromise()
+        .then(function () {
+          delete peerProxyServers[peerIdentifier];
+          callback(null);
+        })
+        .catch(callback);
+
+      return;
+    }
+
+    callback(null);
+};
+
+MobileCallInstance.prototype._connect =
+  function (peerIdentifier, callback) {
+    if (!startListeningForAdvertisementsIsActive) {
+      return callback('startListeningForAdvertisements is not active');
+    }
+
+    function returnSuccessfulConnectResponse() {
+      var server = peerProxyServers[peerIdentifier];
+
+      if (!server || !server.address())  {
+        return callback('Server was either closed or is not yet listening');
+      }
+
+      callback(null, JSON.stringify({
+        listeningPort: peerProxyServers[peerIdentifier].address().port,
+        clientPort: 0,
+        serverPort: 0
+      }));
+
+      setTimeout(function () {
+        if (!peerProxySockets[peerIdentifier]) {
+          // Either the code that called connect didn't connect within the allowed
+          // window or the server already failed.
+          cleanProxyServer();
+        }
+      }, 2000);
+    }
+
+    var self = this;
+    var cleanProxyServerCalled = false;
+    function cleanProxyServer() {
+      if (cleanProxyServerCalled) {
+        return;
+      }
+      cleanProxyServerCalled = true;
+      self._disconnect(peerIdentifier, function (error) {
+        logger.debug('Got error while disconecting a peer: ' + error);
+      });
+    }
+
+    var peerToConnect = peerAvailabilities[peerIdentifier];
+    if (!peerToConnect) {
+      setImmediate(function () {
+        callback('Connection could not be established');
+      });
+      return;
+    }
+
+    if (peerProxyServers[peerIdentifier]) {
+      return callback('Already connect(ing/ed)');
+    }
+
+    peerProxyServers[peerIdentifier] = makeIntoCloseAllServer(
+      net.createServer(function (socket) {
+        if (peerProxySockets[peerIdentifier]) {
+          socket.destroy();
+          return;
+        }
+
+        var peerConnection = peerConnections[peerIdentifier];
+
+        if (!peerConnection || peerConnection.destroyed) {
+          socket.destroy();
+          return;
+        }
+
+        peerProxySockets[peerIdentifier] = socket;
+        peerProxySockets[peerIdentifier].pipe(peerConnection)
+          .pipe(peerProxySockets[peerIdentifier]);
+        socket.on('end', function () {
+          logger.debug('got an end on peerProxySockets');
+          socket.end();
+        });
+        socket.on('error', function (err) {
+          logger.debug('error on peerProxyServers socket for ' + peerIdentifier +
+            ', err - ' + err);
+        });
+        socket.on('close', function () {
+          cleanProxyServer();
+        });
+      }),
+      true
+    );
+
+    peerProxyServers[peerIdentifier].listen(0, function () {
+      peerConnections[peerIdentifier] = net.connect(peerToConnect.portNumber,
+        function () {
+          setTimeout(function () {
+              if (!peerProxyServers[peerIdentifier]) {
+                var error = 'Unspecified Error with Radio infrastructure';
+                callback(error);
+              }
+              returnSuccessfulConnectResponse();
+            },
+            100);
+        });
+      peerConnections[peerIdentifier].on('end', function () {
+        peerConnections[peerIdentifier] &&
+          peerConnections[peerIdentifier].end();
+      });
+      peerConnections[peerIdentifier].on('error', function (err) {
+        logger.debug('error on peerConnections socket for ' + peerIdentifier +
+          ', err - ' + err);
+      });
+      peerConnections[peerIdentifier].on('close', function () {
+        cleanProxyServer();
+      });
+    });
+
+    peerProxyServers[peerIdentifier].on('close', function () {
+      cleanProxyServer();
+    });
+  };
+
 // jscs:disable jsDoc
 /**
  * All the usual restrictions on connect apply including throwing errors if
@@ -487,127 +629,10 @@ function (callBack) {
  */
 // jscs:enable jsDoc
 MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
-  if (!startListeningForAdvertisementsIsActive) {
-    return callback('startListeningForAdvertisements is not active');
+  if (this.platform === platformChoice.IOS) {
+    return callback('Platform does not support connect');
   }
-
-  function returnSuccessfulConnectResponse() {
-    var server = peerProxyServers[peerIdentifier];
-
-    if (!server || !server.address())  {
-      return callback('Server was either closed or is not yet listening');
-    }
-
-    callback(null, JSON.stringify({
-      listeningPort: peerProxyServers[peerIdentifier].address().port,
-      clientPort: 0,
-      serverPort: 0
-    }));
-
-    setTimeout(function () {
-      if (!peerProxySockets[peerIdentifier]) {
-        // Either the code that called connect didn't connect within the allowed
-        // window or the server already failed.
-        cleanProxyServer();
-      }
-    }, 2000);
-  }
-
-  var cleanProxyServerCalled = false;
-  function cleanProxyServer() {
-    if (cleanProxyServerCalled) {
-      return;
-    }
-    cleanProxyServerCalled = true;
-    peerConnections[peerIdentifier] &&
-      peerConnections[peerIdentifier].destroy();
-    peerProxySockets[peerIdentifier] &&
-      peerProxySockets[peerIdentifier].destroy();
-    peerProxyServers[peerIdentifier] &&
-      peerProxyServers[peerIdentifier].closeAllPromise()
-        .then(function () {
-          delete peerConnections[peerIdentifier];
-          delete peerProxySockets[peerIdentifier];
-          delete peerProxyServers[peerIdentifier];
-        })
-        .catch(function (err) {
-          logger.debug('Got error closing server ' + err);
-          throw err;
-        });
-  }
-
-  var peerToConnect = peerAvailabilities[peerIdentifier];
-  if (!peerToConnect) {
-    setImmediate(function () {
-      callback('Connection could not be established');
-    });
-    return;
-  }
-
-  if (peerProxyServers[peerIdentifier]) {
-    return callback('Already connect(ing/ed)');
-  }
-
-  peerProxyServers[peerIdentifier] = makeIntoCloseAllServer(
-    net.createServer(function (socket) {
-      if (peerProxySockets[peerIdentifier]) {
-        socket.destroy();
-        return;
-      }
-
-      var peerConnection = peerConnections[peerIdentifier];
-
-      if (!peerConnection || peerConnection.destroyed) {
-        socket.destroy();
-        return;
-      }
-
-      peerProxySockets[peerIdentifier] = socket;
-      peerProxySockets[peerIdentifier].pipe(peerConnection)
-        .pipe(peerProxySockets[peerIdentifier]);
-      socket.on('end', function () {
-        logger.debug('got an end on peerProxySockets');
-        socket.end();
-      });
-      socket.on('error', function (err) {
-        logger.debug('error on peerProxyServers socket for ' + peerIdentifier +
-          ', err - ' + err);
-      });
-      socket.on('close', function () {
-        cleanProxyServer();
-      });
-    }),
-    true
-  );
-
-  peerProxyServers[peerIdentifier].listen(0, function () {
-    peerConnections[peerIdentifier] = net.connect(peerToConnect.portNumber,
-      function () {
-        setTimeout(function () {
-            if (!peerProxyServers[peerIdentifier]) {
-              var error = 'Unspecified Error with Radio infrastructure';
-              callback(error);
-            }
-            returnSuccessfulConnectResponse();
-          },
-          100);
-      });
-    peerConnections[peerIdentifier].on('end', function () {
-      peerConnections[peerIdentifier] &&
-        peerConnections[peerIdentifier].end();
-    });
-    peerConnections[peerIdentifier].on('error', function (err) {
-      logger.debug('error on peerConnections socket for ' + peerIdentifier +
-        ', err - ' + err);
-    });
-    peerConnections[peerIdentifier].on('close', function () {
-      cleanProxyServer();
-    });
-  });
-
-  peerProxyServers[peerIdentifier].on('close', function () {
-    cleanProxyServer();
-  });
+  return this._connect(peerIdentifier, callback);
 };
 
 /**
@@ -656,14 +681,35 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
  * We have to throw the same errors as for multiConnect so, for example, if this
  * method is called while we are simulating Android then we MUST throw a
  * "Platform does not support `multiConnect`" error.
- *
+ */
+ var multiConnectResponses = {};
+ /**
  * @param {string} peerIdentifier
  * @param {string} syncValue
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 MobileCallInstance.prototype.multiConnect =
   function (peerIdentifier, syncValue, callback) {
+    if (this.platform === platformChoice.ANDROID) {
+      return callback('Platform does not support multiConnect');
+    }
 
+    return this._connect(peerIdentifier, function (error, response) {
+      multiConnectResponses[syncValue] = {
+          error: error
+      };
+
+      if (!error && response) {
+        var conenction = JSON.parse(response);
+        var listeningPort = connection.listeningPort;
+        multiConnectResponses[syncValue].portNumber = listeningPort;
+      }
+      // Just notify callback that request was recived
+      // An actual handling of response should be done in the
+      // {@link module:WifiBasedNativeMock~MobileCallInstance.registerToNative}
+      // callback
+      callback(null);
+    });
   };
 
 
@@ -676,7 +722,11 @@ MobileCallInstance.prototype.multiConnect =
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 MobileCallInstance.prototype.disconnect = function(peerIdentifier, callback) {
+  if (this.platform === platformChoice.ANDROID) {
+    return callback('Platform does not support multiConnect');
+  }
 
+  this._disconnect(peerIdentifier, callback);
 };
 
 /**
@@ -740,6 +790,10 @@ MobileCallInstance.prototype.callNative = function () {
     case 'connect':
     {
       return this.connect(arguments[0], arguments[1]);
+    }
+    case 'multiConnect':
+    {
+      return this.multiConnect(arguments[0], arguments[1], arguments[2]);
     }
     case 'killConnections':
     {
@@ -876,6 +930,23 @@ function (callback) {
   incomingConnectionToPortNumberFailedCallback = callback;
 };
 
+/**
+ * {@link module:WifiBasedNativeMock~MobileCallInstance.multiConnectResolved}.
+ *
+ * @public
+ * @param {module:thaliMobileNative~multiConnectResolved} callback
+ */
+MobileCallInstance.prototype.multiConnectResolved = function (callback) {
+  Object.keys(multiConnectResponses)
+    .forEach(function (syncValue) {
+      var multiConnectResponse = multiConnectResponses[syncValue];
+      var error = multiConnectResponse.error;
+      var portNumber = multiConnectResponse.portNumber;
+
+      callback(syncValue, error, portNumber);
+    });
+};
+
 MobileCallInstance.prototype.registerToNative = function () {
   switch (this.mobileMethodName) {
     case 'peerAvailabilityChanged':
@@ -893,6 +964,10 @@ MobileCallInstance.prototype.registerToNative = function () {
     case 'incomingConnectionToPortNumberFailed':
     {
       return this.incomingConnectionToPortNumberFailed(arguments[0]);
+    }
+    case 'multiConnectResolved':
+    {
+      return this.multiConnectResolved(arguments[0]);
     }
     default:
     {
