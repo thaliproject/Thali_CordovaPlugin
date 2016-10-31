@@ -23,9 +23,16 @@ class TCPListenerTests: XCTestCase {
     let readDataTimeout: NSTimeInterval = 5.0
     let disconnectTimeout: NSTimeInterval = 5.0
 
-    // MARK: - Setup
+    // MARK: - Setup & Teardown
     override func setUp() {
-        randomMessage = String.random(length: 100)
+        super.setUp()
+        let fullMessageLength = 1 * 1024
+        randomMessage = String.random(length: fullMessageLength)
+    }
+
+    override func tearDown() {
+        randomMessage = nil
+        super.tearDown()
     }
 
     // MARK: - Tests
