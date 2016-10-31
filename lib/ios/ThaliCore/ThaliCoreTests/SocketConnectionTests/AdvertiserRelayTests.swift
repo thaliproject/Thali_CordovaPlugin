@@ -15,9 +15,9 @@ class AdvertiserRelayTests: XCTestCase {
 
     // MARK: - State
     var advertiserManager: AdvertiserManager!
-
     var randomlyGeneratedServiceType: String!
     var randomMessage: String!
+
     var anyAvailablePort: UInt16 = 0
 
     let browserFindPeerTimeout: NSTimeInterval = 5.0
@@ -26,9 +26,9 @@ class AdvertiserRelayTests: XCTestCase {
     let disposeTimeout: NSTimeInterval = 30.0
     let receiveMessageTimeout: NSTimeInterval = 10.0
 
-
-    // MARK: - Setup
+    // MARK: - Setup & Teardown
     override func setUp() {
+        super.setUp()
         randomlyGeneratedServiceType = String.randomValidServiceType(length: 7)
 
         let crlf = "\r\n"
@@ -41,8 +41,11 @@ class AdvertiserRelayTests: XCTestCase {
     }
 
     override func tearDown() {
+        randomlyGeneratedServiceType = nil
+        randomMessage = nil
         advertiserManager.stopAdvertising()
         advertiserManager = nil
+        super.tearDown()
     }
 
     // MARK: - Tests
