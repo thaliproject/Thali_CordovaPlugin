@@ -22,6 +22,11 @@ class AtomicTests: XCTestCase {
         atomic = Atomic(initialValue)
     }
 
+    override func tearDown() {
+        atomic = nil
+        super.tearDown()
+    }
+
     // MARK: - Tests
     func testGetCorrectValueWithValueProperty() {
         XCTAssertEqual(atomic.value, initialValue)
