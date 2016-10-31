@@ -21,14 +21,22 @@ class VirtualSocketBuilderTests: XCTestCase {
     let streamReceivedTimeout: NSTimeInterval = 5.0
     let connectionErrorTimeout: NSTimeInterval = 10.0
 
-    // MARK: - Setup
+    // MARK: - Setup & Teardown
     override func setUp() {
+        super.setUp()
         mcPeerID = MCPeerID(displayName: String.random(length: 5))
         mcSessionMock = MCSessionMock(peer: MCPeerID(displayName: String.random(length: 5)))
         nonTCPSession = Session(session: mcSessionMock,
                                 identifier: mcPeerID,
                                 connected: {},
                                 notConnected: {})
+    }
+
+    override func tearDown() {
+        mcPeerID = nil
+        mcSessionMock = nil
+        nonTCPSession = nil
+        super.tearDown()
     }
 
     // MARK: - Tests
