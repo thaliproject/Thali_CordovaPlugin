@@ -39,7 +39,7 @@ class TCPListenerTests: XCTestCase {
 
         var listenerPort: UInt16? = nil
         let tcpListener = TCPListener(with: unexpectedReadDataHandler,
-                                      socketDisconnected: unexpectedSocketDisconnectHandler,
+                                      socketDisconnected: { _ in },
                                       stoppedListening: unexpectedStopListeningHandler)
         tcpListener.startListeningForConnections(on: anyAvailablePort,
                                                  connectionAccepted: {
@@ -69,7 +69,7 @@ class TCPListenerTests: XCTestCase {
 
         let clientMock = TCPClientMock(didReadData: unexpectedReadDataHandler,
                                        didConnect: {},
-                                       didDisconnect: unexpectedDisconnectHandler)
+                                       didDisconnect: { _ in })
         // When
         clientMock.connectToLocalHost(on: portToConnect, errorHandler: unexpectedErrorHandler)
 

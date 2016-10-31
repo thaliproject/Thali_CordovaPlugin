@@ -30,7 +30,7 @@ class TCPClientTests: XCTestCase {
                                            mockServerAcceptedConnection?.fulfill()
                                        },
                                        didReadData: unexpectedReadDataHandler,
-                                       didDisconnect: unexpectedSocketDisconnectHandler)
+                                       didDisconnect: { _ in })
 
         var listenerPort: UInt16 = 0
         do {
@@ -47,7 +47,7 @@ class TCPClientTests: XCTestCase {
         // When
         // TCP Client is trying to connect to TCP mock server
         let tcpClient = TCPClient(with: unexpectedReadDataHandler,
-                                  didDisconnect: unexpectedSocketDisconnectHandler)
+                                  didDisconnect: { _ in })
         tcpClient.connectToLocalhost(onPort: listenerPort) {
             socket, port, error in
             XCTAssertNil(error)
@@ -72,7 +72,7 @@ class TCPClientTests: XCTestCase {
                                            mockServerAcceptedConnection?.fulfill()
                                        },
                                        didReadData: { _ in },
-                                       didDisconnect: unexpectedSocketDisconnectHandler)
+                                       didDisconnect: { _ in })
 
         var listenerPort: UInt16 = 0
         do {
@@ -90,7 +90,7 @@ class TCPClientTests: XCTestCase {
                                       data in
                                       dataReadHandler?.fulfill()
                                   },
-                                  didDisconnect: unexpectedSocketDisconnectHandler)
+                                  didDisconnect: { _ in })
         tcpClient.connectToLocalhost(onPort: listenerPort) {
             socket, port, error in
             socket!.readDataWithTimeout(self.noTCPTimeout, tag: self.defaultTCPDataTag)
