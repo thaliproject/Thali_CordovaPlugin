@@ -18,10 +18,17 @@ class AdvertiserTests: XCTestCase {
     var randomlyGeneratedPeer: Peer!
     let startAdvertisingErrorTimeout: NSTimeInterval = 5.0
 
-    // MARK: - Setup
+    // MARK: - Setup & Teardown
     override func setUp() {
+        super.setUp()
         randomlyGeneratedServiceType = String.randomValidServiceType(length: 7)
         randomlyGeneratedPeer = Peer()
+    }
+
+    override func tearDown() {
+        randomlyGeneratedServiceType = nil
+        randomlyGeneratedPeer = nil
+        super.tearDown()
     }
 
     // MARK: - Tests
