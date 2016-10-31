@@ -17,16 +17,19 @@ class AdvertiserManagerTests: XCTestCase {
     var advertiserManager: AdvertiserManager!
     let disposeTimeout: NSTimeInterval = 4.0
 
-    // MARK: - Setup
+    // MARK: - Setup & Teardown
     override func setUp() {
+        super.setUp()
         serviceType = String.randomValidServiceType(length: 7)
         advertiserManager = AdvertiserManager(serviceType: serviceType,
                                               disposeAdvertiserTimeout: disposeTimeout)
     }
 
     override func tearDown() {
+        serviceType = nil
         advertiserManager.stopAdvertising()
         advertiserManager = nil
+        super.tearDown()
     }
 
     // MARK: - Tests
@@ -36,6 +39,43 @@ class AdvertiserManagerTests: XCTestCase {
 
         // When
         advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
+                                                             errorHandler: unexpectedErrorHandler)
+
+        // Then
+        XCTAssertTrue(advertiserManager.advertising)
+    }
+
+    func testStopAdvertisingWithoutCallingStartIsNOTError() {
+        // Given
+        XCTAssertFalse(advertiserManager.advertising)
+
+        // When
+        advertiserManager.stopAdvertising()
+
+        // Then
+        XCTAssertFalse(advertiserManager.advertising)
+    }
+
+    func testStopAdvertisingTwiceWithoutCallingStartIsNOTError() {
+        // Given
+        XCTAssertFalse(advertiserManager.advertising)
+
+        // When
+        advertiserManager.stopAdvertising()
+        advertiserManager.stopAdvertising()
+
+        // Then
+        XCTAssertFalse(advertiserManager.advertising)
+    }
+
+    func testStartAdvertisingTwice() {
+        // Given
+        XCTAssertFalse(advertiserManager.advertising)
+
+        // When
+        advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
+                                                             errorHandler: unexpectedErrorHandler)
+        advertiserManager.startUpdateAdvertisingAndListening(onPort: 43,
                                                              errorHandler: unexpectedErrorHandler)
 
         // Then
@@ -67,6 +107,34 @@ class AdvertiserManagerTests: XCTestCase {
         XCTAssertFalse(advertiserManager.advertising, "advertising is still active")
         XCTAssertEqual(advertiserManager.advertisers.value.count,
                        expectedAmountOfAdvertisersAfterStopMethod)
+    }
+
+    func testStartAdvertisingTwiceChangesInternalAmountOfAdvertisers() {
+        // Given
+        let expectedAmountOfAdvertisersBeforeStartMethod = 0
+        let expectedAmountOfAdvertisersAfterFirstStartMethod = 1
+        let expectedAmountOfAdvertisersAfterSecondStartMethod = 2
+
+        XCTAssertEqual(advertiserManager.advertisers.value.count,
+                       expectedAmountOfAdvertisersBeforeStartMethod)
+
+        // When
+        advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
+                                                             errorHandler: unexpectedErrorHandler)
+
+        // Then
+        XCTAssertTrue(advertiserManager.advertising, "advertising is not active")
+        XCTAssertEqual(advertiserManager.advertisers.value.count,
+                       expectedAmountOfAdvertisersAfterFirstStartMethod)
+
+        // When
+        advertiserManager.startUpdateAdvertisingAndListening(onPort: 43,
+                                                             errorHandler: unexpectedErrorHandler)
+
+        // Then
+        XCTAssertTrue(advertiserManager.advertising, "advertising is not active")
+        XCTAssertEqual(advertiserManager.advertisers.value.count,
+                       expectedAmountOfAdvertisersAfterSecondStartMethod)
     }
 
     func testStartStopStartAdvertisingChangesInternalAmountOfAdvertisers() {
