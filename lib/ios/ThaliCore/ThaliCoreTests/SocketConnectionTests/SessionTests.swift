@@ -23,10 +23,18 @@ class SessionTests: XCTestCase {
     let receiveInputStreamTimeout: NSTimeInterval = 5.0
     let changeStateTimeout: NSTimeInterval = 5.0
 
-    // MARK: - Setup
+    // MARK: - Setup & Teardown
     override func setUp() {
-        mcSession = MCSessionMock(peer: MCPeerID(displayName: String.random(length: 5)))
+        super.setUp()
         peerID = MCPeerID(displayName: String.random(length: 5))
+        mcSession = MCSessionMock(peer: MCPeerID(displayName: String.random(length: 5)))
+    }
+
+    override func tearDown() {
+        peerID = nil
+        mcSession = nil
+        disconnected = nil
+        super.tearDown()
     }
 
     // MARK: - Tests
