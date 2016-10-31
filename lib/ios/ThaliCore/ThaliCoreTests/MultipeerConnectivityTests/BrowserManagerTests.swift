@@ -23,8 +23,9 @@ class BrowserManagerTests: XCTestCase {
     let creatingMPCFSessionTimeout: NSTimeInterval = 5.0
     let browserConnectTimeout: NSTimeInterval = 10.0
 
-    // MARK: - Setup
+    // MARK: - Setup & Teardown
     override func setUp() {
+        super.setUp()
         serviceType = String.randomValidServiceType(length: 7)
         advertiserManager = AdvertiserManager(serviceType: serviceType,
                                               disposeAdvertiserTimeout: disposeTimeout)
@@ -35,8 +36,11 @@ class BrowserManagerTests: XCTestCase {
 
     override func tearDown() {
         browserManager.stopListeningForAdvertisements()
+        browserManager = nil
         advertiserManager.stopAdvertising()
         advertiserManager = nil
+        serviceType = nil
+        super.tearDown()
     }
 
     // MARK: - Tests
@@ -46,6 +50,23 @@ class BrowserManagerTests: XCTestCase {
 
         // Then
         XCTAssertTrue(browserManager.listening)
+    }
+
+    func testStopListeningWithoutCallingStartIsNOTError() {
+        // When
+        browserManager.stopListeningForAdvertisements()
+
+        // Then
+        XCTAssertFalse(browserManager.listening)
+    }
+
+    func testStopListeningTwiceWithoutCallingStartIsNOTError() {
+        // When
+        browserManager.stopListeningForAdvertisements()
+        browserManager.stopListeningForAdvertisements()
+
+        // Then
+        XCTAssertFalse(browserManager.listening)
     }
 
     func testStopListeningChangesListeningState() {
@@ -99,10 +120,12 @@ class BrowserManagerTests: XCTestCase {
     }
 
     func testConnectToPeerWithoutListeningReturnStartListeningNotActiveError() {
+        // Expectations
         let getStartListeningNotActiveError =
             expectationWithDescription("got startListening not active error")
-        var connectionError: ThaliCoreError?
 
+        // Given
+        var connectionError: ThaliCoreError?
         XCTAssertFalse(browserManager.listening)
 
         // When
@@ -117,15 +140,14 @@ class BrowserManagerTests: XCTestCase {
         // Then
         waitForExpectationsWithTimeout(getErrorOnStartListeningTimeout, handler: nil)
         XCTAssertEqual(connectionError, .StartListeningNotActive)
-
-        browserManager.stopListeningForAdvertisements()
     }
 
     func testConnectToWrongPeerReturnsIllegalPeerIDError() {
-        // Given
+        // Expectations
         let getIllegalPeerIDError = expectationWithDescription("get Illegal Peer")
-        var connectionError: ThaliCoreError?
 
+        // Given
+        var connectionError: ThaliCoreError?
         browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
 
         // When
@@ -145,13 +167,15 @@ class BrowserManagerTests: XCTestCase {
     }
 
     func testPickLatestGenerationAdvertiserOnConnect() {
+        // Expectations
+        let foundTwoAdvertisers = expectationWithDescription("found two advertisers")
+
         // Given
         let port1: UInt16 = 42
         let port2: UInt16 = 43
 
         var foundedAdvertisersCount = 0
         let expectedAdvertisersCount = 2
-        let foundTwoAdvertisers = expectationWithDescription("found two advertisers")
 
         // Starting 1st generation of advertiser
         advertiserManager.startUpdateAdvertisingAndListening(onPort: port1,
@@ -200,17 +224,19 @@ class BrowserManagerTests: XCTestCase {
         XCTAssertEqual(lastGenerationOfAdvertiserPeer?.generation,
                        secondGenerationAdvertiserIdentifier.generation)
 
+        // Cleanup
         browserManager.stopListeningForAdvertisements()
     }
 
     func testReceivedPeerAvailabilityEventAfterFoundAdvertiser() {
-        // Given
+        // Expectations
         let foundPeer = expectationWithDescription("found peer advertiser's identifier")
 
+        // Given
         var advertiserPeerAvailability: PeerAvailability? = nil
-
         advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
                                                              errorHandler: unexpectedErrorHandler)
+
         // When
         let browserManager = BrowserManager(serviceType: serviceType,
                                             inputStreamReceiveTimeout: 1,
@@ -231,14 +257,15 @@ class BrowserManagerTests: XCTestCase {
             XCTFail("AdvertiserManager does not have any advertisers")
         }
 
+        // Cleanup
         browserManager.stopListeningForAdvertisements()
     }
 
     func testIncrementAvailablePeersWhenFoundPeer() {
-        // Given
-        let MPCFConnectionCreated =
-            expectationWithDescription("MPCF connection is created")
+        // Expectations
+        let MPCFConnectionCreated = expectationWithDescription("MPCF connection is created")
 
+        // Given
         let (advertiserManager, browserManager) = createMPCFPeers {
             peerAvailability in
             MPCFConnectionCreated.fulfill()
@@ -252,15 +279,17 @@ class BrowserManagerTests: XCTestCase {
                        browserManager.availablePeers.value.count,
                        "BrowserManager has not available peers")
 
+        // Cleanup
         browserManager.stopListeningForAdvertisements()
         advertiserManager.stopAdvertising()
     }
 
     func testPeerAvailabilityChangedAfterStartAdvertising() {
-        // Given
+        // Expectations
         let peerAvailabilityChangedToTrue =
             expectationWithDescription("PeerAvailability changed to true")
 
+        // Given
         var advertiserPeerAvailability: PeerAvailability? = nil
 
         let browserManager = BrowserManager(
@@ -287,6 +316,7 @@ class BrowserManagerTests: XCTestCase {
         XCTAssertEqual(advertiserManager.advertisers.value.first!.peer.uuid,
                        advertiserPeerAvailability?.peerIdentifier)
 
+        // Cleanup
         browserManager.stopListeningForAdvertisements()
     }
 
@@ -320,6 +350,7 @@ class BrowserManagerTests: XCTestCase {
         // Then
         waitForExpectationsWithTimeout(peerAvailabilityHandlerTimeout, handler: nil)
 
+        // Cleanup
         browserManager.stopListeningForAdvertisements()
     }
 
@@ -385,6 +416,8 @@ class BrowserManagerTests: XCTestCase {
             TCPSocketSuccessfullyCreated = nil
         }
 
+        // Cleanup
+        browserManager.stopListeningForAdvertisements()
         advertiserManager.stopAdvertising()
     }
 }
