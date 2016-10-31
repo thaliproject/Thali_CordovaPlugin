@@ -31,8 +31,9 @@ class BrowserRelayTests: XCTestCase {
     let disposeTimeout: NSTimeInterval = 30.0
     let receiveMessageTimeout: NSTimeInterval = 5.0
 
-    // MARK: - Setup
+    // MARK: - Setup & Teardown
     override func setUp() {
+        super.setUp()
         randomlyGeneratedServiceType = String.randomValidServiceType(length: 7)
         randomMessage = String.random(length: 100)
 
@@ -42,6 +43,15 @@ class BrowserRelayTests: XCTestCase {
                                 identifier: mcPeerID,
                                 connected: {},
                                 notConnected: {})
+    }
+
+    override func tearDown() {
+        randomlyGeneratedServiceType = nil
+        randomMessage = nil
+        mcPeerID = nil
+        mcSessionMock = nil
+        nonTCPSession = nil
+        super.tearDown()
     }
 
     // MARK: - Tests
@@ -304,6 +314,7 @@ class BrowserRelayTests: XCTestCase {
             browserNodeClientReceivedMessage = nil
         }
 
+        // Cleanup
         advertiserManager.stopAdvertising()
     }
 }
