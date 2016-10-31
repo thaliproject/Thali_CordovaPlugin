@@ -17,8 +17,9 @@ class RelayTests: XCTestCase {
     var mcPeerID: MCPeerID!
     var mcSessionMock: MCSessionMock!
     var nonTCPSession: Session!
+    var randomGeneratedServiceType: String!
+    var randomMessage: String!
 
-    let randomGeneratedServiceType = String.randomValidServiceType(length: 7)
     let anyAvailablePort: UInt16 = 0
 
     let streamReceivedTimeout: NSTimeInterval = 5.0
@@ -32,14 +33,31 @@ class RelayTests: XCTestCase {
     let moveDataTimeout = 15.0
 
 
-    // MARK: - Setup
+    // MARK: - Setup & Teardown
     override func setUp() {
+        super.setUp()
+        randomGeneratedServiceType = String.randomValidServiceType(length: 7)
         mcPeerID = MCPeerID(displayName: String.random(length: 5))
         mcSessionMock = MCSessionMock(peer: MCPeerID(displayName: String.random(length: 5)))
         nonTCPSession = Session(session: mcSessionMock,
                                 identifier: mcPeerID,
                                 connected: {},
                                 notConnected: {})
+
+        let crlf = "\r\n"
+        let fullMessageLength = 1 * 1024
+        let plainMessageLength = fullMessageLength - crlf.characters.count
+        randomMessage = String.random(length: plainMessageLength) + crlf
+
+    }
+
+    override func tearDown() {
+        randomGeneratedServiceType = nil
+        mcPeerID = nil
+        mcSessionMock = nil
+        nonTCPSession = nil
+        randomMessage = nil
+        super.tearDown()
     }
 
     // MARK: Tests
@@ -53,22 +71,18 @@ class RelayTests: XCTestCase {
         let totalMessagesAmount = 10
         let receivedMessagesAmount = Atomic(0)
 
-        let crlf = "\r\n"
-        let fullMessageLength = 10 * 1024
-        let plainMessageLength = fullMessageLength - crlf.characters.count
-        let randomMessage = String.random(length: plainMessageLength) + crlf
-
         // Start listening on fake node server
         let advertiserNodeMock =
             TCPServerMock(didAcceptConnection: { },
                           didReadData: {
-                            socket, data in
+                            [weak self] socket, data in
+                            guard let strongSelf = self else { return }
 
                             let receivedMessage = String(data: data,
-                                encoding: NSUTF8StringEncoding)
-                            XCTAssertEqual(randomMessage,
-                                receivedMessage,
-                                "Received message is wrong")
+                                                         encoding: NSUTF8StringEncoding)
+                            XCTAssertEqual(strongSelf.randomMessage,
+                                           receivedMessage,
+                                           "Received message is wrong")
 
                             receivedMessagesAmount.modify {
                                 $0 += 1
