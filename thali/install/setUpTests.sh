@@ -96,7 +96,7 @@ install_thali()
   find . -name "*.gz" -delete
   find . -name "*.pem" -delete
 
-  cp -v $1 app.jsq
+  cp -v $1 app.js
 }
 
 add_android_platform()
