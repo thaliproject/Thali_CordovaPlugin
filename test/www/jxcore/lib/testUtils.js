@@ -692,19 +692,17 @@ var createPskPouchDBRemote = function (
   // See the notes in thaliReplicationPeerAction.start for why the below
   // is here and why it's wrong and should use agent instead but can't.
   return new getLevelDownPouchDb()(
-    serverUrl, {
+      serverUrl, {
       ajax: {
-        agentClass: ForeverAgent.SSL,
-        agentOptions: {
+        agent: new ForeverAgent.SSL({
           keepAlive: true,
           keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
           maxSockets: Infinity,
           maxFreeSockets: 256,
           ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
           pskIdentity: pskId,
-          pskKey: pskKey,
-          secureOptions: pskId + serverUrl
-        }
+          pskKey: pskKey
+        })
       }
     }
   );
