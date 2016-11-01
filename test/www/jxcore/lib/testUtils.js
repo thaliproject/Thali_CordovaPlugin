@@ -692,7 +692,7 @@ var createPskPouchDBRemote = function (
   // See the notes in thaliReplicationPeerAction.start for why the below
   // is here and why it's wrong and should use agent instead but can't.
   return new getLevelDownPouchDb()(
-      serverUrl, {
+    serverUrl, {
       ajax: {
         agent: new ForeverAgent.SSL({
           keepAlive: true,
