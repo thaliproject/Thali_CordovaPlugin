@@ -696,17 +696,15 @@ var createPskPouchDBRemote = function (
   return new getLevelDownPouchDb()(
     serverUrl, {
       ajax: {
-        agentClass: ForeverAgent.SSL,
-        agentOptions: {
+        agent: new ForeverAgent.SSL({
           keepAlive: true,
           keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
           maxSockets: Infinity,
           maxFreeSockets: 256,
           ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
           pskIdentity: pskId,
-          pskKey: pskKey,
-          secureOptions: pskId + serverUrl
-        }
+          pskKey: pskKey
+        })
       }
     }
   );

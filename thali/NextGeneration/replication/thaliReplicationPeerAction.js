@@ -232,18 +232,7 @@ specify an agent class and agentOptions.
         ':' + self._peerAdvertisesDataForUs.portNumber + path.join(thaliConfig.BASE_DB_PATH, self._dbName);
       var ajaxOptions = {
         ajax : {
-          agentClass: ForeverAgent.SSL,
-          agentOptions : {
-            rejectUnauthorized: false,
-            keepAlive: true,
-            keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-            maxSockets: Infinity,
-            maxFreeSockets: 256,
-            ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-            pskIdentity: self.getPskIdentity(),
-            pskKey: self.getPskKey(),
-            secureOptions: self.getPskIdentity() + remoteUrl
-          }
+          agent: httpAgentPool
         },
         skip_setup: true// jscs:ignore requireCamelCaseOrUpperCaseIdentifiers
       };
