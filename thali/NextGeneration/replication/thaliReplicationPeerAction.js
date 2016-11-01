@@ -223,16 +223,7 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
         ':' + self._peerAdvertisesDataForUs.portNumber + path.join(thaliConfig.BASE_DB_PATH, self._dbName);
       var ajaxOptions = {
         ajax : {
-          agent: new ForeverAgent.SSL({
-            rejectUnauthorized: false,
-            keepAlive: true,
-            keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-            maxSockets: Infinity,
-            maxFreeSockets: 256,
-            ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-            pskIdentity: self.getPskIdentity(),
-            pskKey: self.getPskKey()
-          })
+          agent: httpAgentPool
         },
         skip_setup: true// jscs:ignore requireCamelCaseOrUpperCaseIdentifiers
       };
