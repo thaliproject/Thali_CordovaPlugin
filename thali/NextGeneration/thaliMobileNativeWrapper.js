@@ -839,14 +839,14 @@ var handlePeerAvailabilityChanged = function (peer) {
       gServersManager.createPeerListener(peer.peerIdentifier,
                                          peer.pleaseConnect)
       .then(function (portNumber) {
-        var notAvailableEvent = {
+        var peerAvailabilityChangedEvent = {
           peerIdentifier: peer.peerIdentifier,
           portNumber: portNumber
         };
         logger.debug('handlePeerAvailabilityChanged - Emitting %s',
-          JSON.stringify(notAvailableEvent));
+          JSON.stringify(peerAvailabilityChangedEvent));
         module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent',
-          notAvailableEvent);
+          peerAvailabilityChangedEvent);
         resolve();
       })
       .catch(function (error) {

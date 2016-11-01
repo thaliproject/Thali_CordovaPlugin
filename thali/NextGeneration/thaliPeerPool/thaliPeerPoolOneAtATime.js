@@ -9,6 +9,8 @@ var PromiseQueue = require('../promiseQueue');
 var ThaliReplicationPeerAction = require('../replication/thaliReplicationPeerAction');
 var assert = require('assert');
 var thaliMobileNativeWrapper = require('../thaliMobileNativeWrapper');
+var thaliMobile = require('../thaliMobile');
+var ThaliNotificationAction = require('../notification/thaliNotificationAction');
 
 /** @module thaliPeerPoolOneAtATime */
 
@@ -92,7 +94,7 @@ ThaliPeerPoolOneAtATime.prototype._startAction = function (peerAction) {
   .catch(function (err) {
     logger.debug('action returned with error from start' + err + ' - ' +
       peerAction.loggingDescription());
-    return null;
+    return err;
   });
 };
 
@@ -149,6 +151,42 @@ ThaliPeerPoolOneAtATime.prototype._wifiEnqueue = function (peerAction) {
 
 ThaliPeerPoolOneAtATime.prototype._bluetoothReplicationAction = null;
 
+/**
+ * Runs the replication action and if it fails for a reason other than a
+ * timeout and if the peer is still available (meaning the connection has not
+ * been lost) then we will retry the replication.
+ * @param replicationAction
+ * @param {string} peerId Right now replication actions use their public key
+ * rather than the usual network level MAC + generation as their peerID so we
+ * need to pass in the peerID separately so we can look it up in ThaliMobile's
+ * cache of available peers.
+ * @returns {Promise.<null>}
+ * @private
+ */
+ThaliPeerPoolOneAtATime.prototype._replicateThroughProblems =
+  function (replicationAction, peerId) {
+    var self = this;
+    return self._startAction(replicationAction)
+      .then(function (error) {
+        // Just being paranoid
+        replicationAction.kill();
+        if (!error) {
+          // I don't think this is even theoretically possible
+          return null;
+        }
+        if (error.message === 'No activity time out' ||
+          !thaliMobile
+            ._peerAvailabilities[replicationAction.getConnectionType()]
+                                [peerId]) {
+          return null;
+        }
+        logger.debug('Replication action failed badly so we are going to ' +
+          'retry');
+        var clonedAction = replicationAction.clone();
+        return self._replicateThroughProblems(clonedAction, peerId);
+      });
+  };
+
 // Bluetooth actions are put into a serial queue so working with more than
 // a total of 2 phones is going to be a bit dicey
 ThaliPeerPoolOneAtATime.prototype._bluetoothEnqueue = function (peerAction) {
@@ -168,7 +206,15 @@ ThaliPeerPoolOneAtATime.prototype._bluetoothEnqueue = function (peerAction) {
     }
 
     self._bluetoothReplicationAction = peerAction;
-    return;
+    return null;
+  }
+
+  if (peerAction.getActionType() !== ThaliNotificationAction.ACTION_TYPE) {
+    var error = new Error('Got unsupported action type: ' +
+      peerAction.getActionType());
+    logger.error(error.message);
+    peerAction.kill();
+    return error;
   }
 
   self._bluetoothSerialPromiseQueue.enqueue(function (resolve) {
@@ -176,7 +222,9 @@ ThaliPeerPoolOneAtATime.prototype._bluetoothEnqueue = function (peerAction) {
       .then(function () {
         if (self._bluetoothReplicationAction) {
           var replicationAction = self._bluetoothReplicationAction;
-          return self._startAction(replicationAction)
+          return self._replicateThroughProblems(
+              self._bluetoothReplicationAction,
+              peerAction.getPeerIdentifier())
             .then(function () {
               // Currently replication actions use the remote public key as
               // the peer ID instead of the Bluetooth MAC. But listeners
@@ -187,7 +235,6 @@ ThaliPeerPoolOneAtATime.prototype._bluetoothEnqueue = function (peerAction) {
                 .terminateOutgoingConnection(peerAction.getPeerIdentifier(),
                   replicationAction.getPeerAdvertisesDataForUs().portNumber);
               self._bluetoothReplicationAction = null;
-              replicationAction.kill();
               peerAction.kill();
               resolve(true);
               return null;
@@ -207,9 +254,12 @@ ThaliPeerPoolOneAtATime.prototype.enqueue = function (peerAction) {
   if (this._stopped) {
     throw new Error(ThaliPeerPoolOneAtATime.ERRORS.ENQUEUE_WHEN_STOPPED);
   }
-
   var result =
     ThaliPeerPoolOneAtATime.super_.prototype.enqueue.apply(this, arguments);
+
+  if (result) {
+    return result;
+  }
 
   switch(peerAction.getConnectionType()) {
     // MPCF is here because right now master doesn't really know how to set
@@ -217,20 +267,22 @@ ThaliPeerPoolOneAtATime.prototype.enqueue = function (peerAction) {
     case thaliMobileNativeWrapper.connectionTypes
       .MULTI_PEER_CONNECTIVITY_FRAMEWORK:
     case thaliMobileNativeWrapper.connectionTypes.BLUETOOTH: {
-      this._bluetoothEnqueue(peerAction);
+      result = this._bluetoothEnqueue(peerAction);
       break;
     }
     case thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE: {
-      this._wifiEnqueue(peerAction);
+      result = this._wifiEnqueue(peerAction);
       break;
     }
     default: {
-      logger.error('Got unrecognized connection type: ' +
+      peerAction.kill();
+      result = new Error('Got unrecognized connection type: ' +
         peerAction.getConnectionType());
+      break;
     }
   }
 
-  return result;
+  return result instanceof Error ? result : null;
 };
 
 ThaliPeerPoolOneAtATime.prototype.start = function () {

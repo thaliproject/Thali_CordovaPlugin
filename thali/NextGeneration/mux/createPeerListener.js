@@ -36,6 +36,11 @@ function closeServer(self, server, failedConnectionErr, canRetry)
     });
   }
   if (canRetry) {
+    assert(failedConnectionErr, 'Calling canRetry set to true without ' +
+      'emitting an error will mean we do not emit an event that the peer ' +
+      'is not available before emitting an event that the peer is available ' +
+      'which violates thaliMobiles contract to not emit repeated available ' +
+      'events for the same peer');
     logger.debug('Will try to recreate server for %s', server._peerIdentifier);
     // We use next tick just to avoid building up a stack but we want
     // to make sure this code runs before anyone else so we can grab
@@ -54,7 +59,7 @@ function closeServer(self, server, failedConnectionErr, canRetry)
         })
         .catch(function (err) {
           logger.warn('Got error trying to restart listener for peer %s' +
-            ' after failure %s', server._peerIdentifier, err);
+            ' after failure %s', server._peerIdentifier, err.toString());
         });
     });
   }
@@ -228,7 +233,8 @@ function handleForwardConnection(self, listenerOrIncomingConnection, server,
   });
 
   outgoing.on('close', function () {
-    closeServer(self, server, null, true);
+    closeServer(self, server, new Error('Outgoing closed, recreating ' +
+      'connection'), true);
   });
 
   outgoing.on('timeout', function () {

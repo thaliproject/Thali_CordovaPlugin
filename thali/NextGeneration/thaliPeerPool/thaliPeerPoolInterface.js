@@ -97,6 +97,7 @@ ThaliPeerPoolInterface.prototype.enqueue = function (peerAction) {
     peerAction.kill = originalKill;
     return originalKill.apply(this, arguments);
   };
+  return null;
 };
 
 /**

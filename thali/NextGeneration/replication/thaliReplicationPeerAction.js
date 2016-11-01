@@ -101,6 +101,15 @@ ThaliReplicationPeerAction.prototype.getPeerAdvertisesDataForUs = function () {
 };
 
 /**
+ * Creates a new replication action with the same constructor arguments as
+ * this replication action.
+ */
+ThaliReplicationPeerAction.prototype.clone = function () {
+  return new ThaliReplicationPeerAction(this._peerAdvertisesDataForUs,
+    this._PouchDB, this._dbName, this._ourPublicKey);
+};
+
+/**
  * The replication timer is needed because by default we do live replications
  * which will keep a connection open to the remote server and send heartbeats
  * to keep things going. This means that our timers at lower levels in our
@@ -191,10 +200,10 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
     .then(function () {
       /*
       TODO: The code below deals with several issues in a non-obvious way.
-      First, there is https://github.com/thaliproject/thali/issues/267 which
-      deals with a bug in PouchDB that prevents us from using the agent
-      option which we need to use httpAgentPool. The current work around is
-      that we instead specify an agent class and agentOptions.
+      First, there is https://github.com/thaliproject/Thali_CordovaPlugin/issues/730
+which deals with a bug in PouchDB that prevents us from using the agent option
+which we need to use httpAgentPool. The current work around is that we instead
+specify an agent class and agentOptions.
 
       This leads to another related issue. Because we can't use agent we
       create a situation where request (which is hiding under PouchDB on
@@ -318,6 +327,14 @@ ThaliReplicationPeerAction.prototype.kill = function () {
   }
 };
 
+function printErrorArray(errors) {
+  var result = '';
+  errors.forEach(function (error) {
+    result += 'error: ' + error.message + ' ';
+  })
+  return result;
+}
+
 /**
  * @param {Array.<Error>} errors
  * @private
@@ -326,9 +343,13 @@ ThaliReplicationPeerAction.prototype._complete =
   function (errors) {
     var self = this;
     if (this._completed) {
+      logger.debug('We called _complete with ' + printErrorArray(errors) +
+      ' but this is a second call and so we ignored it');
       return;
     }
     this._completed = true;
+    logger.debug('We called _complete with ' + printErrorArray(errors) +
+    ' and it caused us to complete');
 
     this.kill();
 
