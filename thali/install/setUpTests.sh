@@ -105,7 +105,7 @@ add_android_platform()
 
   cd $TEST_PROJECT_ROOT_DIR
 
-  cordova platform add android
+  cordova platform add android -d
 
   # A file that identifies the current build as a UT build
   touch platforms/android/unittests
@@ -117,7 +117,7 @@ build_android()
 
   cd $TEST_PROJECT_ROOT_DIR
 
-  cordova build android --release --device
+  cordova build android --release --device -d
 }
 
 # Adds iOS platform when we're running on macOS
