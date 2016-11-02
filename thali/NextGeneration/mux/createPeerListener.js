@@ -469,35 +469,50 @@ function createPeerListener(self, peerIdentifier, pleaseConnect) {
                                                 server, pleaseConnect);
       }
 
+      var incomingStream;
+
+      // We need to subscribe to `incoming` immediately.
+      // We want not to loose any event (issue #1473).
+      incoming
+      .on('error', function (err) {
+        logger.error('error on incoming socket - ' + err);
+        if (incomingStream) {
+          incomingStream.destroy();
+        }
+      })
+      .on('finish', function () {
+        if (incomingStream) {
+          incomingStream.end();
+        }
+      })
+      .on('close', function () {
+        if (incomingStream) {
+          incomingStream.destroy();
+        }
+      });
+
       server.muxPromise
         .then(function () {
+          // We don't need to create `incomingStream` and `pipe`
+          //   if `incoming` is already closed (issue #1473).
+          if (incoming.readyState === 'closed') {
+            logger.debug('incoming is already closed');
+            return;
+          }
+
           assert(server._mux, 'server._mux must exist by now');
-          var incomingStream = server._mux.createStream();
+          incomingStream = server._mux.createStream();
 
-          incomingStream.on('error', function (err) {
-            logger.debug('error on incoming stream - ' + err);
+          incomingStream
+          .on('error', function (err) {
+            logger.error('error on incoming stream - ' + err);
             incoming.destroy();
-          });
-
-          incomingStream.on('finish', function () {
+          })
+          .on('finish', function () {
             incoming.end();
-          });
-
-          incomingStream.on('close', function () {
+          })
+          .on('close', function () {
             incoming.destroy();
-          });
-
-          incoming.on('error', function (err) {
-            logger.debug('error on incoming socket - ' + err);
-            incomingStream.destroy();
-          });
-
-          incoming.on('finish', function () {
-            incomingStream.end();
-          });
-
-          incoming.on('close', function () {
-            incomingStream.destroy();
           });
 
           incomingStream.pipe(incoming).pipe(incomingStream);
