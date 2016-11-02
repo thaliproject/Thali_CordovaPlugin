@@ -524,48 +524,64 @@ function createPeerListener(self, peerIdentifier, pleaseConnect) {
                                                 server, pleaseConnect);
       }
 
+      var incomingStream;
+
+      // We need to subscribe to `incoming` immediately.
+      // We want not to loose any event (issue #1473).
+      incoming
+      .on('error', function (err) {
+        logger.error('incoming (TCP) - Node TCP/IP client <-> Mux stream' +
+          '- %s - %d - error: %s', peerIdentifier,
+          localIncomingConnectionId, err);
+        if (incomingStream) {
+          incomingStream.destroy();
+        }
+      })
+      .on('finish', function () {
+        logger.debug('incoming (TCP) - Node TCP/IP client <-> Mux stream ' +
+          '- %s - %d - finish', peerIdentifier, localIncomingConnectionId);
+        if (incomingStream) {
+          incomingStream.end();
+        }
+      })
+      .on('close', function () {
+        logger.debug('incoming (TCP) - Node TCP/IP client <-> Mux stream' +
+          ' - %s - %d - close', peerIdentifier, localIncomingConnectionId);
+        if (incomingStream) {
+          incomingStream.destroy();
+        }
+      });
+
       server.muxPromise
         .then(function () {
+          // We don't need to create `incomingStream` and `pipe`
+          //   if `incoming` is already closed (issue #1473).
+          if (incoming.readyState === 'closed') {
+            logger.debug('incoming (TCP) - Node TCP/IP client - is already closed');
+            return;
+          }
+
           assert(server._mux, 'server._mux must exist by now');
-          var incomingStream = server._mux.createStream();
-          incomingStream.on('error', function (err) {
-            logger.debug('incomingStream (mux) - Node TCP/IP client <-> ' +
+          incomingStream = server._mux.createStream();
+
+          incomingStream
+          .on('error', function (err) {
+            logger.error('incomingStream (mux) - Node TCP/IP client <-> ' +
               'Mux stream - %s - %d - error: %s', peerIdentifier,
               localIncomingConnectionId, err);
             incoming.destroy();
-          });
-
-          incomingStream.on('finish', function () {
+          })
+          .on('finish', function () {
             logger.debug('incomingStream (mux) - Node TCP/IP client <-> ' +
               'Mux stream - %s - %d - finish', peerIdentifier,
               localIncomingConnectionId);
             incoming.end();
-          });
-
-          incomingStream.on('close', function () {
+          })
+          .on('close', function () {
             logger.debug('incomingStream (mux) - Node TCP/IP client <-> ' +
               'Mux stream -  %s - %d - close', peerIdentifier,
               localIncomingConnectionId);
             incoming.destroy();
-          });
-
-          incoming.on('error', function (err) {
-            logger.debug('incoming (TCP) - Node TCP/IP client <-> Mux stream' +
-              '- %s - %d - error: %s', peerIdentifier,
-              localIncomingConnectionId, err);
-            incomingStream.destroy();
-          });
-
-          incoming.on('finish', function () {
-            logger.debug('incoming (TCP) - Node TCP/IP client <-> Mux stream ' +
-              '- %s - %d - finish', peerIdentifier, localIncomingConnectionId);
-            incomingStream.end();
-          });
-
-          incoming.on('close', function () {
-            logger.debug('incoming (TCP) - Node TCP/IP client <-> Mux stream' +
-              ' - %s - %d - close', peerIdentifier, localIncomingConnectionId);
-            incomingStream.destroy();
           });
 
           // I had wanted to add an incoming.on('data) event handler here to
