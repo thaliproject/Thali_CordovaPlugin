@@ -431,7 +431,7 @@ test('We fire failedNativeConnection event when we get failedConnection from ' +
   }
 );
 
-test.only('We fire failedNativeConnection event when we get failedConnection from ' +
+test('We fire failedNativeConnection event when we get failedConnection from ' +
   'multiConnectConnection',
   function() {
     return platform._isRealMobile;
