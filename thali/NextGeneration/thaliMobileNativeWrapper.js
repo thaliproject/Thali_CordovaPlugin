@@ -1149,6 +1149,16 @@ module.exports._registerToNative = function () {
     module.exports.emitter.emit('networkChangedNonTCP', gNonTcpNetworkStatus);
   });
 
+  registerToNative('multiConnectConnectionFailure',
+    function (failedConnection) {
+      var event = {
+        error: failedConnection.error,
+        peerIdentifier: failedConnection.peerIdentifier,
+        connectionType: connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK
+      };
+      module.exports.emitter.emit('failedNativeConnection', event);
+  });
+
   registerToNative('incomingConnectionToPortNumberFailed',
     function (portNumber) {
       logger.info('incomingConnectionToPortNumberFailed: %s', JSON.stringify(portNumber));
