@@ -543,6 +543,7 @@ test('We fire failedNativeConnection event when we get failedConnection from ' +
   }
 );
 
+
 if (!platform._isRealMobile) {
   // This test primarily exists to make sure that we can easily debug the full
   // connection life cycle from the HTTP client through thaliMobileNativeWrapper
