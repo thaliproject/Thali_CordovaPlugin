@@ -431,6 +431,38 @@ test('We fire failedNativeConnection event when we get failedConnection from ' +
   }
 );
 
+test.only('We fire failedNativeConnection event when we get failedConnection from ' +
+  'multiConnectConnection',
+  function() {
+    return platform._isRealMobile;
+  },
+  function (t) {
+    thaliMobileNativeWrapper.start(express.Router())
+    .then(function () {
+      var peerIdentifier = 'some-identifier';
+      var errorDescription = 'Dummy Error';
+      thaliMobileNativeWrapper.emitter.once(
+        'failedNativeConnection',
+        function (failedConnection) {
+          t.equals(failedConnection.peerIdentifier, peerIdentifier,
+            'peerIdentifier matches');
+          t.equals(failedConnection.error, errorDescription,
+            'error description matches');
+          t.equals(
+            failedConnection.connectionType,
+            thaliMobileNativeWrapper.connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK,
+            'connection type is tcp');
+          t.end();
+        }
+      );
+      Mobile.fireMultiConnectConnectionFailure({
+        peerIdentifier: peerIdentifier,
+        error: errorDescription
+      });
+    });
+  }
+);
+
 if (!platform.isMobile) {
   // This test primarily exists to make sure that we can easily debug the full
   // connection life cycle from the HTTP client through thaliMobileNativeWrapper
