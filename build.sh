@@ -38,8 +38,11 @@ fi
 # Check the existence of the script that in CI gives the right test server
 # IP address.
 
-hash CIGIVEMEMYIP.sh 2>/dev/null
-RUN_IN_CI=$?
+if [ -f CIGIVEMEMYIP.sh ]; then
+  RUN_IN_CI=0
+else
+  RUN_IN_CI=1
+fi
 
 # Print the Cordova version for debugging purposes
 # and to make sure Cordova is installed
