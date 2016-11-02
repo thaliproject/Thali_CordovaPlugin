@@ -229,7 +229,8 @@ specify an agent class and agentOptions.
       it seems to work.
        */
       var remoteUrl = 'https://' + self._peerAdvertisesDataForUs.hostAddress +
-        ':' + self._peerAdvertisesDataForUs.portNumber + path.join(thaliConfig.BASE_DB_PATH, self._dbName);
+        ':' + self._peerAdvertisesDataForUs.portNumber +
+        path.join(thaliConfig.BASE_DB_PATH, self._dbName);
       var ajaxOptions = {
         ajax : {
           agent: httpAgentPool
@@ -320,7 +321,7 @@ function printErrorArray(errors) {
   var result = '';
   errors.forEach(function (error) {
     result += 'error: ' + error.message + ' ';
-  })
+  });
   return result;
 }
 
@@ -344,6 +345,7 @@ ThaliReplicationPeerAction.prototype._complete =
 
     assert(this._resolve, 'resolve should exist');
     assert(this._reject, 'reject should exist');
+    var returnError = null;
 
     if (!errors || errors.length === 0) {
       this._resolve();
@@ -351,16 +353,16 @@ ThaliReplicationPeerAction.prototype._complete =
       var isErrorResolved = errors.some(function (error) {
         switch (error.code) {
           case 'ECONNREFUSED': {
-            self._reject(
-              new Error('Could not establish TCP connection')
-            );
+            returnError = new Error('Could not establish TCP connection');
+            returnError.status = error.status;
+            self._reject(returnError);
             return true;
           }
           case 'ECONNRESET': {
-            self._reject(
-              new Error('Could establish TCP connection but couldn\'t keep' +
-                ' it running')
-            );
+            returnError = new Error('Could establish TCP connection but ' +
+              'couldn\'t keep it running');
+            returnError.status = error.status;
+            self._reject(returnError);
             return true;
           }
         }

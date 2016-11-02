@@ -102,8 +102,11 @@ ThaliPeerPoolOneAtATime.prototype._wifiReplicationCount = null;
 
 ThaliPeerPoolOneAtATime.prototype._wifiEnqueue = function (peerAction) {
   var self = this;
-  if (peerAction.getActionType() !== ThaliReplicationPeerAction.actionType) {
-    return self._startAction(peerAction);
+  if (peerAction.getActionType() !== ThaliReplicationPeerAction.ACTION_TYPE) {
+    return self._startAction(peerAction)
+      .then(function () {
+        peerAction.kill();
+      });
   }
 
   var peerId = peerAction.getPeerIdentifier();
@@ -120,10 +123,14 @@ ThaliPeerPoolOneAtATime.prototype._wifiEnqueue = function (peerAction) {
       break;
     }
     case 2: {
-      return peerAction.kill();
+      peerAction.kill();
+      return null;
     }
     default: {
-      logger.error('We got an illegal count: ' + count);
+      var error = new Error('We got an illegal count: ' + count);
+      logger.error(error.message);
+      peerAction.kill();
+      return error;
     }
   }
 
@@ -146,7 +153,11 @@ ThaliPeerPoolOneAtATime.prototype._wifiEnqueue = function (peerAction) {
     return originalKill.apply(this, arguments);
   };
 
-  return self._startAction(peerAction);
+  self._startAction(peerAction)
+    .then(function () {
+      peerAction.kill();
+    });
+  return null;
 };
 
 ThaliPeerPoolOneAtATime.prototype._bluetoothReplicationAction = null;
