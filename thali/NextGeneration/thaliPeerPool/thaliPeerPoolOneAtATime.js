@@ -175,7 +175,14 @@ ThaliPeerPoolOneAtATime.prototype._bluetoothReplicationAction = null;
  * @private
  */
 ThaliPeerPoolOneAtATime.prototype._replicateThroughProblems =
-  function (replicationAction, peerId) {
+  function (replicationAction, peerId, _retriesLeft) {
+    if (arguments.length < 3) {
+      _retriesLeft = 399;
+    }
+    if (_retriesLeft <= 0) {
+      logger.error('Too many retries');
+      process.exit(1);
+    }
     var self = this;
     return self._startAction(replicationAction)
       .then(function (error) {
@@ -191,10 +198,20 @@ ThaliPeerPoolOneAtATime.prototype._replicateThroughProblems =
                                 [peerId]) {
           return null;
         }
+
+        if (error.code === 'ECONNREFUSED' || error.code === 'ECONNRESET') {
+          thaliMobileNativeWrapper._getServersManager()
+            .recreatePeerListener(
+              peerId,
+              replicationAction.getPeerAdvertisesDataForUs().portNumber
+            );
+          return null;
+        }
+
         logger.debug('Replication action failed badly so we are going to ' +
           'retry');
         var clonedAction = replicationAction.clone();
-        return self._replicateThroughProblems(clonedAction, peerId);
+        return self._replicateThroughProblems(clonedAction, peerId, _retriesLeft - 1);
       });
   };
 

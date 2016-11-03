@@ -295,6 +295,16 @@ ThaliTcpServersManager.prototype.terminateOutgoingConnection =
     return Promise.resolve(null);
   };
 
+ThaliTcpServersManager.prototype.recreatePeerListener =
+  function (peerIdentifier, port, error) {
+    var peerServer = this._peerServers[peerIdentifier];
+    if (peerServer && peerServer.server.address().port === port) {
+      logger.debug('Recreate outgoing connection called on peerID ' +
+        peerIdentifier + ' with port ' + port);
+      createPeerListener.closeServer(this, peerServer.server, error, true);
+    }
+};
+
 /**
  * Notifies the listener of a failed connection attempt. This is mostly used to
  * determine when we have hit the local maximum connection limit but it's used
