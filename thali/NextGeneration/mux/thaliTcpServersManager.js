@@ -297,11 +297,13 @@ ThaliTcpServersManager.prototype.terminateOutgoingConnection =
 
 ThaliTcpServersManager.prototype.recreatePeerListener =
   function (peerIdentifier, port, error) {
+    logger.debug('Recreate outgoing connection called on peerID ' +
+      peerIdentifier + ' with port ' + port);
     var peerServer = this._peerServers[peerIdentifier];
     if (peerServer && peerServer.server.address().port === port) {
-      logger.debug('Recreate outgoing connection called on peerID ' +
-        peerIdentifier + ' with port ' + port);
       createPeerListener.closeServer(this, peerServer.server, error, true);
+    } else {
+      logger.debug('This peer does not exist anymore');
     }
 };
 
