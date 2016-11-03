@@ -172,9 +172,9 @@ function installNodePouchDB () {
  * are using and can ignore the rest for now.
  */
 function installExpressPouchDB () {
-  var gitUrl = 'https://github.com/yaronyg/pouchdb-server.git';
+  var gitUrl = 'https://github.com/andrew-aladev/pouchdb-server.git';
   var branch = 'thali-release';
-  var commitId = '6f40454';
+  var commitId = '5d3cf13a1a14d6c072f3c19d9acf4c95a17bda0c';
   var packageName = 'express-pouchdb';
   var targetDir = 'customPouchServerDir';
 
