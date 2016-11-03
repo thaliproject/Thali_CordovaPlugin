@@ -22,7 +22,7 @@
     "body-parser": "1.13.3",
     "concat-map": "0.0.1",
     "express": "4.13.3",
-    "express-pouchdb": "1.0.6-thali",
+    "express-pouchdb": "1.0.5-thali",
     "forever-agent": "0.6.1",
     "fs-extra-promise": "0.4.0",
     "inherits": "2.0.1",
