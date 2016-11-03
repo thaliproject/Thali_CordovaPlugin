@@ -97,7 +97,6 @@ public class ConnectionHelper
         }
 
         mConnectivityMonitor = new ConnectivityMonitor(mDiscoveryManager);
-        mConnectivityMonitor.start(); // Should be running as long as the app is alive
 
         mStartStopOperationHandler = new StartStopOperationHandler(mConnectionManager, mDiscoveryManager);
 
