@@ -605,30 +605,29 @@ module.exports.getNonTCPNetworkStatus = function () {
  * @return {Promise<number|Error} The promise will either return an integer with
  * the localhost port to connect to or an Error object.
  */
-module.exports._multiConnect = function (peerIdentifier) {
+ module.exports._multiConnect = function (peerIdentifier) {
+   return gPromiseQueue.enqueue(function (resolve, reject) {
+     var originalSyncValue = uuid.v4();
 
-  return gPromiseQueue.enqueue(function (resolve, reject) {
-    var originalSyncValue = guid();
+     Mobile('multiConnect')
+       .callNative(peerIdentifier, originalSyncValue, function (error) {
+         if (error) {
+           return reject(new Error(error));
+         }
 
-    Mobile('multiConnect')
-      .callNative(peerIdentidier, originalSyncValue, function (error) {
-        if (error) {
-          return reject(new Error(error));
-        }
-
-        Mobile('multiConnectResolved')
-          .registerToNative(function (syncValue, error, portNumber) {
-            if(originalSyncValue !== syncValue) {
-              return;
-            }
-            if (error) {
-              return reject(new Error(error));
-            }
-            resolve(portNumber);
-          });
-      });
-  });
-};
+         module.exports.emitter.on('_multiConnectResolved',
+          function (syncValue, error, portNumber) {
+             if(originalSyncValue !== syncValue) {
+               return;
+             }
+             if (error) {
+               return reject(new Error(error));
+             }
+             resolve(portNumber);
+           });
+       });
+   });
+ };
 
 /**
  * This function attempts to obtain a port that Node code can use to open TCP/IP
@@ -1124,6 +1123,11 @@ module.exports._registerToNative = function () {
       );
     }
   );
+
+
+  registerToNative('multiConnectResolved', function(syncValue, error, portNumber) {
+    module.exports.emitter.emit('_multiConnectResolved', syncValue, error, portNumber);
+  });
 
   registerToNative('networkChanged', function (networkChangedValue) {
     logger.debug('networkChanged: %s', JSON.stringify(networkChangedValue));
