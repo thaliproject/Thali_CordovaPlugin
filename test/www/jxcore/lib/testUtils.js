@@ -295,8 +295,7 @@ module.exports.put = function (host, port, path, pskIdentity, pskKey,
         maxFreeSockets: 256,
         ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
         pskIdentity: pskIdentity,
-        pskKey: pskKey,
-        secureOptions: pskIdentity + host + port + path
+        pskKey: pskKey
       })
     }, function (response) {
       createResponseBody(response)

@@ -252,7 +252,7 @@ test('Client to server request coordinated', function (t) {
     function (res) {
       var msg = 'PeerAdvertisesDataForUs:' + res.connectionType +
         ', '+res.hostAddress+', ' + res.hostAddress + ', '+
-        res.portNumber;
+        res.portNumber + ',' + res.peerId;
       logger.info(msg);
 
       var publicKeyHash = NotificationBeacons.createPublicKeyHash(res.keyId);

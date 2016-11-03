@@ -8,7 +8,6 @@ var actionState = ThaliPeerAction.actionState;
 var assert = require('assert');
 var thaliConfig = require('../thaliConfig');
 var logger = require('../../ThaliLogger')('thaliReplicationPeerAction');
-var ForeverAgent = require('forever-agent');
 var LocalSeqManager = require('./localSeqManager');
 var RefreshTimerManager = require('./utilities').RefreshTimerManager;
 var Utils = require('../utils/common.js');

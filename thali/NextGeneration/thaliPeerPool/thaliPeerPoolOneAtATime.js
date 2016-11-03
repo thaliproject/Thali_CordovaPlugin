@@ -153,7 +153,7 @@ ThaliPeerPoolOneAtATime.prototype._wifiEnqueue = function (peerAction) {
     return originalKill.apply(this, arguments);
   };
 
-  self._startAction(peerAction)
+  self._replicateThroughProblems(peerAction)
     .then(function () {
       peerAction.kill();
     });
@@ -167,15 +167,11 @@ ThaliPeerPoolOneAtATime.prototype._bluetoothReplicationAction = null;
  * timeout and if the peer is still available (meaning the connection has not
  * been lost) then we will retry the replication.
  * @param replicationAction
- * @param {string} peerId Right now replication actions use their public key
- * rather than the usual network level MAC + generation as their peerID so we
- * need to pass in the peerID separately so we can look it up in ThaliMobile's
- * cache of available peers.
  * @returns {Promise.<null>}
  * @private
  */
 ThaliPeerPoolOneAtATime.prototype._replicateThroughProblems =
-  function (replicationAction, peerId) {
+  function (replicationAction) {
     var self = this;
     return self._startAction(replicationAction)
       .then(function (error) {
@@ -183,29 +179,35 @@ ThaliPeerPoolOneAtATime.prototype._replicateThroughProblems =
         replicationAction.kill();
         if (!error) {
           // I don't think this is even theoretically possible
+          logger.debug('Got a replication response with no error!');
           return null;
         }
+
         if (error.message === 'No activity time out' ||
           !thaliMobile
             ._peerAvailabilities[replicationAction.getConnectionType()]
-                                [peerId]) {
+                                [replicationAction.getPeerAdvertisesDataForUs()
+                                    .peerId]) {
           return null;
         }
 
-        if (error.code === 'ECONNREFUSED' || error.code === 'ECONNRESET') {
-          thaliMobileNativeWrapper._getServersManager()
-            .recreatePeerListener(
-              peerId,
-              replicationAction.getPeerAdvertisesDataForUs().portNumber,
-              error
-            );
-          return null;
-        }
+        if (replicationAction.getConnectionType() !==
+          thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE) {
+          if (error.code === 'ECONNREFUSED' || error.code === 'ECONNRESET') {
+            thaliMobileNativeWrapper._getServersManager()
+              .recreatePeerListener(
+                peerId,
+                replicationAction.getPeerAdvertisesDataForUs().portNumber,
+                error
+              );
+            return null;
+          }
 
+        }
         logger.debug('Replication action failed badly so we are going to ' +
           'retry');
         var clonedAction = replicationAction.clone();
-        return self._replicateThroughProblems(clonedAction, peerId);
+        return self._replicateThroughProblems(clonedAction);
       });
   };
 
@@ -245,8 +247,7 @@ ThaliPeerPoolOneAtATime.prototype._bluetoothEnqueue = function (peerAction) {
         if (self._bluetoothReplicationAction) {
           var replicationAction = self._bluetoothReplicationAction;
           return self._replicateThroughProblems(
-              self._bluetoothReplicationAction,
-              peerAction.getPeerIdentifier())
+              self._bluetoothReplicationAction)
             .then(function () {
               // Currently replication actions use the remote public key as
               // the peer ID instead of the Bluetooth MAC. But listeners
@@ -308,6 +309,7 @@ ThaliPeerPoolOneAtATime.prototype.enqueue = function (peerAction) {
 };
 
 ThaliPeerPoolOneAtATime.prototype.start = function () {
+  logger.debug('Start was called');
   this._stopped = false;
 
   return ThaliPeerPoolOneAtATime.super_.prototype.start.apply(this, arguments);
@@ -320,6 +322,7 @@ ThaliPeerPoolOneAtATime.prototype.start = function () {
  * to enqueue.
  */
 ThaliPeerPoolOneAtATime.prototype.stop = function () {
+  logger.debug('Stop was called');
   this._stopped = true;
   this._wifiReplicationCount = {};
   return ThaliPeerPoolOneAtATime.super_.prototype.stop.apply(this, arguments);

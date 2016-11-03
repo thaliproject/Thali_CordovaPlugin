@@ -27,12 +27,15 @@ var util = require('util');
  * @param {number} suggestedTCPTimeout Provides a hint to what time out to
  * put on the TCP connection. For some transports a handshake can take quite a
  * long time.
- * @param {module:ThaliMobileNativeWrapper.connectionTypes} connectionType The type of
- * connection that will be used when connecting to this peer.
+ * @param {module:ThaliMobileNativeWrapper.connectionTypes} connectionType The
+ * type of connection that will be used when connecting to this peer.
+ * @param {string} peerId The advertised peerID for the remote peer who has
+ * tokens for us
  */
 function PeerAdvertisesDataForUs (keyId, pskIdentifyField,
                                   psk, hostAddress, portNumber,
-                                  suggestedTCPTimeout, connectionType) {
+                                  suggestedTCPTimeout, connectionType,
+                                  peerId) {
   this.keyId = keyId;
   this.pskIdentifyField = pskIdentifyField;
   this.psk = psk;
@@ -40,6 +43,7 @@ function PeerAdvertisesDataForUs (keyId, pskIdentifyField,
   this.portNumber = portNumber;
   this.suggestedTCPTimeout = suggestedTCPTimeout;
   this.connectionType = connectionType;
+  this.peerId = peerId;
 }
 // jscs:disable maximumLineLength
 /**
@@ -339,7 +343,8 @@ ThaliNotificationClient.prototype._resolved =
           connInfo.getHostAddress(),
           connInfo.getPortNumber(),
           connInfo.getSuggestedTCPTimeout(),
-          entry.notificationAction.getConnectionType()
+          entry.notificationAction.getConnectionType(),
+          peerId
         );
 
         this.emit(this.Events.PeerAdvertisesDataForUs,

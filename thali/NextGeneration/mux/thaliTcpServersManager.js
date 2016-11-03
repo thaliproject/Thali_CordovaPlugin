@@ -295,6 +295,16 @@ ThaliTcpServersManager.prototype.terminateOutgoingConnection =
     return Promise.resolve(null);
   };
 
+/**
+ * If you are using this method, something has gone very wrong with your code.
+ * This method is used when we think the mux has lost its mind. We use it to
+ * tear down the mux (and the native connection with it) while triggering
+ * a peerAvailabilityChanged sequence that will cause us to see the peer
+ * go away and then come back so we can connect again.
+ * @param peerIdentifier
+ * @param port
+ * @param error
+ */
 ThaliTcpServersManager.prototype.recreatePeerListener =
   function (peerIdentifier, port, error) {
     logger.debug('Recreate outgoing connection called on peerID ' +
