@@ -1,6 +1,6 @@
 #!/bin/sh
 
-### START - JXcore Test Server --------........................
+### START - JXcore Test Server --------.............................
 ### Testing environment prepares separate packages for each node.
 ### Package builder calls this script with each node's IP address
 ### Make sure multiple calls to this script file compiles the application file
@@ -38,11 +38,15 @@ fi
 # Check the existence of the script that in CI gives the right test server
 # IP address.
 
-if [ -f CIGIVEMEMYIP.sh ]; then
-  RUN_IN_CI=0
-else
-  RUN_IN_CI=1
-fi
+hash CIGIVEMEMYIP.sh 2>/dev/null
+RUN_IN_CI=$?
+
+# > new. not working
+# if [ -f CIGIVEMEMYIP.sh ]; then
+#   RUN_IN_CI=0
+# else
+#   RUN_IN_CI=1
+# fi
 
 # Print the Cordova version for debugging purposes
 # and to make sure Cordova is installed
@@ -95,6 +99,8 @@ TEST_TYPE="UnitTest_app.js"
 thali/install/setUpTests.sh $TEST_TYPE $SERVER_ADDRESS
 
 if [ $RUN_IN_CI == 0 ]; then
+
+  echo "We're running in CI. So we're copying .apk and .app into ${WORKING_DIR}"
 
   # Make sure we are back in the project root folder
   # after the setting up the tests
