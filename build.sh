@@ -55,9 +55,9 @@ cordova -v;ERROR_ABORT
 # Run first the tests that can be run on desktop
 thali/install/setUpDesktop.sh;ERROR_ABORT
 cd test/www/jxcore/;ERROR_ABORT
-jx npm test --networkType WIFI;ERROR_ABORT
-jx npm test --networkType NATIVE;ERROR_ABORT
-jx npm test --networkType BOTH;ERROR_ABORT
+jx runTests.js --networkType WIFI;ERROR_ABORT
+jx runTests.js --networkType NATIVE;ERROR_ABORT
+jx runTests.js --networkType BOTH;ERROR_ABORT
 jx npm run test-meta;ERROR_ABORT
 jx runCoordinatedTests.js --networkType NATIVE;ERROR_ABORT
 jx runCoordinatedTests.js --networkType WIFI;ERROR_ABORT
