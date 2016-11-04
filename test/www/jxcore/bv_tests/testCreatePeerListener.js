@@ -306,15 +306,17 @@ function waitForPeerAvailabilityChanged(t, serversManager, dontFail, then) {
 }
 
 function startAdvertisingAndListening(t, applicationPort) {
-
-  Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort,
+  Mobile('startUpdateAdvertisingAndListening').callNative(
+    applicationPort,
     function (err) {
       t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+
       Mobile('startListeningForAdvertisements').callNative(function (err) {
         t.notOk(err, 'Can call startListeningForAdvertisements without error');
+
         Mobile('peerAvailabilityChanged').callRegistered([{
           peerIdentifier : 'peer1',
-          peerAvailable: true
+          peerAvailable : true
         }]);
       });
     });
@@ -572,4 +574,60 @@ test('createPeerListener - multiple parallel calls', function (t) {
     .then(function () {
       t.end();
     });
+});
+
+// This is related with issue #1473.
+test('createPeerListener - we shouldn\'t create a dead pipe', function (t) {
+  var firstConnection = false;
+  var firstConnectionPort;
+
+  serversManager.on('failedConnection', function () {
+    t.fail('connection shouldn\'t fail');
+  });
+
+  var nativeServer = net.createServer(function (socket) {
+    t.ok(firstConnection, 'Should not get unexpected connection');
+
+    // Replacing 'pipe' method on any socket.
+    var oldPipe = socket.__proto__.pipe;
+    socket.__proto__.pipe = function (targetSocket) {
+      if (socket.readyState === 'closed' || targetSocket.readyState === 'closed') {
+        t.fail('we created a new pipe with closed socket');
+      } else {
+        t.pass('we created a new pipe with valid sockets');
+      }
+      return oldPipe.apply(this, arguments);
+    }
+
+    serversManager.terminateOutgoingConnection('peer1', firstConnectionPort)
+    .then(function () {
+      // We are waiting until events will be fired.
+      setImmediate(function () {
+        socket.__proto__.pipe = oldPipe;
+        nativeServer.close();
+        socket.end();
+
+        t.pass('passed');
+        t.end();
+      });
+    });
+  });
+
+  nativeServer.listen(nativePort, function (error) {
+    if (error) {
+      logger.error('got error: \'%s\'', error.toString());
+      t.fail('nativeServer should not fail');
+      t.end();
+      return;
+    }
+    setUp(t, serversManager, applicationPort, nativePort, false, false,
+      function (peerPort) {
+        t.notEqual(peerPort, nativePort, 'peerPort != nativePort');
+        // Need to connect a socket to force the outgoing
+        net.createConnection(peerPort);
+        firstConnection = true;
+        firstConnectionPort = peerPort;
+      }
+    );
+  });
 });

@@ -7,7 +7,6 @@ var ForeverAgent = require('forever-agent');
 var logger = require('../../ThaliLogger')('thaliPeerPoolOneAtATime');
 var PromiseQueue = require('../promiseQueue');
 var ThaliReplicationPeerAction = require('../replication/thaliReplicationPeerAction');
-var assert = require('assert');
 var thaliMobileNativeWrapper = require('../thaliMobileNativeWrapper');
 var thaliMobile = require('../thaliMobile');
 var ThaliNotificationAction = require('../notification/thaliNotificationAction');
@@ -183,11 +182,13 @@ ThaliPeerPoolOneAtATime.prototype._replicateThroughProblems =
           return null;
         }
 
+        var peerAdvertisesDataForUs =
+          replicationAction.getPeerAdvertisesDataForUs();
+
         if (error.message === 'No activity time out' ||
           !thaliMobile
             ._peerAvailabilities[replicationAction.getConnectionType()]
-                                [replicationAction.getPeerAdvertisesDataForUs()
-                                    .peerId]) {
+                                [peerAdvertisesDataForUs.peerId]) {
           return null;
         }
 
@@ -196,8 +197,8 @@ ThaliPeerPoolOneAtATime.prototype._replicateThroughProblems =
           if (error.code === 'ECONNREFUSED' || error.code === 'ECONNRESET') {
             thaliMobileNativeWrapper._getServersManager()
               .recreatePeerListener(
-                peerId,
-                replicationAction.getPeerAdvertisesDataForUs().portNumber,
+                peerAdvertisesDataForUs.peerId,
+                peerAdvertisesDataForUs.portNumber,
                 error
               );
             return null;
