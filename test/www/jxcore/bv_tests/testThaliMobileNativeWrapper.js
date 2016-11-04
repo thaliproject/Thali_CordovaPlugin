@@ -400,7 +400,7 @@ test('make sure terminateConnection is properly hooked up',
   }
 );
 
-test.only('make sure terminateListener is return error if we get called on iOS',
+test('make sure terminateListener is return error if we get called on iOS',
   function () {
     return !platform.isIOS;
   },
