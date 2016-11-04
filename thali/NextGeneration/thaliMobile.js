@@ -253,6 +253,11 @@ module.exports.stop = function () {
   return promiseQueue.enqueue(function (resolve) {
     thaliMobileStates = getInitialStates();
     removeAllAvailabilityWatchersFromPeers();
+    Object.getOwnPropertyNames(connectionTypes)
+      .forEach(function (connectionKey) {
+        var connectionType = connectionTypes[connectionKey];
+        changePeersUnavailable(connectionType);
+      });
 
     module.exports.emitter
       .removeListener('networkChanged', handleNetworkChanged);
@@ -860,22 +865,25 @@ module.exports.disconnect = function () {
 
 
 var emitPeerUnavailable = function (peerIdentifier, connectionType) {
-  module.exports.emitter.emit('peerAvailabilityChanged',
-    getExtendedPeer(
-      {
-        peerIdentifier: peerIdentifier,
-        hostAddress: null,
-        portNumber: null
-      },
-      connectionType
-    )
+  var peer = getExtendedPeer(
+    {
+      peerIdentifier: peerIdentifier,
+      hostAddress: null,
+      portNumber: null
+    },
+    connectionType
   );
+  logger.debug('Emitting peerAvailabilityChanged from emitPeerUnavailable %s',
+    JSON.stringify(peer));
+  module.exports.emitter.emit('peerAvailabilityChanged', peer);
 };
 
 var peerAvailabilities = {};
 peerAvailabilities[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = {};
 peerAvailabilities[connectionTypes.BLUETOOTH] = {};
 peerAvailabilities[connectionTypes.TCP_NATIVE] = {};
+
+module.exports._peerAvailabilities = peerAvailabilities;
 
 var changeCachedPeerUnavailable = function (peer) {
   removeAvailabilityWatcherFromPeerIfExists(peer);
@@ -906,6 +914,11 @@ var updateAndCheckChanges = function (peer) {
   if (!cachedPeer) {
     return true;
   }
+
+  if (!peer.hostAddress) {
+    return true;
+  }
+
   cachedPeer.availableSince = Date.now();
   if (cachedPeer.hostAddress !== peer.hostAddress ||
       cachedPeer.portNumber !== peer.portNumber) {
@@ -931,20 +944,43 @@ var getExtendedPeer = function (peer, connectionType) {
     hostAddress: peer.hostAddress,
     portNumber: peer.portNumber,
     connectionType: connectionType,
-    suggestedTCPTimeout: timeout
+    suggestedTCPTimeout: timeout,
+    recreated: peer.recreated
   };
 };
 
 var handlePeer = function (peer, connectionType) {
   peer = getExtendedPeer(peer, connectionType);
-  if (!updateAndCheckChanges(peer)) {
-    return;
-  }
-  if (peer.hostAddress === null) {
-    changeCachedPeerUnavailable(peer);
+
+  if (peer.recreated) {
+    var cachedPeer =
+      peerAvailabilities[peer.connectionType][peer.peerIdentifier];
+
+    if (!cachedPeer) {
+      if (peer.hostAddress !== null) {
+        ThaliMobileNativeWrapper
+          .terminateListener(peer.peerIdentifier, peer.portNumber)
+          .catch(function (err) {
+            logger.error('Try to clean up a recreated server for an' +
+              'unavailable peer %s and got error %s', peer.peerIdentifier,
+              err);
+          });
+      }
+      return;
+    }
   } else {
-    changeCachedPeerAvailable(peer);
+    if (!updateAndCheckChanges(peer)) {
+      return;
+    }
+    if (peer.hostAddress === null) {
+      changeCachedPeerUnavailable(peer);
+    } else {
+      changeCachedPeerAvailable(peer);
+    }
   }
+
+  logger.debug('Emitting peerAvailabilityChanged from handlePeer %s',
+    JSON.stringify(peer));
   module.exports.emitter.emit('peerAvailabilityChanged', peer);
 };
 
@@ -967,9 +1003,12 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (peer) {
 });
 
 var peerAvailabilityWatchers = {};
-peerAvailabilityWatchers[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = {};
+peerAvailabilityWatchers[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] =
+  {};
 peerAvailabilityWatchers[connectionTypes.BLUETOOTH] = {};
 peerAvailabilityWatchers[connectionTypes.TCP_NATIVE] = {};
+
+module.exports._peerAvailabilityWatchers = peerAvailabilityWatchers;
 
 var addAvailabilityWatcherToPeerIfNotExist = function (peer) {
   if (isAvailabilityWatcherForPeerExist(peer)) {

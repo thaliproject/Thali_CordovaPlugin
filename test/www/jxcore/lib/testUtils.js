@@ -261,15 +261,17 @@ function createResponseBody(response) {
   return new Promise(function (resolve, reject) {
     var responseBody = '';
     response.on('data', function (data) {
+      logger.debug('Got response data')
       responseBody += data;
     });
     response.on('end', function () {
+      logger.debug('Got end');
       completed = true;
       resolve(responseBody);
     });
     response.on('error', function (error) {
       if (!completed) {
-        logger.error('%j', error);
+        logger.error('response body error %j', error);
         reject(error);
       }
     });
@@ -293,8 +295,7 @@ module.exports.put = function (host, port, path, pskIdentity, pskKey,
         maxFreeSockets: 256,
         ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
         pskIdentity: pskIdentity,
-        pskKey: pskKey,
-        secureOptions: pskIdentity + host + port + path
+        pskKey: pskKey
       })
     }, function (response) {
       createResponseBody(response)
@@ -318,7 +319,7 @@ module.exports._get = function (host, port, path, options) {
         .catch(reject);
     });
     request.on('error', function (error) {
-      logger.error('%j', error);
+      logger.error('_get got error %j', error);
       reject(error);
     });
     // Wait for 15 seconds since the request can take a while

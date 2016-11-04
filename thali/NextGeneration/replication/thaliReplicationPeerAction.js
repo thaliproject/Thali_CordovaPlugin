@@ -8,7 +8,6 @@ var actionState = ThaliPeerAction.actionState;
 var assert = require('assert');
 var thaliConfig = require('../thaliConfig');
 var logger = require('../../ThaliLogger')('thaliReplicationPeerAction');
-var ForeverAgent = require('forever-agent');
 var LocalSeqManager = require('./localSeqManager');
 var RefreshTimerManager = require('./utilities').RefreshTimerManager;
 var Utils = require('../utils/common.js');
@@ -98,6 +97,15 @@ ThaliReplicationPeerAction.PUSH_LAST_SYNC_UPDATE_MILLISECONDS = 200;
 
 ThaliReplicationPeerAction.prototype.getPeerAdvertisesDataForUs = function () {
   return this._peerAdvertisesDataForUs;
+};
+
+/**
+ * Creates a new replication action with the same constructor arguments as
+ * this replication action.
+ */
+ThaliReplicationPeerAction.prototype.clone = function () {
+  return new ThaliReplicationPeerAction(this._peerAdvertisesDataForUs,
+    this._PouchDB, this._dbName, this._ourPublicKey);
 };
 
 /**
@@ -278,6 +286,14 @@ ThaliReplicationPeerAction.prototype.kill = function () {
   }
 };
 
+function printErrorArray(errors) {
+  var result = '';
+  errors.forEach(function (error) {
+    result += 'error: ' + error.message + ' ';
+  });
+  return result;
+}
+
 /**
  * @param {Array.<Error>} errors
  * @private
@@ -286,14 +302,19 @@ ThaliReplicationPeerAction.prototype._complete =
   function (errors) {
     var self = this;
     if (this._completed) {
+      logger.debug('We called _complete with ' + printErrorArray(errors) +
+      ' but this is a second call and so we ignored it');
       return;
     }
     this._completed = true;
+    logger.debug('We called _complete with ' + printErrorArray(errors) +
+    ' and it caused us to complete');
 
     this.kill();
 
     assert(this._resolve, 'resolve should exist');
     assert(this._reject, 'reject should exist');
+    var returnError = null;
 
     if (!errors || errors.length === 0) {
       this._resolve();
@@ -301,16 +322,18 @@ ThaliReplicationPeerAction.prototype._complete =
       var isErrorResolved = errors.some(function (error) {
         switch (error.code) {
           case 'ECONNREFUSED': {
-            self._reject(
-              new Error('Could not establish TCP connection')
-            );
+            returnError = new Error('Could not establish TCP connection');
+            returnError.status = error.status;
+            returnError.code = error.code;
+            self._reject(returnError);
             return true;
           }
           case 'ECONNRESET': {
-            self._reject(
-              new Error('Could establish TCP connection but couldn\'t keep' +
-                ' it running')
-            );
+            returnError = new Error('Could establish TCP connection but ' +
+              'couldn\'t keep it running');
+            returnError.status = error.status;
+            returnError.code = error.code;
+            self._reject(returnError);
             return true;
           }
         }

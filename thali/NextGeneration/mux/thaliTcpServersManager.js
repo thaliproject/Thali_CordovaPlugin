@@ -296,6 +296,33 @@ ThaliTcpServersManager.prototype.terminateOutgoingConnection =
   };
 
 /**
+ * If you are using this method, something has gone very wrong with your code.
+ * This method is used when we think the mux has lost its mind. We use it to
+ * tear down the mux (and the native connection with it) while triggering
+ * a peerAvailabilityChanged sequence that will cause us to see the peer
+ * go away and then come back so we can connect again.
+ * @param peerIdentifier
+ * @param port
+ * @param error
+ */
+ThaliTcpServersManager.prototype.recreatePeerListener =
+  function (peerIdentifier, port, error) {
+    logger.debug('Recreate outgoing connection called on peerID ' +
+      peerIdentifier + ' with port ' + port);
+    var peerServer = this._peerServers[peerIdentifier];
+    if (peerServer && peerServer.server.address().port === port) {
+      if (!error) {
+        // We have to pass some error if we want to trigger
+        // peerAvailabilityChanged events sequence
+        error = new Error('Recreating peer listener');
+      }
+      createPeerListener.closeServer(this, peerServer.server, error, true);
+    } else {
+      logger.debug('This peer does not exist anymore');
+    }
+};
+
+/**
  * Notifies the listener of a failed connection attempt. This is mostly used to
  * determine when we have hit the local maximum connection limit but it's used
  * any time there is a connection error since the only other hint that a

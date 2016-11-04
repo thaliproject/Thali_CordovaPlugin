@@ -27,13 +27,21 @@ function closeServer(self, server, failedConnectionErr, canRetry)
   server._mux = null;
   delete self._peerServers[server._peerIdentifier];
   if (failedConnectionErr) {
+    logger.debug('We are emitting failedConnection with error %s and ' +
+      'peerIdentifier %s', failedConnectionErr, server._peerIdentifier);
     self.emit('failedConnection', {
-      'error': failedConnectionErr,
-      'peerIdentifier': server._peerIdentifier
+      error: failedConnectionErr,
+      peerIdentifier: server._peerIdentifier,
+      recreated: true
     });
   }
   if (canRetry) {
-    logger.debug('Recreating listener');
+    assert(failedConnectionErr, 'Calling canRetry set to true without ' +
+      'emitting an error will mean we do not emit an event that the peer ' +
+      'is not available before emitting an event that the peer is available ' +
+      'which violates thaliMobiles contract to not emit repeated available ' +
+      'events for the same peer');
+    logger.debug('Will try to recreate server for %s', server._peerIdentifier);
     // We use next tick just to avoid building up a stack but we want
     // to make sure this code runs before anyone else so we can grab
     // the server spot for the identifier we are using and no this probably
@@ -41,14 +49,17 @@ function closeServer(self, server, failedConnectionErr, canRetry)
     process.nextTick(function () {
       createPeerListener(self, server._peerIdentifier, false)
         .then(function (port) {
+          logger.debug('We are emitting listenerRecreatedAfterFailure with ' +
+            'peerIdentifier %s and portNumber %d', server._peerIdentifier,
+              port);
           self.emit('listenerRecreatedAfterFailure', {
             'peerIdentifier': server._peerIdentifier,
             'portNumber': port
           });
         })
         .catch(function (err) {
-          logger.warn('Got error trying to restart listener after failure -' +
-            err);
+          logger.warn('Got error trying to restart listener for peer %s' +
+            ' after failure %s', server._peerIdentifier, err.toString());
         });
     });
   }
@@ -70,7 +81,7 @@ function findMuxForReverseConnection(nativeServer, clientPort) {
 }
 
 function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
-                                   cb)
+                                   peerIdentifier, cb)
 {
   // Create an outgoing socket to the native listener via a mux
   // New streams created on this mux by the remote side are initiated
@@ -84,21 +95,27 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
         });
 
         stream.on('error', function (err) {
-          logger.debug('multiplexToNativeListener.stream ' + err);
+          logger.debug('multiplexToNativeListener.stream - %s - error %s',
+            peerIdentifier, err);
           client.destroy();
         });
 
         stream.on('finish', function () {
+          logger.debug('multiplexToNativeListener.stream - %s - finish',
+          peerIdentifier);
           stream.destroy();
           client.end();
         });
 
         stream.on('close', function () {
+          logger.debug('multiplexToNativeListener.stream - %s - close',
+          peerIdentifier);
           client.destroy();
         });
 
         client.on('error', function (err) {
-          logger.debug('multiplexToNativeListener.client ' + err);
+          logger.debug('multiplexToNativeListener.client - %s - error %s ',
+            peerIdentifier, err);
           stream.destroy();
           self.emit('routerPortConnectionFailed', {
             error: err,
@@ -107,28 +124,43 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
         });
 
         client.on('finish', function () {
+          logger.debug('multiplexToNativeListener.client - %s - finish',
+            peerIdentifier);
           stream.end();
         });
 
         client.on('close', function () {
+          logger.debug('multiplexToNativeListener.client - %s - close',
+            peerIdentifier);
           stream.destroy();
         });
       });
 
       mux.on('error', function (err) {
-        logger.debug('multiplexToNativeListener.mux ' + err);
+        logger.debug('mux - mux <-> outgoing TCP/IP client connection to ' +
+          'Android - %s - err %s',
+            peerIdentifier, err);
         outgoing.destroy();
       });
 
       mux.on('finish', function () {
+        logger.debug('mux - mux <-> outgoing TCP/IP client connection to ' +
+          'Android - %s - finish',
+          peerIdentifier);
         outgoing.end();
       });
 
       mux.on('close', function () {
+        logger.debug('mux - mux <-> outgoing TCP/IP client connection to ' +
+          'Android - %s - close',
+          peerIdentifier);
         outgoing.end();
       });
 
-      outgoing.on('data', function () {
+      outgoing.on('data', function (data) {
+        logger.silly('outgoing - mux <-> outgoing TCP/IP client connection ' +
+          'to Android - %s - data length (bytes) - %d', peerIdentifier,
+          data.length);
         var peerServerEntry = self._peerServers[server._peerIdentifier];
         if (peerServerEntry) {
           peerServerEntry.lastActive = Date.now();
@@ -136,16 +168,30 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
       });
 
       outgoing.on('error', function (err) {
-        logger.debug('Got error on outgoing to native - ' + err);
+        logger.warn('outgoing - mux <-> outgoing TCP/IP client connection ' +
+          'to Android - %s -  error %s',
+          peerIdentifier, err);
+
         mux.destroy();
       });
 
       outgoing.on('finish', function () {
+        logger.debug('outgoing - mux <-> outgoing TCP/IP client connection ' +
+          'to Android - %s - finish',
+          peerIdentifier);
         mux.end();
       });
 
       outgoing.on('close', function () {
+        logger.debug('outgoing - mux <-> outgoing TCP/IP client connection ' +
+          'to Android  - %s - close',
+          peerIdentifier);
         mux.destroy();
+      });
+
+      outgoing.on('timeout', function () {
+        logger.debug('outgoing - mux <-> outgoing TCP/IP client connection ' +
+          'to Android - %s - timeout');
       });
 
       outgoing.pipe(mux).pipe(outgoing);
@@ -162,21 +208,21 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
 }
 
 function handleForwardConnection(self, listenerOrIncomingConnection, server,
-                                 resolve, reject) {
-  logger.debug('forward connection');
+                                 peerIdentifier, resolve, reject) {
+  logger.debug('Creating outgoing connection to native layer for ' +
+    'peerID ' + peerIdentifier);
   var promiseResolved = false;
 
   // Connect to the native listener and mux the connection
   // When the other side creates a stream, send it to the application
   var outgoing = multiplexToNativeListener(self, listenerOrIncomingConnection,
-    server,
+    server, peerIdentifier,
     function onConnection() {
       promiseResolved = true;
       resolve();
     });
 
   outgoing.on('error', function (err) {
-    logger.warn(err);
     var error = new Error('Cannot Connect To Peer');
     error.outgoingError = err;
     closeServer(self, server, error, true);
@@ -187,7 +233,8 @@ function handleForwardConnection(self, listenerOrIncomingConnection, server,
   });
 
   outgoing.on('close', function () {
-    closeServer(self, server, null, true);
+    closeServer(self, server, new Error('Outgoing closed, recreating ' +
+      'connection'), true);
   });
 
   outgoing.on('timeout', function () {
@@ -249,18 +296,19 @@ function connectToRemotePeer(self, incoming, peerIdentifier, server,
   return new Promise(function (resolve, reject) {
     assert(server._firstConnection, 'We should only get called once');
     server._firstConnection = false;
-    logger.debug('first connection');
+    logger.debug('Issuing callNative for %s', peerIdentifier);
 
     Mobile('connect').callNative(peerIdentifier, // jshint ignore:line
       function (err, unParsedConnection) {
         if (err) {
           var error = new Error(err);
-          logger.warn(error);
-          logger.debug('failedConnection');
+          logger.warn('callNative for %s failed with %s', peerIdentifier,
+            err);
           incoming && incoming.end();
           closeServer(self, server, error, true);
           return reject(error);
         }
+        logger.debug('callNative for %s connected', peerIdentifier);
         var listenerOrIncomingConnection = JSON.parse(unParsedConnection);
         if (listenerOrIncomingConnection.listeningPort === 0) {
           if (pleaseConnect) {
@@ -300,7 +348,7 @@ function connectToRemotePeer(self, incoming, peerIdentifier, server,
         }
         else {
           handleForwardConnection(self, listenerOrIncomingConnection, server,
-                                  resolve, reject);
+                                peerIdentifier, resolve, reject);
         }
       });
   });
@@ -462,7 +510,14 @@ function createPeerListener(self, peerIdentifier, pleaseConnect) {
   }
 
   function _do(resolve, reject) {
+    var incomingConnectionId = -1;
     function onNewConnection(incoming) {
+      ++incomingConnectionId;
+      var localIncomingConnectionId = incomingConnectionId;
+
+      logger.debug('incoming (TCP) - Node TCP/IP client <-> Mux stream' +
+        ' - %s - %d - got a new incoming connection', peerIdentifier,
+        localIncomingConnectionId);
       // Handle a new connection from the app to the server
       if (!pleaseConnect && server._firstConnection) {
         server.muxPromise = connectToRemotePeer(self, incoming, peerIdentifier,
@@ -475,17 +530,23 @@ function createPeerListener(self, peerIdentifier, pleaseConnect) {
       // We want not to loose any event (issue #1473).
       incoming
       .on('error', function (err) {
-        logger.error('error on incoming socket - ' + err);
+        logger.error('incoming (TCP) - Node TCP/IP client <-> Mux stream' +
+          '- %s - %d - error: %s', peerIdentifier,
+          localIncomingConnectionId, err);
         if (incomingStream) {
           incomingStream.destroy();
         }
       })
       .on('finish', function () {
+        logger.debug('incoming (TCP) - Node TCP/IP client <-> Mux stream ' +
+          '- %s - %d - finish', peerIdentifier, localIncomingConnectionId);
         if (incomingStream) {
-          incomingStream.end();
+          incomingStream.destroy();
         }
       })
       .on('close', function () {
+        logger.debug('incoming (TCP) - Node TCP/IP client <-> Mux stream' +
+          ' - %s - %d - close', peerIdentifier, localIncomingConnectionId);
         if (incomingStream) {
           incomingStream.destroy();
         }
@@ -496,7 +557,7 @@ function createPeerListener(self, peerIdentifier, pleaseConnect) {
           // We don't need to create `incomingStream` and `pipe`
           //   if `incoming` is already closed (issue #1473).
           if (incoming.readyState === 'closed') {
-            logger.debug('incoming is already closed');
+            logger.debug('incoming (TCP) - Node TCP/IP client - is already closed');
             return;
           }
 
@@ -505,21 +566,33 @@ function createPeerListener(self, peerIdentifier, pleaseConnect) {
 
           incomingStream
           .on('error', function (err) {
-            logger.error('error on incoming stream - ' + err);
+            logger.error('incomingStream (mux) - Node TCP/IP client <-> ' +
+              'Mux stream - %s - %d - error: %s', peerIdentifier,
+              localIncomingConnectionId, err);
             incoming.destroy();
           })
           .on('finish', function () {
-            incoming.end();
+            logger.debug('incomingStream (mux) - Node TCP/IP client <-> ' +
+              'Mux stream - %s - %d - finish', peerIdentifier,
+              localIncomingConnectionId);
+            incoming.destroy();
           })
           .on('close', function () {
+            logger.debug('incomingStream (mux) - Node TCP/IP client <-> ' +
+              'Mux stream -  %s - %d - close', peerIdentifier,
+              localIncomingConnectionId);
             incoming.destroy();
           });
 
+          // I had wanted to add an incoming.on('data) event handler here to
+          // just measure the amount of data being sent but when I put on the
+          // event handler, even if it doesn't do anything, it causes a massive
+          // slow down in the rate at which JXcore executes and so causes
+          // tests to fail.
+
           incomingStream.pipe(incoming).pipe(incomingStream);
         })
-        .catch(function (err) {
-          logger.debug('failed incoming connection because of mux promise ' +
-            'failure - ' + err);
+        .catch(function () {
           incoming.end();
         });
     }
@@ -557,6 +630,8 @@ function createPeerListener(self, peerIdentifier, pleaseConnect) {
       server.on('connection', onNewConnection);
 
       server.on('close', function onClose() {
+        logger.debug('Closed Node TCP/IP listener (server) for %s',
+          peerIdentifier);
       });
 
       return server;
@@ -580,7 +655,7 @@ function createPeerListener(self, peerIdentifier, pleaseConnect) {
       return;
     }
 
-    logger.debug('createPeerListener creating new server');
+    logger.debug('creating new server for %s', peerIdentifier);
 
     var server = createServer(onNewConnection);
 
@@ -617,14 +692,16 @@ function createPeerListener(self, peerIdentifier, pleaseConnect) {
     }
 
     server.on('error', function (err) {
-      logger.warn(err);
+      logger.warn('Node TCP/IP listener (server) for %s received error %s',
+        peerIdentifier, err);
       failedStartup(err);
     });
 
     // listen(port, ...) port = 0 for random port
     server.listen(0, function () {
       var port = server.address().port;
-      logger.debug('listening', port);
+      logger.debug('Node TCP/IP listener (server) for %s listening on %d',
+        peerIdentifier, port);
 
       logger.debug('pleaseConnect=', pleaseConnect);
 
