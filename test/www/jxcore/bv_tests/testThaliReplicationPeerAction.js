@@ -23,10 +23,7 @@ var thaliReplicationPeerAction = null;
 
 var httpAgentPool = new ForeverAgent.SSL({
   rejectUnauthorized: false,
-  keepAlive: true,
-  keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-  maxSockets: Infinity,
-  maxFreeSockets: 256,
+  maxSockets: 8,
   ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
   pskIdentity: pskId,
   pskKey: pskKey
