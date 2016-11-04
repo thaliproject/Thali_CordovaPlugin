@@ -242,54 +242,6 @@ function handleForwardConnection(self, listenerOrIncomingConnection, server,
   });
 }
 
-function handleReverseConnection(self, incoming, server,
-                                 listenerOrIncomingConnection) {
-  // We expect to be connected to from the p2p side which
-  // implies by the time we get here there is already a
-  // client socket connected to the server set up by
-  // _createNativeListener, find the associated mux
-  // and hook it to our incoming connection
-
-  logger.debug('reverse connection');
-
-  if (listenerOrIncomingConnection.clientPort in
-    self._pendingReverseConnections) {
-    clearTimeout(
-      self._pendingReverseConnections[
-        listenerOrIncomingConnection.clientPort].timerCancel);
-    delete self._pendingReverseConnections[
-      listenerOrIncomingConnection.clientPort];
-  }
-
-  if (listenerOrIncomingConnection.serverPort !==
-    self._nativeServer.address().port) {
-    logger.warn('failedConnection');
-    // This isn't the socket you're looking for !!
-    assert(incoming, 'Reverse connections should only happen after we get a' +
-      'TCP incoming request, pleaseConnect === true should never trigger' +
-      'one so we should always have an incoming');
-    incoming.destroy();
-    closeServer(self, server, new Error('Mismatched serverPort'), true);
-    server._firstConnection = true;
-    return false;
-  }
-
-  // Find the mux for the incoming socket that should have
-  // been created when the reverse connection completed
-  var mux = findMuxForReverseConnection(self._nativeServer,
-                                      listenerOrIncomingConnection.clientPort);
-  if (!mux) {
-    logger.debug('no mux found');
-    incoming.destroy();
-    closeServer(self, server, new Error('Incoming connection died'), true);
-    server._firstConnection = true;
-    return false;
-  }
-
-  server._mux = mux;
-  return true;
-}
-
 function connectToRemotePeer(self, incoming, peerIdentifier, server,
                              pleaseConnect)
 {
@@ -310,46 +262,11 @@ function connectToRemotePeer(self, incoming, peerIdentifier, server,
         }
         logger.debug('callNative for %s connected', peerIdentifier);
         var listenerOrIncomingConnection = JSON.parse(unParsedConnection);
-        if (listenerOrIncomingConnection.listeningPort === 0) {
-          if (pleaseConnect) {
-            logger.warn('was expecting a forward connection to be made');
-            closeServer(self, server, new Error('Cannot Connect To Peer'),
-                        true);
-            return reject(new Error('Unexpected Reverse Connection'));
-          }
-          // So this is annoying.. there's no guarantee on the order of the
-          // server running it's onConnection handler and us getting here.
-          // So we don't always find a mux when handling a reverse
-          // connection. Handle that here.
-
-          if (findMuxForReverseConnection(self._nativeServer,
-              listenerOrIncomingConnection.clientPort)) {
-            handleReverseConnection(self, incoming, server,
-                                    listenerOrIncomingConnection);
-            return resolve();
-          }
-          else {
-            // Record the pending connection, give it a second to turn up
-            self._pendingReverseConnections[
-              listenerOrIncomingConnection.clientPort] = {
-              handleReverseConnection : function () {
-                handleReverseConnection(self, incoming, server,
-                                        listenerOrIncomingConnection);
-                resolve();
-              },
-              timerCancel: setTimeout(function () {
-                logger.debug('timed out waiting for incoming connection');
-                handleReverseConnection(self, incoming, server,
-                                        listenerOrIncomingConnection);
-                resolve();
-              }, thaliConfig.MILLISECONDS_TO_WAIT_FOR_REVERSE_CONNECTION)
-            };
-          }
-        }
-        else {
-          handleForwardConnection(self, listenerOrIncomingConnection, server,
-                                peerIdentifier, resolve, reject);
-        }
+        assert(listenerOrIncomingConnection.listeningPort !== 0,
+        'We should not get a 0 port, this check is to see if we forgot' +
+        ' any of the old reverse connection code');
+        handleForwardConnection(self, listenerOrIncomingConnection, server,
+                              peerIdentifier, resolve, reject);
       });
   });
 }
