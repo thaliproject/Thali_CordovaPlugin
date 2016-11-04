@@ -916,7 +916,7 @@ test('createPeerListener - multiple parallel calls', function (t) {
 });
 
 // This is related with issue #1473.
-test.only('createPeerListener - we shouldn\'t create a dead pipe', function (t) {
+test('createPeerListener - we shouldn\'t create a dead pipe', function (t) {
   var firstConnection = false;
   var firstConnectionPort;
 
@@ -927,34 +927,46 @@ test.only('createPeerListener - we shouldn\'t create a dead pipe', function (t) 
   var nativeServer = net.createServer(function (socket) {
     t.ok(firstConnection, 'Should not get unexpected connection');
 
+    // Replacing 'pipe' method on any socket.
     var oldPipe = socket.__proto__.pipe;
-    socket.__proto__.pipe = function () {
-      t.fail('we should not create pipe with closed socket');
+    socket.__proto__.pipe = function (targetSocket) {
+      if (socket.readyState === 'closed' || targetSocket.readyState === 'closed') {
+        t.fail('we created a new pipe with closed socket');
+      } else {
+        t.pass('we created a new pipe with valid sockets');
+      }
       return oldPipe.apply(this, arguments);
     }
 
     serversManager.terminateOutgoingConnection('peer1', firstConnectionPort)
     .then(function () {
-      nativeServer.close();
-      socket.end();
-      t.pass('passed');
-      t.end();
+      // We are waiting until events will be fired.
+      setImmediate(function () {
+        socket.__proto__.pipe = oldPipe;
+        nativeServer.close();
+        socket.end();
+
+        t.pass('passed');
+        t.end();
+      });
     });
   });
-  nativeServer.listen(nativePort, function (err) {
-    if (err) {
+
+  nativeServer.listen(nativePort, function (error) {
+    if (error) {
+      logger.error('got error: \'%s\'', error.toString());
       t.fail('nativeServer should not fail');
       t.end();
+      return;
     }
+    setUp(t, serversManager, applicationPort, nativePort, false, false,
+      function (peerPort) {
+        t.notEqual(peerPort, nativePort, 'peerPort != nativePort');
+        // Need to connect a socket to force the outgoing
+        net.createConnection(peerPort);
+        firstConnection = true;
+        firstConnectionPort = peerPort;
+      }
+    );
   });
-
-  setUp(t, serversManager, applicationPort, nativePort, false, false,
-    function (peerPort) {
-      t.notEqual(peerPort, nativePort, 'peerPort != nativePort');
-      // Need to connect a socket to force the outgoing
-      net.createConnection(peerPort);
-      firstConnection = true;
-      firstConnectionPort = peerPort;
-    }
-  );
 });
