@@ -1202,7 +1202,7 @@ function WifiBasedNativeMock(platformName, router) {
   mobileHandler.wifiPeerAvailabilityChanged =
     wifiPeerAvailabilityChanged(platformName, thaliWifiInfrastructure);
 
-  mobileHandler._platform = platform;
+  mobileHandler._platform = platformName;
 
   return mobileHandler;
 }

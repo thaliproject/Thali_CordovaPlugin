@@ -13,7 +13,6 @@ var ThaliNotificationClient = require('thali/NextGeneration/notification/thaliNo
 var ThaliPeerPoolDefault = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 var httpTester = require('../lib/httpTester');
 var Promise = require('lie');
-var Platform = require('thali/NextGeneration/utils/platform');
 
 var thaliNotificationServer = null;
 var thaliNotificationClient = null;

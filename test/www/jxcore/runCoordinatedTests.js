@@ -105,15 +105,16 @@ var setListeners = function (instance, instanceId) {
   });
 };
 
+var instanceCount = argv.instanceCount;
 var testServerConfiguration = {
   devices: {
-    android: 0,
-    ios: 0,
-    desktop: argv.instanceCount
+    android: argv.platform === platform.names.ANDROID ? instanceCount : 0,
+    ios: argv.platform === platform.names.IOS ? instanceCount : 0,
+    desktop: 0
   },
   minDevices: {
-    android: 0,
-    ios: 0,
+    android: 2,
+    ios: 2,
     desktop: 2
   },
   waiting_for_devices_timeout: 5 * 1000
