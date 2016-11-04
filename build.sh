@@ -37,8 +37,7 @@ fi
 
 # Check the existence of the script that in CI gives the right test server
 # IP address.
-
-if [ -f CIGIVEMEMYIP.sh ]; then
+if [ -x "$(command -v CIGIVEMEMYIP.sh)" ]; then
   RUN_IN_CI=0
 else
   RUN_IN_CI=1
