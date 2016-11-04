@@ -391,13 +391,63 @@ var verifyCallWithArguments = function (t, callName, parameters) {
   });
 };
 
-test('make sure terminateConnection is properly hooked up', function (t) {
-  verifyCallWithArguments(t, '_terminateConnection', ['connection-id']);
-});
+test('make sure terminateConnection is properly hooked up',
+  function () {
+    return platform.isIOS;
+  },
+  function (t) {
+    verifyCallWithArguments(t, '_terminateConnection', ['connection-id']);
+  }
+);
 
-test('make sure terminateListener is properly hooked up', function (t) {
-  verifyCallWithArguments(t, 'terminateListener', ['peer-id', 8080]);
-});
+test.only('make sure terminateListener is return error if we get called on iOS',
+  function () {
+    return !platform.isIOS;
+  },
+  function (t) {
+    var err = 'Not connect platform';
+
+    try {
+      thaliMobileNativeWrapper._terminateConnection();
+    } catch(e) {
+      t.equal(e.message, err, 'error description matches');
+      t.end();
+      return;
+    }
+
+    t.fail('should not succeed on iOS');
+    t.end();
+  }
+);
+
+test('make sure terminateListener is properly hooked up',
+  function () {
+    return platform.isIOS;
+  },
+  function (t) {
+    verifyCallWithArguments(t, 'terminateListener', ['peer-id', 8080]);
+  }
+);
+
+test('make sure terminateListener is return error if we get called on iOS',
+  function () {
+    return !platform.isIOS;
+  },
+  function (t) {
+    var err = 'Not connect platform';
+
+    try {
+      thaliMobileNativeWrapper.terminateListener();
+    } catch(e) {
+      t.equal(e.message, err, 'error description matches');
+      t.end();
+      return;
+    }
+
+    t.fail('should not succeed on iOS');
+    t.end();
+  }
+);
 
 test('make sure we actually call kill connections properly', function (t) {
   thaliMobileNativeWrapper.killConnections()

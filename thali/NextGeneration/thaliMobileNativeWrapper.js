@@ -687,6 +687,9 @@ module.exports._multiConnect = function (peerIdentifier) {
  */
 // jscs:enable jsDoc
 module.exports._terminateConnection = function (incomingConnectionId) {
+  if(platform.isIOS) {
+    throw new Error('Not connect platform');
+  }
   return gPromiseQueue.enqueue(function (resolve, reject) {
     gServersManager.terminateIncomingConnection(incomingConnectionId)
     .then(function () {
@@ -748,6 +751,9 @@ module.exports.disconnect = function (peerIdentifier) {
  * @returns {Promise<?error>}
  */
 module.exports.terminateListener = function (peerIdentifier, port) {
+  if(platform.isIOS) {
+    throw new Error('Not connect platform');
+  }
   return gPromiseQueue.enqueue(function (resolve, reject) {
     gServersManager.terminateOutgoingConnection(peerIdentifier, port)
     .then(function () {
