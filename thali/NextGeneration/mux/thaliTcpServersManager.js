@@ -311,6 +311,11 @@ ThaliTcpServersManager.prototype.recreatePeerListener =
       peerIdentifier + ' with port ' + port);
     var peerServer = this._peerServers[peerIdentifier];
     if (peerServer && peerServer.server.address().port === port) {
+      if (!error) {
+        // We have to pass some error if we want to trigger
+        // peerAvailabilityChanged events sequence
+        error = new Error('Recreating peer listener');
+      }
       createPeerListener.closeServer(this, peerServer.server, error, true);
     } else {
       logger.debug('This peer does not exist anymore');
