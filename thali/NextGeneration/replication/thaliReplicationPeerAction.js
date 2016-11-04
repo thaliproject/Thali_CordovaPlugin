@@ -189,52 +189,12 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
   return ThaliReplicationPeerAction.super_.prototype.start
     .call(this, httpAgentPool)
     .then(function () {
-      /*
-      TODO: The code below deals with several issues in a non-obvious way.
-      First, there is https://github.com/thaliproject/thali/issues/267 which
-      deals with a bug in PouchDB that prevents us from using the agent
-      option which we need to use httpAgentPool. The current work around is
-      that we instead specify an agent class and agentOptions.
-
-      This leads to another related issue. Because we can't use agent we
-      create a situation where request (which is hiding under PouchDB on
-      Node.js) will use a pool to pick an agent to use. In other words request
-      will look at PouchDB's HTTP request and create a key for it and check
-      the pool of agents it has and see if any match. Normally this is good
-      except that request doesn't know anything about PSK so it doesn't use
-      the PSK values in its pool ID calculations and thus you get fun
-      events like using the same agent (with the same psk ID and key) for
-      two different peers! To prevent this we put in the secureOptions
-      argument which currently Node.js ignores when we use PSK. We stick
-      in there both the pskId as well as the URL. The reason we need both
-      is that the same PSK ID can legitimately be used with two different
-      URLS (For example, if the same peer is available over both bluetooth
-      and wifi). In addition the same URL can legitimately use two different
-      PSK IDs (for example, beacon requests use one ID while all other
-      requests use a secure ID). So we need both values to guarantee the
-      right kind of uniqueness.
-
-      We picked secureOptions because if we used cert (which is ignored when
-      we use PSK) we would also have to use key. We couldn't use PFX because
-      then request tries to load it! So secureOptions was our last choice and
-      it seems to work.
-       */
       var remoteUrl = 'https://' + self._peerAdvertisesDataForUs.hostAddress +
-        ':' + self._peerAdvertisesDataForUs.portNumber + path.join(thaliConfig.BASE_DB_PATH, self._dbName);
+        ':' + self._peerAdvertisesDataForUs.portNumber +
+        path.join(thaliConfig.BASE_DB_PATH, self._dbName);
       var ajaxOptions = {
         ajax : {
-          agentClass: ForeverAgent.SSL,
-          agentOptions : {
-            rejectUnauthorized: false,
-            keepAlive: true,
-            keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-            maxSockets: Infinity,
-            maxFreeSockets: 256,
-            ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-            pskIdentity: self.getPskIdentity(),
-            pskKey: self.getPskKey(),
-            secureOptions: self.getPskIdentity() + remoteUrl
-          }
+          agent: httpAgentPool
         },
         skip_setup: true// jscs:ignore requireCamelCaseOrUpperCaseIdentifiers
       };

@@ -78,7 +78,8 @@ UnitTestFramework.prototype.startTests = function (platformName) {
   .catch(function (error) {
     platform.state = TestFramework.platformStates.failed;
     logger.error(
-      'failed to run unit tests, platformName: \'%s\', error: \'%s\', stack: \'%s\'',
+      'failed to run unit tests, platformName: \'%s\', error: \'%s\', ' +
+      'stack: \'%s\'',
       platformName, error.toString(), error.stack
     );
     return Promise.all(
@@ -108,8 +109,6 @@ UnitTestFramework.prototype.startTests = function (platformName) {
 };
 
 UnitTestFramework.prototype.runTest = function (devices, test) {
-  var self = this;
-
   // Some device skipped our test.
   var skipped = false;
 

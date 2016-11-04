@@ -53,7 +53,7 @@ proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
       // that the SSDP traffic doesn't get mixed up with real
       // Thali messaging (for example, if in a desktop test,
       // the native and Wifi layers are run simultaneously).
-      SSDP_NT: 'http://www.thaliproject.org/mock'
+      SSDP_NT: (process.env.SSDP_NT || 'http://www.thaliproject.org') + '/mock'
     },
     'ip': {
       address: function () {
@@ -1201,6 +1201,8 @@ function WifiBasedNativeMock(platformName, router) {
 
   mobileHandler.wifiPeerAvailabilityChanged =
     wifiPeerAvailabilityChanged(platformName, thaliWifiInfrastructure);
+
+  mobileHandler._platform = platform;
 
   return mobileHandler;
 }

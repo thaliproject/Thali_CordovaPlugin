@@ -63,7 +63,9 @@ fi
 
 jx npm test
 jx npm run test-meta
-jx npm run test-coordinated
+jx runCoordinatedTests.js --networkType NATIVE
+jx runCoordinatedTests.js --networkType WIFI
+jx runCoordinatedTests.js --networkType BOTH
 
 # Verify that docs can be generated
 #cd $WORKING_DIR/thali/

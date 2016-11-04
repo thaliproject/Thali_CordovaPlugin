@@ -199,7 +199,8 @@ TestFramework.prototype.startTests = function (platformName) {
       count === devices.length,
       format(
         'we should receive %d devices for platform: \'%s\', ' +
-        'but received %d devices instead', count, platformName, devices.length
+        'but received %d devices instead',
+        count, platformName, devices.length
       )
     );
   }
@@ -230,7 +231,8 @@ TestFramework.prototype.resolveStarted = function () {
 
   var isStarted = Object.keys(this.platforms)
   .every(function (platformName) {
-    return self.platforms[platformName].state === TestFramework.platformStates.started;
+    return self.platforms[platformName].state ===
+      TestFramework.platformStates.started;
   });
   if (isStarted) {
     this.emit('started');
