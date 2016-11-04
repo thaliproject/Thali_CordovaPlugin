@@ -207,7 +207,7 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
     peer.hostAddress = peer.portNumber = null;
   }
 
-  logger.debug('Emiting wifiPeerAvailabilityChanged ' + JSON.stringify(peer));
+  logger.debug('Emitting wifiPeerAvailabilityChanged ' + JSON.stringify(peer));
   this.emit('wifiPeerAvailabilityChanged', peer);
   return true;
 };

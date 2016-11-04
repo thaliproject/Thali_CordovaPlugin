@@ -8,7 +8,6 @@ var actionState = ThaliPeerAction.actionState;
 var assert = require('assert');
 var thaliConfig = require('../thaliConfig');
 var logger = require('../../ThaliLogger')('thaliReplicationPeerAction');
-var ForeverAgent = require('forever-agent');
 var LocalSeqManager = require('./localSeqManager');
 var RefreshTimerManager = require('./utilities').RefreshTimerManager;
 var Utils = require('../utils/common.js');
@@ -325,6 +324,7 @@ ThaliReplicationPeerAction.prototype._complete =
           case 'ECONNREFUSED': {
             returnError = new Error('Could not establish TCP connection');
             returnError.status = error.status;
+            returnError.code = error.code;
             self._reject(returnError);
             return true;
           }
@@ -332,6 +332,7 @@ ThaliReplicationPeerAction.prototype._complete =
             returnError = new Error('Could establish TCP connection but ' +
               'couldn\'t keep it running');
             returnError.status = error.status;
+            returnError.code = error.code;
             self._reject(returnError);
             return true;
           }

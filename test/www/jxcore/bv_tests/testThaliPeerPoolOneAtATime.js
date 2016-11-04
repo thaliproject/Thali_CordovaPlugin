@@ -5,15 +5,8 @@ var PeerAction = require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
 var inherits = require('util').inherits;
 var connectionTypes =
   require('thali/NextGeneration/thaliMobileNativeWrapper').connectionTypes;
-var ThaliPeerPoolOneAtATime = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolOneAtATime');
 var Agent = require('http').Agent;
-var testUtils = require('../lib/testUtils');
-var express = require('express');
-var https = require('https');
 var Promise = require('lie');
-var makeIntoCloseAllServer =
-  require('thali/NextGeneration/makeIntoCloseAllServer');
-var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var thaliMobile = require('thali/NextGeneration/thaliMobile');
 var proxyquire = require('proxyquire');
 var networkTypes = require('thali/NextGeneration/thaliMobile').networkTypes;
@@ -21,9 +14,6 @@ var sinon = require('sinon');
 var ThaliNotificationAction = require('thali/NextGeneration/notification/thaliNotificationAction');
 var ThaliReplicationAction = require('thali/NextGeneration/replication/thaliReplicationPeerAction');
 
-var peerIdentifier = 'foo';
-var connectionType = connectionTypes.BLUETOOTH;
-var actionType = 'bar';
 var pskIdentity = 'Look at me';
 var pskKey = new Buffer('I\'m as happy as a bluebird');
 
@@ -203,10 +193,11 @@ test('Two notification actions',
   });
 
 test('replicateThroughProblems', function (t) {
-  function FakeReplication(failureResult, loggingDescription) {
+  function FakeReplication(failureResult, loggingDescription, peerId) {
     this._failureResult = failureResult;
     this._loggingDescription = loggingDescription;
     this._cloneCounter = 0;
+    this._peerId = peerId;
   }
 
   FakeReplication.prototype.start = function () {
@@ -240,31 +231,37 @@ test('replicateThroughProblems', function (t) {
     return 'bar';
   };
 
+  FakeReplication.prototype.getPeerAdvertisesDataForUs = function () {
+    return {
+      peerId: this._peerId
+    };
+  };
+
   // Action returned successfully
   // .start, .loggingDescription
   var success = new FakeReplication(null, 'success');
   var noActivityTimeOut = new FakeReplication(new Error('No activity time out'),
-    'noActivityTimeOut');
+    'noActivityTimeOut', '23');
   var failureButNotAvailable = new FakeReplication(new Error('eeeek!'),
-    'failureButNotAvailable');
+    'failureButNotAvailable', '23');
   var failureButAvailable = new FakeReplication(new Error('eeeek!'),
-    'failureButAvailable');
-  testThaliPeerPoolOneAtATime._replicateThroughProblems(success, '23')
+    'failureButAvailable', 'fake');
+  testThaliPeerPoolOneAtATime._replicateThroughProblems(success)
     .then(function (result) {
       t.notOk(result, 'should have gotten null');
       return testThaliPeerPoolOneAtATime.
-      _replicateThroughProblems(noActivityTimeOut, '23');
+      _replicateThroughProblems(noActivityTimeOut);
     }).then(function (result) {
     t.notOk(result, 'Should have stopped nicely');
     return testThaliPeerPoolOneAtATime._replicateThroughProblems(
-      failureButNotAvailable, '23');
+      failureButNotAvailable);
   }).then(function (result) {
     t.notOk(result, 'Still looking for null');
     thaliMobile.
       _peerAvailabilities[failureButNotAvailable.getConnectionType()].fake =
     {};
     return testThaliPeerPoolOneAtATime._replicateThroughProblems(
-      failureButAvailable, 'fake');
+                                      failureButAvailable);
   }).then(function (result) {
     t.notOk(result, 'Yup, another null');
     t.equal(failureButAvailable._cloneCounter, 1, 'We cloned!');

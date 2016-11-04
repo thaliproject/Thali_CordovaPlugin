@@ -541,7 +541,7 @@ function createPeerListener(self, peerIdentifier, pleaseConnect) {
         logger.debug('incoming (TCP) - Node TCP/IP client <-> Mux stream ' +
           '- %s - %d - finish', peerIdentifier, localIncomingConnectionId);
         if (incomingStream) {
-          incomingStream.end();
+          incomingStream.destroy();
         }
       })
       .on('close', function () {
@@ -575,7 +575,7 @@ function createPeerListener(self, peerIdentifier, pleaseConnect) {
             logger.debug('incomingStream (mux) - Node TCP/IP client <-> ' +
               'Mux stream - %s - %d - finish', peerIdentifier,
               localIncomingConnectionId);
-            incoming.end();
+            incoming.destroy();
           })
           .on('close', function () {
             logger.debug('incomingStream (mux) - Node TCP/IP client <-> ' +
