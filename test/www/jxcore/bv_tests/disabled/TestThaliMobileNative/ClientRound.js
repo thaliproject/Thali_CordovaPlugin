@@ -194,12 +194,7 @@ ClientRound._connectToPeer = function (peer) {
           return;
         }
         connectionData = JSON.parse(connectionData);
-        if (connectionData.listeningPort === 0) {
-          // We couldn't connect but that could be a transient error
-          // or this could be iOS in which case we have a problem.
-          reject(new Error('listeningPort is 0'));
-          return;
-        }
+        assert(connectionData.listeningPort !== 0, 'Testing for old code');
         resolve(connectionData);
       }
     );

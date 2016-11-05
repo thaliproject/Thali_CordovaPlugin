@@ -836,8 +836,7 @@ var handlePeerAvailabilityChanged = function (peer) {
       resolve();
     };
     if (peer.peerAvailable) {
-      gServersManager.createPeerListener(peer.peerIdentifier,
-                                         peer.pleaseConnect)
+      gServersManager.createPeerListener(peer.peerIdentifier)
       .then(function (portNumber) {
         var peerAvailabilityChangedEvent = {
           peerIdentifier: peer.peerIdentifier,

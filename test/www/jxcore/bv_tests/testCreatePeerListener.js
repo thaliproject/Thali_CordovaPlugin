@@ -77,10 +77,10 @@ test('calling createPeerListener after calling stop produces error',
       });
   });
 
-test('can call createPeerListener (pleaseConnect === false)', function (t) {
+test('can call createPeerListener', function (t) {
   serversManager.start()
     .then(function () {
-      serversManager.createPeerListener('peerId', false)
+      serversManager.createPeerListener('peerId')
         .then(function (peerPort) {
           t.ok(peerPort > 0 && peerPort <= 65535, 'port must be in range');
           t.end();
@@ -92,37 +92,13 @@ test('can call createPeerListener (pleaseConnect === false)', function (t) {
     });
 });
 
-test('calling createPeerListener (pleaseConnect === true) with unknown peer ' +
-  'is error',
-  function (t) {
-    Mobile('connect').nextNative(function (peerIdentifier, cb) {
-      cb('Unknown Peer');
-    });
-
-    serversManager.start()
-      .then(function () {
-        serversManager.createPeerListener('peerId', true)
-          .catch(function (err) {
-            // Should get an error here, we haven't yet started browsing or
-            // discovered any peers
-            t.ok(err, 'should get error');
-            t.end();
-          });
-      })
-      .catch(function (err) {
-        t.fail('server should not get error - ' + err);
-        t.end();
-      });
-  }
-);
-
 test('calling createPeerListener twice with same peerIdentifier should ' +
   'return the same port', function (t) {
   serversManager.start()
     .then(function () {
-      var promise1 = serversManager.createPeerListener('peer1', false);
-      var promise2 = serversManager.createPeerListener('peer1', false);
-      var promise3 = serversManager.createPeerListener('peer1', false);
+      var promise1 = serversManager.createPeerListener('peer1');
+      var promise2 = serversManager.createPeerListener('peer1');
+      var promise3 = serversManager.createPeerListener('peer1');
       return Promise.all([promise1, promise2, promise3]);
     })
     .then(function (promiseResultArray) {
@@ -236,7 +212,7 @@ function connectAndFail(t, failLogic) {
         cb(null, Mobile.createListenerOrIncomingConnection(
           nativeServer.address().port));
       });
-      return serversManager.createPeerListener('peer2', false);
+      return serversManager.createPeerListener('peer2');
     })
     .then(function (port) {
       firstPort = port;
@@ -287,8 +263,7 @@ function waitForPeerAvailabilityChanged(t, serversManager, dontFail, then) {
   Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
     peers.forEach(function (peer) {
       if (peer.peerAvailable) {
-        serversManager.createPeerListener(peer.peerIdentifier,
-          peer.pleaseConnect)
+        serversManager.createPeerListener(peer.peerIdentifier)
           .then(function (peerPort) {
             if (then) {
               then(peerPort);
@@ -349,8 +324,7 @@ function setUp(t, serversManager, appPort, nativePort, dontFail, then) {
  /////////////////////////
  */
 
-test('peerListener - forwardConnection, pleaseConnect === false - no native ' +
-  'server',
+test('peerListener - no native server',
   function (t) {
     var firstConnection = false;
 
@@ -371,8 +345,7 @@ test('peerListener - forwardConnection, pleaseConnect === false - no native ' +
   }
 );
 
-test('peerListener - forwardConnection, pleaseConnect === false - with ' +
-  'native server',
+test('peerListener - with native server',
   function (t) {
     var firstConnection = false;
 
@@ -404,8 +377,7 @@ test('peerListener - forwardConnection, pleaseConnect === false - with ' +
   }
 );
 
-test('peerListener - forwardConnection, pleaseConnect === false - with ' +
-  'native server and data transfer',
+test('peerListener - with native server and data transfer',
   function (t) {
     var timer = setTimeout(function () {
       t.fail('Timed out');
@@ -443,7 +415,7 @@ test('peerListener - forwardConnection, pleaseConnect === false - with ' +
           cb(null, Mobile.createListenerOrIncomingConnection(
             incomingNativeListenerPort));
         });
-        return serversManager.createPeerListener('peer1', false);
+        return serversManager.createPeerListener('peer1');
       })
       .then(function (localListenerPort) {
         var socket = net.connect(localListenerPort, function () {
@@ -468,7 +440,7 @@ test('createPeerListener is idempotent', function (t) {
 
   waitForPeerAvailabilityChanged(t, serversManager, false, function (peerPort) {
     // Create another peerListener to peer1
-    serversManager.createPeerListener('peer1', false)
+    serversManager.createPeerListener('peer1')
       .then(function (port) {
         t.equal(peerPort, port,
           'Second call to existing peerListener returns existing port');
@@ -502,7 +474,7 @@ test('createPeerListener - ask for a new peer when we are not at maximum ' +
     });
 });
 
-test('createPeerListener - pleaseConnect = false - test timeout', function (t) {
+test('createPeerListener - test timeout', function (t) {
   // We have to prove to ourselves that once we connect to the listener and
   // the connection is created that if the native link goes inactive long
   // enough we will properly close it and clean everything up.
@@ -512,35 +484,7 @@ test('createPeerListener - pleaseConnect = false - test timeout', function (t) {
     });
 });
 
-test('createPeerListener - forward connection - wrong serverPort',
-  function (t) {
-    // In the connect if clientPort/serverPort are set then we have to compare
-    // the listed serverPort with the serverPort we are listening on. If they
-    // don't match then we have to close the port we are listening on, first
-    // a failedConnection event with "Mismatched serverPort" and an attempt
-    // to reconnect to the same peer ID should be treated, fresh, e.g. not
-    // history of the failed attempt.
-    serversManager.start()
-      .then(function () {
-        t.end();
-      });
-  });
-
-test('createPeerListener - forward connection - wrong clientPort',
-  function (t) {
-    // In the connect if clientPort/serverPort are set then we have to compare
-    // the listed clientPort with the clientPorts we currently have multiplexes
-    // for. If we don't find one then we have a race condition and we need to
-    // call destroy on the incoming TCP connection, fire a failedConnection
-    // event with the error "Incoming connection died" and as with the previous
-    // test, treat a new request as 'fresh', no history.
-    serversManager.start()
-      .then(function () {
-        t.end();
-      });
-  });
-
-test('createPeerListener - please connect = false, multiple connections out',
+test('createPeerListener - multiple connections out',
   function (t) {
     // Create an outgoing connection and then open a bunch of TCP links to
     // the server and show that they properly send everything across all the
@@ -552,8 +496,7 @@ test('createPeerListener - please connect = false, multiple connections out',
       });
   });
 
-test('createPeerListener - please connect = false, multiple bi-directional ' +
-  'connections',
+test('createPeerListener - multiple bi-directional connections',
   function (t) {
     // Trigger an outgoing connection and then have multiple connections
     // going in both directions (e.g. the iOS scenario) and make sure that
@@ -620,7 +563,7 @@ test('createPeerListener - we shouldn\'t create a dead pipe', function (t) {
       t.end();
       return;
     }
-    setUp(t, serversManager, applicationPort, nativePort, false, false,
+    setUp(t, serversManager, applicationPort, nativePort, false,
       function (peerPort) {
         t.notEqual(peerPort, nativePort, 'peerPort != nativePort');
         // Need to connect a socket to force the outgoing
