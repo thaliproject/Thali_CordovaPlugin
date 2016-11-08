@@ -356,6 +356,10 @@ test('Resolves an action locally', function (t) {
         res.portNumber,
         globals.TCPEvent.portNumber,
         'portNumber must match');
+      t.equals(
+        res.peerId,
+        globals.TCPEvent.peerIdentifier,
+        'peerIDs must match');
 
       notificationClient.stop();
       t.end();
@@ -404,6 +408,10 @@ test('Resolves an action locally using ThaliPeerPoolDefault', function (t) {
         res.portNumber,
         globals.TCPEvent.portNumber,
         'portNumber must match');
+      t.equals(
+        res.peerId,
+        globals.TCPEvent.peerIdentifier,
+        'peerIds must match');
 
       t.end();
     });

@@ -61,7 +61,9 @@ then
   node CITestMode.js
 fi
 
-jx npm test
+jx runTests.js --networkType WIFI
+jx runTests.js --networkType NATIVE
+jx runTests.js --networkType BOTH
 jx npm run test-meta
 jx runCoordinatedTests.js --networkType NATIVE
 jx runCoordinatedTests.js --networkType WIFI

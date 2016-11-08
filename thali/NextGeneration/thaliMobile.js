@@ -214,6 +214,11 @@ module.exports.stop = function () {
   return promiseQueue.enqueue(function (resolve) {
     thaliMobileStates = getInitialStates();
     removeAllAvailabilityWatchersFromPeers();
+    Object.getOwnPropertyNames(connectionTypes)
+      .forEach(function (connectionKey) {
+        var connectionType = connectionTypes[connectionKey];
+        changePeersUnavailable(connectionType);
+      });
 
     getWifiOrNativeMethodByNetworkType('stop', thaliMobileStates.networkType)()
       .then(resolve);
@@ -834,6 +839,8 @@ var emitPeerUnavailable = function (peerIdentifier, connectionType) {
     peerIdentifier: peerIdentifier,
     connectionType: connectionType
   });
+  logger.debug('Emitting peerAvailabilityChanged from emitPeerUnavailable %s',
+    JSON.stringify(unavailable));
   module.exports.emitter.emit('peerAvailabilityChanged', unavailable);
 };
 
@@ -845,11 +852,13 @@ peerAvailabilities[connectionTypes.TCP_NATIVE] = {};
 
 /**
  * for testing purposes
+ * TODO: leave only one way to access peer availabilities
  * @private
  */
 module.exports._getPeerAvailabilities = function () {
   return peerAvailabilities;
 };
+module.exports._peerAvailabilities = peerAvailabilities;
 
 var changeCachedPeerUnavailable = function (peer) {
   removeAvailabilityWatcherFromPeerIfExists(peer);
@@ -943,12 +952,23 @@ var handlePeer = function (peer) {
   module.exports.emitter.emit('peerAvailabilityChanged', peerStatus);
 };
 
+var handleRecreatedPeer = function (nativePeer) {
+  // FIXME: see #1490 pull request for details
+  throw new Error('not implemented');
+};
+
 ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
 function (nativePeer) {
+  if (nativePeer.recreated) {
+    handleRecreatedPeer(nativePeer);
+    return;
+  }
+
   var connectionType =
     platform.isAndroid ?
     connectionTypes.BLUETOOTH :
     connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK;
+
   var peer = {
     peerIdentifier: nativePeer.peerIdentifier,
     peerAvailable: nativePeer.peerAvailable,
@@ -956,7 +976,8 @@ function (nativePeer) {
     hostAddress: null,
     portNumber: nativePeer.portNumber,
     connectionType: connectionType,
-    availableSince: Date.now()
+    availableSince: Date.now(),
+    recreated: Boolean(nativePeer.recreated) // Android only
   };
   handlePeer(peer);
 });
@@ -970,16 +991,20 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeer) {
     hostAddress: wifiPeer.hostAddress,
     portNumber: wifiPeer.portNumber,
     connectionType: connectionTypes.TCP_NATIVE,
-    availableSince: Date.now()
+    availableSince: Date.now(),
+    recreated: false
   };
   handlePeer(peer);
 });
 
 // TODO: move watchers to the separate module
 var peerAvailabilityWatchers = {};
-peerAvailabilityWatchers[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = {};
+peerAvailabilityWatchers[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] =
+  {};
 peerAvailabilityWatchers[connectionTypes.BLUETOOTH] = {};
 peerAvailabilityWatchers[connectionTypes.TCP_NATIVE] = {};
+
+module.exports._peerAvailabilityWatchers = peerAvailabilityWatchers;
 
 /* jshint latedef:false */
 var addAvailabilityWatcherToPeerIfNotExist = function (peer) {
