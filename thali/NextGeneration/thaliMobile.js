@@ -954,7 +954,7 @@ var handlePeer = function (peer) {
 
 var handleRecreatedPeer = function (nativePeer) {
   // FIXME: see #1490 pull request for details
-  throw new Error('not implemented');
+  // throw new Error('not implemented');
 };
 
 ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',

@@ -402,7 +402,11 @@ test('native peer should be removed if no availability updates ' +
 
 test('peerAvailabilityChanged - peer added/removed to/from cache (native)',
   function (t) {
-    t.timeoutAfter(thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD / 2);
+    var timeout = Math.min(
+      thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD / 2,
+      30 * 1000
+    );
+    t.timeoutAfter(timeout);
 
     var nativePeer = generateLowerLevelPeers().nativePeer;
     var callCount = 0;
@@ -889,7 +893,11 @@ test('networkChanged - fires peerAvailabilityChanged event for native peers ' +
     // Expected result: fire peerAvailabilityChanged with native peer's id and
     // peerAvailable set to false
 
-    t.timeoutAfter(thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD / 2);
+    var timeout = Math.min(
+      thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD / 2,
+      30 * 1000
+    );
+    t.timeoutAfter(timeout);
 
     var testPeers = generateLowerLevelPeers();
     var callCount = 0;
@@ -1150,7 +1158,11 @@ test('newAddressPort field (BLUETOOTH)',
     return !platform.isAndroid;
   },
   function (t) {
-    t.timeoutAfter(thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD / 2);
+    var timeout = Math.min(
+      thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD / 2,
+      30 * 1000
+    );
+    t.timeoutAfter(timeout);
 
     var nativePeer = generateLowerLevelPeers().nativePeer;
     var callCount = 0;
@@ -1570,7 +1582,8 @@ var participantState = {
 };
 
 test('can get data from all participants', function () {
-  return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
+  // FIXME: temporarily disabled
+  return true || global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
 }, function (t) {
   var uuidPath = '/uuid';
   var router = express.Router();
@@ -1712,7 +1725,9 @@ test('test for data corruption', function () {
   // iOS. Those fixes are in the iOS branch. So until they make it to master
   // we just check for Wifi. If it is wifi then we don't run. If it isn't wifi
   // then we must be Android because iOS native doesn't work in master.
-  return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
+  //
+  // FIXME: temporarily disabled in iOS branch
+  return true || global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
 },
 function (t) {
   var router = setUpRouter();
