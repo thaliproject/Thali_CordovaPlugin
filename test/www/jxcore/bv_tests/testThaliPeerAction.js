@@ -108,11 +108,7 @@ test('#testThaliPeerAction - make sure ids are unique', function (t) {
 
 test('#testThaliPeerAction - check that forever agent can be destroyed', function (t) {
   var foreverAgent = new ForeverAgent.SSL({
-    foreverAgent: false,
-    keepAlive: true,
-    keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
     maxSockets: Infinity,
-    maxFreeSockets: 256,
     ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
     pskIdentity: pskIdentity,
     pskKey: pskKey
