@@ -68,8 +68,8 @@ class RelayTests: XCTestCase {
         var browserManagerConnected: XCTestExpectation?
 
         // Given
-        let totalMessagesAmount = 10
-        let receivedMessagesAmount = Atomic(0)
+        let totalMessagesNumber = 10
+        let receivedMessagesNumber = Atomic(0)
 
         // Start listening on fake node server
         let advertiserNodeMock =
@@ -84,9 +84,9 @@ class RelayTests: XCTestCase {
                                            receivedMessage,
                                            "Received message is wrong")
 
-                            receivedMessagesAmount.modify {
+                            receivedMessagesNumber.modify {
                                 $0 += 1
-                                if $0 == totalMessagesAmount {
+                                if $0 == totalMessagesNumber {
                                     advertisersNodeServerReceivedMessage?.fulfill()
                                 }
                             }
@@ -176,7 +176,7 @@ class RelayTests: XCTestCase {
 
         // Creating a bunch of clients, then each of them will send a message
         var browserClients: [TCPClientMock] = []
-        for _ in 0..<totalMessagesAmount {
+        for _ in 0..<totalMessagesNumber {
             let browserNodeClientMock = TCPClientMock(didReadData: unexpectedReadDataHandler,
                                                       didConnect: {},
                                                       didDisconnect: {})
@@ -185,7 +185,7 @@ class RelayTests: XCTestCase {
         }
 
         // Connect to browser's native TCP listener port
-        for i in 0..<totalMessagesAmount {
+        for i in 0..<totalMessagesNumber {
             let browserClient = browserClients[i]
             browserClient.connectToLocalHost(on: browserNativeTCPListenerPort,
                                              errorHandler: unexpectedErrorHandler)
