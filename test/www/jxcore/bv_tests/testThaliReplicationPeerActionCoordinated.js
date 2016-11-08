@@ -40,7 +40,7 @@ var test = tape({
 
 test('Coordinated replication action test',
 function () {
-  // FIXME: not updated for iOS
+  // FIXME: temporarily disabled (iOS branch is not complete)
   return true;
 },
 function (t) {

@@ -169,7 +169,7 @@ function checkSuccess() {
 
 test('Client to server request coordinated',
 function () {
-  // FIXME: adapt for iOS branch
+  // FIXME: temporarily disabled (iOS branch is not complete)
   return true;
 },
 function (t) {

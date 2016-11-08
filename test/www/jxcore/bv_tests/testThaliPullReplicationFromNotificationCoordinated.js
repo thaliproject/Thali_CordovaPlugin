@@ -47,7 +47,7 @@ function bufferIndexOf(bufferArray, entryToFind) {
 
 test('Coordinated pull replication from notification test',
 function () {
-  // FIXME: adapt for iOS branch
+  // FIXME: temporarily disabled (iOS branch is not complete)
   return true;
 },
 function (t) {

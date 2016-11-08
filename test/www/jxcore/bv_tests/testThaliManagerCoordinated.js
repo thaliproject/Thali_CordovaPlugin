@@ -144,7 +144,7 @@ function waitForRemoteDocs(
 
 test('test write',
 function () {
-  // FIXME: temporary disabled
+  // FIXME: temporarily disabled (iOS branch is not complete)
   return true;
 },
 function (t) {
@@ -206,7 +206,7 @@ function (t) {
 
 test('test repeat write 1',
 function () {
-  // FIXME: temporary disabled
+  // FIXME: temporarily disabled (iOS branch is not complete)
   return true;
 },
 function (t) {
@@ -262,7 +262,7 @@ function (t) {
 
 test('test repeat write 2',
 function () {
-  // FIXME: temporary disabled
+  // FIXME: temporarily disabled (iOS branch is not complete)
   return true;
 },
 function (t) {

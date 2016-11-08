@@ -682,7 +682,7 @@ test('will fail bad PSK connection between peers', function (t) {
 
 test('We provide notification when a listener dies and we recreate it',
   function () {
-    // FIXME: not updated for iOS
+    // FIXME: temporarily disabled (iOS branch is not complete)
     return true;
   },
   function (t) {
@@ -750,7 +750,7 @@ test('We provide notification when a listener dies and we recreate it',
 test('We fire nonTCPPeerAvailabilityChangedEvent with the same ' +
   'generation and different port when listener is recreated',
   function () {
-    // FIXME: not updated for iOS
+    // FIXME: temporarily disabled (iOS branch is not complete)
     return true;
   },
   function (t) {

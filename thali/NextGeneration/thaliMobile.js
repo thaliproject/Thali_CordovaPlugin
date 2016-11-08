@@ -953,7 +953,9 @@ var handlePeer = function (peer) {
 };
 
 var handleRecreatedPeer = function (nativePeer) {
-  // FIXME: see #1490 pull request for details
+  // FIXME: some changes have not been migrated from master yet (see #1490 pull
+  // request for details)
+
   // throw new Error('not implemented');
 };
 
