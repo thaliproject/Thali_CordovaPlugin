@@ -1429,7 +1429,7 @@ test('If a peer is not available (and hence is not in the thaliMobile cache)' +
       global.NETWORK_TYPE !== ThaliMobile.networkTypes.NATIVE;
   },
   function (t) {
-    var somePeerIdentifier = 'urn:uuid:' + uuid.v4();
+    var somePeerIdentifier = uuid.v4();
 
     var peerAvailabilityChangedHandler = function (peer) {
       t.fail('We should not have gotten a peer ' + JSON.stringify(peer));
@@ -1450,7 +1450,7 @@ test('If a peer is not available (and hence is not in the thaliMobile cache)' +
       cleanUpCalled = true;
       ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
         peerAvailabilityChangedHandler);
-      ThaliMobileNativeWrapper.emitter.removeListener('failedConnection',
+      ThaliMobileNativeWrapper.emitter.removeListener('failedNativeConnection',
         failedConnectionHandler);
       t.end();
     }
@@ -1458,7 +1458,7 @@ test('If a peer is not available (and hence is not in the thaliMobile cache)' +
     ThaliMobile.emitter.on('peerAvailabilityChanged',
       peerAvailabilityChangedHandler);
 
-    ThaliMobileNativeWrapper.emitter.on('failedConnection',
+    ThaliMobileNativeWrapper.emitter.on('failedNativeConnection',
       failedConnectionHandler);
 
     var originalListener = ThaliMobileNativeWrapper.terminateListener;
