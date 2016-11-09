@@ -10,7 +10,7 @@ var platform = require('thali/NextGeneration/utils/platform');
 
 if (typeof Mobile === 'undefined') {
   global.Mobile =
-    require('./lib/wifiBasedNativeMock.js')(platform.names.ANDROID);
+    require('./lib/wifiBasedNativeMock.js')(platform.names.IOS);
 }
 
 var config = require('./config.json');
@@ -64,12 +64,12 @@ if (!utResult) {
   logger.debug('Failed to execute UT.');
   global.nativeUTFailed = true;
 }
-
-if (platform.isIOS) {
-  // Disable node tests for iOS due to issue #1343
-  console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-  return;
-}
+//
+// if (platform.isIOS) {
+//   // Disable node tests for iOS due to issue #1343
+//   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+//   return;
+// }
 
 // Issue #914
 var networkTypes = [ThaliMobile.networkTypes.NATIVE];
