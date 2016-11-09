@@ -897,14 +897,14 @@ var handlePeerAvailabilityChanged = function (peer) {
       resolve();
     };
     if (peer.peerAvailable) {
-
-      getPortForPeerListener()
+      gServersManager.createPeerListener(peer.peerIdentifier,
+                                         peer.pleaseConnect)
       .then(function (portNumber) {
         module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
           peerIdentifier: peer.peerIdentifier,
           peerAvailable: true,
           generation: peer.generation,
-          portNumber: portNumber
+          portNumber: gRouterServerPort
         });
         peerGenerations[peer.peerIdentifier] = peer.generation;
         resolve();
@@ -922,14 +922,6 @@ var handlePeerAvailabilityChanged = function (peer) {
     }
   });
 };
-
-function getPortForPeerListener() {
-  if(gServersManager) {
-    return gServersManager.createPeerListener(peer.peerIdentifier, peer.pleaseConnect);
-  } else {
-    return Promise.resolve(gRouterServerPort);
-  }
-}
 
 // jscs:disable maximumLineLength
 /**
