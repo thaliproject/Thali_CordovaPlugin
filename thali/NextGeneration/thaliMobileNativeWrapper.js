@@ -990,7 +990,6 @@ function getPeerPort(peer) {
       peer.pleaseConnect);
   } else {
     return Promise.resolve(null);
-  }
 }
 
 // jscs:disable maximumLineLength
