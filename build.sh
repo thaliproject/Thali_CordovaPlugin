@@ -107,8 +107,8 @@ if [ $RUN_IN_CI == 0 ]; then
   # A hack workround due to the fact that CI server doesn't allow relative paths outside
   # of the original parent folder as a path to the build output binaries.
   # https://github.com/thaliproject/Thali_CordovaPlugin/issues/232
-  rm -rf android-release-unsigned.apk
-  cp -R ../ThaliTest/platforms/android/build/outputs/apk/android-release-unsigned.apk android-release-unsigned.apk
+  #rm -rf android-release-unsigned.apk
+  #cp -R ../ThaliTest/platforms/android/build/outputs/apk/android-release-unsigned.apk android-release-unsigned.apk
 
   rm -rf ThaliTest.app
   cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app
