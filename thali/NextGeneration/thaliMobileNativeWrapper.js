@@ -962,7 +962,7 @@ var handlePeerAvailabilityChanged = function (peer) {
       resolve();
     };
     if (peer.peerAvailable) {
-      gServersManager.createPeerListener(peer.peerIdentifier)
+      getPortForPeerListener()
       .then(function (portNumber) {
         var peerAvailabilityChangedEvent = {
           peerIdentifier: peer.peerIdentifier,
@@ -993,6 +993,14 @@ var handlePeerAvailabilityChanged = function (peer) {
 };
 
 module.exports._handlePeerAvailabilityChanged = handlePeerAvailabilityChanged;
+
+function getPortForPeerListener() {
+  if(gServersManager) {
+    return gServersManager.createPeerListener(peer.peerIdentifier, peer.pleaseConnect);
+  } else {
+    return Promise.resolve(gRouterServerPort);
+  }
+}
 
 // jscs:disable maximumLineLength
 /**
