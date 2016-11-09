@@ -205,21 +205,20 @@ function trivialBadEndToEndTest(t, needManualNotify, callback) {
     pskIdToSecret, pskIdentity, pskKey, testData, callback);
 }
 
-var connectionTester = function(port) {
+var connectionTester = function(port, reversed) {
   return new Promise(function(resolve, reject) {
     var connection = net.createConnection(port, function () {
       connection.destroy();
-      resolve();
+      reversed ? reject() : resolve();
     });
     connection.on('error', function (error) {
       connection.destroy();
-      reject(error);
+      reversed ? resolve() : reject(error);
     });
   })
 }
 
-test.only('all services are stopped when we call stop', function (t) {
-  var stopped = false;
+test('all services are started when we call start', function (t) {
   var serversManagerLocalPort = 0;
   var routerServerPort = 0;
   var connections = [];
@@ -244,10 +243,25 @@ test.only('all services are stopped when we call stop', function (t) {
   })
   .then(function (connection) {
     t.pass('all connection succeed');
+    t.end();
   })
   .catch(function (error) {
     t.fail(error);
     t.end();
+  })
+});
+
+test('all services are stopped when we call stop', function (t) {
+  var stopped = false;
+  var serversManagerLocalPort = 0;
+  var routerServerPort = 0;
+  var connections = [];
+  thaliMobileNativeWrapper.start(express.Router())
+  .then(function () {
+    return thaliMobileNativeWrapper.startListeningForAdvertisements();
+  })
+  .then(function () {
+    return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
   })
   .then(function() {
     var discoveryStopped = false;
@@ -269,25 +283,25 @@ test.only('all services are stopped when we call stop', function (t) {
             setImmediate(doConnectTest);
             return;
           }
-          connectionTester(routerServerPort)
-          .then(function (response) {
-            t.fail('connection to router server should fail after stopping');
-            t.end();
-          })
-          .catch(function (error) {
-            t.pass('connection to router server should fail after stopping');
-            t.end();
-          })
+
+          routerServerPort = thaliMobileNativeWrapper._getRouterServerPort();
+
+          connections.push(connectionTester(routerServerPort, true));
 
           if(platform.isAndroid) {
-            connectionTester(serversManagerLocalPort)
-            .then(function (response) {
-              t.fail('connection to servers manager should fail after stopping');
-            })
-            .catch(function (error) {
-              t.pass('connection to servers manager should fail after stopping');
-            });
+            serversManagerLocalPort = thaliMobileNativeWrapper._getServersManagerLocalPort();
+            connections.push(connectionTester(serversManagerLocalPort, true));
           }
+
+          Promise.all(connections)
+          .then(function (response) {
+            t.pass('connection should fail after stopping');
+            t.end();
+          })
+          .catch(function () {
+            t.fail('connection should fail after stopping');
+            t.end();
+          })
 
         };
         doConnectTest();
@@ -364,6 +378,9 @@ test('make sure we actually call kill connections properly', function (t) {
 
 test('thaliMobileNativeWrapper is stopped when routerPortConnectionFailed ' +
   'is received',
+  function() {
+    return !platform.isAndroid;
+  },
   function (t) {
     thaliMobileNativeWrapper.start(express.Router())
     .then(function () {
@@ -400,6 +417,9 @@ test('thaliMobileNativeWrapper is stopped when routerPortConnectionFailed ' +
 
 test('We fire failedNativeConnection event when we get failedConnection from ' +
   'thaliTcpServersManager',
+  function() {
+    return !platform.isAndroid;
+  },
   function (t) {
     thaliMobileNativeWrapper.start(express.Router())
     .then(function () {
