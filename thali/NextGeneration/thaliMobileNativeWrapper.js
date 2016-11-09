@@ -959,7 +959,7 @@ var handlePeerAvailabilityChanged = function (peer) {
       resolve();
     };
     if (peer.peerAvailable) {
-      getPortForPeerListener()
+      getPeerPort(peer)
       .then(function (portNumber) {
         var peerAvailabilityChangedEvent = {
           peerIdentifier: peer.peerIdentifier,
@@ -991,11 +991,11 @@ var handlePeerAvailabilityChanged = function (peer) {
 
 module.exports._handlePeerAvailabilityChanged = handlePeerAvailabilityChanged;
 
-function getPortForPeerListener() {
+function getPeerPort(peer) {
   if(gServersManager) {
     return gServersManager.createPeerListener(peer.peerIdentifier, peer.pleaseConnect);
   } else {
-    return Promise.resolve(gRouterServerPort);
+    return Promise.resolve(null);
   }
 }
 
