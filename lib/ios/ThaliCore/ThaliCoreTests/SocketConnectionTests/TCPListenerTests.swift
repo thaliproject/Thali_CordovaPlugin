@@ -107,7 +107,7 @@ class TCPListenerTests: XCTestCase {
                                                        "Received message is wrong")
                                         readDataHandlerInvoked?.fulfill()
                                       },
-                                      socketDisconnected: unexpectedSocketDisconnectHandler,
+                                      socketDisconnected: { _ in },
                                       stoppedListening: unexpectedStopListeningHandler)
 
         tcpListener.startListeningForConnections(on: anyAvailablePort,
