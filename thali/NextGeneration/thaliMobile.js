@@ -964,7 +964,7 @@ var handleRecreatedPeer = function (nativePeer) {
     changeCachedPeerUnavailable(nativePeer);
     module.exports.emitter.emit('peerAvailabilityChanged', {
       peerIdentifier: nativePeer.peerIdentifier,
-      connectionType: nativePeer.connectionType,
+      connectionType: connectionTypes.BLUETOOTH,
       peerAvailable: false,
       generation: null,
       newAddressPort: null
