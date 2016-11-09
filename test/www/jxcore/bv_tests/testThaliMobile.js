@@ -1335,6 +1335,7 @@ test('We properly fire peer unavailable and then available when ' +
   'connection fails',
   function () {
     // FIXME: temporarily disabled (iOS branch is not complete)
+    // (requires getPeerHostInfo implementation)
     return true;
   },
   function(t) {
@@ -1345,7 +1346,7 @@ test('We properly fire peer unavailable and then available when ' +
 
   var failedConnectionHandler = function (peer) {
     t.equal(peer.peerIdentifier, somePeerIdentifier, 'Failed on right peer');
-    t.ok(peer.recreated, 'Marked as recreated');
+    t.equal(peer.recreated, true, 'Marked as recreated');
     connectionErrorReceived = true;
   };
 
@@ -1354,24 +1355,29 @@ test('We properly fire peer unavailable and then available when ' +
     switch(callCounter) {
       case 1: {
         t.equal(peer.peerIdentifier, somePeerIdentifier, 'peerIds match');
-        t.ok(peer.portNumber, 'peer has a portNumber');
-        t.ok(peer.hostAddress, 'peer has a host address');
-        var socket = net.createConnection(peer.portNumber, peer.hostAddress);
-        socket.on('connect', function () {
-          t.ok(true, 'We should have connected');
+        t.equal(peer.peerAvailable, true, 'peer is available');
+        t.equal(peer.newAddressPort, false, 'newAddressPort is false');
+        ThaliMobile.getPeerHostInfo(peer.peerIdentifier, peer.connectionType)
+        .then(function (peerHostInfo) {
+          var socket = net.connect({
+            port: peerHostInfo.portNumber,
+            host: peerHostInfo.hostAddress
+          });
+          socket.on('connect', function () {
+            t.ok(true, 'We should have connected');
+          });
         });
         return;
       }
       case 2: {
         t.equal(peer.peerIdentifier, somePeerIdentifier, 'still same peer IDs');
-        t.notOk(peer.portNumber, 'peer should not have a portNumber');
-        t.notOk(peer.hostAddress, 'peer should not have a host address');
+        t.equal(peer.peerAvailable, false, 'peer should not be available');
         return;
       }
       case 3: {
         t.equal(peer.peerIdentifier, somePeerIdentifier, 'peerIds match again');
-        t.ok(peer.portNumber, 'peer has a portNumber again');
-        t.ok(peer.hostAddress, 'peer has a host address again');
+        t.equal(peer.peerAvailable, true, 'peer is available again');
+        t.equal(peer.newAddressPort, false, 'newAddressPort is false');
         t.ok(connectionErrorReceived, 'We got the error we expected');
         return cleanUp();
       }
@@ -1419,53 +1425,56 @@ test('If a peer is not available (and hence is not in the thaliMobile cache)' +
   ' but we already started trying to connect make sure recreate does not ' +
   'happen',
   function () {
-    // FIXME: temporarily disabled (iOS branch is not complete)
-    return true;
+    return !platform.isAndroid ||
+      global.NETWORK_TYPE !== ThaliMobile.networkTypes.NATIVE;
   },
   function (t) {
-  var somePeerIdentifier = 'urn:uuid:' + uuid.v4();
+    var somePeerIdentifier = 'urn:uuid:' + uuid.v4();
 
-  var peerAvailabilityChangedHandler = function (peer) {
-    t.fail('We should not have gotten a peer ' + JSON.stringify(peer));
-    return cleanUp();
-  };
+    var peerAvailabilityChangedHandler = function (peer) {
+      t.fail('We should not have gotten a peer ' + JSON.stringify(peer));
+      return cleanUp();
+    };
 
-  var failedConnectionHandler = function (peer) {
-    t.equal(peer.peerIdentifier, somePeerIdentifier, 'Failed on right peer');
-    t.ok(peer.recreated, 'Marked as recreated');
-    connectionErrorReceived = true;
-  };
+    var connectionErrorReceived = false;
+    var failedConnectionHandler = function (peer) {
+      t.equal(peer.peerIdentifier, somePeerIdentifier, 'Failed on right peer');
+      connectionErrorReceived = true;
+    };
 
-  var cleanUpCalled = false;
-  function cleanUp() {
-    if (cleanUpCalled) {
-      return;
+    var cleanUpCalled = false;
+    function cleanUp() {
+      if (cleanUpCalled) {
+        return;
+      }
+      cleanUpCalled = true;
+      ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+        peerAvailabilityChangedHandler);
+      ThaliMobileNativeWrapper.emitter.removeListener('failedConnection',
+        failedConnectionHandler);
+      t.end();
     }
-    cleanUpCalled = true;
-    ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+
+    ThaliMobile.emitter.on('peerAvailabilityChanged',
       peerAvailabilityChangedHandler);
-    ThaliMobileNativeWrapper.emitter.removeListener('failedConnection',
+
+    ThaliMobileNativeWrapper.emitter.on('failedConnection',
       failedConnectionHandler);
-    t.end();
-  }
 
-  ThaliMobile.emitter.on('peerAvailabilityChanged',
-    peerAvailabilityChangedHandler);
+    var originalListener = ThaliMobileNativeWrapper.terminateListener;
+    ThaliMobileNativeWrapper.terminateListener = function(peerIdentifier) {
+      t.equal(peerIdentifier, somePeerIdentifier, 'Peer still matches');
+      t.ok(connectionErrorReceived, 'We got the connection error');
+      ThaliMobileNativeWrapper.terminateListener = originalListener;
+      cleanUp();
+      return Promise.resolve();
+    };
 
-  var connectionErrorReceived = false;
-  ThaliMobileNativeWrapper.emitter.on('failedConnection',
-    failedConnectionHandler);
-
-  var originalListener = ThaliMobileNativeWrapper.terminateListener;
-  ThaliMobileNativeWrapper.terminateListener = function(peerIdentifier) {
-    t.equal(peerIdentifier, somePeerIdentifier, 'Peer still matches');
-    t.ok(connectionErrorReceived, 'We got the connection error');
-    ThaliMobileNativeWrapper.terminateListener = originalListener;
-    cleanUp();
-  };
-
-  ThaliMobile.start(express.Router(), new Buffer('foo'),
-    ThaliMobile.networkTypes.NATIVE)
+    ThaliMobile.start(
+      express.Router(),
+      new Buffer('foo'),
+      ThaliMobile.networkTypes.NATIVE
+    )
     .then(function () {
       return ThaliMobile.startListeningForAdvertisements();
     })
@@ -1487,7 +1496,9 @@ test('If a peer is not available (and hence is not in the thaliMobile cache)' +
       ThaliMobileNativeWrapper.terminateListener = originalListener;
       cleanUp();
     });
-  });
+  }
+);
+
 
 if (!tape.coordinated) {
   return;

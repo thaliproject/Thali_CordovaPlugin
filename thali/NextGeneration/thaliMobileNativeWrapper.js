@@ -93,6 +93,7 @@ module.exports._isStarted = function () {
 function failedConnectionHandler(failedConnection) {
   var peer = {
     peerIdentifier: failedConnection.peerIdentifier,
+    peerAvailable: false,
     generation: failedConnection.generation,
     portNumber: null,
     recreated: failedConnection.recreated
