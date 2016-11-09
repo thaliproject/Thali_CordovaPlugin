@@ -298,6 +298,8 @@ function (t) {
   })
 });
 
+=======
+>>>>>>> Added cahnges for nonTCPPeerAvailabilityChanged
 test('all services are stopped when we call stop', function (t) {
   var stopped = false;
   var serversManagerLocalPort = 0;

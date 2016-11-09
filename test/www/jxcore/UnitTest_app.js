@@ -64,11 +64,6 @@ if (!utResult) {
   logger.debug('Failed to execute UT.');
   global.nativeUTFailed = true;
 }
-if (platform.isIOS) {
-  // Disable node tests for iOS due to issue #1343
-  console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-  return;
-}
 
 global.NETWORK_TYPE = ThaliMobile.networkTypes.WIFI;
 
