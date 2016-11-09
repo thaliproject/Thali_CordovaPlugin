@@ -127,7 +127,7 @@ function routerPortConnectionFailedHandler(failedRouterPort) {
     return;
   }
 
-  gPromiseQueue.enqueueAtTop(stop())
+  gPromiseQueue.enqueueAtTop(stop)
     .catch(function (err) {
       return err;
     })
@@ -294,64 +294,24 @@ module.exports.start = function (router, pskIdToSecret) {
         gRouterServerPort = gRouterServer.address().port;
         logger.debug('listening', gRouterServerPort);
 
-        stopCreateAndStartServersManager()
-          .then(function () {
-            states.started = true;
-            resolve();
-          })
-          .catch(function (err) {
-            reject(err);
-          });
+        if(platform.isAndroid) {
+          stopCreateAndStartServersManager()
+            .then(function () {
+              states.started = true;
+              resolve();
+            })
+            .catch(function (err) {
+              reject(err);
+            });
+        } else {
+          states.started = true;
+          resolve();
+        }
+
       });
     gRouterServer = makeIntoCloseAllServer(gRouterServer);
   });
 };
-
-function stop() {
-  return function (resolve, reject) {
-    if (!states.started) {
-      return resolve();
-    }
-
-    states.started = false;
-
-    var errorDescriptions = {};
-
-    Mobile('stopAdvertisingAndListening').callNative(function (error) {
-      if (error) {
-        errorDescriptions.stopAdvertisingError = new Error(error);
-      }
-      Mobile('stopListeningForAdvertisements').callNative(function (error) {
-        if (error) {
-          errorDescriptions.stopListeningError = new Error(error);
-        }
-        stopServersManager()
-          .catch(function (err) {
-            errorDescriptions.stopServersManagerError = err;
-          })
-          .then(function () {
-            var oldRouterServer = gRouterServer;
-            gRouterServer = null;
-            return oldRouterServer ? oldRouterServer.closeAllPromise() :
-              Promise.resolve();
-          })
-          .catch(function (err) {
-            errorDescriptions.stopRouterServerError = err;
-          })
-          .then(function () {
-            if (Object.getOwnPropertyNames(errorDescriptions).length === 0) {
-              return resolve();
-            }
-
-            var error = new Error('check errorDescriptions property');
-            error.errorDescriptions = errorDescriptions;
-
-            return reject(error);
-          });
-      });
-    });
-  };
-}
 
 /**
  * This method will call all the stop methods, call stop on the {@link
@@ -365,9 +325,73 @@ function stop() {
  *
  * @returns {Promise<?Error>}
  */
-module.exports.stop = function () {
-  return gPromiseQueue.enqueue(stop());
-};
+
+function stop(resolve, reject) {
+   if (!states.started) {
+     return resolve();
+   }
+
+   states.started = false;
+
+   var errorDescriptions = {};
+
+   stopNative()
+   .catch(function(err) {
+     errorDescriptions = err;
+   })
+   .then(function() {
+     if(platform.isAndroid) {
+       return stopServersManager();
+     }
+     return Promise.resolve();
+   })
+   .catch(function (err) {
+     errorDescriptions.stopServersManagerError = err;
+   })
+   .then(function () {
+     var oldRouterServer = gRouterServer;
+     gRouterServer = null;
+     return oldRouterServer ? oldRouterServer.closeAllPromise() :
+       Promise.resolve();
+   })
+   .catch(function (err) {
+     errorDescriptions.stopRouterServerError = err;
+   })
+   .then(function () {
+     if (Object.getOwnPropertyNames(errorDescriptions).length === 0) {
+       return resolve();
+     }
+
+     var error = new Error('check errorDescriptions property');
+     error.errorDescriptions = errorDescriptions;
+
+     return reject(error);
+   });
+ }
+
+ function stopNative() {
+   return new Promise(function(resolve, reject) {
+     var errorDescriptions = {};
+
+     Mobile('stopAdvertisingAndListening').callNative(function (error) {
+       if (error) {
+         errorDescriptions.stopAdvertisingError = new Error(error);
+         reject(errorDescriptions);
+       }
+       Mobile('stopListeningForAdvertisements').callNative(function (error) {
+         if (error) {
+           errorDescriptions.stopListeningError = new Error(error);
+           reject(errorDescriptions);
+         }
+         resolve();
+       });
+     });
+   })
+ }
+
+ module.exports.stop = function() {
+   return gPromiseQueue.enqueue(stop);
+ }
 
 /* eslint-disable max-len */
 /**
@@ -1141,7 +1165,7 @@ module.exports._registerToNative = function () {
 
       // Enqueue the restart to prevent other calls being handled
       // while the restart is ongoing.
-      gPromiseQueue.enqueueAtTop(stop())
+      gPromiseQueue.enqueueAtTop(stop)
         .catch(function (err) {
           return err;
         })
