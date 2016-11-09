@@ -205,29 +205,51 @@ function trivialBadEndToEndTest(t, needManualNotify, callback) {
     pskIdToSecret, pskIdentity, pskKey, testData, callback);
 }
 
-var connectionTester = function (port, callback) {
-  var returned = false;
-  var connection = net.createConnection(port, function () {
-    connection.destroy();
-    if (!returned) {
-      returned = true;
-      callback(true);
-    }
-  });
-  connection.on('error', function () {
-    connection.destroy();
-    if (!returned) {
-      returned = true;
-      callback(false);
-    }
-  });
-};
+var connectionTester = function(port) {
+  return new Promise(function(resolve, reject) {
+    var connection = net.createConnection(port, function () {
+      connection.destroy();
+      resolve();
+    });
+    connection.on('error', function (error) {
+      connection.destroy();
+      reject(error);
+    });
+  })
+}
 
-test('all services are stopped when we call stop', function (t) {
+test.only('all services are stopped when we call stop', function (t) {
   var stopped = false;
   var serversManagerLocalPort = 0;
   var routerServerPort = 0;
-  var stopAndCheck = function () {
+  var connections = [];
+  thaliMobileNativeWrapper.start(express.Router())
+  .then(function () {
+    return thaliMobileNativeWrapper.startListeningForAdvertisements();
+  })
+  .then(function () {
+    return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
+  })
+  .then(function () {
+    routerServerPort = thaliMobileNativeWrapper._getRouterServerPort();
+
+    connections.push(connectionTester(routerServerPort));
+
+    if(platform.isAndroid) {
+      serversManagerLocalPort = thaliMobileNativeWrapper._getServersManagerLocalPort();
+      connections.push(connectionTester(serversManagerLocalPort));
+    }
+
+    return Promise.all(connections);
+  })
+  .then(function (connection) {
+    t.pass('all connection succeed');
+  })
+  .catch(function (error) {
+    t.fail(error);
+    t.end();
+  })
+  .then(function() {
     var discoveryStopped = false;
     var advertisingStopped = false;
     var stateChangeHandler = function (state) {
@@ -247,21 +269,26 @@ test('all services are stopped when we call stop', function (t) {
             setImmediate(doConnectTest);
             return;
           }
-          connectionTester(
-            serversManagerLocalPort,
-            function (success) {
-              t.equals(success, false,
-                'connection to servers manager should fail after stopping');
-              connectionTester(
-                routerServerPort,
-                function () {
-                  t.equals(success, false,
-                    'connection to router server should fail after stopping');
-                  t.end();
-                }
-              );
-            }
-          );
+          connectionTester(routerServerPort)
+          .then(function (response) {
+            t.fail('connection to router server should fail after stopping');
+            t.end();
+          })
+          .catch(function (error) {
+            t.pass('connection to router server should fail after stopping');
+            t.end();
+          })
+
+          if(platform.isAndroid) {
+            connectionTester(serversManagerLocalPort)
+            .then(function (response) {
+              t.fail('connection to servers manager should fail after stopping');
+            })
+            .catch(function (error) {
+              t.pass('connection to servers manager should fail after stopping');
+            });
+          }
+
         };
         doConnectTest();
       }
@@ -277,34 +304,6 @@ test('all services are stopped when we call stop', function (t) {
       stopped = true;
       // stateChangeHandler above should get called
     });
-  };
-  thaliMobileNativeWrapper.start(express.Router())
-  .then(function () {
-    return thaliMobileNativeWrapper.startListeningForAdvertisements();
-  })
-  .then(function () {
-    return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
-  })
-  .then(function () {
-    serversManagerLocalPort =
-      thaliMobileNativeWrapper._getServersManagerLocalPort();
-    routerServerPort =
-      thaliMobileNativeWrapper._getRouterServerPort();
-    connectionTester(
-      serversManagerLocalPort,
-      function (success) {
-        t.equals(success, true,
-          'connection to servers manager should succeed after starting');
-        connectionTester(
-          routerServerPort,
-          function () {
-            t.equals(success, true,
-              'connection to router server should succeed after starting');
-            stopAndCheck();
-          }
-        );
-      }
-    );
   });
 });
 
