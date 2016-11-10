@@ -38,12 +38,7 @@ var test = tape({
   }
 });
 
-test('Coordinated replication action test',
-function () {
-  // FIXME: temporarily disabled (iOS branch is not complete)
-  return true;
-},
-function (t) {
+test('Coordinated replication action test', function (t) {
   var router = express.Router();
   router.use(
     '/db',

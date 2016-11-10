@@ -1327,6 +1327,9 @@ test('disconnect fails on wifi peers', function (t) {
     if (peerStatus.peerIdentifier !== wifiPeer.peerIdentifier) {
       return;
     }
+    ThaliMobile.emitter
+      .removeListener('peerAvailabilityChanged', availabilityHandler);
+
     ThaliMobile
       .disconnect(wifiPeer.peerIdentifier, peerStatus.connectionType)
       .then(function () {
@@ -1335,6 +1338,7 @@ test('disconnect fails on wifi peers', function (t) {
       .catch(function (error) {
         t.equal(error.message, 'Wifi does not support disconnect',
           'Got specific error message');
+        return null;
       })
       .then(t.end);
   };
@@ -1622,13 +1626,15 @@ test('If a peer is not available (and hence is not in the thaliMobile cache)' +
       failedConnectionHandler);
 
     var originalListener = ThaliMobileNativeWrapper.terminateListener;
-    ThaliMobileNativeWrapper.terminateListener = function(peerIdentifier) {
+
+    function disconnect (peerIdentifier) {
       t.equal(peerIdentifier, somePeerIdentifier, 'Peer still matches');
       t.ok(connectionErrorReceived, 'We got the connection error');
-      ThaliMobileNativeWrapper.terminateListener = originalListener;
+      ThaliMobileNativeWrapper.disconnect.restore();
       cleanUp();
       return Promise.resolve();
-    };
+    }
+    sinon.stub(ThaliMobileNativeWrapper, 'disconnect', disconnect);
 
     ThaliMobile.start(
       express.Router(),

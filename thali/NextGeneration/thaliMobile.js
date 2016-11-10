@@ -1049,7 +1049,7 @@ var handleRecreatedPeer = function (nativePeer) {
   } else {
     if (nativePeer.peerAvailable) {
       ThaliMobileNativeWrapper
-        .terminateListener(nativePeer.peerIdentifier, nativePeer.portNumber)
+        .disconnect(nativePeer.peerIdentifier, nativePeer.portNumber)
         .catch(function (err) {
           logger.error('Try to clean up a recreated server for an' +
             'unavailable peer %s and got error %s', nativePeer.peerIdentifier,

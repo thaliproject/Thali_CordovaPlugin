@@ -142,12 +142,7 @@ function waitForRemoteDocs(
   });
 }
 
-test('test write',
-function () {
-  // FIXME: temporarily disabled (iOS branch is not complete)
-  return true;
-},
-function (t) {
+test('test write', function (t) {
   testUtils.testTimeout(t, TEST_TIMEOUT);
 
   // This function will return all participant's public keys
@@ -205,12 +200,7 @@ function (t) {
   });
 });
 
-test('test repeat write 1',
-function () {
-  // FIXME: temporarily disabled (iOS branch is not complete)
-  return true;
-},
-function (t) {
+test('test repeat write 1', function (t) {
   testUtils.testTimeout(t, TEST_TIMEOUT);
 
   var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
@@ -261,12 +251,7 @@ function (t) {
   });
 });
 
-test('test repeat write 2',
-function () {
-  // FIXME: temporarily disabled (iOS branch is not complete)
-  return true;
-},
-function (t) {
+test('test repeat write 2', function (t) {
   testUtils.testTimeout(t, TEST_TIMEOUT);
 
   var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
