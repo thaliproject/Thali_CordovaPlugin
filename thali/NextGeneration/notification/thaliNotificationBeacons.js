@@ -525,11 +525,11 @@ function generateBeaconStreamAndSecrets(publicKeysToNotify,
 
   var pskMap = generatePskSecrets(publicKeysToNotify, ecdhForLocalDevice,
     beaconStreamWithPreAmble);
-  
+
   return {
     beaconStreamWithPreAmble: beaconStreamWithPreAmble,
     keyAndSecret: pskMap
   };
-}  
+}
 
 module.exports.generateBeaconStreamAndSecrets = generateBeaconStreamAndSecrets;

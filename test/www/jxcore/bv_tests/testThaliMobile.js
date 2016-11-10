@@ -1320,6 +1320,77 @@ test('#getPeerHostInfo - returns discovered cached wifi peer',
   }
 );
 
+test('disconnect fails on wifi peers', function (t) {
+  var wifiPeer = generateLowerLevelPeers().wifiPeer;
+
+  var availabilityHandler = function (peerStatus) {
+    if (peerStatus.peerIdentifier !== wifiPeer.peerIdentifier) {
+      return;
+    }
+    ThaliMobile
+      .disconnect(wifiPeer.peerIdentifier, peerStatus.connectionType)
+      .then(function () {
+        t.fail('disconnect should not be successful');
+      })
+      .catch(function (error) {
+        t.equal(error.message, 'Wifi does not support disconnect',
+          'Got specific error message');
+      })
+      .then(t.end);
+  };
+
+  ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
+
+  ThaliMobile.start(express.Router()).then(function () {
+    emitWifiPeerAvailability(wifiPeer);
+  });
+});
+
+test('disconnect delegates native peers to the native wrapper',
+  function (t) {
+    var nativePeer = generateLowerLevelPeers().nativePeer;
+
+    var availabilityHandler = function (peerStatus) {
+      if (peerStatus.peerIdentifier !== nativePeer.peerIdentifier) {
+        return;
+      }
+      ThaliMobile.emitter
+        .removeListener('peerAvailabilityChanged', availabilityHandler);
+
+      var nativeDisconnectSpy =
+        sinon.spy(ThaliMobileNativeWrapper, 'disconnect');
+
+      ThaliMobile
+        .disconnect(
+          nativePeer.peerIdentifier,
+          peerStatus.connectionType,
+          nativePeer.portNumber
+        )
+        .catch(function () {
+          t.fail('should not fail');
+        })
+        .then(function () {
+          t.ok(nativeDisconnectSpy.calledOnce,
+            'native wrapper `disconnect` called once');
+          t.ok(nativeDisconnectSpy.calledWithExactly(
+            nativePeer.peerIdentifier,
+            nativePeer.portNumber
+          ), 'native wrapper `disconnect` called with peer data');
+        })
+        .then(function () {
+          nativeDisconnectSpy.restore();
+          t.end();
+        });
+    };
+
+    ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
+
+    ThaliMobile.start(express.Router()).then(function () {
+      emitNativePeerAvailability(nativePeer);
+    });
+  }
+);
+
 test('network changes emitted correctly',
   function () {
     return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
