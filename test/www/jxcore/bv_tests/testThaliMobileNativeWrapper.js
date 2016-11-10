@@ -557,6 +557,37 @@ test('We fire failedNativeConnection event when we get failedConnection from ' +
 // HTTP server we are hosting for the user. Since it is just meant for
 // debugging it is only intended to be run on a desktop. So this test really
 // needs to stay not running when we are on mobile.
+test('We fire failedNativeConnection event when we get failedConnection from ' +
+  'multiConnectConnection',
+  function() {
+    return platform._isRealMobile;
+  },
+  function (t) {
+    thaliMobileNativeWrapper.start(express.Router())
+    .then(function () {
+      var peerIdentifier = 'some-identifier';
+      var errorDescription = 'Dummy Error';
+      thaliMobileNativeWrapper.emitter.once(
+        'failedNativeConnection',
+        function (failedConnection) {
+          t.equals(failedConnection.peerIdentifier, peerIdentifier,
+            'peerIdentifier matches');
+          t.equals(failedConnection.error, errorDescription,
+            'error description matches');
+          t.equals(
+            failedConnection.connectionType,
+            thaliMobileNativeWrapper.connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK,
+            'connection type is MPCF');
+          t.end();
+        }
+      );
+      Mobile.fireMultiConnectConnectionFailure({
+        peerIdentifier: peerIdentifier,
+        error: errorDescription
+      });
+    });
+  }
+);
 
 test('can do HTTP requests between peers without coordinator',
   function() {
