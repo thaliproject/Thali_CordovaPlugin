@@ -649,21 +649,15 @@ module.exports._terminateConnection = function (incomingConnectionId) {
  * a null result.
  */
 module.exports._disconnect = function (peerIdentifier) {
-  return gPromiseQueue
-    .enqueue(function (resolve, reject) {
-      if (platform.isAndroid) {
-        return reject(new Error('Not multiConnect platform'));
-      }
-      if (platform.isIOS) {
-        Mobile('disconnect')
-          .callNative(function (errorMsg) {
-            if (errorMsg) {
-              return reject(new Error(errorMsg));
-            }
-            resolve();
-          });
+  return gPromiseQueue.enqueue(function (resolve, reject) {
+    Mobile('disconnect').callNative(peerIdentifier, function (errorMsg) {
+      if (errorMsg) {
+        reject(new Error(errorMsg));
+      } else {
+        resolve();
       }
     });
+  });
 };
 
 /**
@@ -679,17 +673,17 @@ module.exports._disconnect = function (peerIdentifier) {
  * reject with an Error will be returned) the response will be a resolve with
  * a null result.
  */
-module.exports.disconnect = function(peerIdentifier) {
+module.exports.disconnect = function(peerIdentifier, portNumber) {
   if (platform.isAndroid) {
-    return this._terminateConnection(peerIdentifier);
+    return this._terminateListener(peerIdentifier, portNumber);
   }
   if (platform.isIOS) {
-    return this._disconnect(peerIdentifier)
+    return this._disconnect(peerIdentifier);
   }
 
   return Promise.reject(new Error('Disconnect can not be called on ' +
     platform.name + ' platform'));
-}
+};
 
 /**
  * Used on `connect` platforms to terminate a TCP/IP listener waiting for
@@ -703,11 +697,15 @@ module.exports.disconnect = function(peerIdentifier) {
  * If called on a non-`connect` platform then a 'Not connect platform' error
  * MUST be returned.
  *
+ * @private
  * @param {string} peerIdentifier
  * @param {number} port
  * @returns {Promise<?error>}
  */
-module.exports.terminateListener = function (peerIdentifier, port) {
+module.exports._terminateListener = function (peerIdentifier, port) {
+  if (!platform.isAndroid) {
+    return Promise.reject(new Error('Not connect platform'));
+  }
   return gPromiseQueue.enqueue(function (resolve, reject) {
     gServersManager.terminateOutgoingConnection(peerIdentifier, port)
     .then(function () {

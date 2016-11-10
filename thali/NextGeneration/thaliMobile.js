@@ -512,24 +512,27 @@ var getPeerHostInfoStrategies = (function () {
  * On Android and iOS this calls down to disconnect on thaliMobileNativeWrapper.
  * For Wifi this method MUST return a 'Wifi does not support disconnect' error.
  *
+ * This method requires port number assigned to the peer (this port is returned
+ * from `getPeerHostInfo` method) to prevent possible race conditions...
+ *
  * @public
  * @property {string} peerIdentifier Value from peerAvailabilityChanged event.
  * @property {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
+ * @property {number} portNumber
  * @returns {Promise<?Error>}
  */
-module.exports.disconnect = function(peerIdentifier, connectionType) {
-  return promiseQueue
-    .enqueue(function (resolve, reject) {
-      if (connectionType === connectionTypes.TCP_NATIVE) {
-        return reject(new Error('Wifi does not support disconnect'));
-      }
-
-      return thaliMobileNativeWrapper
-        .disconnect(peerIdentifier)
-        .then(resolve)
-        .catch(reject);
+module.exports.disconnect =
+  function (peerIdentifier, connectionType, portNumber) {
+    if (connectionType === connectionTypes.TCP_NATIVE) {
+      return Promise.reject(new Error('Wifi does not support disconnect'));
+    }
+    return promiseQueue.enqueue(function (resolve, reject) {
+      return ThaliMobileNativeWrapper
+        .disconnect(peerIdentifier, portNumber)
+        .then(resolve, reject);
     });
-};
+  };
+
 /*
         EVENTS
  */

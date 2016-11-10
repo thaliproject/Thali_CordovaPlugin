@@ -336,7 +336,7 @@ test('make sure terminateConnection is properly hooked up', function (t) {
 });
 
 test('make sure terminateListener is properly hooked up', function (t) {
-  verifyCallWithArguments(t, 'terminateListener', ['peer-id', 8080]);
+  verifyCallWithArguments(t, '_terminateListener', ['peer-id', 8080]);
 });
 
 test('make sure we actually call kill connections properly', function (t) {
