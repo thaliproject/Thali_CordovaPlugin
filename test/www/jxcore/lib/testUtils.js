@@ -369,8 +369,7 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
     function tryAgain(portNumber) {
       ++retryCount;
       logger.warn('Retry count for getSamePeerWithRetry is ' + retryCount);
-      getRequestPromise =
-        module.exports.get('127.0.0.1', portNumber, path, pskIdentity, pskKey);
+      getRequestPromise = module.exports.get('127.0.0.1', portNumber, path, pskIdentity, pskKey);
       getRequestPromise
         .then(function (result) {
           exitCall(result);
@@ -381,31 +380,12 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
         });
     }
 
-    function nonTCPAvailableHandler(record) {
-      // Ignore peer unavailable events
-      if (record.portNumber === null) {
-        if (peerID && record.peerIdentifier === peerID) {
-          logger.warn('We got a peer unavailable notification for a ' +
-            'peer we are looking for.');
-        }
-        return;
-      }
-
-      if (peerID && record.peerIdentifier !== peerID) {
-        return;
-      }
-
-      logger.debug('We got a peer ' + JSON.stringify(record));
-
-      if (!peerID) {
-        peerID = record.peerIdentifier;
-        return tryAgain(record.portNumber);
-      }
-
+    function callTryAgain(portNumber) {
+      return tryAgain(portNumber);
 
       // We have a predefined peerID
       if (!getRequestPromise) {
-        return tryAgain(record.portNumber);
+        return tryAgain(portNumber);
       }
 
       getRequestPromise
@@ -416,8 +396,39 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
           // unlikely
         })
         .catch(function (err) {
-          return tryAgain(record.portNumber, err);
+          return tryAgain(portNumber, err);
         });
+    }
+
+    function nonTCPAvailableHandler(record) {
+      // Ignore peer unavailable events
+      if (peerID && record.peerIdentifier === peerID) {
+        logger.warn('We got a peer unavailable notification for a ' +
+          'peer we are looking for.');
+      }
+
+      if (peerID && record.peerIdentifier !== peerID) {
+        return;
+      }
+
+      logger.debug('We got a peer ' + JSON.stringify(record));
+
+      if (!peerID) {
+
+        peerID = record.peerIdentifier;
+
+        if(platform.isIOS) {
+          thaliMobileNativeWrapper._multiConnect(peerID)
+          .then(function(portNumber){
+            record.portNumber = portNumber;
+            callTryAgain(portNumber);
+          })
+        } else {
+          callTryAgain(peerID);
+        }
+      } else {
+        callTryAgain(record.portNumber);
+      }
     }
 
     thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
@@ -699,3 +710,11 @@ module.exports.setUpServer = function (testBody, appConfig) {
   );
   return testCloseAllServer;
 };
+
+module.exports.skipOnIOS = function() {
+  return platform.isIOS;
+}
+
+module.exports.skipOnAndroid = function() {
+  return platform.isAndroid;
+}
