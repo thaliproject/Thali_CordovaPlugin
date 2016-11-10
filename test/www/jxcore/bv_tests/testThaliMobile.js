@@ -1409,14 +1409,23 @@ test('calls correct starts when network changes',
 );
 
 test('We properly fire peer unavailable and then available when ' +
-  'connection fails',
-  function () {
-    // FIXME: temporarily disabled (iOS branch is not complete)
-    // (requires getPeerHostInfo implementation)
-    return true;
-  },
-  function(t) {
-  var somePeerIdentifier = 'urn:uuid:' + uuid.v4();
+'connection fails', function(t) {
+
+  // Scenario:
+  // 1. We got peerAvailabilityChanged event (peerAvailable: true).
+  // 2. We are trying to connect to this peer.
+  // 3. Connection fails for some reason (it happens with Bluetooth)
+  //
+  // Expected result:
+  // 1. thaliMobile gets peerAvailabilityChanged event for the same peer and
+  //    peerAvailable set to false
+  // 2. After peer listener is recreated in mux layer we are getting new
+  //    peerAvailabilityChanged event with peerAvailable set to true
+  //
+  // To emulate failing non-TCP connection we fire artificial
+  // peerAvailabilityChanged event with some unknown peer id.
+
+  var somePeerIdentifier = uuid.v4();
 
   var callCounter = 0;
   var connectionErrorReceived = false;
@@ -1442,6 +1451,9 @@ test('We properly fire peer unavailable and then available when ' +
           });
           socket.on('connect', function () {
             t.ok(true, 'We should have connected');
+            // We are connected to the peer listener
+            // At this point mux layer is going to call Mobile('connect') and
+            // fail
           });
         });
         return;
@@ -1467,14 +1479,14 @@ test('We properly fire peer unavailable and then available when ' +
       return;
     }
     cleanUpCalled = true;
-    ThaliMobileNativeWrapper.emitter.removeListener('failedConnection',
+    ThaliMobileNativeWrapper.emitter.removeListener('failedNativeConnection',
       failedConnectionHandler);
     ThaliMobileNativeWrapper.emitter.removeListener(
       'peerAvailabilityChanged', peerAvailabilityChangedHandler);
     t.end();
   }
 
-  ThaliMobileNativeWrapper.emitter.on('failedConnection',
+  ThaliMobileNativeWrapper.emitter.on('failedNativeConnection',
     failedConnectionHandler);
 
   ThaliMobile.emitter.on('peerAvailabilityChanged',
@@ -1488,8 +1500,8 @@ test('We properly fire peer unavailable and then available when ' +
     .then(function () {
       return ThaliMobileNativeWrapper._handlePeerAvailabilityChanged({
         peerIdentifier: somePeerIdentifier,
-        peerAvailable: true,
-        pleaseConnect: false
+        generation: 0,
+        peerAvailable: true
       });
     })
     .catch(function (err) {
