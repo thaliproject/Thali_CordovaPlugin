@@ -12,14 +12,22 @@ import ThaliCore
 
 class AtomicTests: XCTestCase {
 
+    // MARK: - State
     var atomic: Atomic<Int>!
     let initialValue: Int = 1
 
+    // MARK: - Setup & Teardown
     override func setUp() {
         super.setUp()
         atomic = Atomic(initialValue)
     }
 
+    override func tearDown() {
+        atomic = nil
+        super.tearDown()
+    }
+
+    // MARK: - Tests
     func testGetCorrectValueWithValueProperty() {
         XCTAssertEqual(atomic.value, initialValue)
     }

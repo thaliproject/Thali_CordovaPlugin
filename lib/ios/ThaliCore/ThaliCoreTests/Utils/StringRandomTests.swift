@@ -11,8 +11,10 @@ import XCTest
 
 class StringRandomTests: XCTestCase {
 
+    // MARK: - State
     let serviceTypeLength = 10
 
+    // MARK: - Tests
     func testReturnsTrueWhenServiceTypeIsValid() {
         for _ in 0...1000 {
             // Given
