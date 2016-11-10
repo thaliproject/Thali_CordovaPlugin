@@ -451,7 +451,7 @@ test('We fire failedNativeConnection event when we get failedConnection from ' +
           t.equals(
             failedConnection.connectionType,
             thaliMobileNativeWrapper.connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK,
-            'connection type is tcp');
+            'connection type is MPCF');
           t.end();
         }
       );
