@@ -251,6 +251,53 @@ test('all services are started when we call start', function (t) {
   })
 });
 
+test('TCP Servers Manager should be null when we call start on iOS',
+testUtils.skipOnAndroid,
+function (t) {
+  var serversManagerLocalPort = 0;
+  var routerServerPort = 0;
+  var connections = [];
+  thaliMobileNativeWrapper.start(express.Router())
+  .then(function () {
+    return thaliMobileNativeWrapper.startListeningForAdvertisements();
+  })
+  .then(function () {
+    return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
+  })
+  .then(function () {
+    var serversManager = thaliMobileNativeWrapper._getServersManager();
+    t.equals(serversManager, null, 'TCP Servers Manager doesn\'t exists');
+    t.end();
+  })
+  .catch(function (error) {
+    t.fail(error);
+    t.end();
+  })
+});
+
+test('nonTCPPeerAvailabilityChangedEvent should return null for a portNumber on iOS',
+testUtils.skipOnAndroid,
+function (t) {
+  thaliMobileNativeWrapper.start(express.Router())
+  .then(function () {
+    return thaliMobileNativeWrapper.startListeningForAdvertisements();
+  })
+  .then(function () {
+    return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
+  })
+  .then(function () {
+    thaliMobileNativeWrapper.emitter.once('nonTCPPeerAvailabilityChangedEvent',
+    function(res) {
+      t.equals(res.portNumber, null, 'portNumber equal null');
+      t.end();
+    });
+  })
+  .catch(function (error) {
+    t.fail(error);
+    t.end();
+  })
+});
+
 test('all services are stopped when we call stop', function (t) {
   var stopped = false;
   var serversManagerLocalPort = 0;
@@ -378,9 +425,7 @@ test('make sure we actually call kill connections properly', function (t) {
 
 test('thaliMobileNativeWrapper is stopped when routerPortConnectionFailed ' +
   'is received',
-  function() {
-    return !platform.isAndroid;
-  },
+  testUtils.skipOnIOS,
   function (t) {
     thaliMobileNativeWrapper.start(express.Router())
     .then(function () {
@@ -417,9 +462,7 @@ test('thaliMobileNativeWrapper is stopped when routerPortConnectionFailed ' +
 
 test('We fire failedNativeConnection event when we get failedConnection from ' +
   'thaliTcpServersManager',
-  function() {
-    return !platform.isAndroid;
-  },
+  testUtils.skipOnIOS,
   function (t) {
     thaliMobileNativeWrapper.start(express.Router())
     .then(function () {
@@ -699,6 +742,7 @@ test('will fail bad PSK connection between peers', function (t) {
 });
 
 test('We provide notification when a listener dies and we recreate it',
+  testUtils.skipOnIOS,
   function (t) {
     var recreatedPort = null;
     trivialEndToEndTest(t, false, function (peerId) {
@@ -763,6 +807,7 @@ test('We provide notification when a listener dies and we recreate it',
 
 test('We fire nonTCPPeerAvailabilityChangedEvent with the same generation ' +
   'and different port when listener is recreated',
+  testUtils.skipOnIOS,
   function (t) {
     trivialEndToEndTest(t, false, function (peerId) {
       var beforeRecreatePeer = null;
