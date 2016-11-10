@@ -27,7 +27,7 @@ npm link
 
 cd install
 npm install --no-optional
-#node validateBuildEnvironment.js
+node validateBuildEnvironment.js
 cd ../../test/www/jxcore
 npm link thali
 node installCustomPouchDB.js
