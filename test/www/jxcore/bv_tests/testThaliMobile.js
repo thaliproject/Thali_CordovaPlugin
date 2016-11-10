@@ -1409,13 +1409,7 @@ test('calls correct starts when network changes',
 );
 
 test('We properly fire peer unavailable and then available when ' +
-  'connection fails',
-  function () {
-    // FIXME: temporarily disabled (iOS branch is not complete - issue #899)
-    // (requires getPeerHostInfo implementation)
-    return true;
-  },
-  function(t) {
+'connection fails', function(t) {
 
   // Scenario:
   // 1. We got peerAvailabilityChanged event (peerAvailable: true).
