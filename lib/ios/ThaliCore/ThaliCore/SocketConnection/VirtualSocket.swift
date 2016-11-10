@@ -28,12 +28,14 @@ class VirtualSocket: NSObject {
     private var outputStreamOpened = false
 
     let maxReadBufferLength = 1024
-    private var pendingDataToWrite: NSMutableData?
+    let maxDataToWriteLength = 1024
+    private var bufferToWrite: Atomic<NSMutableData>
 
     // MARK: - Initialize
     init(with inputStream: NSInputStream, outputStream: NSOutputStream) {
         self.inputStream = inputStream
         self.outputStream = outputStream
+        bufferToWrite = Atomic(NSMutableData())
         super.init()
     }
 
@@ -73,31 +75,41 @@ class VirtualSocket: NSObject {
     }
 
     func writeDataToOutputStream(data: NSData) {
-
-        if !outputStream.hasSpaceAvailable {
-            pendingDataToWrite?.appendData(data)
-            return
+        bufferToWrite.modify {
+            $0.appendData(data)
         }
-
-        let dataLength = data.length
-        let buffer: [UInt8] = Array(
-                                UnsafeBufferPointer(start: UnsafePointer<UInt8>(data.bytes),
-                                                    count: dataLength)
-                              )
-
-        let bytesWritten = outputStream.write(buffer, maxLength: dataLength)
-        if bytesWritten < 0 {
-            closeStreams()
+        if outputStream.hasSpaceAvailable {
+            writePendingDataFromBuffer()
         }
     }
 
-    func writePendingData() {
-        guard let dataToWrite = pendingDataToWrite else {
-            return
-        }
+    // MARK: - Private methods
+    private func writePendingDataFromBuffer() {
+        bufferToWrite.modify {
+            [weak self] in
+            guard let strongSelf = self else { return }
 
-        pendingDataToWrite = nil
-        writeDataToOutputStream(dataToWrite)
+            let bufferLength = $0.length
+
+            guard bufferLength > 0 else {
+                return
+            }
+
+            let dataToBeWrittenLength = min(bufferLength, strongSelf.maxDataToWriteLength)
+
+            var buffer = [UInt8](count: dataToBeWrittenLength, repeatedValue: 0)
+            $0.getBytes(&buffer, length: dataToBeWrittenLength)
+
+            let bytesWritten =
+                strongSelf.outputStream.write(buffer, maxLength: dataToBeWrittenLength)
+
+            if bytesWritten < 0 {
+                strongSelf.closeStreams()
+            } else {
+                let writtenBytesRange = NSRange(location: 0, length: bytesWritten)
+                $0.replaceBytesInRange(writtenBytesRange, withBytes: nil, length: 0)
+            }
+        }
     }
 
     private func readDataFromInputStream() {
@@ -128,6 +140,7 @@ extension VirtualSocket: NSStreamDelegate {
         }
     }
 
+    // MARK: - Private helpers
     private func handleEventOnInputStream(eventCode: NSStreamEvent) {
         switch eventCode {
         case NSStreamEvent.OpenCompleted:
@@ -154,7 +167,7 @@ extension VirtualSocket: NSStreamDelegate {
         case NSStreamEvent.HasBytesAvailable:
             readDataFromInputStream()
         case NSStreamEvent.HasSpaceAvailable:
-            writePendingData()
+            writePendingDataFromBuffer()
         case NSStreamEvent.ErrorOccurred:
             closeStreams()
         case NSStreamEvent.EndEncountered:
