@@ -539,8 +539,10 @@ module.exports.startUpdateAdvertisingAndListening = function () {
     if (!states.started) {
       return reject(new Error('Call Start!'));
     }
+
+    var port = (platform.isAndroid) ? gServersManagerLocalPort : gRouterServerPort;
     Mobile('startUpdateAdvertisingAndListening').callNative(
-      gServersManagerLocalPort,
+      port,
       function (error) {
         if (error) {
           return reject(new Error(error));
