@@ -608,15 +608,20 @@ module.exports.getNonTCPNetworkStatus = function () {
          }
 
          module.exports.emitter.on('_multiConnectResolved',
-          function (syncValue, error, portNumber) {
+          function callback (syncValue, error, portNumber) {
              if(originalSyncValue !== syncValue) {
                return;
              }
+
+             module.exports.emitter.removeListener('_multiConnectResolved', callback);
+
              if (error) {
                return reject(new Error(error));
              }
+
              resolve(portNumber);
-           });
+           }
+         );
        });
    });
  };
