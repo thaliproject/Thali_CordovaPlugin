@@ -743,3 +743,56 @@ module.exports.setUpServer = function (testBody, appConfig) {
   );
   return testCloseAllServer;
 };
+
+/**
+ * Stubs `dns.lookup` function such a way, that attempt to connect to
+ * `unresolvableDomain` fails immediately.
+ *
+ * TODO: update implementation to allow multiple domains to be unresolvable
+ *
+ * @param {string} unresolvableDomain
+ * @param {?object} t tape instance with `end` method. If it is not null
+ * `dns.lookup` will be automatically restored after the test ends
+ */
+module.exports.makeDomainUnresolvable = function (unresolvableDomain, t) {
+  var dns = require('dns');
+  if (dns.__originalLookup) {
+    throw new Error('makeDomainUnresolvable can\'t be called twice without ' +
+      'calling restoreUnresolvableDomains');
+  }
+  dns.__originalLookup = dns.lookup;
+  dns.lookup = function (domain, family_, callback_) {
+    var family = family_,
+        callback = callback_;
+    // parse arguments
+    if (arguments.length === 2) {
+      callback = family;
+    }
+    if (domain === unresolvableDomain) {
+      var syscall = 'getaddrinfo';
+      var errorno = 'ENOTFOUND';
+      var e = new Error(syscall + ' ' + errorno);
+      e.errno = e.code = errorno;
+      e.syscall = syscall;
+      setImmediate(callback, e);
+    } else {
+      return dns.__originalLookup.apply(dns, arguments);
+    }
+  };
+
+  if (t && typeof t.end === 'function') {
+    var end = t.end;
+    t.end = function () {
+      module.exports.restoreUnresolvableDomains();
+      return end.apply(t, arguments);
+    };
+  }
+};
+
+module.exports.restoreUnresolvableDomains = function () {
+  var dns = require('dns');
+  if (dns.__originalLookup) {
+    dns.lookup = dns.__originalLookup;
+    delete dns.__originalLookup;
+  }
+};
