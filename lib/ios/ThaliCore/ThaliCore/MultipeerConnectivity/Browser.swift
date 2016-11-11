@@ -16,45 +16,75 @@ import MultipeerConnectivity
 final class Browser: NSObject {
 
   // MARK: - Internal state
+
+  /**
+   Bool flag indicates if `Browser` object is listening for advertisements.
+   */
   internal private(set) var listening: Bool = false
+
+  /**
+   Timeout for inviting a remote peer to a MCSession.
+   */
   internal let invitePeerTimeout: NSTimeInterval = 30.0
 
   // MARK: - Private state
+
+  /**
+   MCNearbyServiceBrowser object.
+   */
   private let browser: MCNearbyServiceBrowser
+
+  /**
+   Represents peers that can be invited into MCSession.
+   */
   private var availablePeers: Atomic<[Peer: MCPeerID]> = Atomic([:])
+
+  /**
+   Handle finding nearby peer.
+   */
   private let didFindPeerHandler: (Peer) -> Void
+
+  /**
+   Handle losing nearby peer.
+   */
   private let didLosePeerHandler: (Peer) -> Void
+
+  /**
+   Handle failing browsing.
+   */
   private var startBrowsingErrorHandler: (ErrorType -> Void)? = nil
 
   // MARK: - Initialization
 
   /**
-   Returns a new `Advertiser` object or nil if it could not be created.
+   Returns a new `Browser` object or nil if it could not be created.
 
    - parameters:
-   - serviceType:
-   The type of service to advertise.
-   This should be a string in the format of Bonjour service type:
-   1. *Must* be 1–15 characters long
-   2. Can contain *only* ASCII letters, digits, and hyphens.
-   3. *Must* contain at least one ASCII letter
-   4. *Must* not begin or end with a hyphen
-   5. Hyphens must not be adjacent to other hyphens
-   For more details, see [RFC6335](https://tools.ietf.org/html/rfc6335#section-5.1).
+     - serviceType:
+       The type of service to browse.
+       This should be a string in the format of Bonjour service type:
+       1. *Must* be 1–15 characters long
+       2. Can contain *only* ASCII letters, digits, and hyphens.
+       3. *Must* contain at least one ASCII letter
+       4. *Must* not begin or end with a hyphen
+       5. Hyphens must not be adjacent to other hyphens
 
-   - foundPeer:
-   Called when a nearby peer is found.
+       For more details, see [RFC6335](https://tools.ietf.org/html/rfc6335#section-5.1).
 
-   - lostPeer:
-   Called when a nearby peer is lost.
+     - foundPeer:
+       Called when a nearby peer is found.
 
-   - returns: An initialized `Advertiser` object, or nil if an object could not be created
-   due to invalid `serviceType` format.
+     - lostPeer:
+       Called when a nearby peer is lost.
+
+   - returns:
+     An initialized `Browser` object, or nil if an object could not be created
+     due to invalid `serviceType` format.
    */
   required init?(serviceType: String,
                  foundPeer: (Peer) -> Void,
                  lostPeer: (Peer) -> Void) {
-    if !String.isValidServiceType(serviceType) {
+    guard String.isValidServiceType(serviceType) else {
       return nil
     }
 
@@ -69,12 +99,11 @@ final class Browser: NSObject {
    Begins listening for `serviceType` provided in init method.
 
    This method sets `listening` value to `true`.
-
-   This method does not change state if `Browser` is already listening.
+   It does not change state if `Browser` is already listening.
 
    - parameters:
-   - startListeningErrorHandler:
-   Called when a browser failed to start browsing for peers.
+     - startListeningErrorHandler:
+       Called when a browser failed to start browsing for peers.
    */
   func startListening(startListeningErrorHandler: ErrorType -> Void) {
     if !listening {
@@ -89,8 +118,7 @@ final class Browser: NSObject {
    Stops listening for the `serviceType` provided in init method.
 
    This method sets `listening` value to `false`.
-
-   This method does not change state if `Browser` is already not listening.
+   It does not change state if `Browser` is already not listening.
    */
   func stopListening() {
     browser.delegate = nil
@@ -102,11 +130,14 @@ final class Browser: NSObject {
    Invites Peer into the session
 
    - parameters:
-   - peer:
-   `Peer` to invite
+     - peer:
+       `Peer` to invite.
+   
+     - sessionConnected:
+       Called when the peer is connected to this session.
 
-   - disconnectHandler:
-   Called when the nearby peer is not (or is no longer) in this session.
+     - sessionNotConnected:
+       Called when the nearby peer is not (or is no longer) in this session.
 
    - throws: IllegalPeerID
 
@@ -142,7 +173,7 @@ extension Browser: MCNearbyServiceBrowserDelegate {
 
   func browser(browser: MCNearbyServiceBrowser,
                foundPeer peerID: MCPeerID,
-                         withDiscoveryInfo info: [String: String]?) {
+               withDiscoveryInfo info: [String: String]?) {
     do {
       let peer = try Peer(mcPeerID: peerID)
       availablePeers.modify { $0[peer] = peerID }
