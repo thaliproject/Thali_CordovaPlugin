@@ -381,7 +381,6 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
     }
 
     function callTryAgain(portNumber) {
-      return tryAgain(portNumber);
 
       // We have a predefined peerID
       if (!getRequestPromise) {
@@ -400,6 +399,19 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
         });
     }
 
+    function getPort(peerID) {
+      return new Promise(function(resolve, reject) {
+        if(platform.isIOS) {
+          thaliMobileNativeWrapper._multiConnect(peerID)
+          .then(function(portNumber){
+            resolve(portNumber);
+          });
+        } else {
+          resolve();
+        }
+      })
+    };
+
     function nonTCPAvailableHandler(record) {
       // Ignore peer unavailable events
       if (peerID && record.peerIdentifier === peerID) {
@@ -414,21 +426,13 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
       logger.debug('We got a peer ' + JSON.stringify(record));
 
       if (!peerID) {
-
         peerID = record.peerIdentifier;
-
-        if(platform.isIOS) {
-          thaliMobileNativeWrapper._multiConnect(peerID)
-          .then(function(portNumber){
-            record.portNumber = portNumber;
-            callTryAgain(portNumber);
-          })
-        } else {
-          callTryAgain(peerID);
-        }
-      } else {
-        callTryAgain(record.portNumber);
       }
+
+      getPort(peerID)
+      .then(function(port) {
+        (port) ? callTryAgain(port) : callTryAgain(record.portNumber);
+      });
     }
 
     thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
