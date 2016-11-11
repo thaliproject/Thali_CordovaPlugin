@@ -8,10 +8,19 @@ JX_NPM_JXB=jxb311
 export JX_NPM_JXB
 
 # Exit immediately if a command exits with a non-zero status.
-set -e
+set -euo pipefail
+
+NORMAL_COLOR='\033[0m'
+RED_COLOR='\033[0;31m'
+
+OUTPUT() {
+  echo -e "${RED_COLOR}$BASH_COMMAND FAILED - setUpDesktop.sh failure${NORMAL_COLOR}"
+}
+
+trap OUTPUT ERR
 
 echo "Setup TestServer"
-cd `dirname $0`
+cd "$(dirname $0)"
 cd ../../test/TestServer
 npm install --no-optional
 node generateServerAddress.js
