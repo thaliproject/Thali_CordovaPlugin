@@ -1097,9 +1097,11 @@ module.exports._registerToNative = function () {
         return;
       }
 
-      if (gServersManagerLocalPort !== portNumber) {
+      var originalPortNumber = (platform.isAndroid) ? gServersManagerLocalPort : gRouterServerPort;
+
+      if (originalPortNumber !== portNumber) {
         logger.info('got incomingConnectionToPortNumberFailed for port ' +
-          portNumber + ' but we are listening on ' + gServersManagerLocalPort);
+          portNumber + ' but we are listening on ' + originalPortNumber);
         return;
       }
 
