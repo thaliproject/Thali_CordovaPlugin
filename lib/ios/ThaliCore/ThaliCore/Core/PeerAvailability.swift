@@ -9,13 +9,13 @@
 
 public struct PeerAvailability {
 
-    public let peerIdentifier: String
-    public let generation: Int
-    public let available: Bool
+  public let peerIdentifier: String
+  public let generation: Int
+  public let available: Bool
 
-    public init(peer: Peer, available: Bool) {
-        self.peerIdentifier = peer.uuid
-        self.generation = peer.generation
-        self.available = available
-    }
+  public init(peer: Peer, available: Bool) {
+    self.peerIdentifier = peer.uuid
+    self.generation = peer.generation
+    self.available = available
+  }
 }
