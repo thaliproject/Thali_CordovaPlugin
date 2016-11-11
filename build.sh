@@ -61,9 +61,9 @@ then
   node CITestMode.js
 fi
 
-jx npm test
-jx npm run test-meta
-jx npm run test-coordinated
+# jx npm test
+# jx npm run test-meta
+# jx npm run test-coordinated
 
 # Verify that docs can be generated
 #cd $WORKING_DIR/thali/
