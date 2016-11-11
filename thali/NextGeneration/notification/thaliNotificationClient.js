@@ -223,10 +223,11 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
     assert('generation' in peerStatus, 'generation must be set');
     assert('newAddressPort' in peerStatus, 'newAddressPort must be set');
 
+    // Remove the old peer if it exists.
+    this.peerDictionary.remove(peerStatus.peerIdentifier);
+
     if (!peerStatus.peerAvailable) {
       logger.warn('peer is not available');
-      // Remove the old peer if it exists.
-      this.peerDictionary.remove(peerStatus.peerIdentifier);
       return;
     }
 
@@ -364,7 +365,6 @@ ThaliNotificationClient.prototype._resolved =
         // We will for wait time out specified in the RETRY_TIMEOUTS
         // array and try again.
         var timeOutHandler = function (peerId) {
-
           entry = this.peerDictionary.get(peerId);
           if (entry && entry.peerState === PeerDictionary.peerState.WAITING) {
             this._createNewAction(
