@@ -42,7 +42,9 @@ TEST_PROJECT_ROOT_DIR=${REPO_ROOT_DIR}/../${TEST_PROJECT_NAME}
 prepare_project()
 {
   IPADDRESS=${1:-}
-# node $REPO_ROOT_DIR/thali/install/validateBuildEnvironment.js
+  cd $REPO_ROOT_DIR/thali/install
+  npm install --no-optional
+  node $REPO_ROOT_DIR/thali/install/validateBuildEnvironment.js
 
   echo "Preparing ${TEST_PROJECT_NAME} Cordova project"
 
