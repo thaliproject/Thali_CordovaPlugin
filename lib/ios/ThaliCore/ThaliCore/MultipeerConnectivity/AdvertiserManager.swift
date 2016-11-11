@@ -13,27 +13,45 @@
 public final class AdvertiserManager {
 
   // MARK: - Public state
+
+  /***/
   public var advertising: Bool {
     return currentAdvertiser?.advertising ?? false
   }
 
   // MARK: - Internal state
+
+  /***/
   internal private(set) var advertisers: Atomic<[Advertiser]> = Atomic([])
+
+  /***/
   internal private(set) var activeRelays: Atomic<[String: AdvertiserRelay]> = Atomic([:])
+
+  /***/
   internal var didDisposeAdvertiserForPeerHandler: ((Peer) -> Void)?
 
   // MARK: - Private state
+
+  /***/
   private var currentAdvertiser: Advertiser?
+
+  /***/
   private let serviceType: String
+
+  /***/
   private let disposeTimeout: NSTimeInterval
 
   // MARK: - Initialization
+
+  /***/
   public init(serviceType: String, disposeAdvertiserTimeout: NSTimeInterval) {
     self.serviceType = serviceType
     self.disposeTimeout = disposeAdvertiserTimeout
   }
 
   // MARK: - Public methods
+
+  /***/
   public func startUpdateAdvertisingAndListening(onPort port: UInt16,
                                                         errorHandler: ErrorType -> Void) {
     if let currentAdvertiser = currentAdvertiser {
@@ -77,6 +95,7 @@ public final class AdvertiserManager {
     self.currentAdvertiser = newAdvertiser
   }
 
+  /***/
   public func stopAdvertising() {
     advertisers.modify {
       $0.forEach { $0.stopAdvertising() }
@@ -85,12 +104,15 @@ public final class AdvertiserManager {
     currentAdvertiser = nil
   }
 
+  /***/
   public func hasAdvertiser(with identifier: String) -> Bool {
     return advertisers.value.filter { $0.peer.uuid == identifier }
       .count > 0
   }
 
   // MARK: - Private methods
+
+  /***/
   private func disposeAdvertiserAfterTimeoutToFinishInvites(
     advertiserShouldBeDisposed: Advertiser) {
 
