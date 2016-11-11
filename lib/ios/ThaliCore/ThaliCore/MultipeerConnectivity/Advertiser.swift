@@ -18,7 +18,7 @@ final class Advertiser: NSObject {
   // MARK: - Internal state
 
   /**
-   Bool flag indicates if `Advertiser object` is advertising.
+   Bool flag indicates if `Advertiser` object is advertising.
    */
   internal private(set) var advertising: Bool = false
 
@@ -30,7 +30,7 @@ final class Advertiser: NSObject {
   // MARK: - Private state
 
   /**
-   MCNearbyServiceAdvertiser object .
+   MCNearbyServiceAdvertiser object.
    */
   private let advertiser: MCNearbyServiceAdvertiser
 
@@ -66,6 +66,7 @@ final class Advertiser: NSObject {
        3. *Must* contain at least one ASCII letter
        4. *Must* not begin or end with a hyphen
        5. Hyphens must not be adjacent to other hyphens
+
        For more details, see [RFC6335](https://tools.ietf.org/html/rfc6335#section-5.1).
 
      - receivedInvitation:
