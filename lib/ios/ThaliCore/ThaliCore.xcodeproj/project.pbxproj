@@ -281,7 +281,9 @@
 				CCA572F71D4B9E5300FBEC41 /* ThaliCoreCITests */,
 				CCA571BD1D4787A900FBEC41 /* Products */,
 			);
+			indentWidth = 2;
 			sourceTree = "<group>";
+			tabWidth = 2;
 		};
 		CCA571BD1D4787A900FBEC41 /* Products */ = {
 			isa = PBXGroup;
