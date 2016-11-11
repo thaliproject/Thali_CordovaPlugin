@@ -13,9 +13,11 @@ import UIKit
 /// UIApplicationDidBecomeActiveNotification
 public final class ApplicationStateNotificationsManager: NSObject {
 
+  // MARK: - Public state
   public var willEnterBackgroundHandler: (Void -> Void)?
   public var didEnterForegroundHandler: (Void -> Void)?
 
+  // MARK: - Public methods
   public override init() {
     super.init()
     subscribeAppStateNotifications()
@@ -25,6 +27,7 @@ public final class ApplicationStateNotificationsManager: NSObject {
     NSNotificationCenter.defaultCenter().removeObserver(self)
   }
 
+  // MARK: - Private methods
   @objc private func applicationWillResignActiveNotification(notification: NSNotification) {
     willEnterBackgroundHandler?()
   }
@@ -44,5 +47,4 @@ public final class ApplicationStateNotificationsManager: NSObject {
                                    name: UIApplicationDidBecomeActiveNotification,
                                    object: nil)
   }
-  
 }
