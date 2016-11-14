@@ -7,6 +7,7 @@ import org.junit.Assert;
 import com.test.thalitest.ThaliTestRunner;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -135,6 +136,7 @@ public class StreamCopyingThreadTest {
         mStreamCopyingThread.setBufferSize(1024 * 8 + 1);
     }
 
+    @Ignore("https://github.com/thaliproject/Thali_CordovaPlugin/issues/1528")
     @Test
     public void testRun() throws Exception {
         mResult = "";

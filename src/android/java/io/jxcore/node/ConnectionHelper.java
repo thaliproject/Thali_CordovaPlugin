@@ -9,6 +9,8 @@ import android.bluetooth.le.AdvertiseSettings;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.os.CountDownTimer;
+import android.system.ErrnoException;
+import android.system.OsConstants;
 import android.util.Log;
 
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
@@ -26,9 +28,9 @@ import java.util.UUID;
  * (with the help of JXcoreExtensions class).
  */
 public class ConnectionHelper
-    implements
-    ConnectionManager.ConnectionManagerListener,
-    DiscoveryManager.DiscoveryManagerListener {
+        implements
+            ConnectionManager.ConnectionManagerListener,
+            DiscoveryManager.DiscoveryManagerListener {
     private static final String TAG = ConnectionHelper.class.getName();
 
     public static final int NO_PORT_NUMBER = 0;
@@ -89,9 +91,9 @@ public class ConnectionHelper
             mDiscoveryManagerSettings.setManufacturerId(MANUFACTURER_ID);
 
             mDiscoveryManagerSettings.setAdvertiseScanModeAndTxPowerLevel(
-                AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY,
-                AdvertiseSettings.ADVERTISE_TX_POWER_HIGH,
-                ScanSettings.SCAN_MODE_LOW_LATENCY);
+                    AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY,
+                    AdvertiseSettings.ADVERTISE_TX_POWER_HIGH,
+                    ScanSettings.SCAN_MODE_LOW_LATENCY);
         } else {
             Log.e(TAG, "Constructor: Bluetooth LE discovery mode is not supported");
         }
@@ -199,7 +201,7 @@ public class ConnectionHelper
      */
     public boolean isRunning() {
         return (mConnectionManager.getState() != ConnectionManagerState.NOT_STARTED
-            && mDiscoveryManager.isRunning());
+                && mDiscoveryManager.isRunning());
     }
 
     /**
@@ -231,13 +233,13 @@ public class ConnectionHelper
      */
     public synchronized boolean disconnectOutgoingConnection(final String peerId) {
         Log.d(TAG, "disconnectOutgoingConnection: Trying to close connection to peer with ID " + peerId);
-        boolean success = mConnectionModel.closeAndRemoveOutgoingConnectionThread(peerId);
+        boolean success = closeAndRemoveOutgoingThread(peerId);
 
         if (success) {
             Log.i(TAG, "disconnectOutgoingConnection: Successfully disconnected (peer ID: " + peerId);
         } else {
             Log.w(TAG, "disconnectOutgoingConnection: Failed to disconnect (peer ID: " + peerId
-                + "), either no such connection or failed to close the connection");
+                    + "), either no such connection or failed to close the connection");
         }
 
         return success;
@@ -571,6 +573,9 @@ public class ConnectionHelper
         try {
             newOutgoingSocketThread = new OutgoingSocketThread(bluetoothSocket, new ConnectionData(peerProperties, false),
                 new SocketThreadBase.Listener() {
+
+                    private static final String NO_AVAILABLE_PORTS = "No available TCP ports";
+
                     @Override
                     public void onListeningForIncomingConnections(int portNumber) {
                         Log.i(TAG, "onListeningForIncomingConnections: Outgoing connection is using port "
@@ -595,25 +600,40 @@ public class ConnectionHelper
                         });
                     }
 
-                    @Override
-                    public void onDone(SocketThreadBase who, boolean threadDoneWasSending) {
-                        Log.i(TAG, "onDone: Outgoing connection, peer "
-                            + who.getPeerProperties().toString() + " done, closing connection...");
+                @Override
+                public void onDone(SocketThreadBase who, boolean threadDoneWasSending) {
+                    Log.i(TAG, "onDone: Outgoing connection, peer "
+                        + who.getPeerProperties().toString() + " done, closing connection...");
 
-                        final String peerId = who.getPeerProperties().getId();
-                        mConnectionModel.closeAndRemoveOutgoingConnectionThread(peerId);
+                    final String peerId = who.getPeerProperties().getId();
+                    closeAndRemoveOutgoingThread(peerId);
+                }
+
+                @Override
+                public void onDisconnected(SocketThreadBase who, String errorMessage) {
+                    Log.w(TAG, "onDisconnected: Outgoing connection, peer "
+                        + who.getPeerProperties().toString()
+                        + " disconnected: " + errorMessage);
+
+                    final String peerId = who.getPeerProperties().getId();
+                    closeAndRemoveOutgoingThread(peerId);
+                }
+
+                @Override
+                public void onDisconnected(SocketThreadBase who, Exception exception) {
+                    Log.w(TAG, "onDisconnected: Outgoing connection, peer "
+                        + who.getPeerProperties().toString()
+                        + " disconnected: " + exception.getMessage());
+                    //No available port
+                    if (exception.getCause() instanceof ErrnoException
+                        && ((ErrnoException) exception.getCause()).errno == OsConstants.EMFILE) {
+                        callback.callOnConnectCallback(NO_AVAILABLE_PORTS, null);
+                        closeAndRemoveOutgoingThread(who.getPeerProperties().getId());
+                    } else {
+                        onDisconnected(who, exception.getMessage());
                     }
-
-                    @Override
-                    public void onDisconnected(SocketThreadBase who, String errorMessage) {
-                        Log.w(TAG, "onDisconnected: Outgoing connection, peer "
-                            + who.getPeerProperties().toString()
-                            + " disconnected: " + errorMessage);
-
-                        final String peerId = who.getPeerProperties().getId();
-                        mConnectionModel.closeAndRemoveOutgoingConnectionThread(peerId);
-                    }
-                });
+                }
+            });
         } catch (IOException e) {
             Log.e(TAG, "handleOutgoingConnection: Failed to create an outgoing connection thread instance: " + e.getMessage(), e);
 
@@ -657,6 +677,10 @@ public class ConnectionHelper
                 mConnectionModel.removeOutgoingConnectionCallback(finalPeerId);
             }
         }
+    }
+
+    private boolean closeAndRemoveOutgoingThread(String peerId) {
+        return mConnectionModel.closeAndRemoveOutgoingConnectionThread(peerId);
     }
 
     /**
@@ -703,6 +727,11 @@ public class ConnectionHelper
 
                         final IncomingSocketThread incomingSocketThread = (IncomingSocketThread) who;
                         mConnectionModel.closeAndRemoveIncomingConnectionThread(incomingSocketThread.getId());
+                    }
+
+                    @Override
+                    public void onDisconnected(SocketThreadBase who, Exception exception) {
+                        //No need to implement
                     }
                 });
         } catch (IOException e) {

@@ -61,13 +61,13 @@ then
   node CITestMode.js
 fi
 
-jx runTests.js --networkType WIFI
-jx runTests.js --networkType NATIVE
-jx runTests.js --networkType BOTH
-jx npm run test-meta
-jx runCoordinatedTests.js --networkType NATIVE
-jx runCoordinatedTests.js --networkType WIFI
-jx runCoordinatedTests.js --networkType BOTH
+#jx runTests.js --networkType WIFI
+#jx runTests.js --networkType NATIVE
+#jx runTests.js --networkType BOTH
+#jx npm run test-meta
+#jx runCoordinatedTests.js --networkType NATIVE
+#jx runCoordinatedTests.js --networkType WIFI
+#jx runCoordinatedTests.js --networkType BOTH
 
 # Verify that docs can be generated
 #cd $WORKING_DIR/thali/
@@ -114,6 +114,6 @@ if [ $RUN_IN_CI == 0 ]; then
   rm -rf android-release-unsigned.apk
   cp -R ../ThaliTest/platforms/android/build/outputs/apk/android-release-unsigned.apk android-release-unsigned.apk
 
-  rm -rf ThaliTest.app
-  cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app
+  #rm -rf ThaliTest.app
+  #cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app
 fi

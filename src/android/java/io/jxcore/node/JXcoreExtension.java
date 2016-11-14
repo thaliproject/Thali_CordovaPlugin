@@ -2,6 +2,7 @@
  * See the license file delivered with this project for further information.
  */
 package io.jxcore.node;
+import com.test.thalitest.RegisterExecuteUT;
 
 import android.content.Context;
 import android.net.wifi.WifiManager;
@@ -42,6 +43,8 @@ public class JXcoreExtension {
     private static final String METHOD_NAME_CONNECT = "connect";
     private static final String METHOD_NAME_KILL_CONNECTIONS = "killConnections";
     private static final String METHOD_NAME_DID_REGISTER_TO_NATIVE = "didRegisterToNative";
+    private static final String METHOD_NAME_MULTICONNECT = "multiConnect";
+    private static final String METHOD_NAME_DISCONNECT = "disconnect";
 
     private static final String EVENT_NAME_PEER_AVAILABILITY_CHANGED = "peerAvailabilityChanged";
     private static final String EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE = "discoveryAdvertisingStateUpdateNonTCP";
@@ -51,6 +54,7 @@ public class JXcoreExtension {
     private static final String METHOD_ARGUMENT_NETWORK_CHANGED = EVENT_NAME_NETWORK_CHANGED;
 
     private static final String EVENT_VALUE_PEER_ID = "peerIdentifier";
+    private static final String EVENT_VALUE_PEER_GENERATION = "generation";
     private static final String EVENT_VALUE_PEER_AVAILABLE = "peerAvailable";
     private static final String EVENT_VALUE_PLEASE_CONNECT = "pleaseConnect";
     private static final String EVENT_VALUE_DISCOVERY_ACTIVE = "discoveryActive";
@@ -78,6 +82,9 @@ public class JXcoreExtension {
     private static ConnectionHelper mConnectionHelper = null;
     private static long mLastTimeIncomingConnectionFailedNotificationWasFired = 0;
     private static boolean mNetworkChangedRegistered = false;
+
+
+    private static String ERROR_PLATFORM_DOES_NOT_SUPPORT_CONNECT = "Platform does not support connect";
 
     public static void LoadExtensions() {
         if (mConnectionHelper != null) {
@@ -219,11 +226,7 @@ public class JXcoreExtension {
                 String bluetoothMacAddress = null;
 
                 if (peerId != null) {
-                    try {
-                        bluetoothMacAddress = peerId.split(BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR)[0];
-                    } catch (IndexOutOfBoundsException e) {
-                        Log.e(TAG, METHOD_NAME_CONNECT + ": Failed to extract the Bluetooth MAC address: " + e.getMessage(), e);
-                    }
+                    bluetoothMacAddress = peerId;
                 }
 
                 if (!BluetoothUtils.isValidBluetoothMacAddress(bluetoothMacAddress)) {
@@ -329,6 +332,29 @@ public class JXcoreExtension {
                 }
 
                 args.add(errorString);
+                args.add(null);
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
+
+
+        jxcore.RegisterMethod(METHOD_NAME_MULTICONNECT, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+                ArrayList<Object> args = new ArrayList<Object>();
+
+                args.add(ERROR_PLATFORM_DOES_NOT_SUPPORT_CONNECT);
+                args.add(null);
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
+
+        jxcore.RegisterMethod(METHOD_NAME_DISCONNECT, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+                ArrayList<Object> args = new ArrayList<Object>();
+
+                args.add(ERROR_PLATFORM_DOES_NOT_SUPPORT_CONNECT);
                 args.add(null);
                 jxcore.CallJSMethod(callbackId, args.toArray());
             }
@@ -486,14 +512,12 @@ public class JXcoreExtension {
     }
 
     public static void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
-        String peerId = peerProperties.getId()
-                + BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR
-                + peerProperties.getExtraInformation();
         JSONObject jsonObject = new JSONObject();
         boolean jsonObjectCreated = false;
 
         try {
-            jsonObject.put(EVENT_VALUE_PEER_ID, peerId);
+            jsonObject.put(EVENT_VALUE_PEER_ID, peerProperties.getId());
+            jsonObject.put(EVENT_VALUE_PEER_GENERATION, peerProperties.getExtraInformation());
             jsonObject.put(EVENT_VALUE_PEER_AVAILABLE, isAvailable);
             jsonObject.put(EVENT_VALUE_PLEASE_CONNECT, false);
             jsonObjectCreated = true;
