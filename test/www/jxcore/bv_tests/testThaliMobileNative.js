@@ -365,7 +365,6 @@ test('Can connect to a remote peer', function (t) {
     connection = JSON.parse(connection);
     logger.info(connection);
 
-    logger.error('foo ' + JSON.stringify(connection));
     t.ok(connection.hasOwnProperty('listeningPort'),
       'Must have listeningPort');
     t.ok(typeof connection.listeningPort === 'number',
