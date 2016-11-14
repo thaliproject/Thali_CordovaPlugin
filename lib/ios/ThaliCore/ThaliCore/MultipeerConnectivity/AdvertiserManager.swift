@@ -14,36 +14,62 @@ public final class AdvertiserManager {
 
   // MARK: - Public state
 
-  /***/
+  /**
+   Bool flag indicates if advertising is active.
+   */
   public var advertising: Bool {
     return currentAdvertiser?.advertising ?? false
   }
 
   // MARK: - Internal state
 
-  /***/
+  /**
+   Active `Advertiser` objects.
+   */
   internal private(set) var advertisers: Atomic<[Advertiser]> = Atomic([])
 
-  /***/
+  /**
+   Active `Relay` objects.
+   */
   internal private(set) var activeRelays: Atomic<[String: AdvertiserRelay]> = Atomic([:])
 
-  /***/
+  /**
+   Handle disposing advertiser after timeout.
+   */
   internal var didDisposeAdvertiserForPeerHandler: ((Peer) -> Void)?
 
   // MARK: - Private state
 
-  /***/
+  /**
+   Currently active `Advertiser` object.
+   */
   private var currentAdvertiser: Advertiser?
 
-  /***/
+  /**
+   The type of service to advertise.
+   */
   private let serviceType: String
 
-  /***/
+  /**
+   Timeout after which advertiser disposes.
+   */
   private let disposeTimeout: NSTimeInterval
 
   // MARK: - Initialization
 
-  /***/
+  /**
+   Returns a new `AdvertiserManager` object.
+
+   - parameters:
+     - serviceType:
+       The type of service to advertise.
+
+     - disposeAdvertiserTimeout:
+       Timeout after which advertiser disposes.
+
+   - returns:
+   An initialized `AdvertiserManager` object.
+   */
   public init(serviceType: String, disposeAdvertiserTimeout: NSTimeInterval) {
     self.serviceType = serviceType
     self.disposeTimeout = disposeAdvertiserTimeout
@@ -51,9 +77,23 @@ public final class AdvertiserManager {
 
   // MARK: - Public methods
 
-  /***/
+  /**
+   This method has two separate but related functions.
+
+   It's first function is to begin advertising the Thali peer's presence to other peers.
+
+   The second purpose is to bridge outgoing non-TCP/IP connections to TCP/IP port.
+   
+   - parameters:
+     - port:
+       Pre-configured localhost port that a native TCP/IP client should
+       use to bridge outgoing non-TCP/IP connection.
+
+     - errorHandler:
+       Called when startUpdateAdvertisingAndListening fails.
+   */
   public func startUpdateAdvertisingAndListening(onPort port: UInt16,
-                                                        errorHandler: ErrorType -> Void) {
+                                                 errorHandler: ErrorType -> Void) {
     if let currentAdvertiser = currentAdvertiser {
       disposeAdvertiserAfterTimeoutToFinishInvites(currentAdvertiser)
     }
@@ -70,7 +110,7 @@ public final class AdvertiserManager {
                                     let relay = AdvertiserRelay(with: session, on: port)
                                     $0[newPeer.uuid] = relay
                                   }
-      },
+                                },
                                 sessionNotConnected: {
                                   [weak self] in
                                   guard let strongSelf = self else { return }
@@ -81,7 +121,8 @@ public final class AdvertiserManager {
                                     }
                                     $0.removeValueForKey(newPeer.uuid)
                                   }
-      })
+                                })
+
     guard let newAdvertiser = advertiser else {
       errorHandler(ThaliCoreError.ConnectionFailed)
       return
@@ -95,7 +136,9 @@ public final class AdvertiserManager {
     self.currentAdvertiser = newAdvertiser
   }
 
-  /***/
+  /**
+   Dispose all advertisers.
+   */
   public func stopAdvertising() {
     advertisers.modify {
       $0.forEach { $0.stopAdvertising() }
@@ -104,15 +147,31 @@ public final class AdvertiserManager {
     currentAdvertiser = nil
   }
 
-  /***/
+  /**
+   Checks if `AdvertiserManager` has advertiser with a given identifier.
+
+   - parameters:
+     - identifier:
+       UUID part of the `Peer`.
+
+   - returns:
+     Bool value indicates if `AdvertiserManager` has advertiser with given identifier.
+   */
   public func hasAdvertiser(with identifier: String) -> Bool {
     return advertisers.value.filter { $0.peer.uuid == identifier }
-      .count > 0
+                            .count > 0
   }
 
   // MARK: - Private methods
 
-  /***/
+  /**
+   Disposes advertiser after timeout.
+   
+   In any case when a peer starts a new underlying `MCNearbyServiceAdvertiser` object
+   it MUST keep the old object for at least *disposeTimeout*.
+   This is to allow any in progress invites to finish.
+   After *disposeTimeout* the old `MCNearbyServiceAdvertiser` objects MUST be closed.
+   */
   private func disposeAdvertiserAfterTimeoutToFinishInvites(
     advertiserShouldBeDisposed: Advertiser) {
 
