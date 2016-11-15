@@ -15,20 +15,20 @@ const versions =
 {
   xcode: '7.3.1',
   xcodeCommandLineTools: ' ',
-  macOS: '10.11.6',
-  node: '6.6.0',
-  npm: '3.10.3',
-  brew: '1.0.',
+  macOS: '10.12.1',
+  node: '6.9.1',
+  npm: '3.10.8',
+  brew: '1.1.',
   ruby: '2.3.0p0',
   wget: '1.18',
-  jxcore: '0.3.1.5',
+  jxcore: '0.3.1.6',
   androidHome: ' ',
-  androidBuildTools: '23.0.3',
+  androidBuildTools: '25.0.0',
   androidPlatform: 'android-23',
   // We don't have an easy way to identify the version of the support libraries
   // we have but if they were installed recently enough then they will have
   // what we need.
-  androidSupportLibraries: '38.0.0',
+  androidSupportLibraries: '40.0.0',
   cordovaAndroidSetMinSDK: '22',
   get cordovaAndroidSetBuildToolsVersion() {
     return this.androidBuildTools;
@@ -40,9 +40,9 @@ const versions =
   cordova: '6.3.1',
   java: '1.8.0_102',
   git: '2.10.0',
-  swiftlint: '0.12.0',
-  btconnectorlib2: '0.3.5-alpha2',
-  jxcoreCordova: '0.1.5',
+  swiftlint: '0.13.0',
+  btconnectorlib2: '0.3.5',
+  jxcoreCordova: '0.1.6',
   sinopiaNode: ' ',
   sinopiaJxCore: ' '
 };
