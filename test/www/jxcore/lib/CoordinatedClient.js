@@ -157,9 +157,10 @@ CoordinatedClient.prototype._schedule = function (data) {
     return Promise.all(promises);
   })
   .catch(function (error) {
+    var stack = error ? error.stack : null;
     logger.error(
       'unexpected error: \'%s\', stack: \'%s\'',
-      String(error), error && error.stack
+      String(error), stack
     );
     self._failed(error);
   });
@@ -220,9 +221,10 @@ CoordinatedClient.prototype._disconnect = function () {
 };
 
 CoordinatedClient.prototype._error = function (error) {
+  var stack = error ? error.stack : null;
   logger.error(
     'unexpected error: \'%s\', stack: \'%s\'',
-    String(error), error && error.stack
+    String(error), stack
   );
   this._failed(error);
 };
@@ -291,9 +293,10 @@ CoordinatedClient.prototype._emit = function (event, data, externalOptions) {
     emit();
   })
   .catch(function (error) {
+    var stack = error ? error.stack : null;
     logger.error(
       'unexpected error: \'%s\', stack: \'%s\'',
-      String(error), error && error.stack
+      String(error), stack
     );
     return Promise.reject(error);
   })
