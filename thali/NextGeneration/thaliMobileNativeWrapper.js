@@ -93,14 +93,17 @@ module.exports._isStarted = function () {
 function failedConnectionHandler(failedConnection) {
   var peer = {
     peerIdentifier: failedConnection.peerIdentifier,
+    peerAvailable: false,
     generation: failedConnection.generation,
-    portNumber: null
+    portNumber: null,
+    recreated: failedConnection.recreated
   };
   handlePeerAvailabilityChanged(peer);
 
   var event = {
     error: failedConnection.error,
     peerIdentifier: failedConnection.peerIdentifier,
+    recreated: failedConnection.recreated,
     connectionType: connectionTypes.BLUETOOTH
   };
   module.exports.emitter.emit('failedNativeConnection', event);
@@ -149,11 +152,18 @@ function listenerRecreatedAfterFailureHandler(recreateAnnouncement) {
   }
 
   var generation = peerGenerations[recreateAnnouncement.peerIdentifier];
+
+  logger.debug('listenerRecreatedAfterFailureHandler - We are emitting ' +
+    'nonTCPPeerAvailabilityChangedEvent with peerIdentifier %s, ' +
+    'generation %s, and portNumber %d',
+    recreateAnnouncement.peerIdentifier, generation,
+    recreateAnnouncement.portNumber);
   module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
     peerIdentifier: recreateAnnouncement.peerIdentifier,
     peerAvailable: true,
     generation: generation,
-    portNumber: recreateAnnouncement.portNumber
+    portNumber: recreateAnnouncement.portNumber,
+    recreated: true
   });
 }
 
@@ -678,6 +688,7 @@ module.exports.terminateListener = function (peerIdentifier, port) {
   return gPromiseQueue.enqueue(function (resolve, reject) {
     gServersManager.terminateOutgoingConnection(peerIdentifier, port)
     .then(function () {
+      delete peerGenerations[peerIdentifier];
       resolve();
     })
     .catch(function (error) {
@@ -823,6 +834,8 @@ module.exports.connectionTypes = connectionTypes;
 // jscs:enable maximumLineLength
 var peerAvailabilityChangedQueue = new PromiseQueue();
 var handlePeerAvailabilityChanged = function (peer) {
+  logger.debug('Received peer availability changed event with ' +
+    JSON.stringify(peer));
   if (!states.started) {
     logger.debug('Filtered out nonTCPPeerAvailabilityChangedEvent ' +
                  'due to not being in started state');
@@ -833,26 +846,40 @@ var handlePeerAvailabilityChanged = function (peer) {
       // TODO: Should the created peer listener be cleaned up when
       // peer becomes unavailable and which function should be used
       // for that?
-      module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
+      var event = {
         peerIdentifier: peer.peerIdentifier,
         peerAvailable: false,
         generation: null,
-        portNumber: null
-      });
-      delete peerGenerations[peer.peerIdentifier];
+        portNumber: null,
+        recreated: peer.recreated
+      };
+      if (!peer.recreated) {
+        // The whole purpose of storing peer generations is to make sure that
+        // after recreation we use the same generation. So we don't delete it
+        // during listener recreation
+        delete peerGenerations[peer.peerIdentifier];
+      }
+      logger.debug('handlePeerUnavailable - Emitting %s',
+        JSON.stringify(event));
+      module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', event);
       resolve();
     };
     if (peer.peerAvailable) {
       gServersManager.createPeerListener(peer.peerIdentifier,
                                          peer.pleaseConnect)
       .then(function (portNumber) {
-        module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
+        var peerAvailabilityChangedEvent = {
           peerIdentifier: peer.peerIdentifier,
           peerAvailable: true,
           generation: peer.generation,
           portNumber: portNumber
-        });
+        };
         peerGenerations[peer.peerIdentifier] = peer.generation;
+
+        logger.debug('handlePeerAvailabilityChanged - Emitting %s',
+          JSON.stringify(peerAvailabilityChangedEvent));
+        module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent',
+          peerAvailabilityChangedEvent);
         resolve();
       })
       .catch(function (error) {
@@ -868,6 +895,8 @@ var handlePeerAvailabilityChanged = function (peer) {
     }
   });
 };
+
+module.exports._handlePeerAvailabilityChanged = handlePeerAvailabilityChanged;
 
 // jscs:disable maximumLineLength
 /**
@@ -986,6 +1015,8 @@ module.exports._registerToNative = function () {
   };
 
   registerToNative('peerAvailabilityChanged', function (peers) {
+    logger.debug('Received peerAvailabilityChanged event from native ' +
+      'layer %j', peers);
     if (typeof peers.forEach !== 'function') {
       peers = [peers];
     }

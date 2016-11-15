@@ -92,11 +92,11 @@ or `./setupTests.sh PerfTest_app.js` on the latest Git Bash. The script will cre
 ThaliTest and will compile it for both Android and iOS. This assumes you are
 running on a Mac with all the right tools.
 4. Go to `Thali_CordovaPlugin/test/TestServer`.
-5. Examine `UnitTestConfig.js` and make sure it is configured properly. is configured properly.
-6. Run `jx index.js \{\"devices\":\{\"ios\":2,\"android\":2\}\}` in that directory on your local PC to start the
+5. Check out the default configuration options in test/TestServer/config/UnitTest.js
+5. Run `jx index.js \{\"devices\":\{\"ios\":2,\"android\":2\}\}` in that directory on your local PC to start the
 coordination server. Obviously edit the device counts passed on the command line to reflect the actual test
 environment.
-7. Deploy and run the tests on your two Android or two iPhone devices.
+6. Deploy and run the tests on your two Android or two iPhone devices.
 
 #### Testing Doze and App Standby on Android
 
@@ -181,6 +181,26 @@ starting the coordinated test from the command line but passing in the parameter
 `--waitForInstance`. The coordinator will then start one less instance when
 it runs with the assumption that one will then run `jx UnitTest_app.js` from
 inside an IDE to debug.
+
+By default tests are running with mocked android native API and with WiFi
+network type. It is possible to change it via `--networkType=<wifi|both|native>`
+and `--platform=<ios|android>` parameters, for example:
+
+```
+$ jx runCoordinatedTests.js --platform=ios --networkType=both
+```
+
+Also it is possible to run multiple coordinated tests simultaneously on the same
+machine. Use `COORDINATED_PORT` environment variable to set different port for
+each test runner, for example:
+
+```
+COORDINATED_PORT=12345 jx runCoordinatedTests.js --platform=ios &> ios.log & \
+COORDINATED_PORT=54321 jx runCoordinatedTests.js --platform=android &> android.log &
+```
+
+This example will start iOS tests and android tests in parallel in background
+and write entire output to the ios.log and android.log respectively.
 
 ### Writing Unit Tests
 The Unit Tests are kept in Thali_CordovaPlugin/test/www/jxcore/bv_tests. So please put new tests there.
