@@ -1334,7 +1334,7 @@ test('calls correct starts when network changes',
 test('We properly fire peer unavailable and then available when ' +
   'connection fails',
   function () {
-    // FIXME: temporarily disabled (iOS branch is not complete)
+    // FIXME: temporarily disabled (iOS branch is not complete - issue #899)
     // (requires getPeerHostInfo implementation)
     return true;
   },
@@ -1593,7 +1593,7 @@ var participantState = {
 };
 
 test('can get data from all participants', function () {
-  // FIXME: temporarily disabled (iOS branch is not complete)
+  // FIXME: temporarily disabled (iOS branch is not complete - issue #899)
   return true || global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
 }, function (t) {
   var uuidPath = '/uuid';
@@ -1737,7 +1737,7 @@ test('test for data corruption', function () {
   // we just check for Wifi. If it is wifi then we don't run. If it isn't wifi
   // then we must be Android because iOS native doesn't work in master.
   //
-  // FIXME: temporarily disabled (iOS branch is not complete)
+  // FIXME: temporarily disabled (iOS branch is not complete - issue #899)
   return true || global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
 },
 function (t) {
