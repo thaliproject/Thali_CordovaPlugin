@@ -11,7 +11,7 @@ import XCTest
 
 class SimpleTestCase: XCTestCase {
 
-    func testExample() {
-        XCTAssert(true)
-    }
+  func testExample() {
+    XCTAssert(true)
+  }
 }
