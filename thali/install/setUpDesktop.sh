@@ -32,7 +32,7 @@ npm link
 echo "Install Thali Install Directory"
 cd install
 npm install --no-optional
-#node validateBuildEnvironment.js
+node validateBuildEnvironment.js
 
 echo "Final Desktop Step"
 cd ../../test/www/jxcore
