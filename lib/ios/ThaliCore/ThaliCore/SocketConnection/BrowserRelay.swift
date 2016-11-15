@@ -43,8 +43,8 @@ final class BrowserRelay {
     let anyAvailablePort: UInt16 = 0
     tcpListener.startListeningForConnections(on: anyAvailablePort,
                                              connectionAccepted: didAcceptConnectionHandler) {
-                                              port, error in
-                                              completion(port: port, error: error)
+      port, error in
+      completion(port: port, error: error)
     }
   }
 
