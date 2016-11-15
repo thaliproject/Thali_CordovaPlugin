@@ -55,7 +55,7 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
 
   /**
    An unique string that identifies `VirtualSocket` object.
-   
+
    Both *inputStream* and *outputStream* have the same *streamName*.
    */
   internal private(set) var streamName: String
@@ -90,7 +90,7 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
    - parameters:
      - nonTCPsession:
        Represents non-TCP/IP session.
-   
+
      - streamName:
        Name of new stream.
 
@@ -139,9 +139,9 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
 
   /**
    We're calling this method when we have inputStream from remote peer.
-   
+
    It creates new `VirtualSocket` object asynchronously.
-   
+
    - parameters:
      - inputStream:
        *inputStream* object.
@@ -171,9 +171,9 @@ final class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
 
   /**
    Called when creating of `VirtualSocket` is completed.
-   
+
    It has 2 arguments: `VirtualSocket?` and `ErrorType?`.
-   
+
    If we're passing `ErrorType` then something went wrong and `VirtualSocket` should be nil.
    Otherwise `ErrorType` should be nil.
    */
@@ -183,14 +183,14 @@ final class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
 
   /**
    Returns new `AdvertiserVirtualSocketBuilder` object.
-   
+
    - parameters:
      - nonTCPsession:
        non-TCP/IP session that will be used for communication among peers via `VirtualSocket`.
-      
+
      - completion:
        Called when creating of `VirtualSocket` is completed.
-   
+
    - returns:
      An initialized `AdvertiserVirtualSocketBuilder` object.
    */
@@ -204,14 +204,14 @@ final class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
   /**
    Creates new `VirtualSocket` object asynchronously.
 
-   Method is trying to start new *outputStream* using the exact same stream name as the *inputStream*.
+   Method is trying to start new *outputStream* using the exact same name as the *inputStream*.
    If succeeded then *completion* is called and `VirtualSocket` passed as a parameter,
    otherwise *completion* is called with nil argument and error passed.
-   
+
    - parameters:
      - inputStream:
        inputStream object that will be used in new `VirtualSocket`.
-   
+
      - inputStreamName:
        Name of *inputStream*. It will be used to start new *outputStream*.
    */

@@ -66,7 +66,7 @@ public final class BrowserManager {
 
      - inputStreamReceiveTimeout:
        Invite timeout after which the session between peers can be treated as failed.
-   
+
      - peerAvailabilityChangedHandler:
        Called when PeerAvailability is changed.
 
@@ -85,7 +85,7 @@ public final class BrowserManager {
 
   /**
    This method instructs to discover what other devices are within range.
-   
+
    - parameters:
      - errorHandler:
        Called when advertisement fails.
@@ -118,7 +118,7 @@ public final class BrowserManager {
    Establish a non-TCP/IP connection to the identified peer and then create a
    TCP/IP bridge on top of that connection which can be accessed by
    opening a TCP/IP connection to the port returned in the callback.
-   
+
    - parameters:
      - peerIdentifier:
        A value mapped to the UUID part of the remote peer's MCPeerID.

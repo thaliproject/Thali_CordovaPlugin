@@ -193,12 +193,12 @@ class RelayTests: XCTestCase {
 
     advertisersNodeServerReceivedMessage =
       expectationWithDescription("Advertiser's fake node server received a message")
-    
+
     waitForExpectationsWithTimeout(moveDataTimeout) {
       error in
       advertisersNodeServerReceivedMessage = nil
     }
-    
+
     advertiserManager.stopAdvertising()
   }
 }
