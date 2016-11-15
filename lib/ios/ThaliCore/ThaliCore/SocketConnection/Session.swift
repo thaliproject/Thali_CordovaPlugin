@@ -67,9 +67,9 @@ class Session: NSObject {
 
      - connected:
        Called when the nearby peer’s state changes to `MCSessionStateConnected`.
-       
+
        It means the nearby peer accepted the invitation and is now connected to the session.
-   
+
      - notConnected:
        Called when the nearby peer’s state changes to `MCSessionStateNotConnected`.
 
@@ -97,7 +97,7 @@ class Session: NSObject {
    - parameters:
      - name:
        A name for the stream.
-   
+
    - throws:
      ConnectionFailed if a stream could not be established.
 

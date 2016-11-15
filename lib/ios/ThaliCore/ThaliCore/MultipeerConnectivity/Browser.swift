@@ -132,7 +132,7 @@ final class Browser: NSObject {
    - parameters:
      - peer:
        `Peer` to invite.
-   
+
      - sessionConnected:
        Called when the peer is connected to this session.
 

@@ -83,7 +83,7 @@ public final class AdvertiserManager {
    It's first function is to begin advertising the Thali peer's presence to other peers.
 
    The second purpose is to bridge outgoing non-TCP/IP connections to TCP/IP port.
-   
+
    - parameters:
      - port:
        Pre-configured localhost port that a native TCP/IP client should
@@ -166,7 +166,7 @@ public final class AdvertiserManager {
 
   /**
    Disposes advertiser after timeout.
-   
+
    In any case when a peer starts a new underlying `MCNearbyServiceAdvertiser` object
    it MUST keep the old object for at least *disposeTimeout*.
    This is to allow any in progress invites to finish.
