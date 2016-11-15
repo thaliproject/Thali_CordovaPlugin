@@ -8,7 +8,6 @@ var Promise        = require('bluebird');
 var testUtils = require('../lib/testUtils');
 var tape      = require('../lib/thaliTape');
 
-var platform                             = require('thali/NextGeneration/utils/platform');
 var thaliConfig                          = require('thali/NextGeneration/thaliConfig');
 var ThaliMobile                          = require('thali/NextGeneration/thaliMobile');
 var ThaliNotificationServer              = require('thali/NextGeneration/notification/thaliNotificationServer');
