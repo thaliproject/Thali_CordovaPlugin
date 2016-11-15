@@ -92,13 +92,10 @@ final class AdvertiserRelay {
                                         completion: ((VirtualSocket?, ErrorType?) -> Void)) {
     let virtualSockBuilder = AdvertiserVirtualSocketBuilder(with: nonTCPsession) {
       virtualSocket, error in
-
       completion(virtualSocket, error)
-
     }
 
-    virtualSockBuilder.createVirtualSocket(with: inputStream,
-                                           inputStreamName: inputStreamName)
+    virtualSockBuilder.createVirtualSocket(with: inputStream, inputStreamName: inputStreamName)
   }
 
   private func didOpenVirtualSocketHandler(virtualSocket: VirtualSocket) {
