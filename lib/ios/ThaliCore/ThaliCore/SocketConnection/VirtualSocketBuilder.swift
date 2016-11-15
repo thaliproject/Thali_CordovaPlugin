@@ -13,11 +13,34 @@
 class VirtualSocketBuilder {
 
   // MARK: - Private state
+
+  /**
+   Represents non-TCP/IP session.
+   */
   private let nonTCPsession: Session
+
+  /**
+   Represents object that provides write-only stream functionality.
+   */
   private var outputStream: NSOutputStream?
+
+  /**
+   Represents object that provides read-only stream functionality.
+   */
   private var inputStream: NSInputStream?
 
   // MARK: - Initialization
+
+  /**
+   Creates a new `VirtualSocketBuilder` object.
+
+   - parameters:
+     - nonTCPsession:
+       Represents non-TCP/IP session.
+
+   - returns:
+     An initialized `VirtualSocketBuilder` object.
+   */
   init(with nonTCPsession: Session) {
     self.nonTCPsession = nonTCPsession
   }
@@ -29,23 +52,66 @@ class VirtualSocketBuilder {
 final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
 
   // MARK: - Internal state
+
+  /**
+   An unique string that identifies `VirtualSocket` object.
+   
+   Both *inputStream* and *outputStream* have the same *streamName*.
+   */
   internal private(set) var streamName: String
 
   // MARK: - Private state
+
+  /**
+   Timeout to receive *inputStream* back.
+   */
   private let streamReceivedBackTimeout: NSTimeInterval
+
+  /**
+   Called when creating of `VirtualSocket` is completed.
+
+   It has 2 arguments: `VirtualSocket?` and `ErrorType?`.
+
+   If we're passing `ErrorType` then something went wrong and `VirtualSocket` should be nil.
+   Otherwise `ErrorType` should be nil.
+   */
   private var completion: ((VirtualSocket?, ErrorType?) -> Void)?
+
+  /**
+   Bool flag indicates if we received *inputStream*.
+   */
   private var streamReceivedBack = Atomic(false)
 
   // MARK: - Initialization
-  init(with nonTCPsession: Session,
-            streamName: String,
-            streamReceivedBackTimeout: NSTimeInterval) {
+
+  /**
+   Creates a new `BrowserVirtualSocketBuilder` object.
+
+   - parameters:
+     - nonTCPsession:
+       Represents non-TCP/IP session.
+   
+     - streamName:
+       Name of new stream.
+
+     - streamReceivedBackTimeout:
+       Timeout to receive *inputStream* back.
+
+   - returns:
+     An initialized `BrowserVirtualSocketBuilder` object.
+   */
+  init(with nonTCPsession: Session, streamName: String, streamReceivedBackTimeout: NSTimeInterval) {
     self.streamName = streamName
     self.streamReceivedBackTimeout = streamReceivedBackTimeout
     super.init(with: nonTCPsession)
   }
 
   // MARK: - Internal methods
+
+  /**
+   This method is trying to start new *outputStream* with fresh generated name
+   and then waiting for inputStream from remote peer for *streamReceivedBackTimeout*.
+   */
   func startBuilding(with completion: (VirtualSocket?, ErrorType?) -> Void) {
     self.completion = completion
 
@@ -71,6 +137,15 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
     }
   }
 
+  /**
+   We're calling this method when we have inputStream from remote peer.
+   
+   It creates new `VirtualSocket` object asynchronously.
+   
+   - parameters:
+     - inputStream:
+       *inputStream* object.
+   */
   func completeVirtualSocket(with inputStream: NSInputStream) {
 
     streamReceivedBack.modify { $0 = true }
@@ -93,21 +168,57 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
 final class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
 
   // MARK: - Private state
+
+  /**
+   Called when creating of `VirtualSocket` is completed.
+   
+   It has 2 arguments: `VirtualSocket?` and `ErrorType?`.
+   
+   If we're passing `ErrorType` then something went wrong and `VirtualSocket` should be nil.
+   Otherwise `ErrorType` should be nil.
+   */
   private var completion: (VirtualSocket?, ErrorType?) -> Void
 
   // MARK: - Initialization
-  required init(with nonTCPsession: Session,
-                     completion: ((VirtualSocket?, ErrorType?) -> Void)) {
+
+  /**
+   Returns new `AdvertiserVirtualSocketBuilder` object.
+   
+   - parameters:
+     - nonTCPsession:
+       non-TCP/IP session that will be used for communication among peers via `VirtualSocket`.
+      
+     - completion:
+       Called when creating of `VirtualSocket` is completed.
+   
+   - returns:
+     An initialized `AdvertiserVirtualSocketBuilder` object.
+   */
+  required init(with nonTCPsession: Session, completion: ((VirtualSocket?, ErrorType?) -> Void)) {
     self.completion = completion
     super.init(with: nonTCPsession)
   }
 
   // MARK: - Internal methods
+
+  /**
+   Creates new `VirtualSocket` object asynchronously.
+
+   Method is trying to start new *outputStream* using the exact same stream name as the *inputStream*.
+   If succeeded then *completion* is called and `VirtualSocket` passed as a parameter,
+   otherwise *completion* is called with nil argument and error passed.
+   
+   - parameters:
+     - inputStream:
+       inputStream object that will be used in new `VirtualSocket`.
+   
+     - inputStreamName:
+       Name of *inputStream*. It will be used to start new *outputStream*.
+   */
   func createVirtualSocket(with inputStream: NSInputStream, inputStreamName: String) {
     do {
       let outputStream = try nonTCPsession.startOutputStream(with: inputStreamName)
-      let virtualNonTCPSocket = VirtualSocket(with: inputStream,
-                                              outputStream: outputStream)
+      let virtualNonTCPSocket = VirtualSocket(with: inputStream, outputStream: outputStream)
       completion(virtualNonTCPSocket, nil)
     } catch let error {
       completion(nil, error)
