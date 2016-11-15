@@ -12,6 +12,7 @@ import XCTest
 
 class AppStateNotificationsManagerTests: XCTestCase {
 
+    // MARK: - Setup & Teardown
     override func setUp() {
         super.setUp()
     }
@@ -20,10 +21,11 @@ class AppStateNotificationsManagerTests: XCTestCase {
         super.tearDown()
     }
 
+    // MARK: - Tests
     func testWillEnterBackground() {
         var willEnterBackgroundCalled: Bool = false
-        let c = ApplicationStateNotificationsManager()
-        c.willEnterBackgroundHandler = {
+        let manager = ApplicationStateNotificationsManager()
+        manager.willEnterBackgroundHandler = {
             willEnterBackgroundCalled = true
         }
         NSNotificationCenter.defaultCenter().postNotificationName(
@@ -35,8 +37,8 @@ class AppStateNotificationsManagerTests: XCTestCase {
 
     func testDidEnterForeground() {
         var didEnterForegroundCalled: Bool = false
-        let c = ApplicationStateNotificationsManager()
-        c.didEnterForegroundHandler = {
+        let manager = ApplicationStateNotificationsManager()
+        manager.didEnterForegroundHandler = {
             didEnterForegroundCalled = true
         }
         NSNotificationCenter.defaultCenter().postNotificationName(

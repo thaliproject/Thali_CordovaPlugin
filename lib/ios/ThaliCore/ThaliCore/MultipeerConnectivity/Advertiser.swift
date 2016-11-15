@@ -118,7 +118,9 @@ extension Advertiser: MCNearbyServiceAdvertiserDelegate {
                     withContext context: NSData?,
                     invitationHandler: (Bool, MCSession) -> Void) {
 
-        let mcSession = MCSession(peer: advertiser.myPeerID)
+        let mcSession = MCSession(peer: advertiser.myPeerID,
+                                  securityIdentity: nil,
+                                  encryptionPreference: .None)
 
         let session = Session(session: mcSession,
                               identifier: peerID,

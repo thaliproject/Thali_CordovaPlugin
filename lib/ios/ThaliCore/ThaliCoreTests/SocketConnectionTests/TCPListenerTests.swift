@@ -23,9 +23,16 @@ class TCPListenerTests: XCTestCase {
     let readDataTimeout: NSTimeInterval = 5.0
     let disconnectTimeout: NSTimeInterval = 5.0
 
-    // MARK: - Setup
+    // MARK: - Setup & Teardown
     override func setUp() {
-        randomMessage = String.random(length: 100)
+        super.setUp()
+        let fullMessageLength = 1 * 1024
+        randomMessage = String.random(length: fullMessageLength)
+    }
+
+    override func tearDown() {
+        randomMessage = nil
+        super.tearDown()
     }
 
     // MARK: - Tests
@@ -39,7 +46,7 @@ class TCPListenerTests: XCTestCase {
 
         var listenerPort: UInt16? = nil
         let tcpListener = TCPListener(with: unexpectedReadDataHandler,
-                                      socketDisconnected: unexpectedSocketDisconnectHandler,
+                                      socketDisconnected: { _ in },
                                       stoppedListening: unexpectedStopListeningHandler)
         tcpListener.startListeningForConnections(on: anyAvailablePort,
                                                  connectionAccepted: {
@@ -69,7 +76,7 @@ class TCPListenerTests: XCTestCase {
 
         let clientMock = TCPClientMock(didReadData: unexpectedReadDataHandler,
                                        didConnect: {},
-                                       didDisconnect: unexpectedDisconnectHandler)
+                                       didDisconnect: { _ in })
         // When
         clientMock.connectToLocalHost(on: portToConnect, errorHandler: unexpectedErrorHandler)
 
@@ -100,7 +107,7 @@ class TCPListenerTests: XCTestCase {
                                                        "Received message is wrong")
                                         readDataHandlerInvoked?.fulfill()
                                       },
-                                      socketDisconnected: unexpectedSocketDisconnectHandler,
+                                      socketDisconnected: { _ in },
                                       stoppedListening: unexpectedStopListeningHandler)
 
         tcpListener.startListeningForConnections(on: anyAvailablePort,

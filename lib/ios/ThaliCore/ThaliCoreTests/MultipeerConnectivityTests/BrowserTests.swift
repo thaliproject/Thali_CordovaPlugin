@@ -23,8 +23,9 @@ class BrowserTests: XCTestCase {
     let lostPeerTimeout: NSTimeInterval = 1.0
     let startBrowsingErrorTimeout: NSTimeInterval = 1.0
 
-    // MARK: - Setup
+    // MARK: - Setup & Teardown
     override func setUp() {
+        super.setUp()
         randomlyGeneratedServiceType = String.randomValidServiceType(length: 7)
         randomlyGeneratedPeer = Peer()
         randomlyGeneratedPeerID = MCPeerID(displayName: randomlyGeneratedPeer.stringValue)
@@ -32,7 +33,71 @@ class BrowserTests: XCTestCase {
                                            serviceType: randomlyGeneratedServiceType)
     }
 
+    override func tearDown() {
+        randomlyGeneratedServiceType = nil
+        randomlyGeneratedPeer = nil
+        randomlyGeneratedPeerID = nil
+        mcBrowser = nil
+        super.tearDown()
+    }
+
     // MARK: - Tests
+    func testStartChangesListeningState() {
+        // Given
+        let newBrowser = Browser(serviceType: randomlyGeneratedServiceType,
+                                 foundPeer: unexpectedFoundPeerHandler,
+                                 lostPeer: unexpectedLostPeerHandler)
+
+        guard let browser = newBrowser else {
+            failBrowserMustNotBeNil()
+            return
+        }
+
+        // When
+        browser.startListening(unexpectedErrorHandler)
+        // Then
+        XCTAssertTrue(browser.listening)
+
+        // Cleanup
+        browser.stopListening()
+    }
+
+    func testStopWithoutCallingStartIsNOTError() {
+        // Given
+        let newBrowser = Browser(serviceType: randomlyGeneratedServiceType,
+                                 foundPeer: unexpectedFoundPeerHandler,
+                                 lostPeer: unexpectedLostPeerHandler)
+
+        guard let browser = newBrowser else {
+            failBrowserMustNotBeNil()
+            return
+        }
+
+        // When
+        browser.stopListening()
+        // Then
+        XCTAssertFalse(browser.listening)
+    }
+
+    func testStopTwiceWithoutCallingStartIsNOTError() {
+        // Given
+        let newBrowser = Browser(serviceType: randomlyGeneratedServiceType,
+                                 foundPeer: unexpectedFoundPeerHandler,
+                                 lostPeer: unexpectedLostPeerHandler)
+
+        guard let browser = newBrowser else {
+            failBrowserMustNotBeNil()
+            return
+        }
+
+        // When
+        browser.stopListening()
+        browser.stopListening()
+
+        // Then
+        XCTAssertFalse(browser.listening)
+    }
+
     func testStartStopChangesListeningState() {
         // Given
         let newBrowser = Browser(serviceType: randomlyGeneratedServiceType,

@@ -1831,7 +1831,7 @@ test('test for data corruption', function () {
   // we just check for Wifi. If it is wifi then we don't run. If it isn't wifi
   // then we must be Android because iOS native doesn't work in master.
   //
-  // FIXME: temporarily disabled (iOS branch is not complete)
+  // FIXME: temporarily disabled (iOS branch is not complete - issue #899)
   return true || global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
 },
 function (t) {

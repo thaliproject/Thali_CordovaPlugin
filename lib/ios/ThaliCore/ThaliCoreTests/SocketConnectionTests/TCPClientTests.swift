@@ -30,7 +30,7 @@ class TCPClientTests: XCTestCase {
                                            mockServerAcceptedConnection?.fulfill()
                                        },
                                        didReadData: unexpectedReadDataHandler,
-                                       didDisconnect: unexpectedDisconnectHandler)
+                                       didDisconnect: { _ in })
 
         var listenerPort: UInt16 = 0
         do {
@@ -41,13 +41,12 @@ class TCPClientTests: XCTestCase {
 
         XCTAssertNotEqual(listenerPort, 0)
 
-        mockServerAcceptedConnection =
-            expectationWithDescription("Mock server accepted connection")
+        mockServerAcceptedConnection = expectationWithDescription("Mock server accepted connection")
 
         // When
         // TCP Client is trying to connect to TCP mock server
         let tcpClient = TCPClient(with: unexpectedReadDataHandler,
-                                  didDisconnect: unexpectedSocketDisconnectHandler)
+                                  didDisconnect: { _ in })
         tcpClient.connectToLocalhost(onPort: listenerPort) {
             socket, port, error in
             XCTAssertNil(error)
@@ -72,7 +71,7 @@ class TCPClientTests: XCTestCase {
                                            mockServerAcceptedConnection?.fulfill()
                                        },
                                        didReadData: { _ in },
-                                       didDisconnect: unexpectedDisconnectHandler)
+                                       didDisconnect: { _ in })
 
         var listenerPort: UInt16 = 0
         do {
@@ -82,15 +81,14 @@ class TCPClientTests: XCTestCase {
         }
         XCTAssertNotEqual(listenerPort, 0)
 
-        mockServerAcceptedConnection =
-            expectationWithDescription("Mock server accepted connection")
+        mockServerAcceptedConnection = expectationWithDescription("Mock server accepted connection")
 
         // TCP Client is trying to connect to TCP mock server
         let tcpClient = TCPClient(with: {
                                       data in
                                       dataReadHandler?.fulfill()
                                   },
-                                  didDisconnect: unexpectedSocketDisconnectHandler)
+                                  didDisconnect: { _ in })
         tcpClient.connectToLocalhost(onPort: listenerPort) {
             socket, port, error in
             socket!.readDataWithTimeout(self.noTCPTimeout, tag: self.defaultTCPDataTag)
@@ -126,7 +124,7 @@ class TCPClientTests: XCTestCase {
                                            mockServerAcceptedConnection?.fulfill()
                                        },
                                        didReadData: unexpectedReadDataHandler,
-                                       didDisconnect: {})
+                                       didDisconnect: { _ in })
 
         var listenerPort: UInt16 = 0
         do {
@@ -136,8 +134,7 @@ class TCPClientTests: XCTestCase {
         }
 
         // TCP Client is trying to connect to TCP mock server
-        mockServerAcceptedConnection =
-            expectationWithDescription("Mock server accepted connection")
+        mockServerAcceptedConnection = expectationWithDescription("Mock server accepted connection")
 
         let tcpClient = TCPClient(with: unexpectedReadDataHandler,
                                   didDisconnect: {
@@ -157,8 +154,7 @@ class TCPClientTests: XCTestCase {
 
         // When
         // Mock server disconnects TCP client
-        didDisconnectHandler =
-            expectationWithDescription("didDisconnectHandler invoked")
+        didDisconnectHandler = expectationWithDescription("didDisconnectHandler invoked")
         serverMock.disconnectAllClients()
 
         // Then
