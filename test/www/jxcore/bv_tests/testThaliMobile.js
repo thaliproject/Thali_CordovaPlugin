@@ -215,6 +215,67 @@ test('#stop should clear watchers and change peers', function (t) {
     });
 });
 
+test('#start subscribes to the WiFi infrastructure events and #stop ' +
+'unsubscribes from them (in WiFi-only mode)',
+  function () {
+    // TODO: requires #1453
+    //
+    // this test is for WIFI mode but for #1453 we also need similar tests for
+    // NATIVE and for BOTH modes
+    return true;
+  },
+  function (t) {
+    var sandbox = sinon.sandbox.create();
+    var wifiEmitter = ThaliMobile._getThaliWifiInfrastructure();
+    var nativeEmitter = ThaliMobileNativeWrapper.emitter;
+
+    var wifiOnSpy = sandbox.spy(wifiEmitter, 'on');
+    var nativeOnSpy = sandbox.spy(nativeEmitter, 'on');
+    var wifiOffSpy = sandbox.spy(wifiEmitter, 'removeListener');
+    var nativeOffSpy = sandbox.spy(nativeEmitter, 'removeListener');
+
+    function resetSpies() {
+      wifiOnSpy.reset();
+      nativeOnSpy.reset();
+      wifiOffSpy.reset();
+      nativeOffSpy.reset();
+    }
+
+    var expectedWifiEventNames = [
+      'wifiPeerAvailabilityChanged',
+      'discoveryAdvertisingStateUpdateWifiEvent',
+      'networkChangedWifi',
+    ].sort();
+
+    var router = express.Router();
+
+    ThaliMobile.start(router, pskIdToSecret, ThaliMobile.networkTypes.WIFI)
+    .then(function () {
+      var wifiEventNames = wifiOnSpy.args.map(function (callArgs) {
+        return callArgs[0];
+      }).sort();
+      t.deepEqual(wifiEventNames, expectedWifiEventNames,
+        'listen to the correct wifi events');
+      t.equals(nativeOnSpy.called, false,
+        'does not listen to the native events');
+      resetSpies();
+      return ThaliMobile.stop();
+    })
+    .then(function () {
+      var wifiEventNames = wifiOffSpy.args.map(function (callArgs) {
+        return callArgs[0];
+      }).sort();
+      t.deepEqual(wifiEventNames, expectedWifiEventNames,
+        'should remove wifi listeners');
+    })
+    .catch(t.fail)
+    .then(function () {
+      sandbox.restore();
+      t.end();
+    });
+  }
+);
+
 test('does not emit duplicate discoveryAdvertisingStateUpdate',
   function () {
     // test is not for native transport because it fires artificial events from
@@ -1370,7 +1431,7 @@ test('#getPeerHostInfo - returns discovered cached wifi peer',
   }
 );
 
-test('disconnect fails on wifi peers', function (t) {
+test('#disconnect fails on wifi peers', function (t) {
   var wifiPeer = generateLowerLevelPeers().wifiPeer;
 
   var availabilityHandler = function (peerStatus) {
@@ -1400,7 +1461,10 @@ test('disconnect fails on wifi peers', function (t) {
   });
 });
 
-test('disconnect delegates native peers to the native wrapper',
+test('#disconnect delegates native peers to the native wrapper',
+  function () {
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
+  },
   function (t) {
     var nativePeer = generateLowerLevelPeers().nativePeer;
 
@@ -1599,7 +1663,8 @@ test('We properly fire peer unavailable and then available when ' +
   };
 
   var cleanUpCalled = false;
-  function cleanUp() {
+  // jshint latedef:false
+  function cleanUp() { // jshint latedef:true
     if (cleanUpCalled) {
       return;
     }
@@ -1657,7 +1722,8 @@ test('If a peer is not available (and hence is not in the thaliMobile cache)' +
     };
 
     var cleanUpCalled = false;
-    function cleanUp() {
+    // jshint latedef:false
+    function cleanUp() { // jshint latedef:true
       if (cleanUpCalled) {
         return;
       }
