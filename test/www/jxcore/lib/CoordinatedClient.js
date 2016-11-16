@@ -67,8 +67,10 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware,
 
   this._state = CoordinatedClient.states.created;
 
+  var serverUrl = 'http://' + serverAddress + ':' + DEFAULT_SERVER_PORT + '/';
+  logger.info('Connecting to coordination server on ' + serverUrl);
   this._io = SocketIOClient(
-    'http://' + serverAddress + ':' + DEFAULT_SERVER_PORT + '/',
+    serverUrl,
     {
       reconnection: true,
       reconnectionAttempts: 15,
@@ -96,9 +98,9 @@ CoordinatedClient.prototype._bind = function () {
   this._io
   .on  ('connect',           this._connect.bind(this))
   .on  ('connect_timeout',   logger.debug.bind(logger))
-  .on  ('connect_error',     logger.error.bind(logger))
+  .on  ('connect_error',     this._connectionError.bind(this))
   .on  ('reconnect',         this._reconnect.bind(this))
-  .on  ('reconnect_error',   logger.error.bind(logger))
+  .on  ('reconnect_error',   this._connectionError.bind(this))
   .on  ('reconnect_failed',  this._error.bind(this))
   .once('schedule',          this._schedule.bind(this))
   .on  ('discard',           this._discard.bind(this))
@@ -155,9 +157,10 @@ CoordinatedClient.prototype._schedule = function (data) {
     return Promise.all(promises);
   })
   .catch(function (error) {
+    var stack = error ? error.stack : null;
     logger.error(
       'unexpected error: \'%s\', stack: \'%s\'',
-      error.toString(), error.stack
+      String(error), stack
     );
     self._failed(error);
   });
@@ -218,9 +221,20 @@ CoordinatedClient.prototype._disconnect = function () {
 };
 
 CoordinatedClient.prototype._error = function (error) {
+  var stack = error ? error.stack : null;
   logger.error(
     'unexpected error: \'%s\', stack: \'%s\'',
-    error.toString(), error.stack
+    String(error), stack
+  );
+  this._failed(error);
+};
+
+CoordinatedClient.prototype._connectionError = function (error) {
+  var stack = error ? error.stack : null;
+  var description = error ? error.description : null;
+  logger.error(
+    'connection error: \'%s\', description: \'%s\', stack: \'%s\'',
+    String(error), description, stack
   );
   this._failed(error);
 };
@@ -279,9 +293,10 @@ CoordinatedClient.prototype._emit = function (event, data, externalOptions) {
     emit();
   })
   .catch(function (error) {
+    var stack = error ? error.stack : null;
     logger.error(
       'unexpected error: \'%s\', stack: \'%s\'',
-      error.toString(), error.stack
+      String(error), stack
     );
     return Promise.reject(error);
   })
