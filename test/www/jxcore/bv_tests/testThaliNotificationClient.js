@@ -640,3 +640,52 @@ test('hostaddress is removed when the action is running. ', function (t) {
   }, 2000);
 });
 
+test('notificationClient does not retry action with BAD_PEER resolution',
+  function (t) {
+    var sandbox = sinon.sandbox.create();
+    var getPeerHostInfoErrorMessage = 'getPeerHostInfo fail';
+    var peerId = globals.TCPEvent.peerIdentifier;
+
+    var notificationClient =
+      new ThaliNotificationClient(globals.peerPoolInterface,
+        globals.targetDeviceKeyExchangeObjects[0]);
+
+    var actionResolvedSpy = sandbox.spy();
+    var enqueue = function (action) {
+      var keepAliveAgent = new http.Agent({ keepAlive: true });
+
+      action.eventEmitter.on(
+        ThaliNotificationAction.Events.Resolved,
+        actionResolvedSpy
+      );
+
+      action.start(keepAliveAgent)
+      .then(function () {
+        t.fail('Should not succeed');
+      })
+      .catch(function (err) {
+        var peerEntry = notificationClient.peerDictionary.get(peerId);
+        t.equal(err.message, getPeerHostInfoErrorMessage,
+          'failed with expected error');
+        t.equal(peerEntry.peerState, PeerDictionary.peerState.RESOLVED,
+          'peer state should be RESOLVED');
+      })
+      .then(function () {
+        sandbox.restore();
+        t.end();
+      });
+    };
+
+    sandbox.stub(globals.peerPoolInterface, 'enqueue', enqueue);
+    sandbox.stub(ThaliMobile, 'getPeerHostInfo',
+      function (peerId, connectionType) {
+        return Promise.reject(new Error(getPeerHostInfoErrorMessage));
+      }
+    );
+
+    notificationClient.start([globals.sourcePublicKey]);
+
+    // New peer with TCP connection
+    notificationClient._peerAvailabilityChanged(globals.TCPEvent);
+  }
+);
