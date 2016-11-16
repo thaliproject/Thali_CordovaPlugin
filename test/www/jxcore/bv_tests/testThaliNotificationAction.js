@@ -254,6 +254,40 @@ test('Test NETWORK_PROBLEM locally', function (t) {
   });
 });
 
+test('Action fails when getPeerHostInfo fails', function (t) {
+  t.plan(2);
+
+  var errorMessage = 'Unspecified error';
+
+  sandbox.stub(
+    ThaliMobile,
+    'getPeerHostInfo',
+    function () {
+      return Promise.reject(new Error(errorMessage));
+    }
+  );
+
+  var act = new NotificationAction(
+    'hello',
+    globals.targetDeviceKeyExchangeObjects[0],
+    addressBookCallback ,
+    TCP_NATIVE
+  );
+
+  act.eventEmitter.on(NotificationAction.Events.Resolved,
+    function (peerIdentifier, res) {
+      t.equals(
+        res,
+        NotificationAction.ActionResolution.BAD_PEER,
+        'Resolution should be BAD_PEER');
+    });
+
+  act.start(globals.actionAgent).then( function () {
+    t.fail('This call should cause reject.');
+  }).catch(function (err) {
+    t.equals(err.message, errorMessage, 'correct error message');
+  });
+});
 
 test('Call the start two times', function (t) {
   t.plan(3);
@@ -297,7 +331,7 @@ test('Call the start two times', function (t) {
 
   act.start(globals.actionAgent).then( function () {
       t.fail('Second start should not be successful.');
-    }).catch( function (err) {
+  }).catch( function (err) {
     t.equals(err.message, ThaliPeerAction.DOUBLE_START, 'Call start once');
   });
 });
