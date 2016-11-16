@@ -1269,31 +1269,81 @@ function checkPeerHostInfoProperties(t, peerHostInfo, peer) {
   t.deepEqual(actualKeys, expectedKeys, 'contains expected properties');
 }
 
-test('#getPeerHostInfo - returns discovered cached native peer', function (t) {
-  var peer = {
-    peerIdentifier: 'foo',
-    peerAvailable: true,
-    generation: 0,
-    portNumber: 9999
-  };
+test('#getPeerHostInfo - returns discovered cached native peer (BLUETOOTH)',
+  function () {
+    return !platform.isAndroid;
+  },
+  function (t) {
+    var peer = {
+      peerIdentifier: 'foo',
+      peerAvailable: true,
+      generation: 0,
+      portNumber: 9999
+    };
 
-  ThaliMobileNativeWrapper.emitter.emit(
-    'nonTCPPeerAvailabilityChangedEvent',
-    peer
-  );
+    ThaliMobileNativeWrapper.emitter.emit(
+      'nonTCPPeerAvailabilityChangedEvent',
+      peer
+    );
 
-  var connectionType = platform.isIOS ?
-    ThaliMobileNativeWrapper.connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK :
-    ThaliMobileNativeWrapper.connectionTypes.BLUETOOTH;
+    var connectionType = ThaliMobileNativeWrapper.connectionTypes.BLUETOOTH;
 
-  ThaliMobile.getPeerHostInfo(peer.peerIdentifier, connectionType)
-  .then(function (peerHostInfo) {
-    checkPeerHostInfoProperties(t, peerHostInfo, peer);
-    t.equal(peerHostInfo.hostAddress, '127.0.0.1', 'the same hostAddress');
-    t.equal(peerHostInfo.portNumber, peer.portNumber, 'the same portNumber');
-    t.end();
-  }).catch(t.end);
-});
+    ThaliMobile.getPeerHostInfo(peer.peerIdentifier, connectionType)
+    .then(function (peerHostInfo) {
+      checkPeerHostInfoProperties(t, peerHostInfo, peer);
+      t.equal(peerHostInfo.hostAddress, '127.0.0.1', 'the same hostAddress');
+      t.equal(peerHostInfo.portNumber, peer.portNumber, 'the same portNumber');
+      t.end();
+    }).catch(t.end);
+  }
+);
+
+test('#getPeerHostInfo - returns discovered cached native peer and calls ' +
+'`_multiConnect` to retrieve the port (MPCF)',
+  function () {
+    return !platform.isIOS;
+  },
+  function (t) {
+    var peer = {
+      peerIdentifier: 'foo',
+      peerAvailable: true,
+      generation: 0,
+      portNumber: null
+    };
+    var resolvedPortNumber = 12345;
+
+    var multiConnectStub = sinon.stub(
+      ThaliMobileNativeWrapper,
+      '_multiConnect',
+      function (peerId) {
+        if (peerId !== peer.peerIdentifier) {
+          return Promise.reject(new Error('Connection could not be established'));
+        }
+        return Promise.resolve(resolvedPortNumber);
+      }
+    );
+
+    ThaliMobileNativeWrapper.emitter.emit(
+      'nonTCPPeerAvailabilityChangedEvent',
+      peer
+    );
+
+    var connectionType =
+      ThaliMobileNativeWrapper.connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK;
+
+    ThaliMobile.getPeerHostInfo(peer.peerIdentifier, connectionType)
+    .then(function (peerHostInfo) {
+      checkPeerHostInfoProperties(t, peerHostInfo, peer);
+      t.equal(peerHostInfo.hostAddress, '127.0.0.1', 'the same hostAddress');
+      t.equal(peerHostInfo.portNumber, resolvedPortNumber, 'the same portNumber');
+    })
+    .catch(t.fail)
+    .then(function () {
+      multiConnectStub.restore();
+      t.end();
+    });
+  }
+);
 
 test('#getPeerHostInfo - returns discovered cached wifi peer',
   function (t) {

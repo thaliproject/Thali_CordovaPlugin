@@ -98,15 +98,11 @@ var addressBookCallback = function (unencryptedKeyId) {
   return null;
 };
 
-var stubs = [];
-function stub() {
-  var st = sinon.stub.apply(null, arguments);
-  stubs.push(st);
-  return st;
-}
+var sandbox = null;
 
 var test = tape({
   setup: function (t) {
+    sandbox = sinon.sandbox.create();
     globals = new GlobalVariables();
     globals.init().then(function () {
       t.end();
@@ -116,11 +112,7 @@ var test = tape({
     });
   },
   teardown: function (t) {
-    stubs.forEach(function (st) {
-      st.restore();
-    });
-    stubs = [];
-
+    sandbox.restore();
     globals.kill().then(function () {
       t.end();
     }).catch(function (failure) {
@@ -143,7 +135,7 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
     suggestedTCPTimeout: 2000,
   };
 
-  var getPeerHostInfoStub = stub(ThaliMobile, 'getPeerHostInfo');
+  var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
   getPeerHostInfoStub.withArgs('identifier', TCP_NATIVE)
     .returns(Promise.resolve(peerHostInfo));
 
@@ -198,7 +190,7 @@ test('Test HTTP_BAD_RESPONSE locally', function (t) {
     suggestedTCPTimeout: 2000,
   };
 
-  var getPeerHostInfoStub = stub(ThaliMobile, 'getPeerHostInfo');
+  var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
   getPeerHostInfoStub.withArgs('identifier', TCP_NATIVE)
     .returns(Promise.resolve(peerHostInfo));
 
@@ -233,7 +225,7 @@ test('Test NETWORK_PROBLEM locally', function (t) {
     suggestedTCPTimeout: 2000,
   };
 
-  var getPeerHostInfoStub = stub(ThaliMobile, 'getPeerHostInfo');
+  var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
   getPeerHostInfoStub.withArgs('hello', TCP_NATIVE)
     .returns(Promise.resolve(peerHostInfo));
 
@@ -262,6 +254,40 @@ test('Test NETWORK_PROBLEM locally', function (t) {
   });
 });
 
+test('Action fails when getPeerHostInfo fails', function (t) {
+  t.plan(2);
+
+  var errorMessage = 'Unspecified error';
+
+  sandbox.stub(
+    ThaliMobile,
+    'getPeerHostInfo',
+    function () {
+      return Promise.reject(new Error(errorMessage));
+    }
+  );
+
+  var act = new NotificationAction(
+    'hello',
+    globals.targetDeviceKeyExchangeObjects[0],
+    addressBookCallback ,
+    TCP_NATIVE
+  );
+
+  act.eventEmitter.on(NotificationAction.Events.Resolved,
+    function (peerIdentifier, res) {
+      t.equals(
+        res,
+        NotificationAction.ActionResolution.BAD_PEER,
+        'Resolution should be BAD_PEER');
+    });
+
+  act.start(globals.actionAgent).then( function () {
+    t.fail('This call should cause reject.');
+  }).catch(function (err) {
+    t.equals(err.message, errorMessage, 'correct error message');
+  });
+});
 
 test('Call the start two times', function (t) {
   t.plan(3);
@@ -276,7 +302,7 @@ test('Call the start two times', function (t) {
     suggestedTCPTimeout: 2000,
   };
 
-  var getPeerHostInfoStub = stub(ThaliMobile, 'getPeerHostInfo');
+  var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
   getPeerHostInfoStub.withArgs('hello', TCP_NATIVE)
     .returns(Promise.resolve(peerHostInfo));
 
@@ -305,7 +331,7 @@ test('Call the start two times', function (t) {
 
   act.start(globals.actionAgent).then( function () {
       t.fail('Second start should not be successful.');
-    }).catch( function (err) {
+  }).catch( function (err) {
     t.equals(err.message, ThaliPeerAction.DOUBLE_START, 'Call start once');
   });
 });
@@ -320,7 +346,7 @@ test('Call the kill before calling the start', function (t) {
     suggestedTCPTimeout: 2000,
   };
 
-  var getPeerHostInfoStub = stub(ThaliMobile, 'getPeerHostInfo');
+  var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
   getPeerHostInfoStub.withArgs('hello', TCP_NATIVE)
     .returns(Promise.resolve(peerHostInfo));
 
@@ -358,7 +384,7 @@ test('Call the kill immediately after the start', function (t) {
     suggestedTCPTimeout: 1,
   };
 
-  var getPeerHostInfoStub = stub(ThaliMobile, 'getPeerHostInfo');
+  var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
   getPeerHostInfoStub.withArgs('hello', TCP_NATIVE)
     .returns(Promise.resolve(peerHostInfo));
 
@@ -405,7 +431,7 @@ test('Call the kill while waiting a response from the server', function (t) {
     suggestedTCPTimeout: 10000,
   };
 
-  var getPeerHostInfoStub = stub(ThaliMobile, 'getPeerHostInfo');
+  var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
   getPeerHostInfoStub.withArgs('hello', TCP_NATIVE)
     .returns(Promise.resolve(peerHostInfo));
 
@@ -463,7 +489,7 @@ test('Test to exceed the max content size locally', function (t) {
     suggestedTCPTimeout: 10000,
   };
 
-  var getPeerHostInfoStub = stub(ThaliMobile, 'getPeerHostInfo');
+  var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
   getPeerHostInfoStub.withArgs('hello', TCP_NATIVE)
     .returns(Promise.resolve(peerHostInfo));
 
@@ -506,7 +532,7 @@ test('Close the server socket while the client is waiting a response ' +
       suggestedTCPTimeout: 10000,
     };
 
-    var getPeerHostInfoStub = stub(ThaliMobile, 'getPeerHostInfo');
+    var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
     getPeerHostInfoStub.withArgs('hello', TCP_NATIVE)
       .returns(Promise.resolve(peerHostInfo));
 
@@ -566,7 +592,7 @@ test('Close the client socket while the client is waiting a response ' +
       suggestedTCPTimeout: 10000,
     };
 
-    var getPeerHostInfoStub = stub(ThaliMobile, 'getPeerHostInfo');
+    var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
     getPeerHostInfoStub.withArgs('hello', TCP_NATIVE)
       .returns(Promise.resolve(peerHostInfo));
 

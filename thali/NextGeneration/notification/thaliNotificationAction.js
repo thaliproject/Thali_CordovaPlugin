@@ -35,9 +35,12 @@ function ThaliNotificationAction(peerIdentifier,
                                  connectionType) {
 
   assert(peerIdentifier, 'peerIdentifier must not be null or undefined');
-  assert(ecdhForLocalDevice, 'connectionType must not be null or undefined');
+  assert(ecdhForLocalDevice,
+    'ecdhForLocalDevice must not be null or undefined');
   assert(addressBookCallback,
     'addressBookCallback must not be null or undefined');
+  assert(connectionType,
+    'connectionType must not be null or undefined');
 
   ThaliNotificationAction.super_.call(this, peerIdentifier,
     connectionType,
@@ -114,7 +117,10 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
       return ThaliMobile.getPeerHostInfo(
         self.getPeerIdentifier(),
         self.getConnectionType()
-      );
+      ).catch(function (error) {
+        self._complete(ThaliNotificationAction.ActionResolution.BAD_PEER);
+        throw error;
+      });
     })
     .then(function (peerHostInfo) {
       self._peerConnection = new PeerDictionary.PeerConnectionInformation(
@@ -318,6 +324,11 @@ ThaliNotificationAction.ActionResolution = {
    * MAX_CONTENT_SIZE.
    */
   HTTP_BAD_RESPONSE: 'httpBadResponse',
+  /**
+   * Couldn't retrieve peer connection information because peer had become
+   * unavailable or it has unsupported connection type
+   */
+  BAD_PEER: 'badPeer',
   /**
    * We weren't able to successfully create a network connection to the remote
    * peer or we were able to create a connection but we weren't able to complete
