@@ -213,6 +213,11 @@ extension PeerAvailability {
         delegate?.context(self, didChangeNetworkStatus: jsonValue(networkStatus))
     }
 
+    private func notifyOnIncomingConnectionToPortNumberFailed() {
+        let port: UInt16 = 0
+        delegate?.context(self, didFailIncomingConnectionToPort:port)
+    }
+
     private func handleWillEnterBackground() {
         delegate?.appWillEnterBackground(with: self)
     }
