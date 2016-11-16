@@ -350,21 +350,6 @@ if (require.main === module) {
                          'Versions and commandsAndResults keys must be equal');
   processCommandsAndResults(commandsAndResults)
     .then(() => {
-      // .jx and .node-gyp removal disabled since the issue,
-      // see https://github.com/thaliproject/Thali_CordovaPlugin/issues/1509
-
-      // Good to clean this up in case we have changed the version of jxcore
-      const home = process.env.HOME;
-      // const jx = path.join(home, '.jx');
-      const jxc = path.join(home, '.jxc');
-      // const nodeGyp = path.join(home, '.node-gyp');
-      return Promise.all([
-        // fs.removeAsync(jx),
-        fs.removeAsync(jxc),
-        // fs.removeAsync(nodeGyp)
-      ]);
-    })
-    .then(() => {
       console.log('Environment validated');
       process.exit(0);
     })
