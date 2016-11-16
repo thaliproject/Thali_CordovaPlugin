@@ -114,6 +114,6 @@ if [ $RUN_IN_CI == 0 ]; then
   rm -rf android-release-unsigned.apk
   cp -R ../ThaliTest/platforms/android/build/outputs/apk/android-release-unsigned.apk android-release-unsigned.apk
 
-  #rm -rf ThaliTest.app
-  #cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app
+  rm -rf ThaliTest.app
+  cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app
 fi
