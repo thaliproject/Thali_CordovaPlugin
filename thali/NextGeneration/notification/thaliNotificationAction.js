@@ -35,9 +35,12 @@ function ThaliNotificationAction(peerIdentifier,
                                  connectionType) {
 
   assert(peerIdentifier, 'peerIdentifier must not be null or undefined');
-  assert(ecdhForLocalDevice, 'connectionType must not be null or undefined');
+  assert(ecdhForLocalDevice,
+    'ecdhForLocalDevice must not be null or undefined');
   assert(addressBookCallback,
     'addressBookCallback must not be null or undefined');
+  assert(connectionType,
+    'connectionType must not be null or undefined');
 
   ThaliNotificationAction.super_.call(this, peerIdentifier,
     connectionType,

@@ -216,14 +216,12 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
       logger.warn('no dictionary');
       return;
     }
-    if (!peerStatus) {
-      logger.warn('_peerAvailabilityChanged: peerStatus is not set');
-      return;
-    }
-    if (!peerStatus.peerIdentifier) {
-      logger.warn('_peerAvailabilityChanged: peerIdentifier is not set');
-      return;
-    }
+
+    assert(peerStatus, 'peerStatus must not be null or undefined');
+    assert(peerStatus.peerIdentifier, 'peerIdentifier must be set');
+    assert(peerStatus.connectionType, 'connectionType must be set');
+    assert('generation' in peerStatus, 'generation must be set');
+    assert('newAddressPort' in peerStatus, 'newAddressPort must be set');
 
     if (!peerStatus.peerAvailable) {
       logger.warn('peer is not available');

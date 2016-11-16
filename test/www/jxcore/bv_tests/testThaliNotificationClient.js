@@ -490,6 +490,7 @@ test('Action fails because of a bad hostname.', function (t) {
     peerIdentifier: 'id123',
     peerAvailable: true,
     newAddressPort: false,
+    generation: 0,
     connectionType: ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
   };
 
