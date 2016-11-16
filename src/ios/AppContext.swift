@@ -172,7 +172,7 @@ extension PeerAvailability {
 
     return BrowserManager(serviceType: self.serviceType,
                           inputStreamReceiveTimeout: self.inputStreamReceiveTimeout,
-                          peersAvailabilityChangedHandler: {
+                          peerAvailabilityChanged: {
                             [weak self] peers in
                             guard let strongSelf = self else { return }
 
