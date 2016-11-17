@@ -190,7 +190,7 @@ class AdvertiserManagerTests: XCTestCase {
                                                          errorHandler: unexpectedErrorHandler)
     XCTAssertEqual(advertiserManager.advertisers.value.count, 2)
 
-    advertiserManager.didDisposeAdvertiserForPeerHandler = {
+    advertiserManager.didDisposeOfAdvertiserForPeerHandler = {
       [weak firstAdvertiserDisposed] peer in
 
       XCTAssertEqual(firstAdvertiserPeer, peer)

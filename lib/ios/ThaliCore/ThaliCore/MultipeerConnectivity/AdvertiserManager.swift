@@ -36,7 +36,7 @@ public final class AdvertiserManager {
   /**
    Handle disposing advertiser after timeout.
    */
-  internal var didDisposeAdvertiserForPeerHandler: ((Peer) -> Void)?
+  internal var didDisposeOfAdvertiserForPeerHandler: ((Peer) -> Void)?
 
   // MARK: - Private state
 
@@ -51,7 +51,7 @@ public final class AdvertiserManager {
   private let serviceType: String
 
   /**
-   Timeout after which advertiser disposes.
+   Timeout after which advertiser gets disposed of.
    */
   private let disposeTimeout: NSTimeInterval
 
@@ -65,7 +65,7 @@ public final class AdvertiserManager {
        The type of service to advertise.
 
      - disposeAdvertiserTimeout:
-       Timeout after which advertiser disposes.
+       Timeout after which advertiser gets disposed of.
 
    - returns:
    An initialized `AdvertiserManager` object.
@@ -95,7 +95,7 @@ public final class AdvertiserManager {
   public func startUpdateAdvertisingAndListening(onPort port: UInt16,
                                                  errorHandler: ErrorType -> Void) {
     if let currentAdvertiser = currentAdvertiser {
-      disposeAdvertiserAfterTimeoutToFinishInvites(currentAdvertiser)
+      disposeOfAdvertiserAfterTimeoutToFinishInvites(currentAdvertiser)
     }
 
     let newPeer = currentAdvertiser?.peer.nextGenerationPeer() ?? Peer()
@@ -137,7 +137,7 @@ public final class AdvertiserManager {
   }
 
   /**
-   Dispose all advertisers.
+   Dispose of all advertisers.
    */
   public func stopAdvertising() {
     advertisers.modify {
@@ -165,24 +165,24 @@ public final class AdvertiserManager {
   // MARK: - Private methods
 
   /**
-   Disposes advertiser after timeout.
+   Disposes of advertiser after timeout.
 
    In any case when a peer starts a new underlying `MCNearbyServiceAdvertiser` object
    it MUST keep the old object for at least *disposeTimeout*.
    This is to allow any in progress invites to finish.
    After *disposeTimeout* the old `MCNearbyServiceAdvertiser` objects MUST be closed.
    */
-  private func disposeAdvertiserAfterTimeoutToFinishInvites(
-    advertiserShouldBeDisposed: Advertiser) {
+  private func disposeOfAdvertiserAfterTimeoutToFinishInvites(
+    advertiserToBeDisposedOf: Advertiser) {
 
     let disposeTimeout = dispatch_time(DISPATCH_TIME_NOW,
                                        Int64(self.disposeTimeout * Double(NSEC_PER_SEC)))
 
     dispatch_after(disposeTimeout, dispatch_get_main_queue()) {
       [weak self,
-      weak advertiserShouldBeDisposed] in
+      weak advertiserToBeDisposedOf] in
       guard let strongSelf = self else { return }
-      guard let advertiserShouldBeDisposed = advertiserShouldBeDisposed else { return }
+      guard let advertiserShouldBeDisposed = advertiserToBeDisposedOf else { return }
 
       strongSelf.advertisers.modify {
         advertiserShouldBeDisposed.stopAdvertising()
@@ -191,7 +191,7 @@ public final class AdvertiserManager {
         }
       }
 
-      strongSelf.didDisposeAdvertiserForPeerHandler?(advertiserShouldBeDisposed.peer)
+      strongSelf.didDisposeOfAdvertiserForPeerHandler?(advertiserShouldBeDisposed.peer)
     }
   }
 }
