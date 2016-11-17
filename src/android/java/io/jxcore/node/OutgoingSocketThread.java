@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
-import java.net.SocketException;
 
 /**
  * A thread for outgoing Bluetooth connections.
@@ -67,7 +66,6 @@ class OutgoingSocketThread extends SocketThreadBase {
 
         try {
             mServerSocket = new ServerSocket(0);
-            configureServerSocket();
             Log.d(mTag, "Server socket local port: " + mServerSocket.getLocalPort());
         } catch (IOException e) {
             Log.e(mTag, "Failed to create a server socket instance: " + e.getMessage(), e);
@@ -143,13 +141,4 @@ class OutgoingSocketThread extends SocketThreadBase {
         }
     }
 
-    private void configureServerSocket() throws SocketException {
-        if(mServerSocket!=null){
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && mBluetoothSocket!=null) {
-                mServerSocket.setReceiveBufferSize(mBluetoothSocket.getMaxReceivePacketSize());
-            }
-            mServerSocket.setReuseAddress(false);
-            mServerSocket.setSoTimeout(0);
-        }
-    }
 }
