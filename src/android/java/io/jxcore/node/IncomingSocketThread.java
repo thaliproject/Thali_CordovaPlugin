@@ -78,7 +78,7 @@ class IncomingSocketThread extends SocketThreadBase {
         try {
             Inet4Address mLocalHostAddress = (Inet4Address) Inet4Address.getByName("localhost");
             mLocalhostSocket = new Socket(mLocalHostAddress, mTcpPortNumber);
-
+            configureSocket();
             Log.i(mTag, "Creating TCP android... " );
             Log.i(mTag, "Local host address: " + getLocalHostAddressAsString() + ", port: " + getLocalHostPort());
 
