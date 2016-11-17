@@ -200,8 +200,14 @@ test('Add two Peers.', function (t) {
   t.equal(notificationClient.peerDictionary.size(), 2,
     'peerDictionalty contains 2 peers');
 
-  var peer = notificationClient.peerDictionary.get('id123');
-  var peer2 = notificationClient.peerDictionary.get('id3212');
+  var peer = notificationClient.peerDictionary.get({
+    peerIdentifier: 'id123',
+    generation: 0
+  });
+  var peer2 = notificationClient.peerDictionary.get({
+    peerIdentifier: 'id3212',
+    generation: 0
+  });
 
   t.equal(
     peer.notificationAction.getConnectionType(),
@@ -271,9 +277,10 @@ test('Received beacons with no values for us', function (t) {
       );
       action.start(keepAliveAgent).then(function () {
         setImmediate(function () {
-          var entry = notificationClient.peerDictionary.get(
-            globals.TCPEvent.peerIdentifier
-          );
+          var entry = notificationClient.peerDictionary.get({
+            peerIdentifier: globals.TCPEvent.peerIdentifier,
+            generation: globals.TCPEvent.generation
+          });
           t.ok(entry, 'entry exists');
           t.equal(entry.peerState, ThaliPeerDictionary.peerState.RESOLVED,
             'entry is resolved');
@@ -322,11 +329,14 @@ test('Notification action killed with a superseded', function (t) {
       // Give the system a chance to fire any promises or events in case the
       // logic isn't working right.
       setImmediate(function () {
+        var entry = notificationClient.peerDictionary.get({
+          peerIdentifier: action.getPeerIdentifier(),
+          generation: action.getPeerGeneration(),
+        });
         t.equal(action.getActionState(), PeerAction.actionState.KILLED,
-          'Action should be killed');
-        t.equal(notificationClient.peerDictionary
-            .get(action.getPeerIdentifier()).peerState,
-          PeerDictionary.peerState.RESOLVED);
+          'Action should be KILLED');
+        t.equal(entry.peerState, PeerDictionary.peerState.RESOLVED,
+          'Peer state should be RESOLVED');
         peerPoolInterface.enqueue.restore();
         t.end();
       });
@@ -487,6 +497,9 @@ test('Action fails because of a bad hostname.', function (t) {
   var retryTimeouts = [100, 300, 600];
   ThaliNotificationClient.RETRY_TIMEOUTS = retryTimeouts;
 
+  var UNRESOLVABLE = 'address-that-does-not-exists';
+  testUtils.makeDomainUnresolvable(UNRESOLVABLE);
+
   var TCPEvent = {
     peerIdentifier: 'id123',
     peerAvailable: true,
@@ -496,7 +509,7 @@ test('Action fails because of a bad hostname.', function (t) {
   };
 
   var TCPPeerHostInfo = {
-    hostAddress: 'address-that-does-not-exists',
+    hostAddress: UNRESOLVABLE,
     portNumber: 123,
     suggestedTCPTimeout: 10000
   };
@@ -561,7 +574,10 @@ test('Action fails because of a bad hostname.', function (t) {
         retryTimeouts.length,
         'correct number of failures'
       );
-      var entry = notificationClient.peerDictionary.get('id123');
+      var entry = notificationClient.peerDictionary.get({
+        peerIdentifier: 'id123',
+        generation: 0
+      });
       t.equals(
         entry.peerState,
         ThaliPeerDictionary.peerState.RESOLVED,
@@ -571,6 +587,7 @@ test('Action fails because of a bad hostname.', function (t) {
     enqueueStub.restore();
     getPeerHostInfoStub.restore();
     notificationClient.stop();
+    testUtils.restoreUnresolvableDomains();
     t.end();
   };
 
@@ -646,6 +663,7 @@ test('notificationClient does not retry action with BAD_PEER resolution',
     var sandbox = sinon.sandbox.create();
     var getPeerHostInfoErrorMessage = 'getPeerHostInfo fail';
     var peerId = globals.TCPEvent.peerIdentifier;
+    var generation = globals.TCPEvent.generation;
 
     var notificationClient =
       new ThaliNotificationClient(globals.peerPoolInterface,
@@ -665,7 +683,10 @@ test('notificationClient does not retry action with BAD_PEER resolution',
         t.fail('Should not succeed');
       })
       .catch(function (err) {
-        var peerEntry = notificationClient.peerDictionary.get(peerId);
+        var peerEntry = notificationClient.peerDictionary.get({
+          peerIdentifier: peerId,
+          generation: generation
+        });
         t.equal(err.message, getPeerHostInfoErrorMessage,
           'failed with expected error');
         t.equal(peerEntry.peerState, PeerDictionary.peerState.RESOLVED,
@@ -693,7 +714,7 @@ test('notificationClient does not retry action with BAD_PEER resolution',
 
 test('notification client correctly handles peer availability changes ' +
 'of the same peer', function (t) {
-  testUtils.makeDomainUnresolvable('unresolvable_hostname', t);
+  testUtils.makeDomainUnresolvable('unresolvable_hostname');
   globals.TCPPeerHostInfo.hostAddress = 'unresolvable_hostname';
 
   var notificationClient =
@@ -716,6 +737,7 @@ test('notification client correctly handles peer availability changes ' +
           // action. We are going to fire new peerAvailabilityChanged event with
           // the same peer id but different generation. Notification action
           // should correctly handle this
+          t.pass('First action failed');
           globals.TCPEvent.generation++;
           notificationClient._peerAvailabilityChanged(globals.TCPEvent);
         });
@@ -723,12 +745,14 @@ test('notification client correctly handles peer availability changes ' +
       case 2:
         setTimeout(function () {
           action.kill();
+          t.pass('second action killed');
           enqueueStub.restore();
           getPeerHostInfoStub.restore();
           // notificationClient enqueues action and then synchronously updates
           // peerDictionary with enqueued action. If we stop notificationClient
           // inside enqueue stack it will fail.
           notificationClient.stop();
+          testUtils.restoreUnresolvableDomains();
           t.end();
         }, ThaliNotificationClient.RETRY_TIMEOUTS[0] * 2);
         return;
