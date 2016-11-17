@@ -18,6 +18,10 @@ export NVM_NODEJS_ORG_MIRROR
 JX_NPM_JXB=jxb311
 export JX_NPM_JXB
 
+if running_on_ci; then
+  node thali/install/updateEnvironmentSettings.js
+fi
+
 echo "Setup TestServer"
 cd `dirname $0`
 cd ../../test/TestServer

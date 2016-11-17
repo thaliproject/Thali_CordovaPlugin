@@ -36,9 +36,10 @@ function updateCommonGypies() {
         return;
       }
 
-      const contents = fs.readFileSync(path, `utf8`);
+      const contents = fs.readFileSync(filePath, `utf8`);
 
       if (contents.indexOf('node_win_onecore') !== -1) {
+        console.log(`${filePath} update is not needed`);
         return;
       }
 
@@ -61,7 +62,7 @@ function cleanupSettings() {
   ]
   .filter(filePath => fs.exists(filePath))
   .forEach((filePath) => {
-    console.log(`Removing ${filePath}`);
+    console.log(`removing ${filePath}`);
 
     fs.removeSync(filePath);
   });
@@ -82,14 +83,14 @@ function updateSettings() {
 // run if we were called from the command line
 if (require.main === module) {
   try {
-    console.log(`Settings update started`);
+    console.log(`start settings update`);
 
     cleanupSettings();
     prepareSettings();
     updateSettings();
 
-    console.log(`Settings update completed`);
+    console.log(`end settings update`);
   } catch (error) {
-    console.log(`Settings update failed: ${error}`);
+    console.log(`failed settings update: ${error}`);
   }
 }
