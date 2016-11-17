@@ -1,29 +1,16 @@
 #!/usr/bin/env bash
 
+echo "start setUpTests.sh"
+
+pushd "$(dirname $0)" > /dev/null
+SCRIPT_PATH="$(pwd -P)"
+popd > /dev/null
+
+source "$SCRIPT_PATH/include.sh/build-dep.sh"
+
 set -euo pipefail
 
-NORMAL_COLOR='\033[0m'
-RED_COLOR='\033[0;31m'
-
-OUTPUT() {
-  echo -e "${RED_COLOR}$BASH_COMMAND FAILED - setUpTests failure${NORMAL_COLOR}"
-}
-
-trap OUTPUT ERR
-
-# Check the platform we are running
-IS_MINIGW_PLATFORM=false
-IS_DARWIN_PLATFORM=false
-
-if test x"$(uname -s | cut -c 1-5)" == xMINGW ; then
-  echo "Running in MinGW"
-
-  IS_MINIGW_PLATFORM=true
-elif test x"`uname`" = xDarwin ; then
-  echo "Running in macOS"
-
-  IS_DARWIN_PLATFORM=true
-fi
+trap 'log_error $LINENO' ERR
 
 TEST_PROJECT_NAME=ThaliTest
 
@@ -45,7 +32,7 @@ prepare_project()
   npm install --no-optional --production --prefix $REPO_ROOT_DIR/thali/install
   node $REPO_ROOT_DIR/thali/install/validateBuildEnvironment.js
 
-  echo "Preparing ${TEST_PROJECT_NAME} Cordova project"
+  echo "start preparing ${TEST_PROJECT_NAME} Cordova project"
 
   cd $REPO_ROOT_DIR/test/TestServer
   npm install --no-optional
@@ -54,7 +41,7 @@ prepare_project()
   cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME
   mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev
 
-  if [ $IS_MINIGW_PLATFORM == true ]; then
+  if is_minigw_platform; then
       # The thali package might be installed as link and there will
       # be troubles later on if this link is tried to be copied so
       # remove it here.
@@ -68,18 +55,20 @@ prepare_project()
   npm install --no-optional
   cd $REPO_ROOT_DIR/../$TEST_PROJECT_NAME
   cordova plugin add $REPO_ROOT_DIR/thali/install/SSDPReplacer
+
+  echo "end preparing ${TEST_PROJECT_NAME} Cordova project"
 }
 
 install_thali()
 {
-  echo "Installing Thali into ${TEST_PROJECT_NAME}"
+  echo "start installing Thali into ${TEST_PROJECT_NAME}"
 
   cd $TEST_PROJECT_ROOT_DIR/www/jxcore
   node installCustomPouchDB.js
   jx npm install $REPO_ROOT_DIR/thali --save --no-optional
   find . -name "*.gz" -delete
 
-  if [ $IS_MINIGW_PLATFORM == true ]; then
+  if is_minigw_platform; then
       # On Windows the package.json file will contain an invalid local file URI for Thali,
       # which needs to be replaced with a valid value. Otherwise the build process
       # will be aborted. Restore write permission after running sed in case
@@ -91,18 +80,22 @@ install_thali()
   # SuperTest which is used by some of the BVTs include a PEM file (for private
   # keys) that makes Android unhappy so we remove it below in addition to the gz
   # files.
+  echo "run supertest for Android"
   npm install --no-optional --production
 
   # In case autoremove fails to delete the files, delete them explicitly.
   find . -name "*.gz" -delete
   find . -name "*.pem" -delete
 
+  echo "copying app.js"
   cp -v $1 app.js
+
+  echo "end installing Thali"
 }
 
 add_android_platform()
 {
-  echo "Adding Android platform into ${TEST_PROJECT_NAME}"
+  echo "start adding Android platform into ${TEST_PROJECT_NAME}"
 
   cd $TEST_PROJECT_ROOT_DIR
 
@@ -110,22 +103,26 @@ add_android_platform()
 
   # A file that identifies the current build as a UT build
   touch platforms/android/unittests
+
+  echo "end adding Android platform"
 }
 
 build_android()
 {
-  echo "Building Android app"
+  echo "start building ${TEST_PROJECT_NAME} Android app"
 
   cd $TEST_PROJECT_ROOT_DIR
 
   cordova build android --release --device
+
+  echo "end building ${TEST_PROJECT_NAME} Android app"
 }
 
 # Adds iOS platform when we're running on macOS
 add_ios_platform_if_possible()
 {
-  if [ $IS_DARWIN_PLATFORM == true ]; then
-    echo "Adding iOS platform into ${TEST_PROJECT_NAME}"
+  if is_darwin_platform; then
+    echo "start adding iOS platform into ${TEST_PROJECT_NAME}"
 
     cd $TEST_PROJECT_ROOT_DIR
 
@@ -133,14 +130,18 @@ add_ios_platform_if_possible()
 
     # A file that identifies the current build as a UT build
     touch platforms/ios/unittests
+
+    echo "end adding iOS platform"
+  else
+    echo "skip adding iOS platform"
   fi
 }
 
 # Builds iOS platform when we're running on macOS
 build_ios_if_possible()
 {
-  if [ $IS_DARWIN_PLATFORM == true ]; then
-    echo "Building iOS app"
+  if is_darwin_platform; then
+    echo "start building ${TEST_PROJECT_NAME} iOS app"
 
     cd $TEST_PROJECT_ROOT_DIR
 
@@ -163,7 +164,7 @@ build_ios_if_possible()
     TEST_PROJECT_DIR=$TEST_PROJECT_ROOT_DIR/platforms/ios
     TEST_PROJECT_PATH=$TEST_PROJECT_DIR/$TEST_PROJECT_NAME.xcodeproj
 
-    echo "Building project: ${TEST_PROJECT_PATH}"
+    echo "building project: ${TEST_PROJECT_PATH}"
 
     (\
     cd $TEST_PROJECT_DIR && \
@@ -177,6 +178,8 @@ build_ios_if_possible()
       CONFIGURATION_BUILD_DIR="${TEST_PROJECT_DIR}/build/device" \
       SHARED_PRECOMPS_DIR="${TEST_PROJECT_DIR}/build/sharedpch" \
     )
+
+    echo "end building ${TEST_PROJECT_NAME} iOS app"
   fi
 }
 
@@ -190,3 +193,4 @@ build_android
 build_ios_if_possible
 
 echo "Remember to start the test coordination server by running jx index.js"
+echo "end setUpTests.sh"
