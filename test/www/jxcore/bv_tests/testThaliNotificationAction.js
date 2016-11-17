@@ -39,6 +39,16 @@ var GlobalVariables = function () {
     NotificationBeacons.createPublicKeyHash(this.sourcePublicKey);
 
   this.actionAgent = httpTester.getTestAgent();
+  this.testPeer = {
+    peerIdentifier: 'identifier',
+    generation: 0,
+    connectionType: TCP_NATIVE
+  };
+  this.testPeerHostInfo = {
+    hostAddress: '127.0.0.1',
+    portNumber: null, // GlobalVariables#init updates this port to the real one
+    suggestedTCPTimeout: 2000,
+  };
 
   this.createPublicKeysToNotifyAndPreamble();
 };
@@ -48,6 +58,7 @@ GlobalVariables.prototype.init = function () {
   return httpTester.getTestHttpsServer(self.expressApp, self.expressRouter)
     .then(function (server) {
       self.expressServer = server;
+      self.testPeerHostInfo.portNumber = server.address().port;
       return Promise.resolve();
     })
     .catch(function (failure) {
@@ -123,36 +134,33 @@ var test = tape({
 });
 
 test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
-  t.plan(7);
+  t.plan(8);
 
   httpTester.runServer(globals.expressRouter,
     thaliConfig.NOTIFICATION_BEACON_PATH,
     200, globals.preambleAndBeacons, 1);
 
-  var peerHostInfo = {
-    hostAddress: '127.0.0.1',
-    portNumber: globals.expressServer.address().port,
-    suggestedTCPTimeout: 2000,
-  };
-
-  var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
-  getPeerHostInfoStub.withArgs('identifier', TCP_NATIVE)
-    .returns(Promise.resolve(peerHostInfo));
+  sandbox.stub(ThaliMobile, 'getPeerHostInfo')
+    .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
+    .returns(Promise.resolve(globals.testPeerHostInfo));
 
   var act = new NotificationAction(
-    'identifier',
+    globals.testPeer,
     globals.targetDeviceKeyExchangeObjects[0],
-    addressBookCallback ,
-    TCP_NATIVE
+    addressBookCallback
   );
 
   act.eventEmitter.on(NotificationAction.Events.Resolved,
-    function (peerIdentifier, res, beaconDetails) {
+    function (action, res, beaconDetails) {
+      t.equals(
+        action.getPeerIdentifier(),
+        globals.testPeer.peerIdentifier,
+        'peerIdentifier should match');
 
       t.equals(
-        peerIdentifier,
-        'identifier',
-        'peerIdentifier should be identifier');
+        action.getPeerGeneration(),
+        globals.testPeer.generation,
+        'generation should match');
 
       t.equals(
           res,
@@ -165,7 +173,6 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
           globals.preambleAndBeacons)) === 0, 'good preAmble');
       t.ok(globals.sourcePublicKeyHash.compare(
           beaconDetails.unencryptedKeyId) === 0, 'public keys match!');
-
     });
 
   act.start(globals.actionAgent).then(function (res) {
@@ -174,7 +181,7 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
       'Once start returns the action should be in KILLED state');
   })
   .catch(function (failure) {
-    t.fail('Test failed:' + failure);
+    t.fail(failure.stack);
   });
 });
 
@@ -184,30 +191,24 @@ test('Test HTTP_BAD_RESPONSE locally', function (t) {
   httpTester.runServer(globals.expressRouter,
     thaliConfig.NOTIFICATION_BEACON_PATH, 503, 'hello', 1);
 
-  var peerHostInfo = {
-    hostAddress: '127.0.0.1',
-    portNumber: globals.expressServer.address().port,
-    suggestedTCPTimeout: 2000,
-  };
 
-  var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
-  getPeerHostInfoStub.withArgs('identifier', TCP_NATIVE)
-    .returns(Promise.resolve(peerHostInfo));
+  sandbox.stub(ThaliMobile, 'getPeerHostInfo')
+    .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
+    .returns(Promise.resolve(globals.testPeerHostInfo));
 
   var act = new NotificationAction(
-    'identifier',
+    globals.testPeer,
     globals.targetDeviceKeyExchangeObjects[0],
     addressBookCallback,
     TCP_NATIVE
   );
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved,
-    function (peerIdentifier, res) {
-      t.equals(
-        res,
-        NotificationAction.ActionResolution.HTTP_BAD_RESPONSE,
-        'Response should be HTTP_BAD_RESPONSE');
-    });
+  act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
+    t.equals(
+      res, NotificationAction.ActionResolution.HTTP_BAD_RESPONSE,
+      'Response should be HTTP_BAD_RESPONSE'
+    );
+  });
 
   act.start(globals.actionAgent).then( function (res) {
     t.equals(res, null, 'must return null after successful call');
@@ -219,38 +220,35 @@ test('Test HTTP_BAD_RESPONSE locally', function (t) {
 test('Test NETWORK_PROBLEM locally', function (t) {
   t.plan(2);
 
-  var peerHostInfo = {
-    hostAddress: 'address_that_cant_exist',
-    portNumber: globals.expressServer.address().port,
-    suggestedTCPTimeout: 2000,
-  };
+  testUtils.makeDomainUnresolvable('unresolvable_domain');
+  globals.testPeerHostInfo.hostAddress = 'unresolvable_domain';
 
-  var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
-  getPeerHostInfoStub.withArgs('hello', TCP_NATIVE)
-    .returns(Promise.resolve(peerHostInfo));
+  sandbox.stub(ThaliMobile, 'getPeerHostInfo')
+    .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
+    .returns(Promise.resolve(globals.testPeerHostInfo));
 
   var act = new NotificationAction(
-    'hello',
+    globals.testPeer,
     globals.targetDeviceKeyExchangeObjects[0],
     addressBookCallback ,
     TCP_NATIVE
   );
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved,
-    function (peerIdentifier, res) {
-      t.equals(
-        res,
-        NotificationAction.ActionResolution.NETWORK_PROBLEM,
-        'Response should be NETWORK_PROBLEM');
-    });
+  act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
+    t.equals(
+      res, NotificationAction.ActionResolution.NETWORK_PROBLEM,
+      'Response should be NETWORK_PROBLEM'
+    );
+  });
 
-  act.start(globals.actionAgent).then( function () {
+  act.start(globals.actionAgent).then(function () {
     t.fail('This call should cause reject.');
   }).catch(function (err) {
+    testUtils.restoreUnresolvableDomains();
     t.equals(
-      err.message,
-      'Could not establish TCP connection',
-      'reject reason should be: Could not establish TCP connection');
+      err.message, 'Could not establish TCP connection',
+      'reject reason should be: Could not establish TCP connection'
+    );
   });
 });
 
@@ -268,19 +266,18 @@ test('Action fails when getPeerHostInfo fails', function (t) {
   );
 
   var act = new NotificationAction(
-    'hello',
+    globals.testPeer,
     globals.targetDeviceKeyExchangeObjects[0],
     addressBookCallback ,
     TCP_NATIVE
   );
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved,
-    function (peerIdentifier, res) {
-      t.equals(
-        res,
-        NotificationAction.ActionResolution.BAD_PEER,
-        'Resolution should be BAD_PEER');
-    });
+  act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
+    t.equals(
+      res, NotificationAction.ActionResolution.BAD_PEER,
+      'Resolution should be BAD_PEER'
+    );
+  });
 
   act.start(globals.actionAgent).then( function () {
     t.fail('This call should cause reject.');
@@ -296,29 +293,23 @@ test('Call the start two times', function (t) {
     thaliConfig.NOTIFICATION_BEACON_PATH,
     200, globals.preambleAndBeacons, 1);
 
-  var peerHostInfo = {
-    hostAddress: '127.0.0.1',
-    portNumber: globals.expressServer.address().port,
-    suggestedTCPTimeout: 2000,
-  };
-
-  var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
-  getPeerHostInfoStub.withArgs('hello', TCP_NATIVE)
-    .returns(Promise.resolve(peerHostInfo));
+  sandbox.stub(ThaliMobile, 'getPeerHostInfo')
+    .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
+    .returns(Promise.resolve(globals.testPeerHostInfo));
 
   var act = new NotificationAction(
-    'hello',
+    globals.testPeer,
     globals.targetDeviceKeyExchangeObjects[0],
     addressBookCallback,
     TCP_NATIVE
   );
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved,
-    function (peerIdentifier, res) {
+  act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
     t.equals(
       res,
       NotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED,
-      'Response should be BEACONS_RETRIEVED_AND_PARSED');
+      'Response should be BEACONS_RETRIEVED_AND_PARSED'
+    );
   });
 
 
@@ -340,28 +331,23 @@ test('Call the kill before calling the start', function (t) {
 
   t.plan(2);
 
-  var peerHostInfo = {
-    hostAddress: '127.0.0.1',
-    portNumber: 5000,
-    suggestedTCPTimeout: 2000,
-  };
-
-  var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
-  getPeerHostInfoStub.withArgs('hello', TCP_NATIVE)
-    .returns(Promise.resolve(peerHostInfo));
+  sandbox.stub(ThaliMobile, 'getPeerHostInfo')
+    .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
+    .returns(Promise.resolve(globals.testPeerHostInfo));
 
   var act = new NotificationAction(
-    'hello',
+    globals.testPeer,
     globals.targetDeviceKeyExchangeObjects[0],
     addressBookCallback,
     TCP_NATIVE
   );
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved,
-    function (peerIdentifier, res) {
-      t.equals(res, NotificationAction.ActionResolution.KILLED,
-        'Should be Killed');
-    });
+  act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
+    t.equals(
+      res, NotificationAction.ActionResolution.KILLED,
+      'Should be Killed'
+    );
+  });
   act.kill();
 
   act.start(globals.actionAgent).catch( function (err) {
@@ -378,39 +364,33 @@ test('Call the kill immediately after the start', function (t) {
   httpTester.runServer(globals.expressRouter, '/NotificationBeacons', 503,
     'hello', 1, 2000);
 
-  var peerHostInfo = {
-    hostAddress: '127.0.0.1',
-    portNumber: globals.expressServer.address().port,
-    suggestedTCPTimeout: 1,
-  };
+  globals.testPeerHostInfo.suggestedTCPTimeout = 1;
 
-  var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
-  getPeerHostInfoStub.withArgs('hello', TCP_NATIVE)
-    .returns(Promise.resolve(peerHostInfo));
+  sandbox.stub(ThaliMobile, 'getPeerHostInfo')
+    .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
+    .returns(Promise.resolve(globals.testPeerHostInfo));
 
   var act = new NotificationAction(
-    'hello',
+    globals.testPeer,
     globals.targetDeviceKeyExchangeObjects[0],
     addressBookCallback,
     TCP_NATIVE
   );
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved,
-    function (peerIdentifier, res) {
-      t.equals(
-        res,
-        NotificationAction.ActionResolution.KILLED,
-        'Should be KILLED'
-      );
-    }
-  );
+  act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
+    t.equals(
+      res,
+      NotificationAction.ActionResolution.KILLED,
+      'Should be KILLED'
+    );
+  });
 
-  act.start(globals.actionAgent).then( function (res) {
-      t.equals(res, null, 'must return null after successful kill');
-    })
-    .catch(function (failure) {
-      t.fail('Test failed:' + failure);
-    });
+  act.start(globals.actionAgent).then(function (res) {
+    t.equals(res, null, 'must return null after successful kill');
+  })
+  .catch(function (failure) {
+    t.fail('Test failed:' + failure);
+  });
 
   act.kill();
 
@@ -425,30 +405,25 @@ test('Call the kill while waiting a response from the server', function (t) {
     'hello', 1, 10000);
 
   // Sets 10000 milliseconds TCP timeout.
-  var peerHostInfo = {
-    hostAddress: '127.0.0.1',
-    portNumber: globals.expressServer.address().port,
-    suggestedTCPTimeout: 10000,
-  };
+  globals.testPeerHostInfo.suggestedTCPTimeout = 10000;
 
-  var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
-  getPeerHostInfoStub.withArgs('hello', TCP_NATIVE)
-    .returns(Promise.resolve(peerHostInfo));
+  sandbox.stub(ThaliMobile, 'getPeerHostInfo')
+    .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
+    .returns(Promise.resolve(globals.testPeerHostInfo));
 
   var act = new NotificationAction(
-    'hello',
+    globals.testPeer,
     globals.targetDeviceKeyExchangeObjects[0],
     addressBookCallback,
     TCP_NATIVE
   );
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved,
-    function (peerIdentifier, res) {
-      t.equals(
-        res,
-        NotificationAction.ActionResolution.KILLED,
-        'Should be KILLED');
-    });
+  act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
+    t.equals(
+      res, NotificationAction.ActionResolution.KILLED,
+      'Should be KILLED'
+    );
+  });
 
 
   act.start(globals.actionAgent).then( function (res) {
@@ -483,30 +458,25 @@ test('Test to exceed the max content size locally', function (t) {
     200, buffer, 1+NotificationAction.MAX_CONTENT_SIZE_IN_BYTES/1024);
 
   // Sets 10000 milliseconds TCP timeout.
-  var peerHostInfo = {
-    hostAddress: '127.0.0.1',
-    portNumber: globals.expressServer.address().port,
-    suggestedTCPTimeout: 10000,
-  };
+  globals.testPeerHostInfo.suggestedTCPTimeout = 10000;
 
-  var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
-  getPeerHostInfoStub.withArgs('hello', TCP_NATIVE)
-    .returns(Promise.resolve(peerHostInfo));
+  sandbox.stub(ThaliMobile, 'getPeerHostInfo')
+    .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
+    .returns(Promise.resolve(globals.testPeerHostInfo));
 
   var act = new NotificationAction(
-    'hello',
+    globals.testPeer,
     globals.targetDeviceKeyExchangeObjects[0],
     addressBookCallback,
     TCP_NATIVE
   );
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved,
-    function (peerIdentifier, res) {
-      t.equals(
-        res,
-        NotificationAction.ActionResolution.HTTP_BAD_RESPONSE,
-        'HTTP_BAD_RESPONSE should be response when content size is exceeded');
-    });
+  act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
+    t.equals(
+      res, NotificationAction.ActionResolution.HTTP_BAD_RESPONSE,
+      'HTTP_BAD_RESPONSE should be response when content size is exceeded'
+    );
+  });
 
   act.start(globals.actionAgent).then( function (res) {
     t.equals(res, null, 'must return null after successful call');
@@ -526,32 +496,28 @@ test('Close the server socket while the client is waiting a response ' +
       'hello', 1, 10000);
 
     // Sets 10000 milliseconds TCP timeout.
-    var peerHostInfo = {
-      hostAddress: '127.0.0.1',
-      portNumber: globals.expressServer.address().port,
-      suggestedTCPTimeout: 10000,
-    };
+    globals.testPeerHostInfo.suggestedTCPTimeout = 10000;
 
-    var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
-    getPeerHostInfoStub.withArgs('hello', TCP_NATIVE)
-      .returns(Promise.resolve(peerHostInfo));
+    sandbox.stub(ThaliMobile, 'getPeerHostInfo')
+      .withArgs(
+        globals.testPeer.peerIdentifier,
+        globals.testPeer.connectionType
+      )
+      .returns(Promise.resolve(globals.testPeerHostInfo));
 
     var act = new NotificationAction(
-      'hello',
+      globals.testPeer,
       globals.targetDeviceKeyExchangeObjects[0],
       addressBookCallback,
       TCP_NATIVE
     );
 
-    act.eventEmitter.on(NotificationAction.Events.Resolved,
-      function (peerIdentifier, res) {
-        t.equals(
-          res,
-          NotificationAction.ActionResolution.NETWORK_PROBLEM,
-          'Should be NETWORK_PROBLEM caused closing server socket'
-        );
-      }
-    );
+    act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
+      t.equals(
+        res, NotificationAction.ActionResolution.NETWORK_PROBLEM,
+        'Should be NETWORK_PROBLEM caused closing server socket'
+      );
+    });
 
     act.start(globals.actionAgent).then( function () {
       t.fail('Test should return failure: Could not establish TCP connection');
@@ -586,27 +552,27 @@ test('Close the client socket while the client is waiting a response ' +
       'hello', 1, 10000);
 
     // Sets 10000 milliseconds TCP timeout.
-    var peerHostInfo = {
-      hostAddress: '127.0.0.1',
-      portNumber: globals.expressServer.address().port,
-      suggestedTCPTimeout: 10000,
-    };
+    globals.testPeerHostInfo.suggestedTCPTimeout = 10000;
 
-    var getPeerHostInfoStub = sandbox.stub(ThaliMobile, 'getPeerHostInfo');
-    getPeerHostInfoStub.withArgs('hello', TCP_NATIVE)
-      .returns(Promise.resolve(peerHostInfo));
+    sandbox.stub(ThaliMobile, 'getPeerHostInfo')
+      .withArgs(
+        globals.testPeer.peerIdentifier,
+        globals.testPeer.connectionType
+      )
+      .returns(Promise.resolve(globals.testPeerHostInfo));
 
-    var act = new NotificationAction('hello',
+    var act = new NotificationAction(
+      globals.testPeer,
       globals.targetDeviceKeyExchangeObjects[0], addressBookCallback ,
-      TCP_NATIVE);
+      TCP_NATIVE
+    );
 
-    act.eventEmitter.on(NotificationAction.Events.Resolved,
-      function (peerIdentifier, res) {
-        t.equals(
-          res,
-          NotificationAction.ActionResolution.NETWORK_PROBLEM,
-          'Should be NETWORK_PROBLEM caused closing client socket');
-      });
+    act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
+      t.equals(
+        res, NotificationAction.ActionResolution.NETWORK_PROBLEM,
+        'Should be NETWORK_PROBLEM caused closing client socket'
+      );
+    });
 
     act.start(globals.actionAgent).then( function () {
       t.fail('Test should return failure: Could not establish TCP connection');

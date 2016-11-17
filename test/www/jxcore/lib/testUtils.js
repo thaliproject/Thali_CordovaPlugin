@@ -751,10 +751,8 @@ module.exports.setUpServer = function (testBody, appConfig) {
  * TODO: update implementation to allow multiple domains to be unresolvable
  *
  * @param {string} unresolvableDomain
- * @param {?object} t tape instance with `end` method. If it is not null
- * `dns.lookup` will be automatically restored after the test ends
  */
-module.exports.makeDomainUnresolvable = function (unresolvableDomain, t) {
+module.exports.makeDomainUnresolvable = function (unresolvableDomain) {
   var dns = require('dns');
   if (dns.__originalLookup) {
     throw new Error('makeDomainUnresolvable can\'t be called twice without ' +
@@ -779,14 +777,6 @@ module.exports.makeDomainUnresolvable = function (unresolvableDomain, t) {
       return dns.__originalLookup.apply(dns, arguments);
     }
   };
-
-  if (t && typeof t.end === 'function') {
-    var end = t.end;
-    t.end = function () {
-      module.exports.restoreUnresolvableDomains();
-      return end.apply(t, arguments);
-    };
-  }
 };
 
 module.exports.restoreUnresolvableDomains = function () {
