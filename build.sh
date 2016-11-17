@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 ### START - JXcore Test Server --------......................
 ### Testing environment prepares separate packages for each node.
@@ -6,18 +6,18 @@
 ### Make sure multiple calls to this script file compiles the application file
 ### END - JXcore Test Server   --------
 
+echo "start build.sh"
+
+pushd "$(dirname $0)" > /dev/null
+SCRIPT_PATH="$(pwd -P)"
+popd > /dev/null
+
+source "$SCRIPT_PATH/thali/install/include.sh/build-dep.sh"
+
 set -euo pipefail
 
-NORMAL_COLOR='\033[0m'
-RED_COLOR='\033[0;31m'
-GREEN_COLOR='\033[0;32m'
-GRAY_COLOR='\033[0;37m'
+trap 'log_error $LINENO' ERR
 
-OUTPUT() {
-  echo -e "${RED_COLOR}$BASH_COMMAND FAILED - build.sh failure${NORMAL_COLOR}"
-}
-
-trap OUTPUT ERR
 
 # The build has sometimes failed with the default value of maximum open
 # files per process, which is 256. Try to boost it as workaround.
@@ -33,14 +33,6 @@ THALI_PLUGIN_DIR="${WORKING_DIR}/../Thali_CordovaPlugin"
 if [ ! -d "$THALI_PLUGIN_DIR" ]; then
   cp -R . $THALI_PLUGIN_DIR
   cd $THALI_PLUGIN_DIR
-fi
-
-# Check the existence of the script that in CI gives the right test server
-# IP address.
-if [ -x "$(command -v CIGIVEMEMYIP.sh)" ]; then
-  RUN_IN_CI=0
-else
-  RUN_IN_CI=1
 fi
 
 # Print the Cordova version for debugging purposes
@@ -61,6 +53,7 @@ then
   node CITestMode.js
 fi
 
+echo "run desktop tests"
 jx runTests.js --networkType WIFI
 jx runTests.js --networkType NATIVE
 jx runTests.js --networkType BOTH
@@ -78,26 +71,22 @@ jx runCoordinatedTests.js --networkType BOTH
 # after the test execution
 cd $WORKING_DIR
 
-if [ $RUN_IN_CI == 0 ]; then
-  SERVER_ADDRESS=$(CIGIVEMEMYIP.sh)
-else
-  # Passing an empty value as the server address means that the address
-  # will be generated later in the build process based on the current host.
-  SERVER_ADDRESS=""
-fi
-
-# Remove the previous build result (if any) to start from a clean state.
+echo "remove the previous build result (if any) to start from a clean state."
 rm -rf ../ThaliTest
 
 # Either PerfTest_app.js or UnitTest_app.js
 TEST_TYPE="UnitTest_app.js"
+
+SERVER_ADDRESS="$(get_ci_ip_address)"
 
 # The line below is really supposed to be 'jx npm run setupUnit -- $SERVER_ADDRESS' but getting the last argument
 # passed through npm run and then into sh script seems to be a step too far. Eventually we could use an
 # intermediary node.js script to fix this but for now we'll just hack it.
 thali/install/setUpTests.sh $TEST_TYPE $SERVER_ADDRESS
 
-if [ $RUN_IN_CI == 0 ]; then
+if running_on_ci; then
+
+  echo "start copying builds for CI"
 
   # Make sure we are back in the project root folder
   # after the setting up the tests
@@ -111,9 +100,15 @@ if [ $RUN_IN_CI == 0 ]; then
   # A hack workround due to the fact that CI server doesn't allow relative paths outside
   # of the original parent folder as a path to the build output binaries.
   # https://github.com/thaliproject/Thali_CordovaPlugin/issues/232
+  echo "copying Android build for CI"
   rm -rf android-release-unsigned.apk
   cp -R ../ThaliTest/platforms/android/build/outputs/apk/android-release-unsigned.apk android-release-unsigned.apk
 
+  echo "copying iOS build for CI"
   rm -rf ThaliTest.app
   cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app
+
+  echo "end copying builds for CI"
 fi
+
+echo "end build.sh"

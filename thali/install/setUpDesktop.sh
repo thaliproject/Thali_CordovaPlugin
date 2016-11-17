@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 
+echo "start setUpDesktop.sh"
+
+pushd "$(dirname $0)" > /dev/null
+SCRIPT_PATH="$(pwd -P)"
+popd > /dev/null
+
+source "$SCRIPT_PATH/include.sh/build-dep.sh"
+
 set -euo pipefail
 
-echo "Start setUpDesktop.sh"
+trap 'log_error $LINENO' ERR
 
-NORMAL_COLOR='\033[0m'
-RED_COLOR='\033[0;31m'
-
-OUTPUT() {
-  echo -e "${RED_COLOR}$BASH_COMMAND FAILED - setUpDesktop failure${NORMAL_COLOR}"
-}
-
-trap OUTPUT ERR
 
 NVM_NODEJS_ORG_MIRROR=https://jxcore.azureedge.net
 export NVM_NODEJS_ORG_MIRROR
@@ -40,4 +40,4 @@ npm link thali
 node installCustomPouchDB.js
 jx npm install --no-optional
 
-echo "End setUpDesktop.sh"
+echo "end setUpDesktop.sh"

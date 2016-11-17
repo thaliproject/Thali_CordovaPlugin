@@ -1,29 +1,16 @@
 #!/usr/bin/env bash
 
+echo "start setUpTests.sh"
+
+pushd "$(dirname $0)" > /dev/null
+SCRIPT_PATH="$(pwd -P)"
+popd > /dev/null
+
+source "$SCRIPT_PATH/include.sh/build-dep.sh"
+
 set -euo pipefail
 
-NORMAL_COLOR='\033[0m'
-RED_COLOR='\033[0;31m'
-
-OUTPUT() {
-  echo -e "${RED_COLOR}$BASH_COMMAND FAILED - setUpTests failure${NORMAL_COLOR}"
-}
-
-trap OUTPUT ERR
-
-# Check the platform we are running
-IS_MINIGW_PLATFORM=false
-IS_DARWIN_PLATFORM=false
-
-if test x"$(uname -s | cut -c 1-5)" == xMINGW ; then
-  echo "Running in MinGW"
-
-  IS_MINIGW_PLATFORM=true
-elif test x"`uname`" = xDarwin ; then
-  echo "Running in macOS"
-
-  IS_DARWIN_PLATFORM=true
-fi
+trap 'log_error $LINENO' ERR
 
 TEST_PROJECT_NAME=ThaliTest
 
@@ -54,7 +41,7 @@ prepare_project()
   cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME
   mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev
 
-  if [ $IS_MINIGW_PLATFORM == true ]; then
+  if is_minigw_platform; then
       # The thali package might be installed as link and there will
       # be troubles later on if this link is tried to be copied so
       # remove it here.
@@ -79,7 +66,7 @@ install_thali()
   jx npm install $REPO_ROOT_DIR/thali --save --no-optional
   find . -name "*.gz" -delete
 
-  if [ $IS_MINIGW_PLATFORM == true ]; then
+  if is_minigw_platform; then
       # On Windows the package.json file will contain an invalid local file URI for Thali,
       # which needs to be replaced with a valid value. Otherwise the build process
       # will be aborted. Restore write permission after running sed in case
@@ -124,7 +111,7 @@ build_android()
 # Adds iOS platform when we're running on macOS
 add_ios_platform_if_possible()
 {
-  if [ $IS_DARWIN_PLATFORM == true ]; then
+  if is_darwin_platform; then
     echo "Adding iOS platform into ${TEST_PROJECT_NAME}"
 
     cd $TEST_PROJECT_ROOT_DIR
@@ -139,7 +126,7 @@ add_ios_platform_if_possible()
 # Builds iOS platform when we're running on macOS
 build_ios_if_possible()
 {
-  if [ $IS_DARWIN_PLATFORM == true ]; then
+  if is_darwin_platform; then
     echo "Building iOS app"
 
     cd $TEST_PROJECT_ROOT_DIR
@@ -190,3 +177,4 @@ build_android
 build_ios_if_possible
 
 echo "Remember to start the test coordination server by running jx index.js"
+echo "end setUpTests.sh"
