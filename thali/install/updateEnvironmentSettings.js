@@ -12,6 +12,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+function rmdirfrSync(path) {
+  exec(`rm -fr ${path}`);
+}
+
 function updateCommonGypies() {
   const nodeGypSettingsPath = path.join(os.homedir(), `.node-gyp`);
 
@@ -81,7 +85,7 @@ function prepareSettings() {
 
     exec(`${command} --prefix ${tempDir}`);
 
-    fs.rmdirSync(tempDir);
+    rmdirfrSync(tempDir);
   });
 }
 
