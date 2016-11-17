@@ -28,9 +28,9 @@ import java.util.UUID;
  * (with the help of JXcoreExtensions class).
  */
 public class ConnectionHelper
-        implements
-            ConnectionManager.ConnectionManagerListener,
-            DiscoveryManager.DiscoveryManagerListener {
+    implements
+    ConnectionManager.ConnectionManagerListener,
+    DiscoveryManager.DiscoveryManagerListener {
     private static final String TAG = ConnectionHelper.class.getName();
 
     public static final int NO_PORT_NUMBER = 0;
@@ -91,9 +91,9 @@ public class ConnectionHelper
             mDiscoveryManagerSettings.setManufacturerId(MANUFACTURER_ID);
 
             mDiscoveryManagerSettings.setAdvertiseScanModeAndTxPowerLevel(
-                    AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY,
-                    AdvertiseSettings.ADVERTISE_TX_POWER_HIGH,
-                    ScanSettings.SCAN_MODE_LOW_LATENCY);
+                AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY,
+                AdvertiseSettings.ADVERTISE_TX_POWER_HIGH,
+                ScanSettings.SCAN_MODE_LOW_LATENCY);
         } else {
             Log.e(TAG, "Constructor: Bluetooth LE discovery mode is not supported");
         }
@@ -201,7 +201,7 @@ public class ConnectionHelper
      */
     public boolean isRunning() {
         return (mConnectionManager.getState() != ConnectionManagerState.NOT_STARTED
-                && mDiscoveryManager.isRunning());
+            && mDiscoveryManager.isRunning());
     }
 
     /**
@@ -239,7 +239,7 @@ public class ConnectionHelper
             Log.i(TAG, "disconnectOutgoingConnection: Successfully disconnected (peer ID: " + peerId);
         } else {
             Log.w(TAG, "disconnectOutgoingConnection: Failed to disconnect (peer ID: " + peerId
-                    + "), either no such connection or failed to close the connection");
+                + "), either no such connection or failed to close the connection");
         }
 
         return success;
@@ -600,40 +600,44 @@ public class ConnectionHelper
                         });
                     }
 
-                @Override
-                public void onDone(SocketThreadBase who, boolean threadDoneWasSending) {
-                    Log.i(TAG, "onDone: Outgoing connection, peer "
-                        + who.getPeerProperties().toString() + " done, closing connection...");
+                    @Override
+                    public void onDone(SocketThreadBase who, boolean threadDoneWasSending) {
+                        Log.i(TAG, "onDone: Outgoing connection, peer "
+                            + who.getPeerProperties().toString() + " done, closing connection...");
 
-                    final String peerId = who.getPeerProperties().getId();
-                    closeAndRemoveOutgoingThread(peerId);
-                }
+                        final String peerId = who.getPeerProperties().getId();
+                        closeAndRemoveOutgoingThread(peerId);
+                    }
 
-                @Override
-                public void onDisconnected(SocketThreadBase who, String errorMessage) {
-                    Log.w(TAG, "onDisconnected: Outgoing connection, peer "
-                        + who.getPeerProperties().toString()
-                        + " disconnected: " + errorMessage);
+                    @Override
+                    public void onDisconnected(SocketThreadBase who, String errorMessage) {
+                        Log.w(TAG, "onDisconnected: Outgoing connection, peer "
+                            + who.getPeerProperties().toString()
+                            + " disconnected: " + errorMessage);
 
-                    final String peerId = who.getPeerProperties().getId();
-                    closeAndRemoveOutgoingThread(peerId);
-                }
+                        final String peerId = who.getPeerProperties().getId();
+                        closeAndRemoveOutgoingThread(peerId);
+                    }
 
-                @Override
-                public void onDisconnected(SocketThreadBase who, Exception exception) {
-                    Log.w(TAG, "onDisconnected: Outgoing connection, peer "
-                        + who.getPeerProperties().toString()
-                        + " disconnected: " + exception.getMessage());
-                    //No available port
-                    if (exception.getCause() instanceof ErrnoException
-                        && ((ErrnoException) exception.getCause()).errno == OsConstants.EMFILE) {
+                    @Override
+                    public void onDisconnected(SocketThreadBase who, Exception exception) {
+                        Log.w(TAG, "onDisconnected: Outgoing connection, peer "
+                            + who.getPeerProperties().toString()
+                            + " disconnected: " + exception.getMessage());
+                        //No available port
+                        if (exception.getCause() instanceof ErrnoException
+                            && ((ErrnoException) exception.getCause()).errno == OsConstants.EMFILE) {
+                            processErrnoException(who);
+                        } else {
+                            onDisconnected(who, exception.getMessage());
+                        }
+                    }
+
+                    private void processErrnoException(SocketThreadBase who) {
                         callback.callOnConnectCallback(NO_AVAILABLE_PORTS, null);
                         closeAndRemoveOutgoingThread(who.getPeerProperties().getId());
-                    } else {
-                        onDisconnected(who, exception.getMessage());
                     }
-                }
-            });
+                });
         } catch (IOException e) {
             Log.e(TAG, "handleOutgoingConnection: Failed to create an outgoing connection thread instance: " + e.getMessage(), e);
 
@@ -731,7 +735,11 @@ public class ConnectionHelper
 
                     @Override
                     public void onDisconnected(SocketThreadBase who, Exception exception) {
-                        //No need to implement
+                        // It will be never called in current implementation of IncomingSocketThread
+                        // Default implementation without eating of the exceptions for some future cases
+                        if (exception != null) {
+                            onDisconnected(who, exception.getMessage());
+                        }
                     }
                 });
         } catch (IOException e) {
