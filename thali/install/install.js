@@ -362,12 +362,15 @@ module.exports = function (callback, appRootDirectory) {
 
         return uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory)
           .then(function () {
-            console.log('Adding Thali Cordova plugin from: ' +
+            console.log('start adding Thali Cordova plugin from: ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory);
 
             return exec('cordova plugins add ' +
               thaliCordovaPluginUnZipResult.unzipedDirectory,
-              { cwd: appRootDirectory });
+              { cwd: appRootDirectory })
+              .then(function () {
+                console.log('end adding Thali Cordova plugin');
+              });
           })
           .then(function () {
             return fs.writeFileAsync(weAddedPluginsFile, 'yes');
