@@ -68,7 +68,7 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
   private let streamReceivedBackTimeout: NSTimeInterval
 
   /**
-   Called when creating of `VirtualSocket` is completed.
+   Called when creation of VirtualSocket is completed.
 
    It has 2 arguments: `VirtualSocket?` and `ErrorType?`.
 
@@ -170,7 +170,7 @@ final class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
   // MARK: - Private state
 
   /**
-   Called when creating of `VirtualSocket` is completed.
+   Called when creation of VirtualSocket is completed.
 
    It has 2 arguments: `VirtualSocket?` and `ErrorType?`.
 
@@ -189,7 +189,7 @@ final class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
        non-TCP/IP session that will be used for communication among peers via `VirtualSocket`.
 
      - completion:
-       Called when creating of `VirtualSocket` is completed.
+       Called when creation of VirtualSocket is completed.
 
    - returns:
      An initialized `AdvertiserVirtualSocketBuilder` object.

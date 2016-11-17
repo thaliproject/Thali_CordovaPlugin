@@ -35,7 +35,7 @@ final class Browser: NSObject {
   private let browser: MCNearbyServiceBrowser
 
   /**
-   Represents peers that can be invited into MCSession.
+   Represents peers who can be invited into MCSession.
    */
   private var availablePeers: Atomic<[Peer: MCPeerID]> = Atomic([:])
 
