@@ -4,7 +4,7 @@ var Promise = require('lie');
 var assert = require('assert');
 var https = require('https');
 var PeerAction = require('../thaliPeerPool/thaliPeerAction');
-var PeerDictionary = require('./thaliPeerDictionary');
+var PeerConnectionInformation = require('./thaliPeerConnectionInformation');
 var NotificationBeacons = require('./thaliNotificationBeacons');
 var EventEmitter = require('events').EventEmitter;
 var thaliConfig = require('../thaliConfig');
@@ -29,24 +29,27 @@ var ThaliMobile = require('../thaliMobile');
  * @fires module:thaliNotificationAction.event:Resolved
  */
 /* jshint -W003 */
-function ThaliNotificationAction(peerIdentifier,
+function ThaliNotificationAction(peer,
                                  ecdhForLocalDevice,
-                                 addressBookCallback,
-                                 connectionType) {
+                                 addressBookCallback) {
 
-  assert(peerIdentifier, 'peerIdentifier must not be null or undefined');
+  assert(peer, 'peer must not be null or undefined');
+  assert(peer.peerIdentifier, 'peer.peerIdentifier must be set');
+  assert(peer.connectionType, 'peer.connectionType must be set');
+  assert(typeof peer.generation === 'number',
+    'peer.generation must be a number');
   assert(ecdhForLocalDevice,
     'ecdhForLocalDevice must not be null or undefined');
   assert(addressBookCallback,
     'addressBookCallback must not be null or undefined');
-  assert(connectionType,
-    'connectionType must not be null or undefined');
 
-  ThaliNotificationAction.super_.call(this, peerIdentifier,
-    connectionType,
+  ThaliNotificationAction.super_.call(this, peer.peerIdentifier,
+    peer.connectionType,
     ThaliNotificationAction.ACTION_TYPE,
     thaliConfig.BEACON_PSK_IDENTITY,
     thaliConfig.BEACON_KEY);
+
+  this._peer = peer;
 
   this.eventEmitter = new EventEmitter();
 
@@ -67,6 +70,11 @@ inherits(ThaliNotificationAction, PeerAction);
 ThaliNotificationAction.prototype.getResolution = function () {
   return this._resolution;
 };
+
+ThaliNotificationAction.prototype.getPeerGeneration = function () {
+  return this._peer.generation;
+};
+
 
 /**
  * NotificationAction's event emitter
@@ -123,7 +131,7 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
       });
     })
     .then(function (peerHostInfo) {
-      self._peerConnection = new PeerDictionary.PeerConnectionInformation(
+      self._peerConnection = new PeerConnectionInformation(
         self.getConnectionType(),
         peerHostInfo.hostAddress,
         peerHostInfo.portNumber,
@@ -281,8 +289,12 @@ ThaliNotificationAction.prototype._complete = function (resolution,
     // Sets our state to KILLED now that we are done
     ThaliNotificationAction.super_.prototype.kill.call(this);
 
-    this.eventEmitter.emit(ThaliNotificationAction.Events.Resolved,
-      this.getPeerIdentifier(), resolution, beaconDetails);
+    this.eventEmitter.emit(
+      ThaliNotificationAction.Events.Resolved,
+      this,
+      resolution,
+      beaconDetails
+    );
 
     if (error && this._reject) {
       this._reject(new Error(error));
