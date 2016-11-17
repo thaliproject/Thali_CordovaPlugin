@@ -69,11 +69,20 @@ function cleanupSettings() {
 }
 
 function prepareSettings() {
-  exec(`jx install leveldown-mobile`);
-  exec(`jx uninstall leveldown-mobile`);
+  [
+    `jx install leveldown-mobile`,
+    `npm install leveldown-mobile`
+  ]
+  .forEach((command) => {
+    const tempDir = path.join(
+      os.tmpdir(), `thali_update_env_${new Date().getTime()}`);
 
-  exec(`npm install leveldown-mobile`);
-  exec(`npm uninstall leveldown-mobile`);
+    fs.mkdirSync(tempDir);
+
+    exec(`${command} --prefix ${tempDir}`);
+
+    fs.rmdirSync(tempDir);
+  });
 }
 
 function updateSettings() {
