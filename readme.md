@@ -65,10 +65,11 @@ jx npm init
 We are still inside of FooBar/www/jxcore and now we are running the script
 that MUST be run before installing thali since a bug in our installer.
 In other case install will fail. This script will go away as soon as
-installed fixed.
+installed fixed. See one of the reasons [thaliproject/Thali_CordovaPlugin#1221](https://github.com/thaliproject/Thali_CordovaPlugin/issues/1221),
+[thaliproject/Thali_CordovaPlugin#1250](https://github.com/thaliproject/Thali_CordovaPlugin/issues/1250) to run this script.
 
 ```
-../../../Thali_CordovaPlugin/thali/install/setUpDesktop.sh
+npm run setupDesktop --prefix ../../../Thali_CordovaPlugin/thali/install
 ```
 
 We are still inside of FooBar/www/jxcore and now we are dealing with creating a
