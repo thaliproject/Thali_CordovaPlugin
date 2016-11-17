@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.SocketException;
 
 /**
  * The base (thread) class for outgoing and incoming socket threads.
@@ -277,5 +278,21 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
 
             Log.i(mTag, "startStreamCopyingThreads: OK (thread ID: " + getId() + ")");
         }
+    }
+
+    protected void configureSocket() throws SocketException {
+        if(mLocalhostSocket!=null){
+            mLocalhostSocket.setKeepAlive(true);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && mBluetoothSocket!=null) {
+                mLocalhostSocket.setReceiveBufferSize(mBluetoothSocket.getMaxReceivePacketSize());
+                mLocalhostSocket.setSendBufferSize(mBluetoothSocket.getMaxTransmitPacketSize());
+            }
+            mLocalhostSocket.setReuseAddress(false);
+            mLocalhostSocket.setOOBInline(false);
+            mLocalhostSocket.setSoLinger(true , 0);
+            mLocalhostSocket.setSoTimeout(0);
+            mLocalhostSocket.setTcpNoDelay(true);
+        }
+
     }
 }
