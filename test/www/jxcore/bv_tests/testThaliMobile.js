@@ -1781,6 +1781,109 @@ test('If a peer is not available (and hence is not in the thaliMobile cache)' +
   }
 );
 
+test.only('does not fire duplicate events after peer listener recreation',
+  function () {
+    return !platform.isAndroid ||
+      global.NETWORK_TYPE !== ThaliMobile.networkTypes.NATIVE;
+  },
+  function (t) {
+    var peerId = 'peer-id';
+    var generation = 0;
+    var initialPort = 1234;
+    var recreatedPort = 1235;
+    var EVENT_NAME = 'nonTCPPeerAvailabilityChangedEvent';
+    var BLUETOOTH = ThaliMobileNativeWrapper.connectionTypes.BLUETOOTH;
+
+    var callCount = 0;
+    ThaliMobile.emitter.on('peerAvailabilityChanged', function listener(peer) {
+      callCount++;
+      switch (callCount) {
+        case 1:
+          t.deepEqual(peer, {
+            peerIdentifier: peerId,
+            connectionType: BLUETOOTH,
+            peerAvailable: true,
+            generation: generation,
+            newAddressPort: false,
+          }, '1st call - correct peer');
+
+          // emulate peer listener recreation
+          setImmediate(function () {
+            ThaliMobileNativeWrapper.emitter.emit(EVENT_NAME, {
+              peerIdentifier: peerId,
+              peerAvailable: false,
+              generation: null,
+              portNumber: null,
+              recreated: true,
+            });
+          });
+          break;
+        case 2:
+          t.deepEqual(peer, {
+            peerIdentifier: peerId,
+            connectionType: BLUETOOTH,
+            peerAvailable: false,
+            generation: null,
+            newAddressPort: null,
+          });
+
+          // emulate peer listener recreation
+          setImmediate(function () {
+            ThaliMobileNativeWrapper.emitter.emit(EVENT_NAME, {
+              peerIdentifier: peerId,
+              peerAvailable: true,
+              generation: generation,
+              portNumber: recreatedPort,
+              recreated: true,
+            });
+          });
+          break;
+        case 3:
+          t.deepEqual(peer, {
+            peerIdentifier: peerId,
+            connectionType: BLUETOOTH,
+            peerAvailable: true,
+            generation: generation,
+            newAddressPort: false,
+          });
+
+          // This should never happen in reality. Native Android does not send
+          // repeated 'peerAvailabilityChanged' events. But this test checks
+          // that thaliMobile ignores repeated events after recreation anyway.
+          setImmediate(function () {
+            ThaliMobileNativeWrapper.emitter.emit(EVENT_NAME, {
+              peerIdentifier: peerId,
+              peerAvailable: true,
+              generation: generation,
+              portNumber: recreatedPort,
+              recreated: false,
+            });
+
+            ThaliMobile.emitter
+              .removeListener('peerAvailabilityChanged', listener);
+            t.end();
+          });
+          break;
+        case 4:
+          t.fail('Got unexpected peerAvailabilityChanged event');
+      }
+    });
+
+    ThaliMobile.start(express.Router(), null, ThaliMobile.networkTypes.NATIVE)
+    .then(function () {
+      ThaliMobileNativeWrapper.emitter.emit(EVENT_NAME, {
+        peerIdentifier: peerId,
+        peerAvailable: true,
+        generation: generation,
+        portNumber: initialPort,
+        recreated: false,
+      });
+    })
+    .catch(function (err) {
+      t.end(err || new Error('test failed'));
+    });
+  }
+);
 
 if (!tape.coordinated) {
   return;
