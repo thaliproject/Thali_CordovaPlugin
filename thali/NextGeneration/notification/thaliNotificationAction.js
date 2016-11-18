@@ -117,9 +117,10 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
       return ThaliMobile.getPeerHostInfo(
         self.getPeerIdentifier(),
         self.getConnectionType()
-      ).catch(function (error) {
+      )
+      .catch(function (error) {
         self._complete(ThaliNotificationAction.ActionResolution.BAD_PEER);
-        throw error;
+        return Promise.reject(error);
       });
     })
     .then(function (peerHostInfo) {
