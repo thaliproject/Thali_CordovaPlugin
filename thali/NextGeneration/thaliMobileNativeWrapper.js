@@ -377,7 +377,7 @@ function stopNative() {
         if (Object.keys(errorDescriptions).length === 0) {
           resolve();
         } else {
-          reject(errorDescriptions)
+          reject(errorDescriptions);
         }
 
       });
