@@ -405,18 +405,17 @@ test('make sure terminateListener is return error if we get called on iOS',
     return !platform.isIOS;
   },
   function (t) {
-    var err = 'Not connect platform';
+    var error = 'Not connect platform';
 
-    try {
-      thaliMobileNativeWrapper._terminateConnection();
-    } catch(e) {
-      t.equal(e.message, err, 'error description matches');
+    thaliMobileNativeWrapper._terminateConnection()
+    .then(function() {
+      t.fail('should not succeed on iOS');
       t.end();
-      return;
-    }
-
-    t.fail('should not succeed on iOS');
-    t.end();
+    })
+    .catch(function(err) {
+      t.equal(err.message, error, 'error description matches');
+      t.end();
+    });
   }
 );
 
@@ -434,18 +433,17 @@ test('make sure terminateListener is return error if we get called on iOS',
     return !platform.isIOS;
   },
   function (t) {
-    var err = 'Not connect platform';
+    var error = 'Not connect platform';
 
-    try {
-      thaliMobileNativeWrapper.terminateListener();
-    } catch(e) {
-      t.equal(e.message, err, 'error description matches');
+    thaliMobileNativeWrapper.terminateListener()
+    .then(function() {
+      t.fail('should not succeed on iOS');
       t.end();
-      return;
-    }
-
-    t.fail('should not succeed on iOS');
-    t.end();
+    })
+    .catch(function(err) {
+      t.equal(err.message, error, 'error description matches');
+      t.end();
+    });
   }
 );
 
