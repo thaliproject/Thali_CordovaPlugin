@@ -297,7 +297,7 @@ module.exports.start = function (router, pskIdToSecret) {
         gRouterServerPort = gRouterServer.address().port;
         logger.debug('listening', gRouterServerPort);
 
-        if(platform.isAndroid) {
+        if (platform.isAndroid) {
           stopCreateAndStartServersManager()
             .then(function () {
               states.started = true;
@@ -330,71 +330,75 @@ module.exports.start = function (router, pskIdToSecret) {
  */
 
 function stop(resolve, reject) {
-   if (!states.started) {
-     return resolve();
-   }
+  if (!states.started) {
+    return resolve();
+  }
 
-   states.started = false;
+  states.started = false;
 
-   var errorDescriptions = {};
+  var errorDescriptions = {};
 
-   stopNative()
-   .catch(function(err) {
-     errorDescriptions = err;
-   })
-   .then(function() {
-     if(platform.isAndroid) {
-       return stopServersManager();
-     }
-     return Promise.resolve();
-   })
-   .catch(function (err) {
-     errorDescriptions.stopServersManagerError = err;
-   })
-   .then(function () {
-     var oldRouterServer = gRouterServer;
-     gRouterServer = null;
-     return oldRouterServer ? oldRouterServer.closeAllPromise() :
-       Promise.resolve();
-   })
-   .catch(function (err) {
-     errorDescriptions.stopRouterServerError = err;
-   })
-   .then(function () {
-     if (Object.getOwnPropertyNames(errorDescriptions).length === 0) {
-       return resolve();
-     }
+  stopNative()
+  .catch(function (err) {
+    errorDescriptions = err;
+  })
+  .then(function () {
+    if (platform.isAndroid) {
+      return stopServersManager();
+    }
+    return Promise.resolve();
+  })
+  .catch(function (err) {
+    errorDescriptions.stopServersManagerError = err;
+  })
+  .then(function () {
+    var oldRouterServer = gRouterServer;
+    gRouterServer = null;
+    return oldRouterServer ? oldRouterServer.closeAllPromise() :
+      Promise.resolve();
+  })
+  .catch(function (err) {
+    errorDescriptions.stopRouterServerError = err;
+  })
+  .then(function () {
+    if (Object.keys(errorDescriptions).length === 0) {
+      return resolve();
+    }
 
-     var error = new Error('check errorDescriptions property');
-     error.errorDescriptions = errorDescriptions;
+    var error = new Error('check errorDescriptions property');
+    error.errorDescriptions = errorDescriptions;
 
-     return reject(error);
-   });
- }
+    return reject(error);
+  });
+}
 
- function stopNative() {
-   return new Promise(function(resolve, reject) {
-     var errorDescriptions = {};
+function stopNative() {
+  return new Promise(function (resolve, reject) {
+    var errorDescriptions = {};
 
-     Mobile('stopAdvertisingAndListening').callNative(function (error) {
-       if (error) {
-         errorDescriptions.stopAdvertisingError = new Error(error);
-         reject(errorDescriptions);
-       }
-       Mobile('stopListeningForAdvertisements').callNative(function (error) {
-         if (error) {
-           errorDescriptions.stopListeningError = new Error(error);
-           reject(errorDescriptions);
-         }
-         resolve();
-       });
-     });
-   })
- }
+    Mobile('stopAdvertisingAndListening').callNative(function (error) {
+      if (error) {
+        errorDescriptions.stopAdvertisingError = new Error(error);
+      }
+      Mobile('stopListeningForAdvertisements').callNative(function (error) {
+        if (error) {
+          errorDescriptions.stopListeningError = new Error(error);
+        }
 
- module.exports.stop = function() {
-   return gPromiseQueue.enqueue(stop);
- }
+        if (Object.keys(errorDescriptions).length === 0) {
+          resolve();
+        } else {
+          reject(errorDescriptions)
+        }
+
+      });
+    });
+  });
+}
+
+module.exports.stop = function () {
+  return gPromiseQueue.enqueue(stop);
+};
 
 // jscs:disable maximumLineLength
 /**
@@ -540,7 +544,10 @@ module.exports.startUpdateAdvertisingAndListening = function () {
       return reject(new Error('Call Start!'));
     }
 
-    var port = (platform.isAndroid) ? gServersManagerLocalPort : gRouterServerPort;
+    var port = (platform.isAndroid) ?
+                gServersManagerLocalPort :
+                gRouterServerPort;
+
     Mobile('startUpdateAdvertisingAndListening').callNative(
       port,
       function (error) {
@@ -975,8 +982,9 @@ var handlePeerAvailabilityChanged = function (peer) {
 module.exports._handlePeerAvailabilityChanged = handlePeerAvailabilityChanged;
 
 function getPeerPort(peer) {
-  if(gServersManager) {
-    return gServersManager.createPeerListener(peer.peerIdentifier, peer.pleaseConnect);
+  if (gServersManager) {
+    return gServersManager.createPeerListener(peer.peerIdentifier,
+      peer.pleaseConnect);
   } else {
     return Promise.resolve(null);
   }
@@ -1148,7 +1156,9 @@ module.exports._registerToNative = function () {
         return;
       }
 
-      var originalPortNumber = (platform.isAndroid) ? gServersManagerLocalPort : gRouterServerPort;
+      var originalPortNumber = (platform.isAndroid) ?
+                                gServersManagerLocalPort :
+                                gRouterServerPort;
 
       if (originalPortNumber !== portNumber) {
         logger.info('got incomingConnectionToPortNumberFailed for port ' +
