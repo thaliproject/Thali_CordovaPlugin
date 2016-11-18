@@ -605,34 +605,38 @@ module.exports.getNonTCPNetworkStatus = function () {
  * @return {Promise<number|Error} The promise will either return an integer with
  * the localhost port to connect to or an Error object.
  */
- module.exports._multiConnect = function (peerIdentifier) {
-   return gPromiseQueue.enqueue(function (resolve, reject) {
-     var originalSyncValue = uuid.v4();
 
-     Mobile('multiConnect')
-       .callNative(peerIdentifier, originalSyncValue, function (error) {
-         if (error) {
-           return reject(new Error(error));
-         }
+var multiConnectCounter = 0;
 
-         module.exports.emitter.on('_multiConnectResolved',
-          function callback (syncValue, error, portNumber) {
-             if(originalSyncValue !== syncValue) {
-               return;
-             }
+module.exports._multiConnect = function (peerIdentifier) {
+  return gPromiseQueue.enqueue(function (resolve, reject) {
+    var originalSyncValue = multiConnectCounter++;
 
-             module.exports.emitter.removeListener('_multiConnectResolved', callback);
+    Mobile('multiConnect')
+    .callNative(peerIdentifier, originalSyncValue, function (error) {
+      if (error) {
+        return reject(new Error(error));
+      }
 
-             if (error) {
-               return reject(new Error(error));
-             }
+      module.exports.emitter.on('_multiConnectResolved',
+        function callback (syncValue, error, portNumber) {
+          if (originalSyncValue !== syncValue) {
+            return;
+          }
 
-             resolve(portNumber);
-           }
-         );
-       });
-   });
- };
+          module.exports.emitter.removeListener(
+            '_multiConnectResolved', callback);
+
+          if (error) {
+            return reject(new Error(error));
+          }
+
+          resolve(portNumber);
+        }
+      );
+    });
+  });
+};
 
 // jscs:disable jsDoc
 /**
@@ -1102,9 +1106,13 @@ module.exports._registerToNative = function () {
   );
 
 
-  registerToNative('multiConnectResolved', function(syncValue, error, portNumber) {
-    module.exports.emitter.emit('_multiConnectResolved', syncValue, error, portNumber);
-  });
+  registerToNative('multiConnectResolved',
+    function (syncValue, error, portNumber) {
+      module.exports.emitter.emit(
+        '_multiConnectResolved',
+        syncValue, error, portNumber);
+    }
+  );
 
   registerToNative('networkChanged', function (networkChangedValue) {
     logger.debug('networkChanged: %s', JSON.stringify(networkChangedValue));
