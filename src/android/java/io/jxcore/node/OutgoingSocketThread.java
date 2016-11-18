@@ -5,7 +5,6 @@ package io.jxcore.node;
 
 import android.bluetooth.BluetoothSocket;
 import android.util.Log;
-
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 import java.io.IOException;
 import java.io.InputStream;
