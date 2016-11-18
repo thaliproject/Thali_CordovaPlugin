@@ -574,6 +574,8 @@ module.exports.getNonTCPNetworkStatus = function () {
   });
 };
 
+var multiConnectCounter = 0;
+
 /**
  * This calls the native multiConnect method. This code is responsible for
  * honoring the restrictions placed on calls to multiConnect. Which is that
@@ -596,8 +598,6 @@ module.exports.getNonTCPNetworkStatus = function () {
  * @return {Promise<number|Error} The promise will either return an integer with
  * the localhost port to connect to or an Error object.
  */
-
-var multiConnectCounter = 0;
 
 module.exports._multiConnect = function (peerIdentifier) {
   return gPromiseQueue.enqueue(function (resolve, reject) {
