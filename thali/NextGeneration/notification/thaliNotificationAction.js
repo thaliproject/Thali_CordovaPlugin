@@ -16,14 +16,14 @@ var ThaliMobile = require('../thaliMobile');
  * Creates a sub-type of the {@link module:thaliPeerPoolInterface~PeerAction}
  * class to represent actions for retrieving notifications.
  *
- * @param {string} peerIdentifier
- * @param {module:ThaliMobileNativeWrapper.connectionTypes} connectionType
+ * @param {object} peer
+ * @param {string} peer.peerIdentifier
+ * @param {number} peer.generation
+ * @param {module:ThaliMobileNativeWrapper.connectionTypes} peer.connectionType
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized
  * with the local device's public and private keys.
  * @param {addressBookCallback} addressBookCallback A callback used to validate
  * which peers we are interested in talking to.
- * @param {module:thaliPeerDictionary~PeerConnectionInformation} peerConnection
- * Connection parameters to connect to peer.
  * @constructor
  * @implements {module:thaliPeerAction~PeerAction}
  * @fires module:thaliNotificationAction.event:Resolved
@@ -49,10 +49,9 @@ function ThaliNotificationAction(peer,
     thaliConfig.BEACON_PSK_IDENTITY,
     thaliConfig.BEACON_KEY);
 
-  this._peer = peer;
-
   this.eventEmitter = new EventEmitter();
 
+  this._peerGeneration = peer.generation;
   this._ecdhForLocalDevice = ecdhForLocalDevice;
   this._addressBookCallback = addressBookCallback;
 
@@ -72,7 +71,7 @@ ThaliNotificationAction.prototype.getResolution = function () {
 };
 
 ThaliNotificationAction.prototype.getPeerGeneration = function () {
-  return this._peer.generation;
+  return this._peerGeneration;
 };
 
 

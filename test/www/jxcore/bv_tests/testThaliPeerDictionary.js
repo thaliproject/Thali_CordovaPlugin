@@ -5,8 +5,6 @@ var sinon = require('sinon');
 
 var PeerDictionary =
   require('thali/NextGeneration/notification/thaliPeerDictionary');
-var PeerConnectionInformation =
-  require('thali/NextGeneration/notification/thaliPeerConnectionInformation');
 var ThaliNotificationAction =
   require('thali/NextGeneration/notification/thaliNotificationAction');
 var ThaliMobileNativeWrapper =
@@ -132,27 +130,6 @@ function verifyEntries(dictionary, baseString, generation, start, end) {
   }
   return true;
 }
-
-test('Test PeerConnectionInformation basics', function (t) {
-
-  var connInfo = new PeerConnectionInformation(
-    ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE,
-    '127.0.0.1', 123, 10);
-
-  t.equals( connInfo.getConnectionType(),
-    ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE, 'connection type works');
-
-  t.equals( connInfo.getHostAddress(),
-    '127.0.0.1', 'getHostAddress works');
-
-  t.equals( connInfo.getPortNumber(),
-    123, 'getPortNumber works');
-
-  t.equals( connInfo.getSuggestedTCPTimeout(),
-    10, 'getSuggestedTCPTimeout works');
-
-  t.end();
-});
 
 test('Test PeerDictionary basic functionality', function (t) {
   var dictionary = new PeerDictionary.PeerDictionary();
