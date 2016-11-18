@@ -253,7 +253,6 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
  * @param {string} peer.peerIdentifier
  * @param {number} peer.generation
  * @param {module:ThaliMobileNativeWrapper.connectionTypes} peer.connectionType
- * @param {module:thaliPeerDictionary.PeerConnectionInformation} peerConnectionInfo
  */
 // jscs:enable maximumLineLength
 ThaliNotificationClient.prototype._createNewAction =
@@ -281,6 +280,31 @@ ThaliNotificationClient.prototype._createNewAction =
   };
 
 /**
+ * This function recreates failed action
+ *
+ * @private
+ * @param {module:thaliNotificationAction~NotificationPeerDictionaryEntry} peerEntry
+ * @param {object} peer
+ * @param {string} peer.peerIdentifier
+ * @param {number} peer.generation
+ * @param {module:ThaliMobileNativeWrapper.connectionTypes} peer.connectionType
+ */
+ThaliNotificationClient.prototype._retryAction = function (action) {
+  var peer = {
+    peerIdentifier: action.getPeerIdentifier(),
+    generation: action.getPeerGeneration(),
+  };
+  var entry = this.peerDictionary.get(peer);
+
+  assert(entry, 'entry exists');
+  assert(entry.peerState === PeerDictionary.peerState.WAITING,
+    'peer state is WAITING');
+
+  peer.connectionType = action.getConnectionType();
+  this._createNewAction(entry, peer);
+};
+
+/**
  * This function handles
  * {@link module:thaliNotificationAction.eventEmitter:Resolved} events
  * coming from the actions.
@@ -306,7 +330,6 @@ ThaliNotificationClient.prototype._onActionResolved =
     var peer = {
       peerIdentifier: action.getPeerIdentifier(),
       generation: action.getPeerGeneration(),
-      connectionType: action.getConnectionType(),
     };
 
     var entry = this.peerDictionary.get(peer);
@@ -376,36 +399,27 @@ ThaliNotificationClient.prototype._onActionResolved =
         // ThaliPeerPoolInterface called kill due to resource exhaustion.
         // We will for wait time out specified in the RETRY_TIMEOUTS
         // array and try again.
-        var timeOutHandler = function (peer) {
-          entry = this.peerDictionary.get(peer);
-          if (entry && entry.peerState === PeerDictionary.peerState.WAITING) {
-            this._createNewAction(entry, peer);
-          } else {
-            assert(false, 'unknown state should be WAITING but got ' + entry.peerState);
-          }
-        };
 
         var maxRetries = ThaliNotificationClient.RETRY_TIMEOUTS.length;
         if (entry.retryCounter < maxRetries) {
-          entry.peerState = PeerDictionary.peerState.WAITING;
-          this.peerDictionary.addUpdateEntry(peer, entry);
 
           // Adds 0 - 100 ms random component to keep concurrent tryouts
           // out of sync.
           var timeOut =
-            ThaliNotificationClient.RETRY_TIMEOUTS[entry.retryCounter++] +
+            ThaliNotificationClient.RETRY_TIMEOUTS[entry.retryCounter] +
             Math.floor(Math.random() * 101);
 
+          entry.retryCounter++;
+          entry.peerState = PeerDictionary.peerState.WAITING;
           entry.waitingTimeout = setTimeout(
-            timeOutHandler.bind(this, peer),
+            this._retryAction.bind(this, action),
             timeOut);
-          this.peerDictionary.addUpdateEntry(peer, entry);
         } else {
           // Gives up after all the timeouts from the RETRY_TIMEOUTS array
           // has been spent.
           entry.peerState = PeerDictionary.peerState.RESOLVED;
-          this.peerDictionary.addUpdateEntry(peer, entry);
         }
+        this.peerDictionary.addUpdateEntry(peer, entry);
         break;
       }
     }
@@ -419,7 +433,7 @@ ThaliNotificationClient.prototype._onActionResolved =
  * @type {number[]}
  */
 ThaliNotificationClient.RETRY_TIMEOUTS =
-  [100, 300, 600, 1200, 2400 , 4800, 9600];
+  [100, 300, 600, 1200, 2400, 4800, 9600];
 
 ThaliNotificationClient.Errors = {
   PEERPOOL_NOT_NULL : 'thaliPeerPoolInterface must not be null',
