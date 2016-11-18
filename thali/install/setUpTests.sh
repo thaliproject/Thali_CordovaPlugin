@@ -65,7 +65,7 @@ install_thali()
 
   cd $TEST_PROJECT_ROOT_DIR/www/jxcore
   node installCustomPouchDB.js
-  jx npm install $REPO_ROOT_DIR/thali --save --no-optional
+  jx install $REPO_ROOT_DIR/thali --save --no-optional
   find . -name "*.gz" -delete
 
   if is_minigw_platform; then
@@ -81,7 +81,7 @@ install_thali()
   # keys) that makes Android unhappy so we remove it below in addition to the gz
   # files.
   echo "run supertest for Android"
-  npm install --no-optional --production
+  jx install --no-optional --production
 
   # In case autoremove fails to delete the files, delete them explicitly.
   find . -name "*.gz" -delete
