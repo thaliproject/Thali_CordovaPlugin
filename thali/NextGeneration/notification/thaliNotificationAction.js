@@ -22,7 +22,7 @@ var ThaliMobile = require('../thaliMobile');
  * Creates a sub-type of the {@link module:thaliPeerPoolInterface~PeerAction}
  * class to represent actions for retrieving notifications.
  *
- * @param {object} peer
+ * @param {Object} peer
  * @param {string} peer.peerIdentifier
  * @param {number} peer.generation
  * @param {module:ThaliMobileNativeWrapper.connectionTypes} peer.connectionType

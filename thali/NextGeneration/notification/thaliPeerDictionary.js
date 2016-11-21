@@ -125,7 +125,7 @@ PeerDictionary.MAXSIZE = 100;
  * and it is removed.
  *
  * @public
- * @param {object} peer
+ * @param {Object} peer
  * @param {string} peer.peerIdentifier
  * @param {number} peer.generation
  * @param {module:thaliPeerDictionary~NotificationPeerDictionaryEntry} entry
@@ -164,7 +164,7 @@ PeerDictionary.prototype.addUpdateEntry =
  * found.
  *
  * @public
- * @param {object} peer
+ * @param {Object} peer
  * @param {string} peer.peerIdentifier
  * @param {number} peer.generation
  */
@@ -218,7 +218,7 @@ PeerDictionary.prototype.removeAll = function () {
  * Checks if the entry exists in the dictionary.
  *
  * @public
- * @param {object} peer
+ * @param {Object} peer
  * @param {string} peer.peerIdentifier
  * @param {number} peer.generation
  * @returns {boolean} Returns true if the entry exists, false otherwise.
@@ -239,7 +239,7 @@ PeerDictionary.prototype.exists = function (peer) {
  * Returns an entry from the dictionary which matches with the peerId.
  *
  * @public
- * @param {object} peer
+ * @param {Object} peer
  * @param {string} peer.peerIdentifier
  * @param {number} peer.generation
  * @returns {module:thaliPeerDictionary~NotificationPeerDictionaryEntry}
