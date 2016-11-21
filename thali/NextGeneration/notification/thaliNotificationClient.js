@@ -249,7 +249,7 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
  *
  * @private
  * @param {module:thaliPeerDictionary~NotificationPeerDictionaryEntry} peerEntry
- * @param {object} peer
+ * @param {Object} peer
  * @param {string} peer.peerIdentifier
  * @param {number} peer.generation
  * @param {module:ThaliMobileNativeWrapper.connectionTypes} peer.connectionType
@@ -284,7 +284,7 @@ ThaliNotificationClient.prototype._createNewAction =
  *
  * @private
  * @param {module:thaliNotificationAction~NotificationPeerDictionaryEntry} peerEntry
- * @param {object} peer
+ * @param {Object} peer
  * @param {string} peer.peerIdentifier
  * @param {number} peer.generation
  * @param {module:ThaliMobileNativeWrapper.connectionTypes} peer.connectionType
