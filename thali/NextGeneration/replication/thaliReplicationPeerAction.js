@@ -8,7 +8,6 @@ var actionState = ThaliPeerAction.actionState;
 var assert = require('assert');
 var thaliConfig = require('../thaliConfig');
 var logger = require('../../ThaliLogger')('thaliReplicationPeerAction');
-var ForeverAgent = require('forever-agent');
 var LocalSeqManager = require('./localSeqManager');
 var RefreshTimerManager = require('./utilities').RefreshTimerManager;
 var Utils = require('../utils/common.js');
@@ -101,6 +100,15 @@ ThaliReplicationPeerAction.prototype.getPeerAdvertisesDataForUs = function () {
 };
 
 /**
+ * Creates a new replication action with the same constructor arguments as
+ * this replication action.
+ */
+ThaliReplicationPeerAction.prototype.clone = function () {
+  return new ThaliReplicationPeerAction(this._peerAdvertisesDataForUs,
+    this._PouchDB, this._dbName, this._ourPublicKey);
+};
+
+/**
  * The replication timer is needed because by default we do live replications
  * which will keep a connection open to the remote server and send heartbeats
  * to keep things going. This means that our timers at lower levels in our
@@ -189,52 +197,12 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
   return ThaliReplicationPeerAction.super_.prototype.start
     .call(this, httpAgentPool)
     .then(function () {
-      /*
-      TODO: The code below deals with several issues in a non-obvious way.
-      First, there is https://github.com/thaliproject/thali/issues/267 which
-      deals with a bug in PouchDB that prevents us from using the agent
-      option which we need to use httpAgentPool. The current work around is
-      that we instead specify an agent class and agentOptions.
-
-      This leads to another related issue. Because we can't use agent we
-      create a situation where request (which is hiding under PouchDB on
-      Node.js) will use a pool to pick an agent to use. In other words request
-      will look at PouchDB's HTTP request and create a key for it and check
-      the pool of agents it has and see if any match. Normally this is good
-      except that request doesn't know anything about PSK so it doesn't use
-      the PSK values in its pool ID calculations and thus you get fun
-      events like using the same agent (with the same psk ID and key) for
-      two different peers! To prevent this we put in the secureOptions
-      argument which currently Node.js ignores when we use PSK. We stick
-      in there both the pskId as well as the URL. The reason we need both
-      is that the same PSK ID can legitimately be used with two different
-      URLS (For example, if the same peer is available over both bluetooth
-      and wifi). In addition the same URL can legitimately use two different
-      PSK IDs (for example, beacon requests use one ID while all other
-      requests use a secure ID). So we need both values to guarantee the
-      right kind of uniqueness.
-
-      We picked secureOptions because if we used cert (which is ignored when
-      we use PSK) we would also have to use key. We couldn't use PFX because
-      then request tries to load it! So secureOptions was our last choice and
-      it seems to work.
-       */
       var remoteUrl = 'https://' + self._peerAdvertisesDataForUs.hostAddress +
-        ':' + self._peerAdvertisesDataForUs.portNumber + path.join(thaliConfig.BASE_DB_PATH, self._dbName);
+        ':' + self._peerAdvertisesDataForUs.portNumber +
+        path.join(thaliConfig.BASE_DB_PATH, self._dbName);
       var ajaxOptions = {
         ajax : {
-          agentClass: ForeverAgent.SSL,
-          agentOptions : {
-            rejectUnauthorized: false,
-            keepAlive: true,
-            keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-            maxSockets: Infinity,
-            maxFreeSockets: 256,
-            ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-            pskIdentity: self.getPskIdentity(),
-            pskKey: self.getPskKey(),
-            secureOptions: self.getPskIdentity() + remoteUrl
-          }
+          agent: httpAgentPool
         },
         skip_setup: true// jscs:ignore requireCamelCaseOrUpperCaseIdentifiers
       };
@@ -318,6 +286,14 @@ ThaliReplicationPeerAction.prototype.kill = function () {
   }
 };
 
+function printErrorArray(errors) {
+  var result = '';
+  errors.forEach(function (error) {
+    result += 'error: ' + error.message + ' ';
+  });
+  return result;
+}
+
 /**
  * @param {Array.<Error>} errors
  * @private
@@ -326,14 +302,19 @@ ThaliReplicationPeerAction.prototype._complete =
   function (errors) {
     var self = this;
     if (this._completed) {
+      logger.debug('We called _complete with ' + printErrorArray(errors) +
+      ' but this is a second call and so we ignored it');
       return;
     }
     this._completed = true;
+    logger.debug('We called _complete with ' + printErrorArray(errors) +
+    ' and it caused us to complete');
 
     this.kill();
 
     assert(this._resolve, 'resolve should exist');
     assert(this._reject, 'reject should exist');
+    var returnError = null;
 
     if (!errors || errors.length === 0) {
       this._resolve();
@@ -341,16 +322,18 @@ ThaliReplicationPeerAction.prototype._complete =
       var isErrorResolved = errors.some(function (error) {
         switch (error.code) {
           case 'ECONNREFUSED': {
-            self._reject(
-              new Error('Could not establish TCP connection')
-            );
+            returnError = new Error('Could not establish TCP connection');
+            returnError.status = error.status;
+            returnError.code = error.code;
+            self._reject(returnError);
             return true;
           }
           case 'ECONNRESET': {
-            self._reject(
-              new Error('Could establish TCP connection but couldn\'t keep' +
-                ' it running')
-            );
+            returnError = new Error('Could establish TCP connection but ' +
+              'couldn\'t keep it running');
+            returnError.status = error.status;
+            returnError.code = error.code;
+            self._reject(returnError);
             return true;
           }
         }

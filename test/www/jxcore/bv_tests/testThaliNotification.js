@@ -167,7 +167,12 @@ function checkSuccess() {
     allDictionaryItemsNonZero(globals.peerRequestedUs);
 }
 
-test('Client to server request coordinated', function (t) {
+test('Client to server request coordinated',
+function () {
+  // FIXME: temporarily disabled (iOS branch is not complete - issue #899)
+  return true;
+},
+function (t) {
 
   // For this test we share our own public key with other peers and collect
   // their public keys. Then we wait until we get a peerAvailabilityChanged
@@ -252,7 +257,7 @@ test('Client to server request coordinated', function (t) {
     function (res) {
       var msg = 'PeerAdvertisesDataForUs:' + res.connectionType +
         ', '+res.hostAddress+', ' + res.hostAddress + ', '+
-        res.portNumber;
+        res.portNumber + ',' + res.peerId;
       logger.info(msg);
 
       var publicKeyHash = NotificationBeacons.createPublicKeyHash(res.keyId);

@@ -154,7 +154,6 @@ function killSkeleton(t, createServerWriteSuccessHandler,
   serverToBeClosed = pretendLocalMux;
 
   function onConnectSuccess(err, connection, peer) {
-    connection = JSON.parse(connection);
     var gotCloseMessage = false;
 
     logger.info('connection ' + JSON.stringify(connection));

@@ -80,21 +80,20 @@ function androidConnectToPeer(peer, retries, successCb, failureCb, quitSignal) {
     if (quitSignal && quitSignal.raised) {
       successCb(null, null, peer);
     }
-    connection = JSON.parse(connection);
     if (err == null) {
       // Connected successfully..
-      successCb(err, connection, peer);
+      successCb(err, JSON.parse(connection), peer);
     } else {
       logger.info('Connect returned an error: ' + err);
 
       if (err === 'Already connect(ing/ed)') {
-        failureCb(err, connection, peer);
+        failureCb(err, null, peer);
         return;
       }
 
       connectRetry(peer, retries, successCb,
         failureCb, quitSignal, function () {
-          failureCb(err, connection, peer);
+          failureCb(err, null, peer);
         });
     }
   });

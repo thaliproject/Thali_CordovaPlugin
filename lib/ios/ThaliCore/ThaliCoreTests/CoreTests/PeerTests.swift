@@ -12,7 +12,8 @@ import XCTest
 
 class PeerTests: XCTestCase {
 
-    func testGenetationByNextGenerationCallShouldHaveSameUUIDPart() {
+    // MARK: - Tests
+    func testPeerByNextGenerationCallShouldHaveSameUUIDPart() {
         let peer = Peer()
         let nextGenPeer = peer.nextGenerationPeer()
         XCTAssertEqual(peer.uuid, nextGenPeer.uuid)
@@ -24,7 +25,7 @@ class PeerTests: XCTestCase {
         XCTAssertEqual(peer.generation + 1, nextGenPeer.generation)
     }
 
-    func testStringValueHasEBNForm() {
+    func testStringValueHasCorrectForm() {
         for i in 0...0xF {
             let uuid = NSUUID().UUIDString
             let string = "\(uuid):\(String(i, radix: 16))"
@@ -34,8 +35,10 @@ class PeerTests: XCTestCase {
         }
     }
 
-    func testInitWithStringHasNotEBNFormError() {
-        let string = "eqwer:asdf:aasdf"
+    func testInitWithStringHasTwoSeparatorsCausesError() {
+        let string = String.random(length: 4) + ":" +
+                     String.random(length: 4) + ":" +
+                     String.random(length: 4)
         var parsingError: ThaliCoreError?
         do {
             let _ = try Peer(stringValue: string)
@@ -46,8 +49,32 @@ class PeerTests: XCTestCase {
         XCTAssertEqual(parsingError, .IllegalPeerID)
     }
 
-    func testInitWithStringHasNotNumberGeneration() {
-        let string = "eqwer:not_a_number"
+    func testInitWithStringHasNoSeparatorCausesError() {
+        let string = String.random(length: 4)
+        var parsingError: ThaliCoreError?
+        do {
+            let _ = try Peer(stringValue: string)
+        } catch let peerErr as ThaliCoreError {
+            parsingError = peerErr
+        } catch _ {
+        }
+        XCTAssertEqual(parsingError, .IllegalPeerID)
+    }
+
+    func testInitWithStringHasInvalidUUIDPartCausesError() {
+        let string = "---" + ":" + "0"
+        var parsingError: ThaliCoreError?
+        do {
+            let _ = try Peer(stringValue: string)
+        } catch let peerErr as ThaliCoreError {
+            parsingError = peerErr
+        } catch _ {
+        }
+        XCTAssertEqual(parsingError, .IllegalPeerID)
+    }
+
+    func testInitWithStringHasNotNumberGenerationCausesError() {
+        let string = String.random(length: 4) + ":" + "not_a_number"
         var parsingError: ThaliCoreError?
         do {
             let _ = try Peer(stringValue: string)
@@ -62,7 +89,7 @@ class PeerTests: XCTestCase {
         let peerID1 = Peer()
         do {
             let peerID2 = try Peer(uuidIdentifier: peerID1.uuid,
-                                         generation: peerID1.generation + 1)
+                                   generation: peerID1.generation + 1)
             XCTAssertNotEqual(peerID1, peerID2)
         } catch let error {
             XCTFail("unexpected error \(error)")

@@ -19,8 +19,10 @@ var serverAddress = require('../server-address');
 
 var logger = require('./testLogger')('CoordinatedClient');
 
+var DEFAULT_SERVER_PORT = Number(process.env.COORDINATED_PORT) || 3000;
 
-function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware, nativeUTFailed) {
+function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware,
+                           nativeUTFailed) {
   asserts.isArray(tests);
   tests.forEach(function (test) {
     asserts.isString(test.name);
@@ -66,7 +68,7 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware, 
   this._state = CoordinatedClient.states.created;
 
   this._io = SocketIOClient(
-    'http://' + serverAddress + ':' + 3000 + '/',
+    'http://' + serverAddress + ':' + DEFAULT_SERVER_PORT + '/',
     {
       reconnection: true,
       reconnectionAttempts: 15,
@@ -180,7 +182,8 @@ CoordinatedClient.prototype._disqualify = function (data) {
   .then(function () {
     if (data) {
       var errorText = CoordinatedClient.getData(data);
-      logger.error('device disqualified from the test server, reason: \'%s\'', errorText);
+      logger.error('device disqualified from the test server, reason: \'%s\'',
+        errorText);
       self._failed(new Error(
         'Test client failed: ' + errorText
       ));
@@ -413,7 +416,8 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
     tape('setup', function (tape) {
       tape.sync = sync.bind(undefined, tape, test.options.setupTimeout);
 
-      processEvent(tape, 'setup_' + test.name, test.options.setup, test.options.setupTimeout)
+      processEvent(tape, 'setup_' + test.name, test.options.setup,
+        test.options.setupTimeout)
       .catch(reject);
     });
 
@@ -432,7 +436,8 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
           logger.info('test was skipped, name: \'%s\'', test.name);
           return skipEvent(tape, 'run_' + test.name, test.options.testTimeout);
         } else {
-          return processEvent(tape, 'run_' + test.name, test.fun, test.options.testTimeout);
+          return processEvent(tape, 'run_' + test.name, test.fun,
+            test.options.testTimeout);
         }
       })
       .catch(reject);
@@ -441,7 +446,8 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
     tape('teardown', function (tape) {
       tape.sync = sync.bind(undefined, tape, test.options.teardownTimeout);
 
-      processEvent(tape, 'teardown_' + test.name, test.options.teardown, test.options.teardownTimeout)
+      processEvent(tape, 'teardown_' + test.name, test.options.teardown,
+        test.options.teardownTimeout)
       // We should exit after test teardown.
       .then(resolve)
       .catch(reject);

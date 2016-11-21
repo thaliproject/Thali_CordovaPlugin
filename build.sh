@@ -1,6 +1,6 @@
 #!/bin/sh
 
-### START - JXcore Test Server --------........................
+### START - JXcore Test Server --------......................
 ### Testing environment prepares separate packages for each node.
 ### Package builder calls this script with each node's IP address
 ### Make sure multiple calls to this script file compiles the application file
@@ -61,9 +61,13 @@ then
   node CITestMode.js
 fi
 
-jx npm test
+jx runTests.js --networkType WIFI
+jx runTests.js --networkType NATIVE
+jx runTests.js --networkType BOTH
 jx npm run test-meta
-jx npm run test-coordinated
+jx runCoordinatedTests.js --networkType NATIVE
+jx runCoordinatedTests.js --networkType WIFI
+jx runCoordinatedTests.js --networkType BOTH
 
 # Verify that docs can be generated
 #cd $WORKING_DIR/thali/

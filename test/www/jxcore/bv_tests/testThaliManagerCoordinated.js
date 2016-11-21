@@ -17,9 +17,6 @@ var ThaliManager = require('thali/NextGeneration/thaliManager');
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 
-var ThaliPeerPoolOneAtATime =
-  require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolOneAtATime');
-
 // Public key for local device should be passed
 // to the tape 'setup' as 'tape.data'.
 var ecdhForLocalDevice = crypto.createECDH(thaliConfig.BEACON_CURVE);
@@ -145,7 +142,12 @@ function waitForRemoteDocs(
   });
 }
 
-test('test write', function (t) {
+test('test write',
+function () {
+  // FIXME: temporarily disabled (iOS branch is not complete - issue #899)
+  return true;
+},
+function (t) {
   testUtils.testTimeout(t, TEST_TIMEOUT);
 
   // This function will return all participant's public keys
@@ -179,7 +181,7 @@ test('test write', function (t) {
       PouchDB,
       DB_NAME,
       ecdhForLocalDevice,
-      new ThaliPeerPoolOneAtATime(),
+      new ThaliPeerPoolDefault(),
       global.NETWORK_TYPE
     );
     return thaliManager.start(partnerKeys);
@@ -202,7 +204,12 @@ test('test write', function (t) {
   });
 });
 
-test('test repeat write 1', function (t) {
+test('test repeat write 1',
+function () {
+  // FIXME: temporarily disabled (iOS branch is not complete - issue #899)
+  return true;
+},
+function (t) {
   testUtils.testTimeout(t, TEST_TIMEOUT);
 
   var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
@@ -253,7 +260,12 @@ test('test repeat write 1', function (t) {
   });
 });
 
-test('test repeat write 2', function (t) {
+test('test repeat write 2',
+function () {
+  // FIXME: temporarily disabled (iOS branch is not complete - issue #899)
+  return true;
+},
+function (t) {
   testUtils.testTimeout(t, TEST_TIMEOUT);
 
   var partnerKeys = testUtils.turnParticipantsIntoBufferArray(

@@ -81,7 +81,8 @@ function replaceContent(path, content, replacements) {
     if (!isReplaced) {
       throw new Error(
         format(
-          'we couldn\'t replace pattern: \'%s\' with value: \'%s\' in file: \'%s\'',
+          'we couldn\'t replace pattern: \'%s\' with value: \'%s\' ' +
+          'in file: \'%s\'',
           pattern, replacement, path
         )
       );

@@ -116,7 +116,9 @@ final class Browser: NSObject {
                          sessionConnected: () -> Void,
                          sessionNotConnected: () -> Void) throws -> Session {
 
-        let mcSession = MCSession(peer: browser.myPeerID)
+        let mcSession = MCSession(peer: browser.myPeerID,
+                                  securityIdentity: nil,
+                                  encryptionPreference: .None)
 
         guard let mcPeerID = availablePeers.value[peer] else {
             throw ThaliCoreError.IllegalPeerID

@@ -17,16 +17,19 @@ class AdvertiserManagerTests: XCTestCase {
     var advertiserManager: AdvertiserManager!
     let disposeTimeout: NSTimeInterval = 4.0
 
-    // MARK: - Setup
+    // MARK: - Setup & Teardown
     override func setUp() {
+        super.setUp()
         serviceType = String.randomValidServiceType(length: 7)
         advertiserManager = AdvertiserManager(serviceType: serviceType,
                                               disposeAdvertiserTimeout: disposeTimeout)
     }
 
     override func tearDown() {
+        serviceType = nil
         advertiserManager.stopAdvertising()
         advertiserManager = nil
+        super.tearDown()
     }
 
     // MARK: - Tests
@@ -42,41 +45,51 @@ class AdvertiserManagerTests: XCTestCase {
         XCTAssertTrue(advertiserManager.advertising)
     }
 
-    func testStartStopAdvertisingChangesInternalAmountOfAdvertisers() {
+    func testStopAdvertisingWithoutCallingStartIsNOTError() {
         // Given
-        let expectedAmountOfAdvertisersBeforeStartMethod = 0
-        let expectedAmountOfAdvertisersAfterStartMethod = 1
-        let expectedAmountOfAdvertisersAfterStopMethod = 0
-
-        XCTAssertEqual(advertiserManager.advertisers.value.count,
-                       expectedAmountOfAdvertisersBeforeStartMethod)
-
-        // When
-        advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
-                                                             errorHandler: unexpectedErrorHandler)
-
-        // Then
-        XCTAssertTrue(advertiserManager.advertising, "advertising is not active")
-        XCTAssertEqual(advertiserManager.advertisers.value.count,
-                       expectedAmountOfAdvertisersAfterStartMethod)
+        XCTAssertFalse(advertiserManager.advertising)
 
         // When
         advertiserManager.stopAdvertising()
 
         // Then
-        XCTAssertFalse(advertiserManager.advertising, "advertising is still active")
-        XCTAssertEqual(advertiserManager.advertisers.value.count,
-                       expectedAmountOfAdvertisersAfterStopMethod)
+        XCTAssertFalse(advertiserManager.advertising)
     }
 
-    func testStartStopStartAdvertisingChangesInternalAmountOfAdvertisers() {
+    func testStopAdvertisingTwiceWithoutCallingStartIsNOTError() {
         // Given
-        let expectedAmountOfAdvertisersBeforeStartMethod = 0
-        let expectedAmountOfAdvertisersAfterStartMethod = 1
-        let expectedAmountOfAdvertisersAfterStopMethod = 0
+        XCTAssertFalse(advertiserManager.advertising)
+
+        // When
+        advertiserManager.stopAdvertising()
+        advertiserManager.stopAdvertising()
+
+        // Then
+        XCTAssertFalse(advertiserManager.advertising)
+    }
+
+    func testStartAdvertisingTwice() {
+        // Given
+        XCTAssertFalse(advertiserManager.advertising)
+
+        // When
+        advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
+                                                             errorHandler: unexpectedErrorHandler)
+        advertiserManager.startUpdateAdvertisingAndListening(onPort: 43,
+                                                             errorHandler: unexpectedErrorHandler)
+
+        // Then
+        XCTAssertTrue(advertiserManager.advertising)
+    }
+
+    func testStartStopAdvertisingChangesInternalNumberOfAdvertisers() {
+        // Given
+        let expectedNumberOfAdvertisersBeforeStartMethod = 0
+        let expectedNumberOfAdvertisersAfterStartMethod = 1
+        let expectedNumberOfAdvertisersAfterStopMethod = 0
 
         XCTAssertEqual(advertiserManager.advertisers.value.count,
-                       expectedAmountOfAdvertisersBeforeStartMethod)
+                       expectedNumberOfAdvertisersBeforeStartMethod)
 
         // When
         advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
@@ -85,7 +98,7 @@ class AdvertiserManagerTests: XCTestCase {
         // Then
         XCTAssertTrue(advertiserManager.advertising, "advertising is not active")
         XCTAssertEqual(advertiserManager.advertisers.value.count,
-                       expectedAmountOfAdvertisersAfterStartMethod)
+                       expectedNumberOfAdvertisersAfterStartMethod)
 
         // When
         advertiserManager.stopAdvertising()
@@ -93,7 +106,17 @@ class AdvertiserManagerTests: XCTestCase {
         // Then
         XCTAssertFalse(advertiserManager.advertising, "advertising is still active")
         XCTAssertEqual(advertiserManager.advertisers.value.count,
-                       expectedAmountOfAdvertisersAfterStopMethod)
+                       expectedNumberOfAdvertisersAfterStopMethod)
+    }
+
+    func testStartAdvertisingTwiceChangesInternalNumberOfAdvertisers() {
+        // Given
+        let expectedNumberOfAdvertisersBeforeStartMethod = 0
+        let expectedNumberOfAdvertisersAfterFirstStartMethod = 1
+        let expectedNumberOfAdvertisersAfterSecondStartMethod = 2
+
+        XCTAssertEqual(advertiserManager.advertisers.value.count,
+                       expectedNumberOfAdvertisersBeforeStartMethod)
 
         // When
         advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
@@ -102,7 +125,52 @@ class AdvertiserManagerTests: XCTestCase {
         // Then
         XCTAssertTrue(advertiserManager.advertising, "advertising is not active")
         XCTAssertEqual(advertiserManager.advertisers.value.count,
-                       expectedAmountOfAdvertisersAfterStartMethod)
+                       expectedNumberOfAdvertisersAfterFirstStartMethod)
+
+        // When
+        advertiserManager.startUpdateAdvertisingAndListening(onPort: 43,
+                                                             errorHandler: unexpectedErrorHandler)
+
+        // Then
+        XCTAssertTrue(advertiserManager.advertising, "advertising is not active")
+        XCTAssertEqual(advertiserManager.advertisers.value.count,
+                       expectedNumberOfAdvertisersAfterSecondStartMethod)
+    }
+
+    func testStartStopStartAdvertisingChangesInternalNumberOfAdvertisers() {
+        // Given
+        let expectedNumberOfAdvertisersBeforeStartMethod = 0
+        let expectedNumberOfAdvertisersAfterStartMethod = 1
+        let expectedNumberOfAdvertisersAfterStopMethod = 0
+
+        XCTAssertEqual(advertiserManager.advertisers.value.count,
+                       expectedNumberOfAdvertisersBeforeStartMethod)
+
+        // When
+        advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
+                                                             errorHandler: unexpectedErrorHandler)
+
+        // Then
+        XCTAssertTrue(advertiserManager.advertising, "advertising is not active")
+        XCTAssertEqual(advertiserManager.advertisers.value.count,
+                       expectedNumberOfAdvertisersAfterStartMethod)
+
+        // When
+        advertiserManager.stopAdvertising()
+
+        // Then
+        XCTAssertFalse(advertiserManager.advertising, "advertising is still active")
+        XCTAssertEqual(advertiserManager.advertisers.value.count,
+                       expectedNumberOfAdvertisersAfterStopMethod)
+
+        // When
+        advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
+                                                             errorHandler: unexpectedErrorHandler)
+
+        // Then
+        XCTAssertTrue(advertiserManager.advertising, "advertising is not active")
+        XCTAssertEqual(advertiserManager.advertisers.value.count,
+                       expectedNumberOfAdvertisersAfterStartMethod)
     }
 
     func testAdvertiserDisposedAfterTimeoutWhenSecondAdvertiserStarts() {
