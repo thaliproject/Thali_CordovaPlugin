@@ -341,10 +341,12 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
   var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
   return new Promise(function (resolve, reject) {
     var retryCount = 0;
-    var MAX_TIME_TO_WAIT_IN_MILLISECONDS = 1000 * 30 * 2;
+    var MAX_TIME_TO_WAIT_IN_MILLISECONDS = 1000 * 60;
+    var GET_PORT_TIMEOUT = 1000 * 3;
     var exitCalled = false;
     var peerID = selectedPeerId;
     var getRequestPromise = null;
+    var cancelGetPortTimeout = null;
 
     function exitCall(success, failure) {
       if (exitCalled) {
@@ -363,13 +365,15 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
     }
 
     var timeoutId = setTimeout(function () {
+      clearTimeout(cancelGetPortTimeout);
       exitCall(null, new Error('Timer expired'));
     }, MAX_TIME_TO_WAIT_IN_MILLISECONDS);
 
     function tryAgain(portNumber) {
       ++retryCount;
       logger.warn('Retry count for getSamePeerWithRetry is ' + retryCount);
-      getRequestPromise = module.exports.get('127.0.0.1', portNumber, path, pskIdentity, pskKey);
+      getRequestPromise = module.exports.get('127.0.0.1',
+                          portNumber, path, pskIdentity, pskKey);
       getRequestPromise
         .then(function (result) {
           exitCall(result);
@@ -400,16 +404,22 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
     }
 
     function getPort(peerID) {
-      return new Promise(function(resolve, reject) {
-        if(platform.isIOS) {
+      return new Promise(function (resolve) {
+        if (platform.isIOS) {
           thaliMobileNativeWrapper._multiConnect(peerID)
-          .then(function(portNumber){
-            resolve(portNumber);
+          .then(function (port) {
+            resolve(port);
+          })
+          .catch(function () {
+            cancelGetPortTimeout = setTimeout(function () {
+              resolve(getPort(peerID));
+            }, GET_PORT_TIMEOUT);
           });
         } else {
-          resolve();
+          resolve(null);
         }
-      })
+      });
+
     };
 
     function nonTCPAvailableHandler(record) {
@@ -430,8 +440,12 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
       }
 
       getPort(peerID)
-      .then(function(port) {
-        (port) ? callTryAgain(port) : callTryAgain(record.portNumber);
+      .then(function (port) {
+        if (port) {
+          callTryAgain(port);
+        } else {
+          callTryAgain(record.portNumber);
+        }
       });
     }
 
@@ -506,12 +520,14 @@ module.exports.runTestOnAllParticipants = function (
     // If the value is greater than 0 then that is how many failures there have
     // been.
 
-    var participantCount = publicKeys.reduce(function (participantCount, participantPublicKey) {
+    var participantCount = publicKeys.reduce(
+      function (participantCount, participantPublicKey) {
       participantCount[participantPublicKey] = 0;
       return participantCount;
     }, {});
 
-    var participantTask = publicKeys.reduce(function (participantTask, participantPublicKey) {
+    var participantTask = publicKeys.reduce(
+      function (participantTask, participantPublicKey) {
       participantTask[participantPublicKey] = Promise.resolve();
       return participantTask;
     }, {});
@@ -715,10 +731,10 @@ module.exports.setUpServer = function (testBody, appConfig) {
   return testCloseAllServer;
 };
 
-module.exports.skipOnIOS = function() {
+module.exports.skipOnIOS = function () {
   return platform.isIOS;
-}
+};
 
-module.exports.skipOnAndroid = function() {
+module.exports.skipOnAndroid = function () {
   return platform.isAndroid;
-}
+};
