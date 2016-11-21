@@ -340,7 +340,7 @@ test('make sure terminateConnection is properly hooked up',
   }
 );
 
-test('make sure terminateListener is return error if we get called on iOS',
+test('make sure terminateConnection is return error if we get called on iOS',
   function () {
     return !platform.isIOS;
   },
