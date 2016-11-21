@@ -85,7 +85,7 @@ public class JXcoreExtension {
 
 
     private static String ERROR_PLATFORM_DOES_NOT_SUPPORT_MULTICONNECT = "Platform does not support multiConnect";
-    private static String ERROR_NOT_MULTICONNECT_PLATFORM = "Not multiConnect platformt";
+    private static String ERROR_NOT_MULTICONNECT_PLATFORM = "Not multiConnect platform";
 
 
     public static void LoadExtensions() {
