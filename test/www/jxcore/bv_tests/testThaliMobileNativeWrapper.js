@@ -392,18 +392,14 @@ var verifyCallWithArguments = function (t, callName, parameters) {
 };
 
 test('make sure terminateConnection is properly hooked up',
-  function () {
-    return platform.isIOS;
-  },
+  testUtils.skipOnIOS,
   function (t) {
     verifyCallWithArguments(t, '_terminateConnection', ['connection-id']);
   }
 );
 
 test('make sure terminateConnection is return error if we get called on iOS',
-  function () {
-    return !platform.isIOS;
-  },
+  testUtils.skipOnAndroid,
   function (t) {
     var error = 'Not connect platform';
 
@@ -420,18 +416,14 @@ test('make sure terminateConnection is return error if we get called on iOS',
 );
 
 test('make sure terminateListener is properly hooked up',
-  function () {
-    return platform.isIOS;
-  },
+  testUtils.skipOnIOS,
   function (t) {
     verifyCallWithArguments(t, 'terminateListener', ['peer-id', 8080]);
   }
 );
 
 test('make sure terminateListener is return error if we get called on iOS',
-  function () {
-    return !platform.isIOS;
-  },
+  testUtils.skipOnAndroid,
   function (t) {
     var error = 'Not connect platform';
 
