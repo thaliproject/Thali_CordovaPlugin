@@ -267,7 +267,7 @@ ThaliPeerPoolOneAtATime.prototype._bluetoothEnqueue = function (peerAction) {
         peerAction.kill();
         thaliMobileNativeWrapper._getServersManager()
           .terminateOutgoingConnection(peerAction.getPeerIdentifier(),
-            peerAction.getConnectionInformation().getPortNumber());
+            peerAction.getConnectionInformation().portNumber);
         resolve(true);
         return null;
       });
