@@ -474,6 +474,7 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
       }
       exitCalled = true;
       clearTimeout(timeoutId);
+      clearTimeout(cancelGetPortTimeout);
       thaliMobileNativeWrapper.emitter
         .removeListener('nonTCPPeerAvailabilityChangedEvent',
           nonTCPAvailableHandler);
@@ -485,7 +486,6 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
     }
 
     var timeoutId = setTimeout(function () {
-      clearTimeout(cancelGetPortTimeout);
       exitCall(null, new Error('Timer expired'));
     }, MAX_TIME_TO_WAIT_IN_MILLISECONDS);
 
