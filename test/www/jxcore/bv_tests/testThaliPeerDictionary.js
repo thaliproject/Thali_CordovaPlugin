@@ -28,7 +28,7 @@ var test = tape({
 /**
  * Crates a new entry and tags all objects in it with the given peer.
  *
- * @param {object} peer
+ * @param {Object} peer
  * @param {string} peer.peerIdentifier
  * @param {number} peer.generation
  * @param {module:thaliPeerDictionary.peerState} state
@@ -86,7 +86,7 @@ function addEntries(dictionary, baseString, generation, state, count) {
  * Checks that objects inside the entry have a unique tag. This
  * ensures objects haven't been replaced with new accidentally.
  *
- * @param {object} peer
+ * @param {Object} peer
  * @param {string} peer.peerIdentifier
  * @param {number} peer.generation
  * @param {module:thaliPeerDictionary~NotificationPeerDictionaryEntry} entry
