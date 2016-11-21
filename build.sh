@@ -23,6 +23,13 @@ trap 'log_error $LINENO' ERR
 # files per process, which is 256. Try to boost it as workaround.
 ulimit -n 1024
 
+echo "Print environment:"
+echo "Cordova version: $(cordova -v)"
+echo "Node version: $(node -v)"
+echo "JXcore version: $(jx -jxv)"
+echo "JXcore engine: $(jx -jsv)"
+echo "xcodebuild version: $(xcodebuild -version)"
+
 WORKING_DIR=$(pwd)
 
 # A hack to workaround an issue where the install scripts assume that the
@@ -34,11 +41,6 @@ if [ ! -d "$THALI_PLUGIN_DIR" ]; then
   cp -R . $THALI_PLUGIN_DIR
   cd $THALI_PLUGIN_DIR
 fi
-
-# Print the Cordova version for debugging purposes
-# and to make sure Cordova is installed
-echo "Cordova version:"
-cordova -v
 
 # Run first the tests that can be run on desktop
 thali/install/setUpDesktop.sh
