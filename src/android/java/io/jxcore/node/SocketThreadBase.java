@@ -15,7 +15,9 @@ import java.net.Socket;
  * The base (thread) class for outgoing and incoming socket threads.
  */
 abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Listener {
+
     public interface Listener {
+
         void onListeningForIncomingConnections(int portNumber);
 
         void onDataTransferred(int numberOfBytes);
@@ -29,6 +31,8 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
         void onDone(SocketThreadBase who, boolean threadDoneWasSending);
 
         void onDisconnected(SocketThreadBase who, String errorMessage);
+
+        void onDisconnected(SocketThreadBase who, Exception exception);
     }
 
     private static final String SENDING_THREAD_NAME = "Sender";
@@ -56,9 +60,9 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
      * @throws IOException Thrown, if either BluetoothSocket.getInputStream or BluetoothSocket.getOutputStream fails.
      */
     public SocketThreadBase(BluetoothSocket bluetoothSocket, Listener listener)
-            throws IOException {
+        throws IOException {
         this(bluetoothSocket, listener, bluetoothSocket.getInputStream(),
-                bluetoothSocket.getOutputStream());
+            bluetoothSocket.getOutputStream());
     }
 
     /**
@@ -97,8 +101,8 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
     public String getLocalHostAddressAsString() {
         Socket localCopyOfmLocalHostSocket = mLocalhostSocket;
         return localCopyOfmLocalHostSocket == null
-                || localCopyOfmLocalHostSocket.getInetAddress() == null
-                ? null : localCopyOfmLocalHostSocket.getInetAddress().toString();
+            || localCopyOfmLocalHostSocket.getInetAddress() == null
+            ? null : localCopyOfmLocalHostSocket.getInetAddress().toString();
     }
 
     /**
@@ -156,8 +160,8 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
             SocketThreadBase otherSocketThreadBase = (SocketThreadBase) other;
 
             return (otherSocketThreadBase.getPeerProperties() != null
-                    && mPeerProperties != null
-                    && otherSocketThreadBase.getPeerProperties().equals(mPeerProperties));
+                && mPeerProperties != null
+                && otherSocketThreadBase.getPeerProperties().equals(mPeerProperties));
         }
 
         return false;
@@ -206,7 +210,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
                 // The receiving thread is the one having the Bluetooth input stream. Thus, if it fails,
                 // we know that connection was disconnected from the other end.
                 Log.e(mTag, "The receiving thread failed with error \"" + errorMessage
-                        + "\", this is likely due to peer having disconnected");
+                    + "\", this is likely due to peer having disconnected");
             } else if (who == mSendingThread) {
                 // The sending thread has the local input stream. Thus, if it fails, we are getting a
                 // local disconnect.

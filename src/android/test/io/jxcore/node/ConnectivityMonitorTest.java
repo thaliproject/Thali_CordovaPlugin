@@ -11,6 +11,7 @@ import com.test.thalitest.ThaliTestRunner;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -71,12 +72,12 @@ public class ConnectivityMonitorTest {
 
         mConnectivityMonitor = mConnectionHelper.getConnectivityMonitor();
         Field bluetoothManagerField = mConnectivityMonitor.getClass()
-        .getDeclaredField("mBluetoothManager");
+            .getDeclaredField("mBluetoothManager");
         bluetoothManagerField.setAccessible(true);
         mBluetoothManager = (BluetoothManager) bluetoothManagerField.get(mConnectivityMonitor);
 
         Field wifiDirectManagerField = mConnectivityMonitor.getClass()
-        .getDeclaredField("mWifiDirectManager");
+            .getDeclaredField("mWifiDirectManager");
         wifiDirectManagerField.setAccessible(true);
         mWifiDirectManager = (WifiDirectManager) wifiDirectManagerField.get(mConnectivityMonitor);
 
@@ -198,6 +199,8 @@ public class ConnectivityMonitorTest {
         };
     }
 
+
+    @Ignore("https://github.com/thaliproject/Thali_CordovaPlugin/issues/1529")
     @Test
     public void testStartStop() throws Exception {
         Future<Boolean> mFuture;
@@ -208,14 +211,14 @@ public class ConnectivityMonitorTest {
         // Since ConnectivityMonitor was already started during initialization of ConnectionHelper,
         // we only check if proper states of WiFi and BT were set.
         assertThat("Proper state of WIFI is set during the start",
-                   mConnectivityMonitor.isWifiEnabled(), is(mWifiManager.isWifiEnabled()));
+            mConnectivityMonitor.isWifiEnabled(), is(mWifiManager.isWifiEnabled()));
 
         assertThat("Proper state of BT is set when during the start",
-                   mConnectivityMonitor.isBluetoothEnabled(), is(mBluetoothAdapter.isEnabled()));
+            mConnectivityMonitor.isBluetoothEnabled(), is(mBluetoothAdapter.isEnabled()));
 
         assertThat("The BT listener was bound",
-                   ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size() > 0,
-                   is(true));
+            ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size() > 0,
+            is(true));
 
         // WIFI
         mFuture = mExecutor.submit(disableAndCheckWifiDisabled());
@@ -223,14 +226,14 @@ public class ConnectivityMonitorTest {
         // check the state. If the intent is registered the state should be updated;
         assertThat("Wifi should be disabled", mFuture.get(), is(true));
         assertThat("Proper state of WIFI is set when switched off",
-                   mConnectivityMonitor.isWifiEnabled(), is(mWifiManager.isWifiEnabled()));
+            mConnectivityMonitor.isWifiEnabled(), is(mWifiManager.isWifiEnabled()));
 
         // change the WIFI state back
         mFuture = mExecutor.submit(enableAndCheckWifiEnabled());
 
         assertThat("Wifi should be enabled", mFuture.get(), is(true));
         assertThat("Proper state of WIFI is set when switched on",
-                   mConnectivityMonitor.isWifiEnabled(), is(mWifiManager.isWifiEnabled()));
+            mConnectivityMonitor.isWifiEnabled(), is(mWifiManager.isWifiEnabled()));
 
         //Bluetooth
         mFuture = mExecutor.submit(disableAndCheckBTDisabled());
@@ -238,29 +241,29 @@ public class ConnectivityMonitorTest {
         // check the state. If the intent is registered the state should be updated;
         assertThat("BT should be disabled", mFuture.get(), is(true));
         assertThat("Proper state of BT is set when switched off",
-                   mConnectivityMonitor.isBluetoothEnabled(), is(false));
+            mConnectivityMonitor.isBluetoothEnabled(), is(false));
 
         // change the BT state back
         mFuture = mExecutor.submit(enableAndCheckBTEnabled());
 
         assertThat("BT should be enabled", mFuture.get(), is(true));
         assertThat("Proper state of BT is set when switched on",
-                   mConnectivityMonitor.isBluetoothEnabled(), is(mBluetoothAdapter.isEnabled()));
+            mConnectivityMonitor.isBluetoothEnabled(), is(mBluetoothAdapter.isEnabled()));
 
         int sizeBeforeBTlistenerRelease = ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size();
 
         mConnectivityMonitor.stop();
 
         assertThat("The BT listener is released",
-                   ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size(),
-                   is(equalTo(sizeBeforeBTlistenerRelease - 1)));
+            ((CopyOnWriteArrayList) mListenersField.get(mBluetoothManager)).size(),
+            is(equalTo(sizeBeforeBTlistenerRelease - 1)));
 
         Field fWifiStateChangedAndConnectivityActionBroadcastReceiver = mConnectivityMonitor.getClass()
-        .getDeclaredField("mWifiStateChangedAndConnectivityActionBroadcastReceiver");
+            .getDeclaredField("mWifiStateChangedAndConnectivityActionBroadcastReceiver");
         fWifiStateChangedAndConnectivityActionBroadcastReceiver.setAccessible(true);
         BroadcastReceiver mWifiStateChangedAndConnectivityActionBroadcastReceiver =
-        (BroadcastReceiver) fWifiStateChangedAndConnectivityActionBroadcastReceiver
-        .get(mConnectivityMonitor);
+            (BroadcastReceiver) fWifiStateChangedAndConnectivityActionBroadcastReceiver
+                .get(mConnectivityMonitor);
 
         Activity mActivity = jxcore.activity;
 
@@ -274,18 +277,18 @@ public class ConnectivityMonitorTest {
     public void testIsBluetoothSupported() throws Exception {
         if (mBluetoothAdapter != null) {
             assertThat("Returns true as the device has the Bluetooth support",
-                       mConnectivityMonitor.isBluetoothSupported(), is(true));
+                mConnectivityMonitor.isBluetoothSupported(), is(true));
         } else {
             assertThat("Returns true as the device has the Bluetooth support",
-                       mConnectivityMonitor.isBluetoothSupported(), is(false));
+                mConnectivityMonitor.isBluetoothSupported(), is(false));
         }
     }
 
     @Test
     public void testIsBleMultipleAdvertisementSupported() throws Exception {
         assertThat("Returns the proper value of BleMultipleAdvertisementSupport",
-                   mConnectivityMonitor.isBleMultipleAdvertisementSupported(),
-                   is(notNullValue()));
+            mConnectivityMonitor.isBleMultipleAdvertisementSupported(),
+            is(notNullValue()));
     }
 
     @Test
@@ -295,7 +298,7 @@ public class ConnectivityMonitorTest {
 
         assertThat("BT should be disabled", mFuture.get(), is(true));
         assertThat("Returns proper state of BT when switched off",
-                   mConnectivityMonitor.isBluetoothEnabled(), is(false));
+            mConnectivityMonitor.isBluetoothEnabled(), is(false));
 
         mFuture = mExecutor.submit(enableAndCheckBTEnabled());
 
@@ -303,7 +306,7 @@ public class ConnectivityMonitorTest {
 
         assertThat("BT should be enabled", mFuture.get(), is(true));
         assertThat("Returns proper state of BT when switched on",
-                   mConnectivityMonitor.isBluetoothEnabled(), is(true));
+            mConnectivityMonitor.isBluetoothEnabled(), is(true));
     }
 
     @Test
@@ -311,7 +314,7 @@ public class ConnectivityMonitorTest {
         boolean supported = mContext.getSystemService(Context.WIFI_P2P_SERVICE) != null;
 
         assertThat("Returns proper value of WIFI Direct support",
-                   mConnectivityMonitor.isWifiDirectSupported(), is(supported));
+            mConnectivityMonitor.isWifiDirectSupported(), is(supported));
     }
 
     @Test
@@ -322,7 +325,7 @@ public class ConnectivityMonitorTest {
 
         assertThat("Wifi should be disabled", mFuture.get(), is(true));
         assertThat("Returns proper state of WIFI when switched off",
-                   mConnectivityMonitor.isWifiEnabled(), is(false));
+            mConnectivityMonitor.isWifiEnabled(), is(false));
 
         mFuture = mExecutor.submit(enableAndCheckWifiEnabled());
 
@@ -330,6 +333,6 @@ public class ConnectivityMonitorTest {
 
         assertThat("Wifi should be enabled", mFuture.get(), is(true));
         assertThat("Returns proper state of WIFI when switched on",
-                   mConnectivityMonitor.isWifiEnabled(), is(true));
+            mConnectivityMonitor.isWifiEnabled(), is(true));
     }
 }

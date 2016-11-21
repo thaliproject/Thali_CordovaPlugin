@@ -9,6 +9,21 @@
 var fs = require('fs-extra-promise');
 var path = require('path');
 
+/**
+ * We've tried various strategies in plugin.xml to set the minimum sdk
+ * in the Android manifest to an acceptable value such as uses-sdk in
+ * the platform/config section and also the android-minSdkVersion and they do
+ * work in that they add an appropriate uses-sdk to AndroidManifest.xml
+ * but unfortunately it still leaves the default uses-sdk element set to
+ * a min of 10 in there! I'm sure there is some fix but I'm tired of fighting
+ * with it so we just force the change. One last thing to try is to create a
+ * build-extras.gradle next to our plugin.xml and try to either stick in
+ * an android declare block with a defaultConfig and a minSdkVersion or use
+ * the special ext property that Cordova declares. But honestly, I'll figure it
+ * out later.
+ * @param {Object} appRoot
+ */
+
 var replaceJXCoreExtension = function (appRoot) {
   var sourceFile = path.join(appRoot, 'plugins/org.thaliproject.p2p/src/' +
     'android/java/io/jxcore/node/JXcoreExtension.java');
