@@ -45,8 +45,6 @@ module.exports.peerState = {
  * @public
  * @param {module:thaliPeerDictionary.peerState} peerState The
  * state of the peer.
- * @param {module:thaliPeerConnectionInformation~PeerConnectionInformation} peerConnection connection
- * information that use to connect to the peer.
  * @param {module:thaliNotificationAction~NotificationAction} notificationAction
  * @constructor
  */
