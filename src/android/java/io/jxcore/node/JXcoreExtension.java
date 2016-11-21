@@ -84,7 +84,9 @@ public class JXcoreExtension {
     private static boolean mNetworkChangedRegistered = false;
 
 
-    private static String ERROR_PLATFORM_DOES_NOT_SUPPORT_CONNECT = "Platform does not support connect";
+    private static String ERROR_PLATFORM_DOES_NOT_SUPPORT_MULTICONNECT = "Platform does not support multiConnect";
+    private static String ERROR_NOT_MULTICONNECT_PLATFORM = "Not multiConnect platformt";
+
 
     public static void LoadExtensions() {
         if (mConnectionHelper != null) {
@@ -343,7 +345,7 @@ public class JXcoreExtension {
             public void Receiver(ArrayList<Object> params, String callbackId) {
                 ArrayList<Object> args = new ArrayList<Object>();
 
-                args.add(ERROR_PLATFORM_DOES_NOT_SUPPORT_CONNECT);
+                args.add(ERROR_PLATFORM_DOES_NOT_SUPPORT_MULTICONNECT);
                 args.add(null);
                 jxcore.CallJSMethod(callbackId, args.toArray());
             }
@@ -354,7 +356,7 @@ public class JXcoreExtension {
             public void Receiver(ArrayList<Object> params, String callbackId) {
                 ArrayList<Object> args = new ArrayList<Object>();
 
-                args.add(ERROR_PLATFORM_DOES_NOT_SUPPORT_CONNECT);
+                args.add(ERROR_NOT_MULTICONNECT_PLATFORM);
                 args.add(null);
                 jxcore.CallJSMethod(callbackId, args.toArray());
             }

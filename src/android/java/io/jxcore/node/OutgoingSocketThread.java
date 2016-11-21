@@ -4,8 +4,6 @@
 package io.jxcore.node;
 
 import android.bluetooth.BluetoothSocket;
-import android.system.Os;
-import android.system.OsConstants;
 import android.util.Log;
 
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
