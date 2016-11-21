@@ -4,7 +4,6 @@ var Promise = require('lie');
 var assert = require('assert');
 var https = require('https');
 var PeerAction = require('../thaliPeerPool/thaliPeerAction');
-var PeerDictionary = require('./thaliPeerDictionary');
 var NotificationBeacons = require('./thaliNotificationBeacons');
 var EventEmitter = require('events').EventEmitter;
 var thaliConfig = require('../thaliConfig');
@@ -13,43 +12,52 @@ var ThaliMobile = require('../thaliMobile');
 /** @module thaliNotificationAction */
 
 /**
+ * @typedef {Object} PeerConnectionInformation
+ * @property {string} hostAddress
+ * @property {number} portNumber
+ * @property {number} suggestedTCPTimeout timeout in milliseconds
+ */
+
+/**
  * Creates a sub-type of the {@link module:thaliPeerPoolInterface~PeerAction}
  * class to represent actions for retrieving notifications.
  *
- * @param {string} peerIdentifier
- * @param {module:ThaliMobileNativeWrapper.connectionTypes} connectionType
+ * @param {Object} peer
+ * @param {string} peer.peerIdentifier
+ * @param {number} peer.generation
+ * @param {module:ThaliMobileNativeWrapper.connectionTypes} peer.connectionType
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized
  * with the local device's public and private keys.
  * @param {addressBookCallback} addressBookCallback A callback used to validate
  * which peers we are interested in talking to.
- * @param {module:thaliPeerDictionary~PeerConnectionInformation} peerConnection
- * Connection parameters to connect to peer.
  * @constructor
  * @implements {module:thaliPeerAction~PeerAction}
  * @fires module:thaliNotificationAction.event:Resolved
  */
 /* jshint -W003 */
-function ThaliNotificationAction(peerIdentifier,
+function ThaliNotificationAction(peer,
                                  ecdhForLocalDevice,
-                                 addressBookCallback,
-                                 connectionType) {
+                                 addressBookCallback) {
 
-  assert(peerIdentifier, 'peerIdentifier must not be null or undefined');
+  assert(peer, 'peer must not be null or undefined');
+  assert(peer.peerIdentifier, 'peer.peerIdentifier must be set');
+  assert(peer.connectionType, 'peer.connectionType must be set');
+  assert(typeof peer.generation === 'number',
+    'peer.generation must be a number');
   assert(ecdhForLocalDevice,
     'ecdhForLocalDevice must not be null or undefined');
   assert(addressBookCallback,
     'addressBookCallback must not be null or undefined');
-  assert(connectionType,
-    'connectionType must not be null or undefined');
 
-  ThaliNotificationAction.super_.call(this, peerIdentifier,
-    connectionType,
+  ThaliNotificationAction.super_.call(this, peer.peerIdentifier,
+    peer.connectionType,
     ThaliNotificationAction.ACTION_TYPE,
     thaliConfig.BEACON_PSK_IDENTITY,
     thaliConfig.BEACON_KEY);
 
   this.eventEmitter = new EventEmitter();
 
+  this._peerGeneration = peer.generation;
   this._ecdhForLocalDevice = ecdhForLocalDevice;
   this._addressBookCallback = addressBookCallback;
 
@@ -67,6 +75,11 @@ inherits(ThaliNotificationAction, PeerAction);
 ThaliNotificationAction.prototype.getResolution = function () {
   return this._resolution;
 };
+
+ThaliNotificationAction.prototype.getPeerGeneration = function () {
+  return this._peerGeneration;
+};
+
 
 /**
  * NotificationAction's event emitter
@@ -123,12 +136,11 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
       });
     })
     .then(function (peerHostInfo) {
-      self._peerConnection = new PeerDictionary.PeerConnectionInformation(
-        self.getConnectionType(),
-        peerHostInfo.hostAddress,
-        peerHostInfo.portNumber,
-        peerHostInfo.suggestedTCPTimeout
-      );
+      self._peerConnection = {
+        hostAddress: peerHostInfo.hostAddress,
+        portNumber: peerHostInfo.portNumber,
+        suggestedTCPTimeout: peerHostInfo.suggestedTCPTimeout
+      };
       return new Promise(function (resolve, reject) {
         // Check if kill is called before entering into this promise
         if (self.getActionState() === PeerAction.actionState.KILLED) {
@@ -140,8 +152,8 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
 
         var options = {
           method: 'GET',
-          hostname: self._peerConnection.getHostAddress(),
-          port: self._peerConnection.getPortNumber(),
+          hostname: self._peerConnection.hostAddress,
+          port: self._peerConnection.portNumber,
           path: thaliConfig.NOTIFICATION_BEACON_PATH,
           agent: httpAgentPool,
           family: 4
@@ -195,7 +207,7 @@ ThaliNotificationAction.prototype.killSuperseded = function () {
  * This synchronous function returns a connection information.
  *
  * @public
- * @returns {module:thaliPeerDictionary~PeerConnectionInformation}
+ * @returns {PeerConnectionInformation}
  * Connection parameters to connect to peer.
  */
 ThaliNotificationAction.prototype.getConnectionInformation = function () {
@@ -281,8 +293,12 @@ ThaliNotificationAction.prototype._complete = function (resolution,
     // Sets our state to KILLED now that we are done
     ThaliNotificationAction.super_.prototype.kill.call(this);
 
-    this.eventEmitter.emit(ThaliNotificationAction.Events.Resolved,
-      this.getPeerIdentifier(), resolution, beaconDetails);
+    this.eventEmitter.emit(
+      ThaliNotificationAction.Events.Resolved,
+      this,
+      resolution,
+      beaconDetails
+    );
 
     if (error && this._reject) {
       this._reject(new Error(error));

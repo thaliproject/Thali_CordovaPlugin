@@ -1,5 +1,6 @@
 'use strict';
 
+var assert = require('assert');
 var ThaliNotificationAction = require('./thaliNotificationAction.js');
 
 /** @module thaliPeerDictionary */
@@ -35,77 +36,6 @@ module.exports.peerState = {
   WAITING: 'waiting'
 };
 
-/**
- * @classdesc Records information about how to connect to a peer
- * over a particular connectionType.
- *
- * @public
- * @constructor
- * @param {module:ThaliMobileNativeWrapper.connectionTypes} connectionType
- * @param {string} hostAddress
- * @param {number} portNumber
- * @param {number} suggestedTCPTimeout
- */
-function PeerConnectionInformation(connectionType, hostAddress,
-                                   portNumber, suggestedTCPTimeout) {
-  this._connectionType = connectionType;
-  this._hostAddress = hostAddress;
-  this._portNumber = portNumber;
-  this._suggestedTCPTimeout = suggestedTCPTimeout ||
-    PeerConnectionInformation.DEFAULT_TCP_TIMEOUT;
-}
-
-/**
- * Returns peer's host address, either IP or DNS.
- *
- * @public
- * @return {string} peer's host address, either IP or DNS
- */
-PeerConnectionInformation.prototype.getHostAddress = function () {
-  return this._hostAddress;
-};
-
-
-/**
- * Returns port to use with the host address.
- *
- * @public
- * @return {number} port to use with the host address.
- */
-PeerConnectionInformation.prototype.getPortNumber = function () {
-  return this._portNumber;
-};
-
-/**
- * Returns TCP time out to use when establishing a TCP connection with the
- * peer.
- *
- * @public
- * @return {number} TCP time out
- */
-PeerConnectionInformation.prototype.getSuggestedTCPTimeout = function () {
-  return this._suggestedTCPTimeout;
-};
-
-/**
- * Returns the connection type that we use to communicate with the peer.
- *
- * @public
- * @return {module:ThaliMobileNativeWrapper.connectionTypes} TCP time out
- */
-PeerConnectionInformation.prototype.getConnectionType = function () {
-  return this._connectionType;
-};
-
-/**
- * This is default TCP timeout that is used if suggestedTCPTimeout is
- * not defined for the PeerConnectionInformation.
- * @type {number}
- * @readonly
- */
-PeerConnectionInformation.DEFAULT_TCP_TIMEOUT = 2000;
-
-module.exports.PeerConnectionInformation = PeerConnectionInformation;
 
 
 // jscs:disable maximumLineLength
@@ -115,8 +45,6 @@ module.exports.PeerConnectionInformation = PeerConnectionInformation;
  * @public
  * @param {module:thaliPeerDictionary.peerState} peerState The
  * state of the peer.
- * @param {module:thaliPeerDictionary~PeerConnectionInformation} peerConnection connection
- * information that use to connect to the peer.
  * @param {module:thaliNotificationAction~NotificationAction} notificationAction
  * @constructor
  */
@@ -197,22 +125,35 @@ PeerDictionary.MAXSIZE = 100;
  * and it is removed.
  *
  * @public
- * @param {string} peerId
+ * @param {Object} peer
+ * @param {string} peer.peerIdentifier
+ * @param {number} peer.generation
  * @param {module:thaliPeerDictionary~NotificationPeerDictionaryEntry} entry
  * Entry to be added.
   */
-PeerDictionary.prototype.addUpdateEntry = function (peerId, entry) {
-  if (this._dictionary[peerId]) {
-    this._dictionary[peerId].entry = entry;
-    this._dictionary[peerId].entryNumber = this._entryCounter++;
-  } else {
-    this._removeOldestIfOverflow();
-    this._dictionary[peerId] = {
-      'entry' : entry,
-      'entryNumber' : this._entryCounter++
-    };
-  }
-};
+PeerDictionary.prototype.addUpdateEntry =
+  function (peer, entry) {
+    var peerIdentifier = peer.peerIdentifier;
+    var generation = peer.generation;
+    assert(peerIdentifier, 'peer.peerIdentifier must be set');
+    assert(typeof generation === 'number', 'peer.generation must be a number');
+
+    if (!this._dictionary[peerIdentifier]) {
+      this._dictionary[peerIdentifier] = {};
+    }
+
+    var peerEntries = this._dictionary[peerIdentifier];
+    if (!peerEntries[generation]) {
+      this._removeOldestIfOverflow();
+      peerEntries[generation] = {
+        peerIdentifier: peerIdentifier,
+        generation: generation,
+      };
+    }
+
+    peerEntries[generation].entry = entry;
+    peerEntries[generation].entryNumber = this._entryCounter++;
+  };
 
 /**
  * Removes an entry which matches with the peerId.
@@ -223,10 +164,16 @@ PeerDictionary.prototype.addUpdateEntry = function (peerId, entry) {
  * found.
  *
  * @public
- * @param {string} peerId
+ * @param {Object} peer
+ * @param {string} peer.peerIdentifier
+ * @param {number} peer.generation
  */
-PeerDictionary.prototype.remove = function (peerId) {
-  var entry = this.get(peerId);
+PeerDictionary.prototype.remove = function (peer) {
+  assert(peer.peerIdentifier, 'peer.peerIdentifier must be set');
+  assert(typeof peer.generation === 'number',
+    'peer.generation must be a number');
+
+  var entry = this.get(peer);
   if (!entry) {
     return;
   }
@@ -235,7 +182,25 @@ PeerDictionary.prototype.remove = function (peerId) {
     entry.notificationAction.eventEmitter.removeAllListeners(
     ThaliNotificationAction.Events.Resolved);
   entry.notificationAction && entry.notificationAction.kill();
-  delete this._dictionary[peerId];
+
+  var peerEntries = this._dictionary[peer.peerIdentifier];
+  delete peerEntries[peer.generation];
+  if (Object.keys(peerEntries).length === 0) {
+    delete this._dictionary[peer.peerIdentifier];
+  }
+};
+
+PeerDictionary.prototype.removeAllPeerEntries = function (peerIdentifier) {
+  var peerEntries = this._dictionary[peerIdentifier];
+  if (!peerEntries) {
+    return;
+  }
+  Object.keys(peerEntries).forEach(function (generation) {
+    this.remove({
+      peerIdentifier: peerIdentifier,
+      generation: Number(generation),
+    });
+  }, this);
 };
 
 /**
@@ -244,8 +209,8 @@ PeerDictionary.prototype.remove = function (peerId) {
  */
 PeerDictionary.prototype.removeAll = function () {
   var self = this;
-  Object.keys(this._dictionary).forEach(function (key) {
-    self.remove(key);
+  Object.keys(this._dictionary).forEach(function (peerIdentifier) {
+    self.removeAllPeerEntries(peerIdentifier);
   });
 };
 
@@ -253,24 +218,41 @@ PeerDictionary.prototype.removeAll = function () {
  * Checks if the entry exists in the dictionary.
  *
  * @public
- * @param {string} peerId
+ * @param {Object} peer
+ * @param {string} peer.peerIdentifier
+ * @param {number} peer.generation
  * @returns {boolean} Returns true if the entry exists, false otherwise.
  */
-PeerDictionary.prototype.exists = function (peerId) {
-  return this._dictionary[peerId] !== undefined;
+PeerDictionary.prototype.exists = function (peer) {
+  assert(peer.peerIdentifier, 'peer.peerIdentifier must be set');
+  assert(typeof peer.generation === 'number',
+    'peer.generation must be a number');
+
+  var peerEntries = this._dictionary[peer.peerIdentifier];
+  return (
+    peerEntries !== undefined &&
+    peerEntries[peer.generation] !== undefined
+  );
 };
 
 /**
  * Returns an entry from the dictionary which matches with the peerId.
  *
  * @public
- * @param {string} peerId ID of the entry that is returned.
+ * @param {Object} peer
+ * @param {string} peer.peerIdentifier
+ * @param {number} peer.generation
  * @returns {module:thaliPeerDictionary~NotificationPeerDictionaryEntry}
  * Returns an entry that matches with the peerId. If the entry is not found
  * returns null.
  */
-PeerDictionary.prototype.get = function (peerId) {
-  var entryObject = this._dictionary[peerId];
+PeerDictionary.prototype.get = function (peer) {
+  assert(peer.peerIdentifier, 'peer.peerIdentifier must be set');
+  assert(typeof peer.generation === 'number',
+    'peer.generation must be a number');
+
+  var peerEntries = this._dictionary[peer.peerIdentifier];
+  var entryObject = peerEntries ? peerEntries[peer.generation] : null;
   return entryObject ? entryObject.entry : null;
 };
 
@@ -281,7 +263,21 @@ PeerDictionary.prototype.get = function (peerId) {
  * @returns {number} Size of the dictionary
  */
 PeerDictionary.prototype.size = function () {
-  return Object.keys(this._dictionary).length;
+  var dict = this._dictionary;
+  return Object.keys(dict).reduce(function (total, peerIdentifier) {
+    return total + Object.keys(dict[peerIdentifier]).length;
+  }, 0);
+};
+
+PeerDictionary.prototype._values = function () {
+  var dict = this._dictionary;
+  return Object.keys(dict).reduce(function (result, peerIdentifier) {
+    var peerEntries = dict[peerIdentifier];
+    var entryObjects = Object.keys(peerEntries).map(function (generation) {
+      return peerEntries[generation];
+    });
+    return result.concat(entryObjects);
+  }, []);
 };
 
 /**
@@ -303,39 +299,35 @@ PeerDictionary.prototype._removeOldestIfOverflow = function () {
 
   var search = function (state) {
     var smallestEntryNumber = self._entryCounter;
-    var oldestPeerId = null;
-    for (var key in self._dictionary) {
-      if (self._dictionary[key].entryNumber < smallestEntryNumber &&
-          self._dictionary[key].entry.peerState === state) {
-        oldestPeerId = key;
-        smallestEntryNumber = self._dictionary[key].entryNumber;
+    var oldestEntryObject = null;
+
+    self._values().filter(function (entryObject) {
+      return entryObject.entry.peerState === state;
+    }).forEach(function (entryObject) {
+      if (entryObject.entryNumber < smallestEntryNumber) {
+        oldestEntryObject = entryObject;
+        smallestEntryNumber = entryObject.entryNumber;
       }
+    });
+    if (!oldestEntryObject) {
+      return null;
     }
-    return oldestPeerId;
+    return {
+      peerIdentifier: oldestEntryObject.peerIdentifier,
+      generation: oldestEntryObject.generation
+    };
   };
 
-  // First search for the oldest RESOLVED entry
-  var oldestPeerId = search(exports.peerState.RESOLVED);
+  var oldestPeer =
+    // First search for the oldest RESOLVED entry
+    search(exports.peerState.RESOLVED) ||
+    // Next search for the oldest WAITING entry
+    search(exports.peerState.WAITING) ||
+    // As a last search for the oldest CONTROLLED_BY_POOL entry
+    search(exports.peerState.CONTROLLED_BY_POOL);
 
-  if (oldestPeerId) {
-    self.remove(oldestPeerId);
-    return;
-  }
-
-  // Next search for the oldest WAITING entry
-  oldestPeerId = search(exports.peerState.WAITING);
-
-  if (oldestPeerId) {
-    self.remove(oldestPeerId);
-    return;
-  }
-
-  // As a last search for the oldest CONTROLLED_BY_POOL entry
-  oldestPeerId = search(exports.peerState.CONTROLLED_BY_POOL);
-
-  if (oldestPeerId) {
-    self.remove(oldestPeerId);
-    return;
+  if (oldestPeer) {
+    self.remove(oldestPeer);
   }
 };
 

@@ -1027,25 +1027,31 @@ var handlePeer = function (peer) {
     newAddressPort: newAddressPort
   };
 
+  logger.debug('Emitting peerAvailabilityChanged from handlePeer %s',
+    JSON.stringify(peerStatus));
   module.exports.emitter.emit('peerAvailabilityChanged', peerStatus);
 };
 
-// TODO chapko: It probably should not be handled here. It seems more logical
-// for me to handle it on the mux layer and after successful recreating
-// thaliMobile should get `nonTCPPeerAvailabilityChangedEvent` event with
-// `newAddressPort` set to true
 var handleRecreatedPeer = function (nativePeer) {
   var cachedPeer =
     peerAvailabilities[connectionTypes.BLUETOOTH][nativePeer.peerIdentifier];
 
   if (cachedPeer) {
-    module.exports.emitter.emit('peerAvailabilityChanged', {
+    var peerStatus = {
       peerIdentifier: nativePeer.peerIdentifier,
       connectionType: connectionTypes.BLUETOOTH,
       peerAvailable: nativePeer.peerAvailable,
       generation: nativePeer.generation,
       newAddressPort: nativePeer.peerAvailable ? false : null
-    });
+    };
+    if (nativePeer.peerAvailable) {
+      var peerToCache = JSON.parse(JSON.stringify(cachedPeer));
+      peerToCache.portNumber = nativePeer.portNumber;
+      changeCachedPeerAvailable(peerToCache);
+    }
+    logger.debug('Emitting peerAvailabilityChanged from handleRecreatedPeer %s',
+      JSON.stringify(peerStatus));
+    module.exports.emitter.emit('peerAvailabilityChanged', peerStatus);
   } else {
     if (nativePeer.peerAvailable) {
       ThaliMobileNativeWrapper
