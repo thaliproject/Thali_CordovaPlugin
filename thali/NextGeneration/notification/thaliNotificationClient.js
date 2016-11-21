@@ -365,9 +365,9 @@ ThaliNotificationClient.prototype._onActionResolved =
           pubKx,
           pskIdentifyField,
           pskSecret,
-          connInfo.getHostAddress(),
-          connInfo.getPortNumber(),
-          connInfo.getSuggestedTCPTimeout(),
+          connInfo.hostAddress,
+          connInfo.portNumber,
+          connInfo.suggestedTCPTimeout,
           entry.notificationAction.getConnectionType(),
           peer.peerIdentifier
         );

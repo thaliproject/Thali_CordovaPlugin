@@ -75,9 +75,7 @@ TestPeerAction.prototype.httpAgentPool = null;
 TestPeerAction.prototype.startPromise = null;
 TestPeerAction.prototype.getConnectionInformation = function () {
   return {
-    getPortNumber: function () {
-      return 23;
-    }
+    portNumber: 23
   };
 };
 TestPeerAction.prototype.getPeerAdvertisesDataForUs = function () {

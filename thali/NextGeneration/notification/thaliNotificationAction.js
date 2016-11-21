@@ -4,13 +4,19 @@ var Promise = require('lie');
 var assert = require('assert');
 var https = require('https');
 var PeerAction = require('../thaliPeerPool/thaliPeerAction');
-var PeerConnectionInformation = require('./thaliPeerConnectionInformation');
 var NotificationBeacons = require('./thaliNotificationBeacons');
 var EventEmitter = require('events').EventEmitter;
 var thaliConfig = require('../thaliConfig');
 var ThaliMobile = require('../thaliMobile');
 
 /** @module thaliNotificationAction */
+
+/**
+ * @typedef {Object} PeerConnectionInformation
+ * @property {string} hostAddress
+ * @property {number} portNumber
+ * @property {number} suggestedTCPTimeout timeout in milliseconds
+ */
 
 /**
  * Creates a sub-type of the {@link module:thaliPeerPoolInterface~PeerAction}
@@ -131,12 +137,11 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
       });
     })
     .then(function (peerHostInfo) {
-      self._peerConnection = new PeerConnectionInformation(
-        self.getConnectionType(),
-        peerHostInfo.hostAddress,
-        peerHostInfo.portNumber,
-        peerHostInfo.suggestedTCPTimeout
-      );
+      self._peerConnection = {
+        hostAddress: peerHostInfo.hostAddress,
+        portNumber: peerHostInfo.portNumber,
+        suggestedTCPTimeout: peerHostInfo.suggestedTCPTimeout
+      };
       return new Promise(function (resolve, reject) {
         // Check if kill is called before entering into this promise
         if (self.getActionState() === PeerAction.actionState.KILLED) {
@@ -148,8 +153,8 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
 
         var options = {
           method: 'GET',
-          hostname: self._peerConnection.getHostAddress(),
-          port: self._peerConnection.getPortNumber(),
+          hostname: self._peerConnection.hostAddress,
+          port: self._peerConnection.portNumber,
           path: thaliConfig.NOTIFICATION_BEACON_PATH,
           agent: httpAgentPool,
           family: 4
@@ -203,7 +208,7 @@ ThaliNotificationAction.prototype.killSuperseded = function () {
  * This synchronous function returns a connection information.
  *
  * @public
- * @returns {module:thaliPeerDictionary~PeerConnectionInformation}
+ * @returns {PeerConnectionInformation}
  * Connection parameters to connect to peer.
  */
 ThaliNotificationAction.prototype.getConnectionInformation = function () {
