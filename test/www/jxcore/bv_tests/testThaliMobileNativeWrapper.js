@@ -617,7 +617,10 @@ test('thaliMobileNativeWrapper is stopped when ' +
       });
     thaliMobileNativeWrapper.start(express.Router())
       .then(function () {
-        routerPort = thaliMobileNativeWrapper._getServersManagerLocalPort();
+        routerPort = (platform.isAndroid) ?
+                      thaliMobileNativeWrapper._getServersManagerLocalPort() :
+                      thaliMobileNativeWrapper._getRouterServerPort();
+
         return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
       })
       .then(function () {
