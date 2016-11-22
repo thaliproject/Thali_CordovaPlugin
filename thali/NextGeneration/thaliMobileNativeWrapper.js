@@ -9,6 +9,7 @@ var express = require('express');
 var TCPServersManager = require('./mux/thaliTcpServersManager');
 var https = require('https');
 var thaliConfig = require('./thaliConfig');
+var platform = require('./utils/platform');
 
 var states = {
   started: false
@@ -629,7 +630,7 @@ module.exports._disconnect = function (peerIdentifier) {
  * Terminates a connection with the named peer. If there is no such connection
  * then the method will still return success.
  *
- * On 'connect' platforms this calls _terminateConnection method and on
+ * On 'connect' platforms this calls terminateListener method and on
  * `multiConnect` platforms this calls _disconnect.
  *
  * @param {string} peerIdentifier The value taken from a peerAvailabilityChanged
@@ -640,7 +641,7 @@ module.exports._disconnect = function (peerIdentifier) {
  */
 module.exports.disconnect = function(peerIdentifier) {
   return Promise.reject(new Error('Not yet implemented'));
-}
+};
 
 /**
  * Used on `connect` platforms to terminate a TCP/IP listener waiting for
@@ -660,7 +661,7 @@ module.exports.disconnect = function(peerIdentifier) {
  */
 module.exports.terminateListener = function (peerIdentifier, port) {
   return gPromiseQueue.enqueue(function (resolve, reject) {
-    gServersManager.terminateListener(peerIdentifier, port)
+    gServersManager.terminateOutgoingConnection(peerIdentifier, port)
     .then(function () {
       resolve();
     })
@@ -708,9 +709,34 @@ module.exports.killConnections = function () {
   });
 };
 
-/*
-        EVENTS
+/**
+ * This method is to enable/disable wifi.
+ *
+ * @returns {Promise<?Error>}
  */
+module.exports.setWifiRadioState = function (value) {
+  if (platform.isIOS) {
+    var error = 'Mobile(\'setWifiRadioState\') is not implemented on ios';
+    console.error(error);
+    return Promise.reject(new Error(error));
+  }
+
+  return gPromiseQueue.enqueue(function (resolve, reject) {
+    Mobile('setWifiRadioState').callNative(value, function (error) {
+      if (error) {
+        logger.error(
+          'Mobile(\'setWifiRadioState\') returned an error: \'%s\', stack: \'%s\'',
+          error.toString(), error.stack
+        );
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+/* EVENTS */
 
 /**
  * Enum to define the types of connections

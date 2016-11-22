@@ -234,7 +234,8 @@ ThaliTcpServersManager.prototype._createNativeListener = function () {
  */
 ThaliTcpServersManager.prototype.createPeerListener = function (peerIdentifier,
                                                                 pleaseConnect) {
-  return createPeerListener(this, peerIdentifier, pleaseConnect);
+  return createPeerListener.createPeerListener(this, peerIdentifier,
+                                                pleaseConnect);
 };
 
 /**
@@ -269,13 +270,26 @@ ThaliTcpServersManager.prototype.terminateIncomingConnection =
  * This method MUST be idempotent so multiple calls with the same value MUST NOT
  * cause an error or a state change.
  *
- * @param {string} peerIdentifier
- * @param {number} port
+ * Note that this method will ONLY terminate the native connection. It will not
+ * fire a 'failedConnection' nor will it fire a 'listenerRecreatedAfterFailure'
+ * event.
+ *
+ * @param {string} peerIdentifier The identifier of the peer we are connected
+ * to and whose local listener we want to shut down.
+ * @param {number} port The port that the local listener for that peer is
+ * running on. We use the port to prevent race conditions where there is already
+ * a new listener for the peer but the code who called
+ * terminateOutgoingConnection doesn't know. It is explicitly not an error to
+ * put a port that is no longer correct. The method should return successfully.
  * @returns {Promise<?error>}
  */
 ThaliTcpServersManager.prototype.terminateOutgoingConnection =
   function (peerIdentifier, port) {
-    return Promise.reject('Not yet implemented');
+    var peerServer = this._peerServers[peerIdentifier];
+    if (peerServer && peerServer.server.address().port === port) {
+      createPeerListener.closeServer(this, peerServer.server, null, false);
+    }
+    return Promise.resolve(null);
   };
 
 /**

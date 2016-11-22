@@ -39,7 +39,7 @@ function closeServer(self, server, failedConnectionErr, canRetry)
     // the server spot for the identifier we are using and no this probably
     // isn't actually required and we could have used setImmediate
     process.nextTick(function () {
-      module.exports(self, server._peerIdentifier, false)
+      createPeerListener(self, server._peerIdentifier, false)
         .then(function (port) {
           self.emit('listenerRecreatedAfterFailure', {
             'peerIdentifier': server._peerIdentifier,
@@ -53,6 +53,8 @@ function closeServer(self, server, failedConnectionErr, canRetry)
     });
   }
 }
+
+module.exports.closeServer = closeServer;
 
 function findMuxForReverseConnection(nativeServer, clientPort) {
   // Find the mux for the reverse connection based on
@@ -431,7 +433,7 @@ function connectToRemotePeer(self, incoming, peerIdentifier, server,
  * @param {string} peerIdentifier
  * @returns {Promise<number|Error>}
  */
-module.exports = function (self, peerIdentifier, pleaseConnect) {
+function createPeerListener(self, peerIdentifier, pleaseConnect) {
 
   // This section manages a server that accepts incoming connections
   // from the application. The first connection causes the p2p link to
@@ -629,4 +631,6 @@ module.exports = function (self, peerIdentifier, pleaseConnect) {
   }
 
   return new Promise(_do);
-};
+}
+
+module.exports.createPeerListener = createPeerListener;

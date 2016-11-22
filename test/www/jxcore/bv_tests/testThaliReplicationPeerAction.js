@@ -12,8 +12,6 @@ var httpTester = require('../lib/httpTester');
 var ThaliReplicationPeerAction = require('thali/NextGeneration/replication/thaliReplicationPeerAction');
 var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var PeerAction = require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
-var Platform = require('thali/NextGeneration/utils/platform');
-var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var devicePublicKey = devicePublicPrivateKey.generateKeys();
@@ -206,7 +204,7 @@ function matchDocsInChanges(pouchDB, docs, thaliPeerReplicationAction) {
           }
         })
         .then(resolve);
-      }, ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds);
+      }, ThaliReplicationPeerAction.PUSH_LAST_SYNC_UPDATE_MILLISECONDS);
     }).on ('error', function (err) {
       reject('got error ' + err);
     });
@@ -223,43 +221,43 @@ test('Make sure docs replicate',
       var localPouchDB = new DifferentDirectoryPouch(randomDBName);
       createDocs(remotePouchDB, 10)
      .then(function (docs) {
-       var notificationForUs = {
-         keyId: new Buffer('abcdefg'),
-         portNumber: serverPort,
-         hostAddress: '127.0.0.1',
-         pskIdentifyField: pskId,
-         psk: pskKey,
-         suggestedTCPTimeout: 10000,
-         connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
-       };
-       var promises = [];
-       thaliReplicationPeerAction =
+        var notificationForUs = {
+          keyId: new Buffer('abcdefg'),
+          portNumber: serverPort,
+          hostAddress: '127.0.0.1',
+          pskIdentifyField: pskId,
+          psk: pskKey,
+          suggestedTCPTimeout: 10000,
+          connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
+        };
+        var promises = [];
+        thaliReplicationPeerAction =
          new ThaliReplicationPeerAction(notificationForUs,
            DifferentDirectoryPouch, randomDBName,
            devicePublicKey);
-       promises.push(thaliReplicationPeerAction.start(httpAgentPool));
-       promises.push(matchDocsInChanges(localPouchDB, docs,
+        promises.push(thaliReplicationPeerAction.start(httpAgentPool));
+        promises.push(matchDocsInChanges(localPouchDB, docs,
                      thaliReplicationPeerAction));
-       return Promise.all(promises);
-     })
+        return Promise.all(promises);
+      })
      .then(function () {
-       return remotePouchDB.info();
-     })
+        return remotePouchDB.info();
+      })
      .then(function (info) {
-       return httpTester.validateSeqNumber(t, randomDBName, serverPort,
-         // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
-         info.update_seq, pskId, pskKey, devicePublicKey, null, 10);
-       // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
-     })
+        return httpTester.validateSeqNumber(t, randomDBName, serverPort,
+        // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
+        info.update_seq, pskId, pskKey, devicePublicKey, null, 10);
+        // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
+      })
      .then(function () {
-       t.pass('All tests passed!');
-     })
-     .catch(function (err) {
-       t.fail('failed with ' + err);
-     })
-     .then(function () {
-       t.end();
-     });
+        t.pass('All tests passed!');
+      })
+      .catch(function (err) {
+        t.fail('failed with ' + err);
+      })
+      .then(function () {
+        t.end();
+      });
     });
   });
 
@@ -279,8 +277,8 @@ test('Do nothing and make sure we time out', function (t) {
     // Using a different directory really shouldn't make any difference
     // to this particular test but I'm being paranoid
     var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
-    var originalTimeout = ThaliReplicationPeerAction.maxIdlePeriodSeconds;
-    ThaliReplicationPeerAction.maxIdlePeriodSeconds = 2;
+    var originalTimeout = ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS;
+    ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 2;
     thaliReplicationPeerAction =
       new ThaliReplicationPeerAction(notificationForUs,
         DifferentDirectoryPouch, randomDBName,
@@ -305,7 +303,7 @@ test('Do nothing and make sure we time out', function (t) {
         t.equal(err.statusCode, 404, 'No doc found');
       })
       .then(function () {
-        ThaliReplicationPeerAction.maxIdlePeriodSeconds = originalTimeout;
+        ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = originalTimeout;
         t.end();
       });
   });
@@ -318,8 +316,8 @@ test('Do something and make sure we time out', function (t) {
     var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
     var localPouchDB = new DifferentDirectoryPouch(randomDBName);
     var thaliReplicationPeerActionStartOutput = null;
-    var originalTimeout = ThaliReplicationPeerAction.maxIdlePeriodSeconds;
-    ThaliReplicationPeerAction.maxIdlePeriodSeconds = 2;
+    var originalTimeout = ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS;
+    ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 2;
     createDocs(remotePouchDB, 10)
       .then(function (docs) {
         var notificationForUs = {
@@ -370,7 +368,7 @@ test('Do something and make sure we time out', function (t) {
           'out');
       })
       .then(function () {
-        ThaliReplicationPeerAction.maxIdlePeriodSeconds = originalTimeout;
+        ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = originalTimeout;
         t.end();
       });
   });

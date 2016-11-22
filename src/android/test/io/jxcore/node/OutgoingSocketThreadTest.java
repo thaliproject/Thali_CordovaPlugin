@@ -80,7 +80,8 @@ public class OutgoingSocketThreadTest {
 
         assertThat("mServerSocket should be null", mServerSocket, is(nullValue()));
     }
-    // 1214
+
+    // https://github.com/thaliproject/Thali_CordovaPlugin/issues/1214
     // @Test
     public void testRun() throws Exception {
         System.out.println("Running OutgoingSocketThread");

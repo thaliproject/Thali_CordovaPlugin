@@ -108,11 +108,10 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
 };
 
 ThaliPeerPoolDefault.prototype.start = function () {
-  var self = this;
   this._stopped = false;
 
   return ThaliPeerPoolDefault.super_.prototype.start.apply(this, arguments);
-}
+};
 
 /**
  * This function is used primarily for cleaning up after tests and will

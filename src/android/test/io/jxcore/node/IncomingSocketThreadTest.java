@@ -100,7 +100,8 @@ public class IncomingSocketThreadTest {
                     mIncomingSocketThread.getLocalHostPort(), is(nullValue()));
         }
     }
-    // 1214
+
+    //https://github.com/thaliproject/Thali_CordovaPlugin/issues/1196
     // @Test
     public void testRun() throws Exception {
         mOutgoingSocketThread.setPort(47775);

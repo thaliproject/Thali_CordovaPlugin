@@ -92,8 +92,7 @@ var getWifiOrNativeMethodByNetworkType = function (method, networkType) {
           });
       };
     }
-    default:
-    {
+    default: {
       throw new Error('Unsupported network type ' + networkType);
     }
   }
@@ -237,6 +236,10 @@ module.exports.start = function (router, pskIdToSecret, networkType) {
       .then(resolve);
   });
 };
+
+module.exports.isStarted = function () {
+  return thaliMobileStates.started;
+}
 
 /**
  * This calls stop on both stacks even if start failed.
@@ -487,7 +490,7 @@ module.exports.getPeerHostInfo = function () {
  * @returns {Promise<?Error>}
  */
 module.exports.disconnect = function () {
-  return Promise.reject('not implement');
+  return Promise.reject('not implemented');
 };
 /*
         EVENTS

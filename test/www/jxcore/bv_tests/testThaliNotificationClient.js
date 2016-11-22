@@ -6,8 +6,8 @@ var sinon = require('sinon');
 var Promise = require('lie');
 var http = require('http');
 var httpTester = require('../lib/httpTester.js');
-var Platform = require('thali/NextGeneration/utils/platform');
-var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+var PeerAction = require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
+var PeerDictionary = require('thali/NextGeneration/notification/thaliPeerDictionary');
 
 var ThaliPeerDictionary =
   require('thali/NextGeneration/notification/thaliPeerDictionary');
@@ -225,6 +225,10 @@ test('TCP_NATIVE peer loses DNS', function (t) {
 });
 
 test('Received beacons with no values for us', function (t) {
+  var notificationClient =
+    new ThaliNotificationClient(globals.peerPoolInterface,
+      globals.targetDeviceKeyExchangeObjects[0]);
+
   var enqueue = function (action) {
     var keepAliveAgent = httpTester.getTestAgent(
       thaliConfig.BEACON_PSK_IDENTITY, thaliConfig.BEACON_KEY);
@@ -251,12 +255,48 @@ test('Received beacons with no values for us', function (t) {
     thaliConfig.NOTIFICATION_BEACON_PATH,
     200, globals.preambleAndBeacons, 1);
 
+  var bogusPublicKey =
+    crypto.createECDH(thaliConfig.BEACON_CURVE).generateKeys();
+  notificationClient.start([bogusPublicKey]);
+
+  notificationClient.on(notificationClient.Events.PeerAdvertisesDataForUs,
+    function () {
+      t.fail('We should not have gotten an event!');
+    });
+
+  // New peer with TCP connection
+  notificationClient._peerAvailabilityChanged(globals.TCPEvent);
+});
+
+test('Notification action killed with a superseded', function (t) {
   var notificationClient =
     new ThaliNotificationClient(globals.peerPoolInterface,
       globals.targetDeviceKeyExchangeObjects[0]);
 
+  var peerPoolInterface = globals.peerPoolInterface;
+  var enqueue = function (action) {
+    setImmediate(function () {
+      action.killSuperseded();
+      // Give the system a chance to fire any promises or events in case the
+      // logic isn't working right.
+      setImmediate(function () {
+        t.equal(action.getActionState(), PeerAction.actionState.KILLED,
+          'Action should be killed');
+        t.equal(notificationClient.peerDictionary
+            .get(action.getPeerIdentifier()).peerState,
+          PeerDictionary.peerState.RESOLVED);
+        peerPoolInterface.enqueue.restore();
+        t.end();
+      });
+    });
+    return null;
+  };
+
+  sinon.stub(globals.peerPoolInterface, 'enqueue', enqueue);
+
   var bogusPublicKey =
     crypto.createECDH(thaliConfig.BEACON_CURVE).generateKeys();
+
   notificationClient.start([bogusPublicKey]);
 
   notificationClient.on(notificationClient.Events.PeerAdvertisesDataForUs,

@@ -23,11 +23,47 @@ var logger    = require('./lib/testLogger')('runTests');
 
 var platform = require('thali/NextGeneration/utils/platform');
 
+var DEFAULT_PLATFORM = platform.names.ANDROID;
+var mockPlatform;
+
+var argv = require('minimist')(process.argv.slice(2), {
+  string: ['platform', 'networkType'],
+  default: {
+    'platform': DEFAULT_PLATFORM
+  }
+});
+
 // The global.Mobile object is replaced here after thaliTape
 // has been required so that thaliTape can pick up the right
 // test framework to be used.
 if (typeof Mobile === 'undefined') {
-  global.Mobile = require('./lib/wifiBasedNativeMock.js')();
+  mockPlatform = require('./lib/parsePlatformArg')() || DEFAULT_PLATFORM;
+  global.Mobile = require('./lib/wifiBasedNativeMock.js')(mockPlatform);
+} else {
+  mockPlatform = Mobile._platform; // mock may be created in UnitTest_app.js
+}
+
+var networkTypes = require('thali/NextGeneration/thaliMobile').networkTypes;
+
+if (argv.networkType) {
+  var networkType = argv.networkType.toUpperCase();
+  switch (networkType) {
+    case networkTypes.WIFI:
+    case networkTypes.NATIVE:
+    case networkTypes.BOTH:
+      global.NETWORK_TYPE = networkType;
+      break;
+    default:
+      logger.warn(
+        'Unrecognized network type: ' + networkType + '. ' +
+        'Available network types: ' + [
+          networkTypes.WIFI,
+          networkTypes.NATIVE,
+          networkTypes.BOTH,
+        ].join(', ')
+      );
+      process.exit(1);
+  }
 }
 
 var hasJavaScriptSuffix = function (path) {
@@ -39,16 +75,29 @@ var loadFile = function (filePath) {
   try {
     require(filePath);
   } catch (error) {
-    error = format(
+    var err = format(
       'test load failed, filePath: \'%s\', error: \'%s\', stack: \'%s\'',
       filePath, error.toString(), error.stack
     );
-    logger.error(error);
-    throw new Error(error);
+    logger.error(err);
+    throw new Error(err);
   }
 };
 
-var testsToRun = process.argv.length > 2 ? process.argv[2] : 'bv_tests';
+var testsToRun = argv._[0] || 'bv_tests';
+
+var currentPlatform = platform.name;
+// Our current platform can be 'darwin', 'linux', 'windows', etc.
+// Our 'thaliTape' expects all these platforms will be named as 'desktop'.
+if (!platform.isMobile) {
+  currentPlatform = 'desktop';
+}
+
+logger.info(
+  'Starting tests. ' +
+  'Network type: ' + global.NETWORK_TYPE + '. ' +
+  'Platform: ' + (mockPlatform || currentPlatform)
+);
 
 if (hasJavaScriptSuffix(testsToRun)) {
   loadFile(path.join(__dirname, testsToRun));
@@ -62,19 +111,13 @@ if (hasJavaScriptSuffix(testsToRun)) {
   });
 }
 
-var currentPlatform = platform.name;
-// Our current platform can be 'darwin', 'linux', 'windows', etc.
-// Our 'thaliTape' expects all these platforms will be named as 'desktop'.
-if (!platform.isMobile) {
-  currentPlatform = 'desktop';
-}
-
 testUtils.hasRequiredHardware()
 .then(function (hasRequiredHardware) {
   return testUtils.getOSVersion()
   .then(function (version) {
-    return thaliTape.begin(currentPlatform, version, hasRequiredHardware, global.nativeUTFailed);
-  })
+    return thaliTape.begin(currentPlatform, version, hasRequiredHardware,
+      global.nativeUTFailed);
+  });
 })
 .then(function () {
   process.exit(0);

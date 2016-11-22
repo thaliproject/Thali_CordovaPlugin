@@ -7,17 +7,11 @@ if (!tape.coordinated) {
 
 var testUtils = require('../lib/testUtils.js');
 
-var extend = require('js-extend').extend;
-var fs = require('fs-extra-promise');
-var path = require('path');
 var crypto = require('crypto');
 var Promise = require('bluebird');
 var PouchDB = require('pouchdb');
 var ExpressPouchDB = require('express-pouchdb');
 
-var sinon = require('sinon');
-
-var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var ThaliManager = require('thali/NextGeneration/thaliManager');
 var ThaliPeerPoolDefault =
@@ -78,11 +72,9 @@ function waitForRemoteDocs(
   var newRemoteDocStrings = newRemoteDocs.map(toString);
 
   function allDocsFound() {
-    return (
-      !localDocString &&
+    return !localDocString &&
       newRemoteDocStrings.length === 0 &&
-      oldRemoteDocStrings.length === 0
-    );
+      oldRemoteDocStrings.length === 0;
   }
 
   function findDoc(doc) {

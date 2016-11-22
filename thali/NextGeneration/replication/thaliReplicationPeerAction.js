@@ -37,8 +37,8 @@ function ThaliReplicationPeerAction(peerAdvertisesDataForUs,
                                     PouchDB,
                                     dbName,
                                     ourPublicKey) {
-  assert(ThaliReplicationPeerAction.maxIdlePeriodSeconds * 1000 -
-    ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds >
+  assert(ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS * 1000 -
+    ThaliReplicationPeerAction.PUSH_LAST_SYNC_UPDATE_MILLISECONDS >
     1000, 'Need at least a seconds worth of clearance to make sure ' +
     'that at least one sync update will have gone out before we time out.');
   assert(peerAdvertisesDataForUs, 'there must be peerAdvertisesDataForUs');
@@ -48,7 +48,7 @@ function ThaliReplicationPeerAction(peerAdvertisesDataForUs,
 
   ThaliReplicationPeerAction.super_.call(this, peerAdvertisesDataForUs.keyId,
     peerAdvertisesDataForUs.connectionType,
-    ThaliReplicationPeerAction.actionType,
+    ThaliReplicationPeerAction.ACTION_TYPE,
     peerAdvertisesDataForUs.pskIdentifyField,
     peerAdvertisesDataForUs.psk);
 
@@ -73,7 +73,7 @@ util.inherits(ThaliReplicationPeerAction, ThaliPeerAction);
  * @readonly
  * @type {string}
  */
-ThaliReplicationPeerAction.actionType = 'ReplicationAction';
+ThaliReplicationPeerAction.ACTION_TYPE = 'ReplicationAction';
 
 /**
  * The number of seconds we will wait for an existing live replication to have
@@ -83,7 +83,7 @@ ThaliReplicationPeerAction.actionType = 'ReplicationAction';
  * @readonly
  * @type {number}
  */
-ThaliReplicationPeerAction.maxIdlePeriodSeconds = 30;
+ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 3;
 
 /**
  * The number of milliseconds to wait between updating `_Local/<peer ID>` on the
@@ -94,7 +94,11 @@ ThaliReplicationPeerAction.maxIdlePeriodSeconds = 30;
  * @readonly
  * @type {number}
  */
-ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds = 200;
+ThaliReplicationPeerAction.PUSH_LAST_SYNC_UPDATE_MILLISECONDS = 200;
+
+ThaliReplicationPeerAction.prototype.getPeerAdvertisesDataForUs = function () {
+  return this._peerAdvertisesDataForUs;
+};
 
 /**
  * The replication timer is needed because by default we do live replications
@@ -112,7 +116,7 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
     self._refreshTimerManager.stop();
   }
   self._refreshTimerManager = new RefreshTimerManager(
-    ThaliReplicationPeerAction.maxIdlePeriodSeconds * 1000,
+    ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS * 1000,
     function() {
       self._complete([new Error('No activity time out')]);
     });
@@ -163,12 +167,12 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
  * {@link module:thaliPeerAction~PeerAction.start}.
  *
  * change - If we don't see any changes on the replication for {@link
- * module:thaliReplicationPeerAction~ThaliReplicatonPeerAction.maxIdlePeriodSeconds}
+ * module:thaliReplicationPeerAction~ThaliReplicatonPeerAction.MAX_IDLE_PERIOD_SECONDS}
  * seconds then we will end the replication. The output from this event also
  * provides us with the current last_seq we have synch'd from the remote peer.
  * Per http://thaliproject.org/ReplicationAcrossDiscoveryProtocol/ we need to
  * update the remote `_Local/<peer ID>` document every
- * {@link module:thaliReplicationPeerAction~ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds}
+ * {@link module:thaliReplicationPeerAction~ThaliReplicationPeerAction.PUSH_LAST_SYNC_UPDATE_MILLISECONDS}
  *
  * Make sure to keep the cancel object returned by the replicate call. Well
  * need it for kill.
@@ -237,7 +241,7 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
 
       var remoteDB = new self._PouchDB(remoteUrl, ajaxOptions);
       self._localSeqManager = new LocalSeqManager(
-        ThaliReplicationPeerAction.pushLastSyncUpdateMilliseconds,
+        ThaliReplicationPeerAction.PUSH_LAST_SYNC_UPDATE_MILLISECONDS,
         remoteDB, self._ourPublicKey);
       self._replicationPromise = new Promise(function (resolve, reject) {
         self._resolve = resolve;
@@ -344,7 +348,8 @@ ThaliReplicationPeerAction.prototype._complete =
           }
           case 'ECONNRESET': {
             self._reject(
-              new Error('Could establish TCP connection but couldn\'t keep it running')
+              new Error('Could establish TCP connection but couldn\'t keep' +
+                ' it running')
             );
             return true;
           }
