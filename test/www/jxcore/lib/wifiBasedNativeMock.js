@@ -36,7 +36,16 @@ var platformChoice = {
   IOS: 'iOS'
 };
 
+var BSSID = 'c1:5b:05:5a:41:1e'; // 'c1-5b-05-5a-41-1e' is valid too.
+var SSID  = 'myWifi';
 var currentNetworkStatus = {
+  wifi:               'on',
+  bluetooth:          'on',
+  bluetoothLowEnergy: 'on',
+  cellular:           'on',
+
+  bssidName: BSSID,
+  ssidName:  SSID
   wifi: 'on',
   bluetooth: 'on',
   bluetoothLowEnergy: 'doNotCare',
