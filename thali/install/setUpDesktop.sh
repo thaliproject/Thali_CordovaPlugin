@@ -42,12 +42,12 @@ echo "end installing Thali install"
 echo ""
 
 echo ""
-echo "start preparing `test/www/jxcore`"
+echo "start preparing 'test/www/jxcore'"
 cd ../../test/www/jxcore
 npm link thali
 node installCustomPouchDB.js
 jx npm install --no-optional
-echo "end prepating `test/www/jxcore`"
+echo "end prepating 'test/www/jxcore'"
 echo ""
 
 echo "end setUpDesktop.sh"
