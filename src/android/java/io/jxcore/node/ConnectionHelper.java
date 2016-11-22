@@ -610,8 +610,12 @@ public class ConnectionHelper
                             + who.getPeerProperties().toString()
                             + " disconnected: " + errorMessage);
 
-                        final String peerId = who.getPeerProperties().getId();
-                        mConnectionModel.closeAndRemoveOutgoingConnectionThread(peerId);
+                        final IncomingSocketThread incomingSocketThread = (IncomingSocketThread) who;
+                        boolean closed = mConnectionModel.closeAndRemoveIncomingConnectionThread(incomingSocketThread.getId());
+                        if (!closed) {
+                            throw new RuntimeException("Trying to close nonexistent incoming connection");
+                        }
+                        JXcoreExtension.notifyIncomingConnectionToPortNumberFailed(incomingSocketThread.getTcpPortNumber());
                     }
                 });
         } catch (IOException e) {
