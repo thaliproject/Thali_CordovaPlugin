@@ -56,7 +56,6 @@ public class JXcoreExtension {
     private static final String EVENT_VALUE_PEER_ID = "peerIdentifier";
     private static final String EVENT_VALUE_PEER_GENERATION = "generation";
     private static final String EVENT_VALUE_PEER_AVAILABLE = "peerAvailable";
-    private static final String EVENT_VALUE_PLEASE_CONNECT = "pleaseConnect";
     private static final String EVENT_VALUE_DISCOVERY_ACTIVE = "discoveryActive";
     private static final String EVENT_VALUE_ADVERTISING_ACTIVE = "advertisingActive";
     private static final String EVENT_VALUE_BLUETOOTH_LOW_ENERGY = "bluetoothLowEnergy";
@@ -521,7 +520,6 @@ public class JXcoreExtension {
             jsonObject.put(EVENT_VALUE_PEER_ID, peerProperties.getId());
             jsonObject.put(EVENT_VALUE_PEER_GENERATION, peerProperties.getExtraInformation());
             jsonObject.put(EVENT_VALUE_PEER_AVAILABLE, isAvailable);
-            jsonObject.put(EVENT_VALUE_PLEASE_CONNECT, false);
             jsonObjectCreated = true;
         } catch (JSONException e) {
             Log.e(TAG, "notifyPeerAvailabilityChanged: Failed to populate the JSON object: " + e.getMessage(), e);
