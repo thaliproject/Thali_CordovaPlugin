@@ -37,6 +37,9 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
     private static final String RECEIVING_THREAD_NAME = "Receiver";
     protected static final int STREAM_COPYING_THREAD_BUFFER_SIZE = 1024 * 8;
 
+    protected int receiveBufferSize = STREAM_COPYING_THREAD_BUFFER_SIZE;
+    protected int sendBufferSize = STREAM_COPYING_THREAD_BUFFER_SIZE;
+
     protected final BluetoothSocket mBluetoothSocket;
     protected final Listener mListener;
     protected final InputStream mBluetoothInputStream;
@@ -77,7 +80,16 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
         mBluetoothOutputStream = outputStream;
         mListener = listener;
         mBluetoothSocket = bluetoothSocket;
+        setBufferSizes();
     }
+
+    private void setBufferSizes(){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && mBluetoothSocket!=null) {
+            receiveBufferSize = mBluetoothSocket.getMaxReceivePacketSize();
+            sendBufferSize = mBluetoothSocket.getMaxTransmitPacketSize();
+        }
+    }
+
 
     public Listener getListener() {
         return mListener;
@@ -264,23 +276,13 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
 
             mSendingThread = new StreamCopyingThread(this, mLocalInputStream, mBluetoothOutputStream, shortName + "/" + SENDING_THREAD_NAME, connectionData);
             mSendingThread.setUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                mSendingThread.setBufferSize(mBluetoothSocket.getMaxReceivePacketSize());
-            }
-            else{
-                mSendingThread.setBufferSize(STREAM_COPYING_THREAD_BUFFER_SIZE);
-            }
+            mSendingThread.setBufferSize(sendBufferSize);
+            mSendingThread.setBufferSize(receiveBufferSize);
             mSendingThread.setNotifyStreamCopyingProgress(true);
             mSendingThread.start();
-
             mReceivingThread = new StreamCopyingThread(this, mBluetoothInputStream, mLocalOutputStream, shortName + "/" + RECEIVING_THREAD_NAME, connectionData);
             mReceivingThread.setUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                mReceivingThread.setBufferSize(mBluetoothSocket.getMaxTransmitPacketSize());
-            }
-            else{
-                mReceivingThread.setBufferSize(STREAM_COPYING_THREAD_BUFFER_SIZE);
-            }
+            mReceivingThread.setBufferSize(sendBufferSize);
             mReceivingThread.setNotifyStreamCopyingProgress(true);
             mReceivingThread.start();
 
@@ -291,17 +293,11 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
     protected void configureSocket() throws SocketException {
         if(mLocalhostSocket!=null){
             mLocalhostSocket.setKeepAlive(true);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && mBluetoothSocket!=null) {
-                mLocalhostSocket.setReceiveBufferSize(mBluetoothSocket.getMaxReceivePacketSize());
-                mLocalhostSocket.setSendBufferSize(mBluetoothSocket.getMaxTransmitPacketSize());
-            }
-            else{
-                mLocalhostSocket.setReceiveBufferSize(STREAM_COPYING_THREAD_BUFFER_SIZE);
-                mLocalhostSocket.setSendBufferSize(STREAM_COPYING_THREAD_BUFFER_SIZE);
-            }
+            mLocalhostSocket.setReceiveBufferSize(receiveBufferSize);
+            mLocalhostSocket.setSendBufferSize(sendBufferSize);
             mLocalhostSocket.setReuseAddress(false);
             mLocalhostSocket.setOOBInline(false);
-            mLocalhostSocket.setSoLinger(true , 100);
+            mLocalhostSocket.setSoLinger(true , 0);
             mLocalhostSocket.setSoTimeout(0);
             mLocalhostSocket.setTcpNoDelay(true);
         }

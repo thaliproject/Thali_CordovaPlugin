@@ -84,12 +84,7 @@ class OutgoingSocketThread extends SocketThreadBase {
                     mListeningOnPortNumber = mServerSocket.getLocalPort();
                     mListener.onListeningForIncomingConnections(mListeningOnPortNumber);
                 }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && mBluetoothSocket!=null) {
-                    mServerSocket.setReceiveBufferSize(mBluetoothSocket.getMaxReceivePacketSize());
-                }
-                else{
-                    mServerSocket.setReceiveBufferSize(STREAM_COPYING_THREAD_BUFFER_SIZE);
-                }
+                mServerSocket.setReceiveBufferSize(receiveBufferSize);
                 mLocalhostSocket = mServerSocket.accept(); // Blocking call
                 configureSocket();
                 Log.i(mTag, "Incoming data from address: " + getLocalHostAddressAsString()
