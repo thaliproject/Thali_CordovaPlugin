@@ -6,6 +6,7 @@
 ### Make sure multiple calls to this script file compiles the application file
 ### END - JXcore Test Server   --------
 
+echo ""
 echo "start build.sh"
 
 SCRIPT_PATH="$(cd "$(dirname "$0")"; pwd -P)"
@@ -20,12 +21,14 @@ trap 'log_error $LINENO' ERR
 # files per process, which is 256. Try to boost it as workaround.
 ulimit -n 1024
 
-echo "Print environment:"
+echo ""
+echo "-- Environment:"
 echo "Cordova version: $(cordova -v)"
 echo "Node version: $(node -v)"
 echo "JXcore version: $(jx -jxv)"
 echo "JXcore engine: $(jx -jsv)"
 echo "xcodebuild version: $(xcodebuild -version)"
+echo ""
 
 WORKING_DIR=$(pwd)
 
@@ -52,6 +55,7 @@ then
   node CITestMode.js
 fi
 
+echo ""
 echo "run desktop tests"
 jx runTests.js --networkType WIFI
 jx runTests.js --networkType NATIVE
@@ -70,6 +74,7 @@ jx runCoordinatedTests.js --networkType BOTH
 # after the test execution
 cd $WORKING_DIR
 
+echo ""
 echo "remove the previous build result (if any) to start from a clean state."
 rm -rf ../ThaliTest
 
@@ -85,6 +90,7 @@ thali/install/setUpTests.sh $TEST_TYPE $SERVER_ADDRESS
 
 if running_on_ci; then
 
+  echo ""
   echo "start copying builds for CI"
 
   # Make sure we are back in the project root folder
@@ -108,6 +114,8 @@ if running_on_ci; then
   cp -R ../ThaliTest/platforms/ios/build/device/ThaliTest.app ThaliTest.app
 
   echo "end copying builds for CI"
+  echo ""
 fi
 
 echo "end build.sh"
+echo ""

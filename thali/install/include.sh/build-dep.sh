@@ -8,6 +8,7 @@ log_error() {
   NORMAL_COLOR='\033[0m'
   RED_COLOR='\033[0;31m'
 
+  echo ""
   echo -e "${RED_COLOR}error: command '${BASH_COMMAND}' failed with code ${code}, file '${filename}' on line ${linenumber}${NORMAL_COLOR}"
 }
 
