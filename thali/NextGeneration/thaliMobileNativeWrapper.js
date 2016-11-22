@@ -315,19 +315,6 @@ module.exports.start = function (router, pskIdToSecret) {
   });
 };
 
-/**
- * This method will call all the stop methods, call stop on the {@link
- * module:tcpServersManager} object (if we are on a `connect` platform) and
- * close the TCP server hosting the router.
- *
- * Once called the object is in stop state.
- *
- * This method is idempotent and so MUST be able to be called multiple times in
- * a row without changing state.
- *
- * @returns {Promise<?Error>}
- */
-
 function stop(resolve, reject) {
   if (!states.started) {
     return resolve();
@@ -394,6 +381,19 @@ function stopNative() {
     });
   });
 }
+
+/**
+ * This method will call all the stop methods, call stop on the {@link
+ * module:tcpServersManager} object (if we are on a `connect` platform) and
+ * close the TCP server hosting the router.
+ *
+ * Once called the object is in stop state.
+ *
+ * This method is idempotent and so MUST be able to be called multiple times in
+ * a row without changing state.
+ *
+ * @returns {Promise<?Error>}
+ */
 
 module.exports.stop = function () {
   return gPromiseQueue.enqueue(stop);
@@ -618,6 +618,8 @@ module.exports.getNonTCPNetworkStatus = function () {
   });
 };
 
+var multiConnectCounter = 0;
+
 /**
  * This calls the native multiConnect method. This code is responsible for
  * honoring the restrictions placed on calls to multiConnect. Which is that
@@ -640,8 +642,6 @@ module.exports.getNonTCPNetworkStatus = function () {
  * @return {Promise<number|Error} The promise will either return an integer with
  * the localhost port to connect to or an Error object.
  */
-
-var multiConnectCounter = 0;
 
 module.exports._multiConnect = function (peerIdentifier) {
   return gPromiseQueue.enqueue(function (resolve, reject) {
