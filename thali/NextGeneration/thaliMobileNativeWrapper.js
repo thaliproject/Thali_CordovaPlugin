@@ -1013,7 +1013,7 @@ module.exports._registerToNative = function () {
 
   registerToNative('incomingConnectionToPortNumberFailed',
     function (portNumber) {
-      logger.info('incomingConnectionToPortNumberFailed: %s', portNumber);
+      logger.info('incomingConnectionToPortNumberFailed: %s', JSON.stringify(portNumber));
 
       if (!states.started) {
         logger.info('got incomingConnectionToPortNumberFailed while not in ' +
