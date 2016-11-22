@@ -304,7 +304,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
             }
             mLocalhostSocket.setReuseAddress(false);
             mLocalhostSocket.setOOBInline(false);
-            mLocalhostSocket.setSoLinger(true , 0);
+            mLocalhostSocket.setSoLinger(true , 100);
             mLocalhostSocket.setSoTimeout(0);
             mLocalhostSocket.setTcpNoDelay(true);
         }
