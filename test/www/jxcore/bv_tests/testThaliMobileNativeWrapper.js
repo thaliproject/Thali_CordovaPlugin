@@ -493,7 +493,7 @@ test('We fire failedNativeConnection event when we get failedConnection from ' +
   }
 );
 
-if (!platform.isMobile) {
+if (!platform._isRealMobile) {
   // This test primarily exists to make sure that we can easily debug the full
   // connection life cycle from the HTTP client through thaliMobileNativeWrapper
   // down through the mux layer down to mobile and back up all the way to the
@@ -589,7 +589,10 @@ if (!platform.isMobile) {
         });
       thaliMobileNativeWrapper.start(express.Router())
       .then(function () {
-        routerPort = thaliMobileNativeWrapper._getServersManagerLocalPort();
+        routerPort = (platform.isAndroid) ?
+                      thaliMobileNativeWrapper._getServersManagerLocalPort() :
+                      thaliMobileNativeWrapper._getRouterServerPort();
+
         return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
       })
       .then(function () {

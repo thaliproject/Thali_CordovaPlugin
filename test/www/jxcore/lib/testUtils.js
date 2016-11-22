@@ -13,7 +13,8 @@ var ForeverAgent = require('forever-agent');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var expressPouchdb = require('express-pouchdb');
 var platform = require('thali/NextGeneration/utils/platform');
-var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
+var makeIntoCloseAllServer =
+  require('thali/NextGeneration/makeIntoCloseAllServer');
 var notificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var express = require('express');
@@ -260,7 +261,7 @@ function createResponseBody(response) {
   return new Promise(function (resolve, reject) {
     var responseBody = '';
     response.on('data', function (data) {
-      logger.debug('Got response data')
+      logger.debug('Got response data');
       responseBody += data;
     });
     response.on('end', function () {
@@ -374,7 +375,8 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
                                                 selectedPeerId) {
   // We don't load thaliMobileNativeWrapper until after the tests have started
   // running so we pick up the right version of mobile
-  var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
+  var thaliMobileNativeWrapper =
+    require('thali/NextGeneration/thaliMobileNativeWrapper');
   return new Promise(function (resolve, reject) {
     var retryCount = 0;
     var MAX_TIME_TO_WAIT_IN_MILLISECONDS = 1000 * 60;
@@ -439,20 +441,20 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
         });
     }
 
-    function getPort(peerID) {
+    function getPort(record) {
       return new Promise(function (resolve) {
         if (platform.isIOS) {
-          thaliMobileNativeWrapper._multiConnect(peerID)
+          thaliMobileNativeWrapper._multiConnect(record.peerIdentifier)
           .then(function (port) {
             resolve(port);
           })
           .catch(function () {
             cancelGetPortTimeout = setTimeout(function () {
-              resolve(getPort(peerID));
+              resolve(getPort(record));
             }, GET_PORT_TIMEOUT);
           });
         } else {
-          resolve(null);
+          resolve(record.portNumber);
         }
       });
 
@@ -460,6 +462,10 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
 
     function nonTCPAvailableHandler(record) {
       // Ignore peer unavailable events
+      if (!record.peerAvailable) {
+        return;
+      }
+
       if (peerID && record.peerIdentifier === peerID) {
         logger.warn('We got a peer unavailable notification for a ' +
           'peer we are looking for.');
@@ -475,17 +481,14 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
         peerID = record.peerIdentifier;
       }
 
-      getPort(peerID)
+      getPort(record)
       .then(function (port) {
-        if (port) {
-          callTryAgain(port);
-        } else {
-          callTryAgain(record.portNumber);
-        }
+        callTryAgain(port);
       });
     }
 
-    thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
+    thaliMobileNativeWrapper.emitter.on(
+      'nonTCPPeerAvailabilityChangedEvent',
       nonTCPAvailableHandler);
   });
 };
