@@ -4,6 +4,7 @@
 package io.jxcore.node;
 
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.util.Log;
@@ -42,6 +43,7 @@ public class JXcoreExtension {
     private static final String METHOD_NAME_CONNECT = "connect";
     private static final String METHOD_NAME_KILL_CONNECTIONS = "killConnections";
     private static final String METHOD_NAME_DID_REGISTER_TO_NATIVE = "didRegisterToNative";
+    private static final String METHOD_NAME_SET_WIFI_RADIO_STATE = "setWifiRadioState";
 
     private static final String EVENT_NAME_PEER_AVAILABILITY_CHANGED = "peerAvailabilityChanged";
     private static final String EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE = "discoveryAdvertisingStateUpdateNonTCP";
@@ -60,6 +62,7 @@ public class JXcoreExtension {
     private static final String EVENT_VALUE_WIFI = "wifi";
     private static final String EVENT_VALUE_CELLULAR = "cellular";
     private static final String EVENT_VALUE_BSSID_NAME = "bssidName";
+    private static final String EVENT_VALUE_SSID_NAME = "ssidName";
     private static final String EVENT_VALUE_PORT_NUMBER = "portNumber";
     // Android specific methods and events
     private static final String METHOD_NAME_IS_BLE_MULTIPLE_ADVERTISEMENT_SUPPORTED = "isBleMultipleAdvertisementSupported";
@@ -338,6 +341,37 @@ public class JXcoreExtension {
          * Android specific methods start here
          */
 
+        jxcore.RegisterMethod(METHOD_NAME_SET_WIFI_RADIO_STATE, new JXcoreCallback() {
+                @Override
+                public void Receiver(ArrayList<Object> params, String callbackId) {
+                    String errorString = null;
+                    ArrayList<Object> args = new ArrayList<Object>();
+                    if (jxcore.activity.getPackageManager().hasSystemFeature(PackageManager.FEATURE_WIFI)) {
+                        if (params != null && params.size() > 0) {
+                            Object parameterObject = params.get(0);
+                            if (parameterObject instanceof Boolean) {
+                                WifiManager wifiManager = (WifiManager) jxcore.activity.getBaseContext().getSystemService(Context.WIFI_SERVICE);
+                                wifiManager.setWifiEnabled((Boolean) parameterObject);
+                            } else {
+                                errorString = "Required parameter, setRadioTo, is invalid - must be a boolean";
+                            }
+                        } else {
+                            errorString = "Required parameter, setRadioTo, missing";
+                        }
+                    } else {
+                        errorString = "Wifi is not enabled";
+                    }
+
+                    if (errorString != null) {
+                        args.add(errorString);
+
+                    }
+                    args.add(null);
+                    jxcore.CallJSMethod(callbackId, args.toArray());
+                }
+            }
+        );
+
         /**
          * Method for checking whether or not the device supports Bluetooth LE multi advertisement.
          *
@@ -552,7 +586,7 @@ public class JXcoreExtension {
      *                           is connected to.
      */
     public static synchronized void notifyNetworkChanged(
-            boolean isBluetoothEnabled, boolean isWifiEnabled, String bssidName) {
+            boolean isBluetoothEnabled, boolean isWifiEnabled, String bssidName, String ssidName) {
         if (!mNetworkChangedRegistered) {
             Log.d(TAG, "notifyNetworkChanged: Not registered for event \""
                     + EVENT_NAME_NETWORK_CHANGED + "\" and will not notify, in JS call method \""
@@ -603,7 +637,8 @@ public class JXcoreExtension {
                 + ", Bluetooth: " + bluetoothRadioState
                 + ", Wi-Fi: " + wifiRadioState
                 + ", cellular: " + cellularRadioState
-                + ", BSSID name: " + bssidName);
+                + ", BSSID name: " + bssidName
+                + ", SSID name: " + ssidName);
 
         JSONObject jsonObject = new JSONObject();
         boolean jsonObjectCreated = false;
@@ -614,6 +649,7 @@ public class JXcoreExtension {
             jsonObject.put(EVENT_VALUE_WIFI, radioStateEnumValueToString(wifiRadioState));
             jsonObject.put(EVENT_VALUE_CELLULAR, radioStateEnumValueToString(cellularRadioState));
             jsonObject.put(EVENT_VALUE_BSSID_NAME, bssidName);
+            jsonObject.put(EVENT_VALUE_SSID_NAME, ssidName);
             jsonObjectCreated = true;
         } catch (JSONException e) {
             Log.e(TAG, "notifyNetworkChanged: Failed to populate the JSON object: " + e.getMessage(), e);
