@@ -8,10 +8,7 @@
 
 echo "start build.sh"
 
-pushd "$(dirname $0)" > /dev/null
-SCRIPT_PATH="$(pwd -P)"
-popd > /dev/null
-
+SCRIPT_PATH="$(cd "$(dirname "$0")"; pwd -P)"
 source "$SCRIPT_PATH/thali/install/include.sh/build-dep.sh"
 
 set -euo pipefail

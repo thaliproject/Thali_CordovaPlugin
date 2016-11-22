@@ -2,10 +2,7 @@
 
 echo "start setUpDesktop.sh"
 
-pushd "$(dirname $0)" > /dev/null
-SCRIPT_PATH="$(pwd -P)"
-popd > /dev/null
-
+SCRIPT_PATH="$(cd "$(dirname "$0")"; pwd -P)"
 source "$SCRIPT_PATH/include.sh/build-dep.sh"
 
 set -euo pipefail
