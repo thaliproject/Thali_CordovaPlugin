@@ -13,183 +13,250 @@ import XCTest
 
 class AdvertiserTests: XCTestCase {
 
-    // MARK: - State
-    var randomlyGeneratedServiceType: String!
-    var randomlyGeneratedPeer: Peer!
-    let startAdvertisingErrorTimeout: NSTimeInterval = 5.0
+  // MARK: - State
+  var randomlyGeneratedServiceType: String!
+  var randomlyGeneratedPeer: Peer!
+  let startAdvertisingErrorTimeout: NSTimeInterval = 5.0
 
-    // MARK: - Setup
-    override func setUp() {
-        randomlyGeneratedServiceType = String.randomValidServiceType(length: 7)
-        randomlyGeneratedPeer = Peer()
+  // MARK: - Setup & Teardown
+  override func setUp() {
+    super.setUp()
+    randomlyGeneratedServiceType = String.randomValidServiceType(length: 7)
+    randomlyGeneratedPeer = Peer()
+  }
+
+  override func tearDown() {
+    randomlyGeneratedServiceType = nil
+    randomlyGeneratedPeer = nil
+    super.tearDown()
+  }
+
+  // MARK: - Tests
+  func testAdvertiserReturnsObjectWhenValidServiceType() {
+    // Given, When
+    let advertiser = Advertiser(peer: randomlyGeneratedPeer,
+                                serviceType: randomlyGeneratedServiceType,
+                                receivedInvitation: unexpectedReceivedSessionHandler,
+                                sessionNotConnected: unexpectedDisconnectHandler)
+
+    // Then
+    XCTAssertNotNil(advertiser, "Advertiser object is nil and could not be created")
+  }
+
+  func testAdvertiserReturnsNilWhenEmptyServiceType() {
+    // Given
+    let emptyServiceType = String.randomValidServiceType(length: 0)
+
+    // When
+    let advertiser = Advertiser(peer: randomlyGeneratedPeer,
+                                serviceType: emptyServiceType,
+                                receivedInvitation: unexpectedReceivedSessionHandler,
+                                sessionNotConnected: unexpectedDisconnectHandler)
+
+    // Then
+    XCTAssertNil(advertiser, "Advertiser object is created with empty serviceType parameter")
+  }
+
+  func testStartChangesAdvertisingState() {
+    // Given
+    let newAdvertiser = Advertiser(peer: randomlyGeneratedPeer,
+                                   serviceType: randomlyGeneratedServiceType,
+                                   receivedInvitation: unexpectedReceivedSessionHandler,
+                                   sessionNotConnected: unexpectedDisconnectHandler)
+
+    guard let advertiser = newAdvertiser else {
+      failAdvertiserMustNotBeNil()
+      return
     }
 
-    // MARK: - Tests
-    func testAdvertiserReturnsObjectWhenValidServiceType() {
-        // Given, When
-        let advertiser = Advertiser(peer: randomlyGeneratedPeer,
-                                    serviceType: randomlyGeneratedServiceType,
-                                    receivedInvitation: unexpectedReceivedSessionHandler,
-                                    sessionNotConnected: unexpectedDisconnectHandler)
+    // When
+    advertiser.startAdvertising(unexpectedErrorHandler)
+    // Then
+    XCTAssertTrue(advertiser.advertising)
 
-        // Then
-        XCTAssertNotNil(advertiser, "Advertiser object is nil and could not be created")
+    // Cleanup
+    advertiser.stopAdvertising()
+  }
+
+  func testStopWithoutCallingStartIsNOTError() {
+    // Given
+    let newAdvertiser = Advertiser(peer: randomlyGeneratedPeer,
+                                   serviceType: randomlyGeneratedServiceType,
+                                   receivedInvitation: unexpectedReceivedSessionHandler,
+                                   sessionNotConnected: unexpectedDisconnectHandler)
+
+    guard let advertiser = newAdvertiser else {
+      failAdvertiserMustNotBeNil()
+      return
     }
 
-    func testAdvertiserReturnsNilWhenEmptyServiceType() {
-        // Given
-        let emptyServiceType = String.randomValidServiceType(length: 0)
+    // When
+    advertiser.stopAdvertising()
 
-        // When
-        let advertiser = Advertiser(peer: randomlyGeneratedPeer,
-                                    serviceType: emptyServiceType,
-                                    receivedInvitation: unexpectedReceivedSessionHandler,
-                                    sessionNotConnected: unexpectedDisconnectHandler)
+    // Then
+    XCTAssertFalse(advertiser.advertising)
+  }
 
-        // Then
-        XCTAssertNil(advertiser, "Advertiser object is created with empty serviceType parameter")
+  func testStopTwiceWithoutCallingStartIsNOTError() {
+    // Given
+    let newAdvertiser = Advertiser(peer: randomlyGeneratedPeer,
+                                   serviceType: randomlyGeneratedServiceType,
+                                   receivedInvitation: unexpectedReceivedSessionHandler,
+                                   sessionNotConnected: unexpectedDisconnectHandler)
+
+    guard let advertiser = newAdvertiser else {
+      failAdvertiserMustNotBeNil()
+      return
     }
 
-    func testStartStopChangesAdvertisingState() {
-        // Given
-        let newAdvertiser = Advertiser(peer: randomlyGeneratedPeer,
-                                       serviceType: randomlyGeneratedServiceType,
-                                       receivedInvitation: unexpectedReceivedSessionHandler,
-                                       sessionNotConnected: unexpectedDisconnectHandler)
+    // When
+    advertiser.stopAdvertising()
+    advertiser.stopAdvertising()
 
-        guard let advertiser = newAdvertiser else {
-            failAdvertiserMustNotBeNil()
-            return
-        }
+    // Then
+    XCTAssertFalse(advertiser.advertising)
+  }
 
-        // When
-        advertiser.startAdvertising(unexpectedErrorHandler)
-        // Then
-        XCTAssertTrue(advertiser.advertising)
+  func testStartTwiceChangesAdvertisingState() {
+    // Given
+    let newAdvertiser = Advertiser(peer: randomlyGeneratedPeer,
+                                   serviceType: randomlyGeneratedServiceType,
+                                   receivedInvitation: unexpectedReceivedSessionHandler,
+                                   sessionNotConnected: unexpectedDisconnectHandler)
 
-        // When
-        advertiser.stopAdvertising()
-        // Then
-        XCTAssertFalse(advertiser.advertising)
+    guard let advertiser = newAdvertiser else {
+      failAdvertiserMustNotBeNil()
+      return
     }
 
-    func testStartStopStartChangesAdvertisingState() {
-        // Given
-        let newAdvertiser = Advertiser(peer: randomlyGeneratedPeer,
-                                       serviceType: randomlyGeneratedServiceType,
-                                       receivedInvitation: unexpectedReceivedSessionHandler,
-                                       sessionNotConnected: unexpectedDisconnectHandler)
+    // When
+    advertiser.startAdvertising(unexpectedErrorHandler)
+    advertiser.startAdvertising(unexpectedErrorHandler)
 
-        guard let advertiser = newAdvertiser else {
-            failAdvertiserMustNotBeNil()
-            return
-        }
+    // Then
+    XCTAssertTrue(advertiser.advertising)
 
-        // When
-        advertiser.startAdvertising(unexpectedErrorHandler)
-        // Then
-        XCTAssertTrue(advertiser.advertising)
+    // Cleanup
+    advertiser.stopAdvertising()
+  }
 
-        // When
-        advertiser.stopAdvertising()
-        // Then
-        XCTAssertFalse(advertiser.advertising)
+  func testStartStopChangesAdvertisingState() {
+    // Given
+    let newAdvertiser = Advertiser(peer: randomlyGeneratedPeer,
+                                   serviceType: randomlyGeneratedServiceType,
+                                   receivedInvitation: unexpectedReceivedSessionHandler,
+                                   sessionNotConnected: unexpectedDisconnectHandler)
 
-        // When
-        advertiser.startAdvertising(unexpectedErrorHandler)
-        // Then
-        XCTAssertTrue(advertiser.advertising)
+    guard let advertiser = newAdvertiser else {
+      failAdvertiserMustNotBeNil()
+      return
     }
 
-    func testStartCalledTwiceChangesStateProperly() {
-        // Given
-        let newAdvertiser = Advertiser(peer: randomlyGeneratedPeer,
-                                       serviceType: randomlyGeneratedServiceType,
-                                       receivedInvitation: unexpectedReceivedSessionHandler,
-                                       sessionNotConnected: unexpectedDisconnectHandler)
+    // When
+    advertiser.startAdvertising(unexpectedErrorHandler)
+    // Then
+    XCTAssertTrue(advertiser.advertising)
 
-        guard let advertiser = newAdvertiser else {
-            failAdvertiserMustNotBeNil()
-            return
-        }
+    // When
+    advertiser.stopAdvertising()
+    // Then
+    XCTAssertFalse(advertiser.advertising)
+  }
 
-        advertiser.startAdvertising(unexpectedErrorHandler)
-        XCTAssertTrue(advertiser.advertising)
+  func testStartStopStartChangesAdvertisingState() {
+    // Given
+    let newAdvertiser = Advertiser(peer: randomlyGeneratedPeer,
+                                   serviceType: randomlyGeneratedServiceType,
+                                   receivedInvitation: unexpectedReceivedSessionHandler,
+                                   sessionNotConnected: unexpectedDisconnectHandler)
 
-        // When
-        advertiser.startAdvertising(unexpectedErrorHandler)
-
-        // Then
-        XCTAssertTrue(advertiser.advertising)
+    guard let advertiser = newAdvertiser else {
+      failAdvertiserMustNotBeNil()
+      return
     }
 
-    func testStopCalledTwiceChangesStateProperly() {
-        // Given
-        let newAdvertiser = Advertiser(peer: randomlyGeneratedPeer,
-                                       serviceType: randomlyGeneratedServiceType,
-                                       receivedInvitation: unexpectedReceivedSessionHandler,
-                                       sessionNotConnected: unexpectedDisconnectHandler)
+    // When
+    advertiser.startAdvertising(unexpectedErrorHandler)
+    // Then
+    XCTAssertTrue(advertiser.advertising)
 
-        guard let advertiser = newAdvertiser else {
-            failAdvertiserMustNotBeNil()
-            return
-        }
+    // When
+    advertiser.stopAdvertising()
+    // Then
+    XCTAssertFalse(advertiser.advertising)
 
-        advertiser.startAdvertising(unexpectedErrorHandler)
-        XCTAssertTrue(advertiser.advertising)
-        advertiser.stopAdvertising()
-        XCTAssertFalse(advertiser.advertising)
+    // When
+    advertiser.startAdvertising(unexpectedErrorHandler)
+    // Then
+    XCTAssertTrue(advertiser.advertising)
+  }
 
-        // When
-        advertiser.stopAdvertising()
+  func testStopCalledTwiceChangesStateProperly() {
+    // Given
+    let newAdvertiser = Advertiser(peer: randomlyGeneratedPeer,
+                                   serviceType: randomlyGeneratedServiceType,
+                                   receivedInvitation: unexpectedReceivedSessionHandler,
+                                   sessionNotConnected: unexpectedDisconnectHandler)
 
-        // Then
-        XCTAssertFalse(advertiser.advertising)
+    guard let advertiser = newAdvertiser else {
+      failAdvertiserMustNotBeNil()
+      return
     }
 
-    func testStartAdvertisingErrorHandlerInvoked() {
-        // Expectations
-        var startAdvertisingErrorHandlerCalled: XCTestExpectation?
+    advertiser.startAdvertising(unexpectedErrorHandler)
+    XCTAssertTrue(advertiser.advertising)
 
-        // Given
-        startAdvertisingErrorHandlerCalled =
-            expectationWithDescription("startAdvertisingErrorHandler is called")
+    // When
+    advertiser.stopAdvertising()
+    advertiser.stopAdvertising()
 
-        let newAdvertiser = Advertiser(peer: randomlyGeneratedPeer,
-                                       serviceType: randomlyGeneratedServiceType,
-                                       receivedInvitation: unexpectedReceivedSessionHandler,
-                                       sessionNotConnected: unexpectedDisconnectHandler)
+    // Then
+    XCTAssertFalse(advertiser.advertising)
+  }
 
-        guard let advertiser = newAdvertiser else {
-            failAdvertiserMustNotBeNil()
-            return
-        }
+  func testStartAdvertisingErrorHandlerInvoked() {
+    // Expectations
+    var startAdvertisingErrorHandlerCalled: XCTestExpectation?
 
-        advertiser.startAdvertising {
-            [weak startAdvertisingErrorHandlerCalled] error in
-            startAdvertisingErrorHandlerCalled?.fulfill()
-        }
+    // Given
+    startAdvertisingErrorHandlerCalled =
+      expectationWithDescription("startAdvertisingErrorHandler is called")
 
-        let mcAdvertiser = MCNearbyServiceAdvertiser(peer: MCPeerID(displayName: "test"),
-                                                     discoveryInfo: nil,
-                                                     serviceType: "test")
+    let newAdvertiser = Advertiser(peer: randomlyGeneratedPeer,
+                                   serviceType: randomlyGeneratedServiceType,
+                                   receivedInvitation: unexpectedReceivedSessionHandler,
+                                   sessionNotConnected: unexpectedDisconnectHandler)
 
-        // When
-        // Fake invocation of delegate method
-        let error = NSError(domain: "org.thaliproject.test",
-                            code: 42,
-                            userInfo: nil)
-        advertiser.advertiser(mcAdvertiser, didNotStartAdvertisingPeer: error)
-
-        // Then
-        waitForExpectationsWithTimeout(startAdvertisingErrorTimeout) {
-            error in
-            startAdvertisingErrorHandlerCalled = nil
-        }
+    guard let advertiser = newAdvertiser else {
+      failAdvertiserMustNotBeNil()
+      return
     }
 
-    // MARK: - Private methods
-    private func failAdvertiserMustNotBeNil() {
-        XCTFail("Advertiser must not be nil")
+    advertiser.startAdvertising {
+      [weak startAdvertisingErrorHandlerCalled] error in
+      startAdvertisingErrorHandlerCalled?.fulfill()
     }
+
+    let mcAdvertiser = MCNearbyServiceAdvertiser(peer: MCPeerID(displayName: "test"),
+                                                 discoveryInfo: nil,
+                                                 serviceType: "test")
+
+    // When
+    // Fake invocation of delegate method
+    let error = NSError(domain: "org.thaliproject.test",
+                        code: 42,
+                        userInfo: nil)
+    advertiser.advertiser(mcAdvertiser, didNotStartAdvertisingPeer: error)
+
+    // Then
+    waitForExpectationsWithTimeout(startAdvertisingErrorTimeout) {
+      error in
+      startAdvertisingErrorHandlerCalled = nil
+    }
+  }
+
+  // MARK: - Private methods
+  private func failAdvertiserMustNotBeNil() {
+    XCTFail("Advertiser must not be nil")
+  }
 }

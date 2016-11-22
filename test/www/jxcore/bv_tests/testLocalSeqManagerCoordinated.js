@@ -71,7 +71,7 @@ var test = tape({
 
 test('Coordinated seq test',
   function () {
-    // FIXME: this test is broken because it has race conditions
+    // FIXME: this test is broken because it has race conditions (issue #1525)
     return true;
   },
   function (t) {

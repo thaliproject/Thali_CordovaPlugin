@@ -1,43 +1,54 @@
 #!/usr/bin/env bash
 
+echo ""
+echo "start setUpDesktop.sh"
+
+SCRIPT_PATH="$(cd "$(dirname "$0")"; pwd -P)"
+source "$SCRIPT_PATH/include.sh/build-dep.sh"
+
 set -euo pipefail
 
-echo "Start setUpDesktop.sh"
+trap 'log_error $LINENO' ERR
 
-NORMAL_COLOR='\033[0m'
-RED_COLOR='\033[0;31m'
-
-OUTPUT() {
-  echo -e "${RED_COLOR}$BASH_COMMAND FAILED - setUpDesktop failure${NORMAL_COLOR}"
-}
-
-trap OUTPUT ERR
 
 NVM_NODEJS_ORG_MIRROR=https://jxcore.azureedge.net
 export NVM_NODEJS_ORG_MIRROR
 JX_NPM_JXB=jxb311
 export JX_NPM_JXB
 
-echo "Setup TestServer"
+echo ""
+echo "start preparing TestServer"
 cd `dirname $0`
 cd ../../test/TestServer
 npm install --no-optional
 node generateServerAddress.js
+echo "end preparing TestServer"
+echo ""
 
-echo "Install Thali Root"
+echo ""
+echo "start installing Thali root"
 cd ../../thali
 jx npm install --no-optional
 npm link
+echo "end installing Thali root"
+echo ""
 
-echo "Install Thali Install Directory"
+echo ""
+echo "start installing Thali install"
 cd install
 npm install --no-optional
-#node validateBuildEnvironment.js
+node validateBuildEnvironment.js
+echo "end installing Thali install"
+echo ""
 
-echo "Final Desktop Step"
+echo ""
+echo "start preparing `test/www/jxcore`"
 cd ../../test/www/jxcore
 npm link thali
 node installCustomPouchDB.js
 jx npm install --no-optional
+echo "end prepating `test/www/jxcore`"
+echo ""
 
-echo "End setUpDesktop.sh"
+echo "end setUpDesktop.sh"
+echo ""

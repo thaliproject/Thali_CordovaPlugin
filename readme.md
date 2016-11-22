@@ -233,14 +233,14 @@ cordova build android --release --device
 `cordova build` creates unsigned _apk_. So in order to install the _apk_ into device
 you need to sign the _apk_.
 
-Please note that `build-tools` should be at least `24.0.3`.
+Please note that `build-tools` should be at least `25.0.0`.
 Because this guide uses tool `apksigner` that is available starting
-from `build-tools` `24.0.3`.
+from `build-tools` `25.0.0`.
 
 You should have keystore file before running the command below.
 
 ```
-/usr/local/opt/android-sdk/build-tools/24.0.3/apksigner sign --ks path/to/keystore/file path/to/unsigned.apk
+/usr/local/opt/android-sdk/build-tools/25.0.0/apksigner sign --ks path/to/keystore/file path/to/unsigned.apk
 ```
 
 ### Get devices list

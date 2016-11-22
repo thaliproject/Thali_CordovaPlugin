@@ -961,13 +961,12 @@ var handleRecreatedPeer = function (nativePeer) {
     peerAvailabilities[connectionTypes.BLUETOOTH][nativePeer.peerIdentifier];
 
   if (cachedPeer) {
-    changeCachedPeerUnavailable(nativePeer);
     module.exports.emitter.emit('peerAvailabilityChanged', {
       peerIdentifier: nativePeer.peerIdentifier,
       connectionType: connectionTypes.BLUETOOTH,
-      peerAvailable: false,
-      generation: null,
-      newAddressPort: null
+      peerAvailable: nativePeer.peerAvailable,
+      generation: nativePeer.generation,
+      newAddressPort: nativePeer.peerAvailable ? false : null
     });
   } else {
     if (nativePeer.peerAvailable) {

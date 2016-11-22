@@ -103,6 +103,7 @@ function failedConnectionHandler(failedConnection) {
   var event = {
     error: failedConnection.error,
     peerIdentifier: failedConnection.peerIdentifier,
+    recreated: failedConnection.recreated,
     connectionType: connectionTypes.BLUETOOTH
   };
   module.exports.emitter.emit('failedNativeConnection', event);
@@ -687,6 +688,7 @@ module.exports.terminateListener = function (peerIdentifier, port) {
   return gPromiseQueue.enqueue(function (resolve, reject) {
     gServersManager.terminateOutgoingConnection(peerIdentifier, port)
     .then(function () {
+      delete peerGenerations[peerIdentifier];
       resolve();
     })
     .catch(function (error) {
@@ -851,8 +853,12 @@ var handlePeerAvailabilityChanged = function (peer) {
         portNumber: null,
         recreated: peer.recreated
       };
-      delete peerGenerations[peer.peerIdentifier];
-
+      if (!peer.recreated) {
+        // The whole purpose of storing peer generations is to make sure that
+        // after recreation we use the same generation. So we don't delete it
+        // during listener recreation
+        delete peerGenerations[peer.peerIdentifier];
+      }
       logger.debug('handlePeerUnavailable - Emitting %s',
         JSON.stringify(event));
       module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', event);

@@ -11,63 +11,62 @@
 import XCTest
 
 func createMPCFPeers(with browsingCompletion: (PeerAvailability) -> Void)
-    -> (AdvertiserManager, BrowserManager) {
+                     -> (AdvertiserManager, BrowserManager) {
 
-        let serviceType = String.randomValidServiceType(length: 7)
+    let serviceType = String.randomValidServiceType(length: 7)
 
-        let browserManager = BrowserManager(serviceType: serviceType,
-                                            inputStreamReceiveTimeout: 5,
-                                            peersAvailabilityChangedHandler: {
-                                                peerAvailability in
+    let browserManager = BrowserManager(serviceType: serviceType,
+                                        inputStreamReceiveTimeout: 5,
+                                        peerAvailabilityChanged: {
+                                          peerAvailability in
+                                          browsingCompletion(peerAvailability.first!)
+                                        })
+    browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
 
-                                                browsingCompletion(peerAvailability.first!)
-        })
-        browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+    let advertiserManager = AdvertiserManager(serviceType: serviceType,
+                                              disposeAdvertiserTimeout: 30)
+    advertiserManager.startUpdateAdvertisingAndListening(onPort: 0,
+                                                         errorHandler: unexpectedErrorHandler)
 
-        let advertiserManager = AdvertiserManager(serviceType: serviceType,
-                                                  disposeAdvertiserTimeout: 30)
-        advertiserManager.startUpdateAdvertisingAndListening(onPort: 0,
-            errorHandler: unexpectedErrorHandler)
-
-        return (advertiserManager, browserManager)
+    return (advertiserManager, browserManager)
 }
 
 func unexpectedErrorHandler(error: ErrorType) {
-    XCTFail("unexpected error: \(error)")
+  XCTFail("unexpected error: \(error)")
 }
 
 func unexpectedConnectHandler() {
-    XCTFail("Unexpected connect received")
+  XCTFail("Unexpected connect received")
 }
 
 func unexpectedDisconnectHandler() {
-    XCTFail("Unexpected disconnect received")
+  XCTFail("Unexpected disconnect received")
 }
 
 func unexpectedReadDataHandler(data: NSData) {
-    XCTFail("Unexpected data readed. Data: \(data)")
+  XCTFail("Unexpected data readed. Data: \(data)")
 }
 
 func unexpectedReadDataHandler(socket: GCDAsyncSocket, data: NSData) {
-    XCTFail("Unexpected data readed on socket \(socket). Data: \(data)")
+  XCTFail("Unexpected data readed on socket \(socket). Data: \(data)")
 }
 
 func unexpectedSocketDisconnectHandler(socket: GCDAsyncSocket) {
-    XCTFail("Unexpected disconnect received on socket \(socket)")
+  XCTFail("Unexpected disconnect received on socket \(socket)")
 }
 
 func unexpectedStopListeningHandler() {
-    XCTFail("Unexpected stopped listening for connections")
+  XCTFail("Unexpected stopped listening for connections")
 }
 
 func unexpectedAcceptConnectionHandler() {
-    XCTFail("Unexpected acceptConnection received")
+  XCTFail("Unexpected acceptConnection received")
 }
 
 func unexpectedAcceptConnectionHandler(socket: GCDAsyncSocket) {
-    XCTFail("Unexpected acceptConnection received")
+  XCTFail("Unexpected acceptConnection received")
 }
 
 func unexpectedReceivedSessionHandler(session: Session) {
-    XCTFail("Unexpected session received: \(session)")
+  XCTFail("Unexpected session received: \(session)")
 }

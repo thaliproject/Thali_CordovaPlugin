@@ -11,16 +11,17 @@ import MultipeerConnectivity
 
 class MCSessionMock: MCSession {
 
-    // MARK: - Public state
-    var errorOnStartStream = false
+  // MARK: - Public state
+  var errorOnStartStream = false
 
-    // MARK: - Overrided methods
-    override func startStreamWithName(streamName: String,
-                                      toPeer peerID: MCPeerID) throws -> NSOutputStream {
-        guard !errorOnStartStream else {
-            throw NSError(domain: "org.thaliproject.test", code: 42, userInfo: nil)
-        }
-
-        return NSOutputStream(toBuffer: nil, capacity: 0)
+  // MARK: - Overrided methods
+  override func startStreamWithName(streamName: String,
+                                    toPeer peerID: MCPeerID) throws
+                                    -> NSOutputStream {
+    guard !errorOnStartStream else {
+      throw NSError(domain: "org.thaliproject.test", code: 42, userInfo: nil)
     }
+
+    return NSOutputStream(toBuffer: nil, capacity: 0)
+  }
 }

@@ -12,81 +12,133 @@ import MultipeerConnectivity
 /// This object defines information about a single peer.
 public struct Peer: Hashable {
 
-    // MARK: - Public state
-    /// An opaque value that identifies a non-TCP/IP transport handle for the peer.
-    /// This value must map to the UUID part of the MCPeerID.
-    public let uuid: String
+  // MARK: - Public state
 
-    /// An integer which counts changes in the peer's database.
-    public private(set) var generation: Int
+  /**
+   An opaque value that identifies a non-TCP/IP transport handle for the peer.
+   This value must map to the UUID part of the MCPeerID.
+   */
+  public let uuid: String
 
-    public var hashValue: Int {
-        return stringValue.hashValue
+  /**
+   An integer which counts changes in the peer's database.
+   */
+  public private(set) var generation: Int
+
+  /**
+   Hash value from *stringValue* which represents uuid and generation.
+   */
+  public var hashValue: Int {
+    return stringValue.hashValue
+  }
+
+  // MARK: - Internal state
+
+  /**
+   Combination of *uuid* and *generation* separated by *separator*.
+   */
+  internal var stringValue: String {
+    return "\(uuid)" + "\(Peer.separator)" + "\(String(generation, radix: 16))"
+  }
+
+  // MARK: - Private state
+  /**
+   Symbol that is used to separate *uuid* and *generation* in *stringValue*.
+   */
+  private static let separator: Character = ":"
+
+  // MARK: - Public methods
+
+  public init() {
+    uuid = NSUUID().UUIDString
+    generation = 0
+  }
+
+  /**
+   Returns a new `Peer` object.
+
+   - parameters:
+     - uuidIdentifier:
+       String that identifies a non-TCP/IP transport handle for the new `Peer`.
+       This value must map to the UUID part of the MCPeerID.
+
+     - generation:
+       An integer which counts changes in the peer's database.
+
+   - throws:
+     IllegalPeerID error if uuidIdentifier is invalid string.
+
+   - returns: An initialized `Peer` object.
+   */
+  public init(uuidIdentifier: String, generation: Int) throws {
+    guard let _ = NSUUID(UUIDString: uuidIdentifier) else {
+      throw ThaliCoreError.IllegalPeerID
     }
+    self.uuid = uuidIdentifier
+    self.generation = generation
+  }
 
-    // MARK: - Internal state
-    /// Combination of `uuid` and `generation` in format *uuid:generation*
-    internal var stringValue: String {
-        return "\(uuid)\(Peer.separator)\(String(generation, radix: 16))"
-    }
+  /**
+   Returns a new `Peer` object.
 
-    // MARK: - Private state
-    private static let separator: Character = ":"
+   - parameters:
+     - stringValue:
+       String that represents combination of *uuid* and *generation* separated by *separator*.
 
-    // MARK: - Public methods
-    public init() {
-        uuid = NSUUID().UUIDString
-        generation = 0
-    }
+   - throws:
+     IllegalPeerID error in following cases:
+       * *stringValue* doesn't have separator, or have more than one
+       * uuid part in *stringValue* is invalid string
+       * generation part in *stringValue* is not hex-number
 
-    public init(uuidIdentifier: String, generation: Int) throws {
-        guard let _ = NSUUID(UUIDString: uuidIdentifier) else {
-            throw ThaliCoreError.IllegalPeerID
-        }
-        self.uuid = uuidIdentifier
-        self.generation = generation
-    }
-
-    public init(stringValue: String) throws {
-        let peerParts = stringValue.characters
+   - returns: An initialized `Peer` object.
+   */
+  public init(stringValue: String) throws {
+    let peerParts = stringValue.characters
                     .split { $0 == Peer.separator }
                     .map(String.init)
-        guard peerParts.count == 2 else {
-            throw ThaliCoreError.IllegalPeerID
-        }
-        guard let uuid = NSUUID(UUIDString: peerParts[0]) else {
-            throw ThaliCoreError.IllegalPeerID
-        }
-        guard let generation = Int(peerParts[1], radix: 16) else {
-            throw ThaliCoreError.IllegalPeerID
-        }
-        self.uuid = uuid.UUIDString
-        self.generation = generation
+    guard peerParts.count == 2 else {
+      throw ThaliCoreError.IllegalPeerID
     }
+    guard let uuid = NSUUID(UUIDString: peerParts[0]) else {
+      throw ThaliCoreError.IllegalPeerID
+    }
+    guard let generation = Int(peerParts[1], radix: 16) else {
+      throw ThaliCoreError.IllegalPeerID
+    }
+    self.uuid = uuid.UUIDString
+    self.generation = generation
+  }
 
-    func nextGenerationPeer() -> Peer {
-        var peer = self
-        peer.generation += 1
-        return peer
-    }
+  // MARK: - Internal methods
+
+  /**
+   Returns `Peer` object with *generation* incremented by 1.
+   */
+  func nextGenerationPeer() -> Peer {
+    var peer = self
+    peer.generation += 1
+    return peer
+  }
 }
 
 // MARK: - Multipeer connectivity specific functions
 extension Peer {
 
-    init(mcPeerID peer: MCPeerID) throws {
-        try self.init(stringValue: peer.displayName)
-    }
+  init(mcPeerID peer: MCPeerID) throws {
+    try self.init(stringValue: peer.displayName)
+  }
 }
 
 // MARK: - Multipeer connectivity specific functions
 extension MCPeerID {
 
-    convenience init(peer: Peer) {
-        self.init(displayName: peer.stringValue)
-    }
+  convenience init(peer: Peer) {
+    self.init(displayName: peer.stringValue)
+  }
 }
 
+// MARK: - Overloading equivalence (==) operator
 public func == (lhs: Peer, rhs: Peer) -> Bool {
-    return lhs.stringValue.compare(rhs.stringValue, options: .LiteralSearch) == .OrderedSame
+  return lhs.stringValue.compare(rhs.stringValue, options: .LiteralSearch) == .OrderedSame
 }

@@ -27,8 +27,8 @@ function closeServer(self, server, failedConnectionErr, canRetry)
   server._mux = null;
   delete self._peerServers[server._peerIdentifier];
   if (failedConnectionErr) {
-    logger.debug('We are emitting failedConnection with error %s and ' +
-      'peerIdentifier %s', failedConnectionErr, server._peerIdentifier);
+    logger.debug('We are emitting failedConnection with error "%s" and ' +
+      'peerIdentifier "%s"', failedConnectionErr, server._peerIdentifier);
     self.emit('failedConnection', {
       error: failedConnectionErr,
       peerIdentifier: server._peerIdentifier,
