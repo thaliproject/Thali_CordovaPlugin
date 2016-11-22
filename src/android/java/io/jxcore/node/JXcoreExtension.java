@@ -62,6 +62,7 @@ public class JXcoreExtension {
     private static final String EVENT_VALUE_WIFI = "wifi";
     private static final String EVENT_VALUE_CELLULAR = "cellular";
     private static final String EVENT_VALUE_BSSID_NAME = "bssidName";
+    private static final String EVENT_VALUE_SSID_NAME = "ssidName";
     private static final String EVENT_VALUE_PORT_NUMBER = "portNumber";
     // Android specific methods and events
     private static final String METHOD_NAME_IS_BLE_MULTIPLE_ADVERTISEMENT_SUPPORTED = "isBleMultipleAdvertisementSupported";
@@ -585,7 +586,7 @@ public class JXcoreExtension {
      *                           is connected to.
      */
     public static synchronized void notifyNetworkChanged(
-            boolean isBluetoothEnabled, boolean isWifiEnabled, String bssidName) {
+            boolean isBluetoothEnabled, boolean isWifiEnabled, String bssidName, String ssidName) {
         if (!mNetworkChangedRegistered) {
             Log.d(TAG, "notifyNetworkChanged: Not registered for event \""
                     + EVENT_NAME_NETWORK_CHANGED + "\" and will not notify, in JS call method \""
@@ -636,7 +637,8 @@ public class JXcoreExtension {
                 + ", Bluetooth: " + bluetoothRadioState
                 + ", Wi-Fi: " + wifiRadioState
                 + ", cellular: " + cellularRadioState
-                + ", BSSID name: " + bssidName);
+                + ", BSSID name: " + bssidName
+                + ", SSID name: " + ssidName);
 
         JSONObject jsonObject = new JSONObject();
         boolean jsonObjectCreated = false;
@@ -647,6 +649,7 @@ public class JXcoreExtension {
             jsonObject.put(EVENT_VALUE_WIFI, radioStateEnumValueToString(wifiRadioState));
             jsonObject.put(EVENT_VALUE_CELLULAR, radioStateEnumValueToString(cellularRadioState));
             jsonObject.put(EVENT_VALUE_BSSID_NAME, bssidName);
+            jsonObject.put(EVENT_VALUE_SSID_NAME, ssidName);
             jsonObjectCreated = true;
         } catch (JSONException e) {
             Log.e(TAG, "notifyNetworkChanged: Failed to populate the JSON object: " + e.getMessage(), e);

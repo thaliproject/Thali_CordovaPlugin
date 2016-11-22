@@ -28,6 +28,7 @@ class ConnectivityMonitor implements BluetoothManager.BluetoothManagerListener {
     private final WifiDirectManager mWifiDirectManager;
     private WifiStateChangedAndConnectivityActionBroadcastReceiver mWifiStateChangedAndConnectivityActionBroadcastReceiver = null;
     private String mBssidName = null;
+    private String mSsidName = null;
     private boolean mIsConnectedOrConnectingToActiveNetwork = false;
     private boolean mActiveNetworkTypeIsWifi = false;
     private boolean mIsBluetoothEnabled = false;
@@ -135,7 +136,8 @@ class ConnectivityMonitor implements BluetoothManager.BluetoothManagerListener {
      * Called when Bluetooth is enabled or disabled.
      *
      * @param mode The new Bluetooth mode.
-     */@Override
+     */
+    @Override
     public void onBluetoothAdapterStateChanged(int mode) {
         updateConnectivityInfo(false);
     }
@@ -167,14 +169,15 @@ class ConnectivityMonitor implements BluetoothManager.BluetoothManagerListener {
         }
 
         final String bssid = (wifiInfo != null) ? wifiInfo.getBSSID() : null;
-
+        final String ssid = (wifiInfo != null) ? wifiInfo.getSSID() : null;
         final boolean isBluetoothEnabled = mBluetoothManager.isBluetoothEnabled();
 
         boolean notificationNecessary =
                 (forceNotify
                         || mIsBluetoothEnabled != isBluetoothEnabled
                         || mIsWifiEnabled != isWifiEnabled
-                        || !stringsMatch(mBssidName, bssid));
+                        || !stringsMatch(mBssidName, bssid)
+                        || !stringsMatch(mSsidName, ssid));
 
         boolean unimportantStateChange =
                 (mIsConnectedOrConnectingToActiveNetwork != isConnectedOrConnecting
@@ -185,6 +188,7 @@ class ConnectivityMonitor implements BluetoothManager.BluetoothManagerListener {
             mIsBluetoothEnabled = isBluetoothEnabled;
             mIsWifiEnabled = isWifiEnabled;
             mBssidName = bssid;
+            mSsidName = ssid;
             mIsConnectedOrConnectingToActiveNetwork = isConnectedOrConnecting;
             mActiveNetworkTypeIsWifi = activeNetworkTypeIsWifi;
 
@@ -194,11 +198,12 @@ class ConnectivityMonitor implements BluetoothManager.BluetoothManagerListener {
                     + "\n    - is Wi-Fi enabled: " + mIsWifiEnabled
                     + "\n    - is Bluetooth enabled: " + mIsBluetoothEnabled
                     + "\n    - BSSID name: " + mBssidName
+                    + "\n    - SSID name: " + mSsidName
                     + "\n    - is connected/connecting to active network: " + mIsConnectedOrConnectingToActiveNetwork
                     + "\n    - active network type is Wi-Fi: " + mActiveNetworkTypeIsWifi);
 
             if (notificationNecessary) {
-                JXcoreExtension.notifyNetworkChanged(mIsBluetoothEnabled, mIsWifiEnabled, mBssidName);
+                JXcoreExtension.notifyNetworkChanged(mIsBluetoothEnabled, mIsWifiEnabled, mBssidName, mSsidName);
             }
         } else {
             Log.v(TAG, "updateConnectivityInfo: No relevant state changes");
