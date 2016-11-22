@@ -36,16 +36,11 @@ var platformChoice = {
   IOS: 'iOS'
 };
 
-var BSSID = 'c1:5b:05:5a:41:1e'; // 'c1-5b-05-5a-41-1e' is valid too.
-var SSID  = 'myWifi';
 var currentNetworkStatus = {
-  wifi:               'on',
-  bluetooth:          'on',
-  bluetoothLowEnergy: 'on',
-  cellular:           'on',
-
-  bssidName: BSSID,
-  ssidName:  SSID
+  wifi: 'on',
+  bluetooth: 'on',
+  bluetoothLowEnergy: 'doNotCare',
+  cellular: 'doNotCare'
 };
 
 var getCurrentNetworkStatus = function () {
@@ -504,9 +499,7 @@ MobileCallInstance.prototype.connect = function (peerIdentifier, callback) {
     }
 
     callback(null, JSON.stringify({
-      listeningPort: peerProxyServers[peerIdentifier].address().port,
-      clientPort: 0,
-      serverPort: 0
+      listeningPort: peerProxyServers[peerIdentifier].address().port
     }));
 
     setTimeout(function () {
@@ -728,46 +721,36 @@ MobileCallInstance.prototype.setWifiRadioState = function (setting, callback) {
  */
 MobileCallInstance.prototype.callNative = function () {
   switch (this.mobileMethodName) {
-    case 'startListeningForAdvertisements':
-    {
+    case 'startListeningForAdvertisements': {
       return this.startListeningForAdvertisements(arguments[0]);
     }
-    case 'stopListeningForAdvertisements':
-    {
+    case 'stopListeningForAdvertisements': {
       return this.stopListeningForAdvertisements(arguments[0]);
     }
-    case 'startUpdateAdvertisingAndListening':
-    {
+    case 'startUpdateAdvertisingAndListening': {
       return this.startUpdateAdvertisingAndListening(
           arguments[0], arguments[1]);
     }
-    case 'stopAdvertisingAndListening':
-    {
+    case 'stopAdvertisingAndListening': {
       return this.stopAdvertisingAndListening(
           arguments[0]);
     }
-    case 'connect':
-    {
+    case 'connect': {
       return this.connect(arguments[0], arguments[1]);
     }
-    case 'killConnections':
-    {
+    case 'killConnections': {
       return this.killConnections(arguments[0]);
     }
-    case 'GetDeviceName':
-    {
+    case 'GetDeviceName': {
       return this.getDeviceName(arguments[0]);
     }
-    case 'didRegisterToNative':
-    {
+    case 'didRegisterToNative': {
       return this.didRegisterToNative(arguments[0], arguments[1]);
     }
-    case 'setWifiRadioState':
-    {
+    case 'setWifiRadioState': {
       return this.setWifiRadioState(arguments[0], arguments[1]);
     }
-    default:
-    {
+    default: {
       throw new Error('The supplied mobileName does not have a matching ' +
           'callNative method: ' + this.mobileMethodName);
     }
@@ -797,8 +780,7 @@ var setupListeners = function (thaliWifiInfrastructure) {
       }
       peerAvailabilityChangedCallback([{
         peerIdentifier: wifiPeer.peerIdentifier,
-        peerAvailable: peerAvailable,
-        pleaseConnect: false
+        peerAvailable: peerAvailable
       }]);
     }
   );
@@ -820,9 +802,8 @@ var setupListeners = function (thaliWifiInfrastructure) {
  * SSDP:byebye or a response to one of our periodic queries we should use it to
  * create a peerAvailabilityChanged call back. In practice we don't really need
  * to batch these messages so we can just fire them as we get them. The
- * peerIdentifier is the USN from the SSDP message, peerAvailable is true or
- * false based on the SSDP response and pleaseConnect is false except for the
- * situation described above for /ConnectToMeforMock.
+ * peerIdentifier is the USN from the SSDP message, and peerAvailable is true or
+ * false based on the SSDP response.
  *
  * @param {module:thaliMobileNative~peerAvailabilityChangedCallback} callback
  */
@@ -891,24 +872,19 @@ function (callback) {
 
 MobileCallInstance.prototype.registerToNative = function () {
   switch (this.mobileMethodName) {
-    case 'peerAvailabilityChanged':
-    {
+    case 'peerAvailabilityChanged': {
       return this.peerAvailabilityChanged(arguments[0]);
     }
-    case 'discoveryAdvertisingStateUpdateNonTCP':
-    {
+    case 'discoveryAdvertisingStateUpdateNonTCP': {
       return this.discoveryAdvertisingStateUpdateNonTCP(arguments[0]);
     }
-    case 'networkChanged':
-    {
+    case 'networkChanged': {
       return this.networkChanged(arguments[0]);
     }
-    case 'incomingConnectionToPortNumberFailed':
-    {
+    case 'incomingConnectionToPortNumberFailed': {
       return this.incomingConnectionToPortNumberFailed(arguments[0]);
     }
-    default:
-    {
+    default: {
       throw new Error('The supplied mobileName does not have a matching ' +
           'registerToNative method: ' + this.mobileMethodName);
     }

@@ -12,6 +12,7 @@ var httpTester = require('../lib/httpTester');
 var ThaliReplicationPeerAction = require('thali/NextGeneration/replication/thaliReplicationPeerAction');
 var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var PeerAction = require('thali/NextGeneration/thaliPeerPool/thaliPeerAction');
+var ForeverAgent = require('forever-agent');
 
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var devicePublicKey = devicePublicPrivateKey.generateKeys();
@@ -20,9 +21,13 @@ var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
 var thaliReplicationPeerAction = null;
 
-// BUGBUG: This is currently ignored for reasons explained
-// in thaliReplicationPeerAction.start
-var httpAgentPool = null;
+var httpAgentPool = new ForeverAgent.SSL({
+  rejectUnauthorized: false,
+  maxSockets: 8,
+  ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+  pskIdentity: pskId,
+  pskKey: pskKey
+});
 
 var test = tape({
   setup: function (t) {
@@ -416,4 +421,32 @@ test('Start replicating and then catch error when server goes', function (t) {
         t.end();
       });
   }, killServer);
+});
+
+test('Make sure clone works', function (t) {
+  var notificationForUs = {
+    keyId: new Buffer('abcdefg'),
+    portNumber: 12,
+    hostAddress: '127.0.0.1',
+    pskIdentifyField: pskId,
+    psk: pskKey,
+    suggestedTCPTimeout: 10000,
+    connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
+  };
+  var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
+  var dbName = 'icky';
+  var originalThaliReplicationAction =
+    new ThaliReplicationPeerAction(notificationForUs, DifferentDirectoryPouch,
+    dbName, devicePublicKey);
+  var clonedAction = originalThaliReplicationAction.clone();
+  t.equal(clonedAction.getPeerAdvertisesDataForUs(),
+    originalThaliReplicationAction.getPeerAdvertisesDataForUs(),
+    'same getPeerAdvertisesDataForUs');
+  t.equal(clonedAction._PouchDB, originalThaliReplicationAction._PouchDB,
+    'Same pouchdB');
+  t.equal(clonedAction._dbName, originalThaliReplicationAction._dbName,
+    'same dbName');
+  t.equal(clonedAction._ourPublicKey,
+    originalThaliReplicationAction._ourPublicKey, 'Same public key');
+  t.end();
 });

@@ -356,6 +356,10 @@ test('Resolves an action locally', function (t) {
         res.portNumber,
         globals.TCPEvent.portNumber,
         'portNumber must match');
+      t.equals(
+        res.peerId,
+        globals.TCPEvent.peerIdentifier,
+        'peerIDs must match');
 
       notificationClient.stop();
       t.end();
@@ -404,6 +408,10 @@ test('Resolves an action locally using ThaliPeerPoolDefault', function (t) {
         res.portNumber,
         globals.TCPEvent.portNumber,
         'portNumber must match');
+      t.equals(
+        res.peerId,
+        globals.TCPEvent.peerIdentifier,
+        'peerIds must match');
 
       t.end();
     });
@@ -442,7 +450,7 @@ test('Action fails because of a bad hostname.', function (t) {
     'enqueue',
     function (action) {
       requestCount++;
-      var keepAliveAgent = new http.Agent({ keepAlive: true });
+      var keepAliveAgent = new http.Agent();
       action.eventEmitter.on(
         ThaliNotificationAction.Events.Resolved,
         testResolutionEvent
@@ -516,7 +524,7 @@ test('hostaddress is removed when the action is running. ', function (t) {
 
   // Simulates how peer pool runs actions
   var enqueue = function (action) {
-    var keepAliveAgent = new http.Agent({ keepAlive: true });
+    var keepAliveAgent = new http.Agent();
     action.start(keepAliveAgent).then( function () {
 
     }).catch( function () {

@@ -5,6 +5,7 @@ var Promise = require('lie');
 var EventEmitter = require('events').EventEmitter;
 var createNativeListener = require('./createNativeListener');
 var createPeerListener = require('./createPeerListener');
+var logger = require('../../ThaliLogger')('thaliTcpServersManager');
 
 /** @module TCPServersManager */
 
@@ -96,9 +97,6 @@ function ThaliTcpServersManager(routerPort) {
 
   // The set of peer servers created by createPeerListener
   this._peerServers = {};
-
-  // See note in createPeerListener
-  this._pendingReverseConnections = {};
 
   // The port on which we expect the application to be
   // listening
@@ -232,10 +230,9 @@ ThaliTcpServersManager.prototype._createNativeListener = function () {
  * @param {string} peerIdentifier
  * @returns {Promise<number|Error>}
  */
-ThaliTcpServersManager.prototype.createPeerListener = function (peerIdentifier,
-                                                                pleaseConnect) {
-  return createPeerListener.createPeerListener(this, peerIdentifier,
-                                                pleaseConnect);
+ThaliTcpServersManager.prototype.createPeerListener = function (peerIdentifier)
+{
+  return createPeerListener.createPeerListener(this, peerIdentifier);
 };
 
 /**
@@ -285,12 +282,41 @@ ThaliTcpServersManager.prototype.terminateIncomingConnection =
  */
 ThaliTcpServersManager.prototype.terminateOutgoingConnection =
   function (peerIdentifier, port) {
+    logger.debug('Terminate outgoing connection called on peerID ' +
+      peerIdentifier + ' with port ' + port);
     var peerServer = this._peerServers[peerIdentifier];
     if (peerServer && peerServer.server.address().port === port) {
       createPeerListener.closeServer(this, peerServer.server, null, false);
     }
     return Promise.resolve(null);
   };
+
+/**
+ * If you are using this method, something has gone very wrong with your code.
+ * This method is used when we think the mux has lost its mind. We use it to
+ * tear down the mux (and the native connection with it) while triggering
+ * a peerAvailabilityChanged sequence that will cause us to see the peer
+ * go away and then come back so we can connect again.
+ * @param peerIdentifier
+ * @param port
+ * @param error
+ */
+ThaliTcpServersManager.prototype.recreatePeerListener =
+  function (peerIdentifier, port, error) {
+    logger.debug('Recreate outgoing connection called on peerID ' +
+      peerIdentifier + ' with port ' + port);
+    var peerServer = this._peerServers[peerIdentifier];
+    if (peerServer && peerServer.server.address().port === port) {
+      if (!error) {
+        // We have to pass some error if we want to trigger
+        // peerAvailabilityChanged events sequence
+        error = new Error('Recreating peer listener');
+      }
+      createPeerListener.closeServer(this, peerServer.server, error, true);
+    } else {
+      logger.debug('This peer does not exist anymore');
+    }
+};
 
 /**
  * Notifies the listener of a failed connection attempt. This is mostly used to

@@ -64,11 +64,12 @@ jx npm init
 
 We are still inside of FooBar/www/jxcore and now we are running the script
 that MUST be run before installing thali since a bug in our installer.
-In other case install will fail. This script will go away as soon as 
-installed fixed.
+In other case install will fail. This script will go away as soon as
+installed fixed. See one of the reasons [thaliproject/Thali_CordovaPlugin#1221](https://github.com/thaliproject/Thali_CordovaPlugin/issues/1221),
+[thaliproject/Thali_CordovaPlugin#1250](https://github.com/thaliproject/Thali_CordovaPlugin/issues/1250) to run this script.
 
 ```
-../../../Thali_CordovaPlugin/thali/install/setUpDesktop.sh
+npm run setupDesktop --prefix ../../../Thali_CordovaPlugin/thali/install
 ```
 
 We are still inside of FooBar/www/jxcore and now we are dealing with creating a
@@ -316,14 +317,14 @@ Download [Xcode 6](https://developer.apple.com/xcode/), or later.
 
 ### Install latest JXCore
 
-The installation guide for JXCore 3.1.2 on Mac OS and Windows can be found [here](https://github.com/thaliproject/jxbuild/blob/master/distribute.md).
+The installation guide for JXCore 3.1.6 on Mac OS and Windows can be found [here](https://github.com/thaliproject/jxbuild/blob/master/distribute.md).
 
-The latest version of JXCore 3.1.2b only for Mac OS can be downloaded from [here](https://jxcore.blob.core.windows.net/jxcore-release/jxcore/0312b/release/jx_osx64v8.zip)
+The latest version of JXCore 3.1.6 only for Mac OS can be downloaded from [here](https://jxcore.blob.core.windows.net/jxcore-release/jxcore/0316/release/jx_osx64v8.zip)
 
 To check the version of the current JXCore installation run:
 ```
 $ jx -jxv
-v 0.3.1.2b
+v 0.3.1.6
 ```
 
 ### Install Cordova
@@ -332,7 +333,7 @@ v 0.3.1.2b
 and [iOS Platform Guide](https://cordova.apache.org/docs/en/4.0.0/guide_platforms_ios_index.md.html#iOS%20Platform%20Guide) for detailed instructions.)
 
 ```
-$ sudo jx npm install -g cordova
+$ npm install -g cordova@6.3.1
 ```
 
 ### Create a Cordova project

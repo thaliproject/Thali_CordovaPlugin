@@ -89,7 +89,8 @@ module.exports._isStarted = function () {
 function failedConnectionHandler(failedConnection) {
   var peer = {
     peerIdentifier: failedConnection.peerIdentifier,
-    portNumber: null
+    portNumber: null,
+    recreated: failedConnection.recreated
   };
   handlePeerAvailabilityChanged(peer);
   module.exports.emitter.emit('failedConnection', failedConnection);
@@ -137,9 +138,14 @@ function listenerRecreatedAfterFailureHandler(recreateAnnouncement) {
     return;
   }
 
+  logger.debug('listenerRecreatedAfterFailureHandler - We are emitting ' +
+    'nonTCPPeerAvailabilityChangedEvent with peerIdentifier %s and ' +
+    'portNumber %d', recreateAnnouncement.peerIdentifier,
+    recreateAnnouncement.portNumber);
   module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
     peerIdentifier: recreateAnnouncement.peerIdentifier,
-    portNumber: recreateAnnouncement.portNumber
+    portNumber: recreateAnnouncement.portNumber,
+    recreated: true
   });
 }
 
@@ -833,6 +839,8 @@ module.exports.connectionTypes = connectionTypes;
 // jscs:enable maximumLineLength
 var peerAvailabilityChangedQueue = new PromiseQueue();
 var handlePeerAvailabilityChanged = function (peer) {
+  logger.debug('Received peer availability changed event with ' +
+    JSON.stringify(peer));
   if (!states.started) {
     logger.debug('Filtered out nonTCPPeerAvailabilityChangedEvent ' +
                  'due to not being in started state');
@@ -843,20 +851,27 @@ var handlePeerAvailabilityChanged = function (peer) {
       // TODO: Should the created peer listener be cleaned up when
       // peer becomes unavailable and which function should be used
       // for that?
-      module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
+      var event = {
         peerIdentifier: peer.peerIdentifier,
-        portNumber: null
-      });
+        portNumber: null,
+        recreated: peer.recreated
+      };
+      logger.debug('handlePeerUnavailable - Emitting %s',
+        JSON.stringify(event));
+      module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', event);
       resolve();
     };
     if (peer.peerAvailable) {
-      gServersManager.createPeerListener(peer.peerIdentifier,
-                                         peer.pleaseConnect)
+      gServersManager.createPeerListener(peer.peerIdentifier)
       .then(function (portNumber) {
-        module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
+        var peerAvailabilityChangedEvent = {
           peerIdentifier: peer.peerIdentifier,
           portNumber: portNumber
-        });
+        };
+        logger.debug('handlePeerAvailabilityChanged - Emitting %s',
+          JSON.stringify(peerAvailabilityChangedEvent));
+        module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent',
+          peerAvailabilityChangedEvent);
         resolve();
       })
       .catch(function (error) {
@@ -872,6 +887,8 @@ var handlePeerAvailabilityChanged = function (peer) {
     }
   });
 };
+
+module.exports._handlePeerAvailabilityChanged = handlePeerAvailabilityChanged;
 
 // jscs:disable maximumLineLength
 /**
@@ -990,6 +1007,8 @@ module.exports._registerToNative = function () {
   };
 
   registerToNative('peerAvailabilityChanged', function (peers) {
+    logger.debug('Received peerAvailabilityChanged event from native ' +
+      'layer %j', peers);
     if (typeof peers.forEach !== 'function') {
       peers = [peers];
     }
@@ -1020,7 +1039,7 @@ module.exports._registerToNative = function () {
 
   registerToNative('incomingConnectionToPortNumberFailed',
     function (portNumber) {
-      logger.info('incomingConnectionToPortNumberFailed: %s', portNumber);
+      logger.info('incomingConnectionToPortNumberFailed: %s', JSON.stringify(portNumber));
 
       if (!states.started) {
         logger.info('got incomingConnectionToPortNumberFailed while not in ' +
