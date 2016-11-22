@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+echo ""
 echo "start setUpTests.sh"
 
 SCRIPT_PATH="$(cd "$(dirname "$0")"; pwd -P)"
@@ -25,11 +26,12 @@ TEST_PROJECT_ROOT_DIR=${REPO_ROOT_DIR}/../${TEST_PROJECT_NAME}
 # Prepares test project
 prepare_project()
 {
+  echo ""
+  echo "start preparing ${TEST_PROJECT_NAME} Cordova project"
+
   IPADDRESS=${1:-}
   npm install --no-optional --production --prefix $REPO_ROOT_DIR/thali/install
   node $REPO_ROOT_DIR/thali/install/validateBuildEnvironment.js
-
-  echo "start preparing ${TEST_PROJECT_NAME} Cordova project"
 
   cd $REPO_ROOT_DIR/test/TestServer
   npm install --no-optional
@@ -54,10 +56,12 @@ prepare_project()
   cordova plugin add $REPO_ROOT_DIR/thali/install/SSDPReplacer
 
   echo "end preparing ${TEST_PROJECT_NAME} Cordova project"
+  echo ""
 }
 
 install_thali()
 {
+  echo ""
   echo "start installing Thali into ${TEST_PROJECT_NAME}"
 
   cd $TEST_PROJECT_ROOT_DIR/www/jxcore
@@ -77,6 +81,7 @@ install_thali()
   # SuperTest which is used by some of the BVTs include a PEM file (for private
   # keys) that makes Android unhappy so we remove it below in addition to the gz
   # files.
+  echo ""
   echo "run supertest for Android"
   jx install --no-optional --production
 
@@ -88,10 +93,12 @@ install_thali()
   cp -v $1 app.js
 
   echo "end installing Thali"
+  echo ""
 }
 
 add_android_platform()
 {
+  echo ""
   echo "start adding Android platform into ${TEST_PROJECT_NAME}"
 
   cd $TEST_PROJECT_ROOT_DIR
@@ -102,10 +109,12 @@ add_android_platform()
   touch platforms/android/unittests
 
   echo "end adding Android platform"
+  echo ""
 }
 
 build_android()
 {
+  echo ""
   echo "start building ${TEST_PROJECT_NAME} Android app"
 
   cd $TEST_PROJECT_ROOT_DIR
@@ -113,12 +122,14 @@ build_android()
   cordova build android --release --device
 
   echo "end building ${TEST_PROJECT_NAME} Android app"
+  echo ""
 }
 
 # Adds iOS platform when we're running on macOS
 add_ios_platform_if_possible()
 {
   if is_darwin_platform; then
+    echo ""
     echo "start adding iOS platform into ${TEST_PROJECT_NAME}"
 
     cd $TEST_PROJECT_ROOT_DIR
@@ -129,8 +140,10 @@ add_ios_platform_if_possible()
     touch platforms/ios/unittests
 
     echo "end adding iOS platform"
+    echo ""
   else
     echo "skip adding iOS platform"
+    echo ""
   fi
 }
 
@@ -138,6 +151,7 @@ add_ios_platform_if_possible()
 build_ios_if_possible()
 {
   if is_darwin_platform; then
+    echo ""
     echo "start building ${TEST_PROJECT_NAME} iOS app"
 
     cd $TEST_PROJECT_ROOT_DIR
@@ -161,6 +175,7 @@ build_ios_if_possible()
     TEST_PROJECT_DIR=$TEST_PROJECT_ROOT_DIR/platforms/ios
     TEST_PROJECT_PATH=$TEST_PROJECT_DIR/$TEST_PROJECT_NAME.xcodeproj
 
+    echo ""
     echo "building project: ${TEST_PROJECT_PATH}"
 
     (\
@@ -177,6 +192,7 @@ build_ios_if_possible()
     )
 
     echo "end building ${TEST_PROJECT_NAME} iOS app"
+    echo ""
   fi
 }
 
@@ -191,3 +207,4 @@ build_ios_if_possible
 
 echo "Remember to start the test coordination server by running jx index.js"
 echo "end setUpTests.sh"
+echo ""
