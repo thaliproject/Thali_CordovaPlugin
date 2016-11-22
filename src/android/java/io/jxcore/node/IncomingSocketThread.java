@@ -5,13 +5,10 @@ package io.jxcore.node;
 
 import android.bluetooth.BluetoothSocket;
 import android.util.Log;
-
-import org.thaliproject.p2p.btconnectorlib.PeerProperties;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.Inet4Address;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 
 /**
@@ -29,7 +26,7 @@ class IncomingSocketThread extends SocketThreadBase {
      * @throws IOException Thrown, if the constructor of the base class, SocketThreadBase, fails.
      */
     public IncomingSocketThread(BluetoothSocket bluetoothSocket, ConnectionData connectionData, Listener listener)
-        throws IOException {
+            throws IOException {
         super(bluetoothSocket, listener);
         this.connectionData = connectionData;
         mTag = IncomingSocketThread.class.getName();
@@ -46,7 +43,7 @@ class IncomingSocketThread extends SocketThreadBase {
      */
     public IncomingSocketThread(BluetoothSocket bluetoothSocket, Listener listener,
                                 InputStream inputStream, OutputStream outputStream)
-        throws IOException {
+            throws IOException {
         super(bluetoothSocket, listener, inputStream, outputStream);
         mTag = IncomingSocketThread.class.getName();
     }
@@ -76,9 +73,10 @@ class IncomingSocketThread extends SocketThreadBase {
         boolean localStreamsCreatedSuccessfully = false;
 
         try {
-            Inet4Address mLocalHostAddress = (Inet4Address) Inet4Address.getByName("localhost");
-            mLocalhostSocket = new Socket(mLocalHostAddress, mTcpPortNumber);
+            mLocalhostSocket = new Socket();
+            InetSocketAddress inetSocketAddress = new InetSocketAddress("localhost",mTcpPortNumber);
             configureSocket();
+            mLocalhostSocket.connect(inetSocketAddress);
             Log.i(mTag, "Creating TCP android... " );
             Log.i(mTag, "Local host address: " + getLocalHostAddressAsString() + ", port: " + getLocalHostPort());
 
