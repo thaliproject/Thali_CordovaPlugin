@@ -7,21 +7,21 @@
 //  See LICENSE.txt file in the project root for full license information.
 //
 
-import ThaliCore
 import XCTest
 import UIKit
+import ThaliCore
 
 // MARK: - Random string generator
 extension String {
 
-  static func random(length length: Int) -> String {
+  static func random(length: Int) -> String {
     let letters: String = "abcdefghkmnopqrstuvxyzABCDEFGHKLMNOPQRSTUXYZ"
     var randomString = ""
 
     let lettersLength = UInt32(letters.characters.count)
     for _ in 0..<length {
       let rand = Int(arc4random_uniform(lettersLength))
-      let char = letters[letters.startIndex.advancedBy(rand)]
+      let char = letters[letters.characters.index(letters.startIndex, offsetBy: rand)]
       randomString.append(char)
     }
     return randomString
@@ -37,7 +37,7 @@ struct Constants {
 
   struct TimeForWhich {
 
-    static let  bluetoothStateIsChanged: NSTimeInterval = 10
+    static let  bluetoothStateIsChanged: TimeInterval = 10
   }
 
   struct NSNotificationName {
@@ -91,20 +91,20 @@ class AppContextDelegateMock: NSObject, AppContextDelegate {
 
   let peerAvailabilityChangedHandler: (String) -> Void
 
-  init(peerAvailabilityChangedHandler: (String) -> Void) {
+  init(peerAvailabilityChangedHandler: @escaping (String) -> Void) {
     self.peerAvailabilityChangedHandler = peerAvailabilityChangedHandler
   }
 
-  @objc func context(context: AppContext,
+  @objc func context(_ context: AppContext,
                      didResolveMultiConnectWithSyncValue value: String,
                      error: NSObject?,
                      listeningPort: NSObject?) {}
-  @objc func context(context: AppContext,
+  @objc func context(_ context: AppContext,
                      didFailMultiConnectConnectionWith paramsJSONString: String) {}
-  @objc func context(context: AppContext, didChangePeerAvailability peers: String) {
+  @objc func context(_ context: AppContext, didChangePeerAvailability peers: String) {
     peerAvailabilityChangedHandler(peers)
   }
-  @objc func context(context: AppContext, didChangeNetworkStatus status: String) {
+  @objc func context(_ context: AppContext, didChangeNetworkStatus status: String) {
     networkStatusUpdated = true
     networkStatus = status
 
@@ -149,11 +149,11 @@ class AppContextDelegateMock: NSObject, AppContextDelegate {
       XCTFail("Can not convert network status JSON string to dictionary")
     }
   }
-  @objc func context(context: AppContext,
+  @objc func context(_ context: AppContext,
                      didUpdateDiscoveryAdvertisingState discoveryAdvertisingState: String) {
     advertisingListeningState = discoveryAdvertisingState
   }
-  @objc func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16) {}
+  @objc func context(_ context: AppContext, didFailIncomingConnectionToPort port: UInt16) {}
   @objc func appWillEnterBackground(with context: AppContext) {
     willEnterBackground = true
   }
@@ -170,7 +170,7 @@ class AppContextTests: XCTestCase {
   weak var expectationThatPrivateBluetoothStateIsChanged: XCTestExpectation?
   weak var expectationThatCoreBluetoothStateIsChanged: XCTestExpectation?
   weak var expectationThatBothBluetoothStatesAreChanged: XCTestExpectation?
-  var bluetoothChangingStateGroup: dispatch_group_t?
+  var bluetoothChangingStateGroup: DispatchGroup?
 
   override func setUp() {
     let serviceType = String.random(length: 8)
@@ -181,17 +181,17 @@ class AppContextTests: XCTestCase {
     context = nil
   }
 
-  private func jsonDictionaryFrom(string: String) -> [String : AnyObject]? {
-    guard let data = string.dataUsingEncoding(NSUTF8StringEncoding) else {
+  fileprivate func jsonDictionaryFrom(_ string: String) -> [String : AnyObject]? {
+    guard let data = string.data(using: String.Encoding.utf8) else {
       return nil
     }
-    return (try? NSJSONSerialization.JSONObjectWithData(data, options: [])) as?
+    return (try? JSONSerialization.jsonObject(with: data, options: [])) as?
       [String : AnyObject]
   }
 
   // MARK: Tests
 
-  private func validateAdvertisingUpdate(jsonString: String, advertising: Bool, browsing: Bool) {
+  fileprivate func validateAdvertisingUpdate(_ jsonString: String, advertising: Bool, browsing: Bool) {
     let json = jsonDictionaryFrom(jsonString)
     let listeningActive = (json?[JSONKey.discoveryActive.rawValue] as? Bool)
     let advertisingActive = (json?[JSONKey.advertisingActive.rawValue] as? Bool)
@@ -206,8 +206,8 @@ class AppContextTests: XCTestCase {
       XCTFail("unexpected peerAvailabilityChanged event")
     })
     context.delegate = delegateMock
-    NSNotificationCenter.defaultCenter()
-                        .postNotificationName(UIApplicationWillResignActiveNotification,
+    NotificationCenter.default
+                        .post(name: NSNotification.Name.UIApplicationWillResignActive,
                                               object: nil)
     XCTAssertTrue(delegateMock.willEnterBackground)
   }
@@ -217,16 +217,16 @@ class AppContextTests: XCTestCase {
       XCTFail("unexpected peerAvailabilityChanged event")
     })
     context.delegate = delegateMock
-    NSNotificationCenter.defaultCenter()
-                        .postNotificationName(UIApplicationDidBecomeActiveNotification,
+    NotificationCenter.default
+                        .post(name: NSNotification.Name.UIApplicationDidBecomeActive,
                                               object: nil)
     XCTAssertTrue(delegateMock.didEnterForeground)
   }
 
   func testDidRegisterToNative() {
-    var error: ErrorType?
+    var error: Error?
     do {
-      try context.didRegisterToNative(["test", "test"])
+      try context.didRegisterToNative(["test" as AnyObject, "test" as AnyObject])
     } catch let err {
       error = err
     }
@@ -234,7 +234,7 @@ class AppContextTests: XCTestCase {
     var contextError: AppContextError?
     do {
       let notAString = 42
-      try context.didRegisterToNative([notAString])
+      try context.didRegisterToNative([notAString as AnyObject])
     } catch let err as AppContextError {
       contextError = err
     } catch let error {
@@ -244,12 +244,12 @@ class AppContextTests: XCTestCase {
   }
 
   func testGetIOSVersion() {
-    XCTAssertEqual(NSProcessInfo().operatingSystemVersionString, context.getIOSVersion())
+    XCTAssertEqual(ProcessInfo().operatingSystemVersionString, context.getIOSVersion())
   }
 
   func testThaliCoreErrors() {
     // testing parameters count
-    context.multiConnectToPeer([""]) {
+    context.multiConnectToPeer(["" as AnyObject]) {
       guard let err = $0 as? AppContextError else {
         XCTFail("unexpected error \($0)")
         return
@@ -257,7 +257,7 @@ class AppContextTests: XCTestCase {
       XCTAssertEqual(err, AppContextError.badParameters)
     }
     // testing parameter types
-    context.multiConnectToPeer([2, 2]) {
+    context.multiConnectToPeer([2 as AnyObject, 2 as AnyObject]) {
       guard let err = $0 as? AppContextError else {
         XCTFail("unexpected error \($0)")
         return
@@ -276,18 +276,18 @@ class AppContextTests: XCTestCase {
   }
 
   func testJsonValue() {
-    var jsonDict: [String : AnyObject] = ["number" : 4.2]
+    var jsonDict: [String : AnyObject] = ["number" : 4.2 as AnyObject]
     var jsonString = "{\"number\":4.2}"
-    XCTAssertEqual(jsonValue(jsonDict), jsonString)
-    jsonDict = ["string" : "42"]
+    XCTAssertEqual(jsonValue(jsonDict as AnyObject), jsonString)
+    jsonDict = ["string" : "42" as AnyObject]
     jsonString = "{\"string\":\"42\"}"
-    XCTAssertEqual(jsonValue(jsonDict), jsonString)
+    XCTAssertEqual(jsonValue(jsonDict as AnyObject), jsonString)
     jsonDict = ["null" : NSNull()]
     jsonString = "{\"null\":null}"
-    XCTAssertEqual(jsonValue(jsonDict), jsonString)
-    jsonDict = ["bool" : true]
+    XCTAssertEqual(jsonValue(jsonDict as AnyObject), jsonString)
+    jsonDict = ["bool" : true as AnyObject]
     jsonString = "{\"bool\":true}"
-    XCTAssertEqual(jsonValue(jsonDict), jsonString)
+    XCTAssertEqual(jsonValue(jsonDict as AnyObject), jsonString)
   }
 
   func testListeningAdvertisingUpdateOnStartAdvertising() {
@@ -296,7 +296,7 @@ class AppContextTests: XCTestCase {
     })
     context.delegate = delegateMock
     let port = 42
-    let _ = try? context.startUpdateAdvertisingAndListening(withParameters: [port])
+    let _ = try? context.startUpdateAdvertisingAndListening(withParameters: [port as AnyObject])
     validateAdvertisingUpdate(delegateMock.advertisingListeningState, advertising: true,
                               browsing: false)
   }
@@ -314,7 +314,7 @@ class AppContextTests: XCTestCase {
   func testStartAdvertisingAndListeningInvokePeerAvailabilityChangedForDifferentContexts() {
     do {
       let foundPeerFromAnotherContextExpectation =
-        expectationWithDescription("found peer from another AppContext")
+        expectation(description: "found peer from another AppContext")
       let delegateMock = AppContextDelegateMock {
         [weak foundPeerFromAnotherContextExpectation] peers in
         foundPeerFromAnotherContextExpectation?.fulfill()
@@ -326,10 +326,10 @@ class AppContextTests: XCTestCase {
       let port = 42
 
       try context1.startListeningForAdvertisements()
-      try context2.startUpdateAdvertisingAndListening(withParameters: [port])
+      try context2.startUpdateAdvertisingAndListening(withParameters: [port as AnyObject])
 
-      let foundPeerTimeout: NSTimeInterval = 10
-      waitForExpectationsWithTimeout(foundPeerTimeout, handler: nil)
+      let foundPeerTimeout: TimeInterval = 10
+      waitForExpectations(timeout: foundPeerTimeout, handler: nil)
 
     } catch let error {
       XCTFail("unexpected error: \(error)")
@@ -351,7 +351,7 @@ class AppContextTests: XCTestCase {
     var contextError: AppContextError?
     do {
       let notAString = 42
-      try context.disconnect([notAString])
+      try context.disconnect([notAString as AnyObject])
     } catch let err as AppContextError {
       contextError = err
     } catch let error {
@@ -367,41 +367,42 @@ class AppContextTests: XCTestCase {
   }
 
   // MARK: Private helpers
-  @objc private func centralBluetoothManagerStateChanged(notification: NSNotification) {
-    if notification.name == Constants.NSNotificationName.centralBluetoothManagerDidChangeState {
+  @objc fileprivate func centralBluetoothManagerStateChanged(_ notification: Notification) {
+    if notification.name == NSNotification.Name(rawValue: Constants.NSNotificationName
+                                                          .centralBluetoothManagerDidChangeState) {
+//    if notification.name == Constants.NSNotificationName.centralBluetoothManagerDidChangeState {
       expectationThatCoreBluetoothStateIsChanged?.fulfill()
       if let bluetoothChangingStateGroup = bluetoothChangingStateGroup {
-        dispatch_group_leave(bluetoothChangingStateGroup)
+        bluetoothChangingStateGroup.leave()
       }
     }
   }
 
-  private func changeBluetoothState(to state: BluetoothHardwareState,
-                                       andWaitUntilChangesWithTimeout timeout: NSTimeInterval) {
+  fileprivate func changeBluetoothState(to state: BluetoothHardwareState,
+                                       andWaitUntilChangesWithTimeout timeout: TimeInterval) {
 
-    bluetoothChangingStateGroup = dispatch_group_create()
+    bluetoothChangingStateGroup = DispatchGroup()
 
     expectationThatBothBluetoothStatesAreChanged =
-      expectationWithDescription("Bluetooth is turned \(state.rawValue)")
+      expectation(description: "Bluetooth is turned \(state.rawValue)")
 
     // When we're switching bluetooth hardware, we're waiting for two async acknowledgements.
     // The first one is from private API, the second acknowledgement is from CoreBluetooth.
     // This is why we enter the same group twice
-    dispatch_group_enter(bluetoothChangingStateGroup!)
-    dispatch_group_enter(bluetoothChangingStateGroup!)
+    bluetoothChangingStateGroup!.enter()
+    bluetoothChangingStateGroup!.enter()
 
     state == .on
              ? BluetoothHardwareControlManager.sharedInstance().turnBluetoothOn()
              : BluetoothHardwareControlManager.sharedInstance().turnBluetoothOff()
 
-    dispatch_group_notify(
-      bluetoothChangingStateGroup!,
-      dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), {
+    bluetoothChangingStateGroup!.notify(
+      queue: DispatchQueue.global(qos: DispatchQoS.QoSClass.background), execute: {
         self.privateAndPublicBluetoothStatesDidChanged()
       }
     )
 
-    waitForExpectationsWithTimeout(Constants.TimeForWhich.bluetoothStateIsChanged) {
+    waitForExpectations(timeout: Constants.TimeForWhich.bluetoothStateIsChanged) {
       error in
       XCTAssertNil(
         error,
@@ -413,7 +414,19 @@ class AppContextTests: XCTestCase {
     expectationThatBothBluetoothStatesAreChanged = nil
   }
 
-  private func privateAndPublicBluetoothStatesDidChanged() {
+  fileprivate func privateAndPublicBluetoothStatesDidChanged() {
     expectationThatBothBluetoothStatesAreChanged?.fulfill()
+  }
+}
+
+extension AppContextTests : BluetoothHardwareControlObserverProtocol {
+
+  func receivedBluetoothManagerNotification(withName bluetoothNotificationName: String) {
+    if bluetoothNotificationName == NSNotification.Name.PowerChanged.rawValue {
+      expectationThatPrivateBluetoothStateIsChanged?.fulfill()
+      if let bluetoothChangingStateGroup = bluetoothChangingStateGroup {
+        bluetoothChangingStateGroup.leave()
+      }
+    }
   }
 }
