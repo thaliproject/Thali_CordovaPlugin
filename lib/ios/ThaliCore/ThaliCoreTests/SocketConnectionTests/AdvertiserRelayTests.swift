@@ -143,9 +143,9 @@ class AdvertiserRelayTests: XCTestCase {
     // Check if relay objectes are valid
     guard
       let browserRelayInfo: (uuid: String, relay: BrowserRelay) =
-      browserManager.activeRelays.value.first as! (uuid: String, relay: BrowserRelay)?,
+      browserManager.activeRelays.value.first as? (uuid: String, relay: BrowserRelay),
       let advertiserRelayInfo: (uuid: String, relay: AdvertiserRelay) =
-      advertiserManager.activeRelays.value.first as! (uuid: String, relay: AdvertiserRelay)?
+      advertiserManager.activeRelays.value.first as? (uuid: String, relay: AdvertiserRelay)
       else {
         return
     }

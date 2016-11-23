@@ -32,7 +32,6 @@ class RelayTests: XCTestCase {
   let browserConnectTimeout = 5.0
   let moveDataTimeout = 15.0
 
-
   // MARK: - Setup & Teardown
   override func setUp() {
     super.setUp()
@@ -160,9 +159,9 @@ class RelayTests: XCTestCase {
     // Check if relay objectes are valid
     guard
       let browserRelayInfo: (uuid: String, relay: BrowserRelay) =
-      browserManager.activeRelays.value.first as! (uuid: String, relay: BrowserRelay)?,
+      browserManager.activeRelays.value.first as? (uuid: String, relay: BrowserRelay),
       let advertiserRelayInfo: (uuid: String, relay: AdvertiserRelay) =
-      advertiserManager.activeRelays.value.first as! (uuid: String, relay: AdvertiserRelay)?
+      advertiserManager.activeRelays.value.first as? (uuid: String, relay: AdvertiserRelay)
       else {
         return
     }

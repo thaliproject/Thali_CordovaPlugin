@@ -21,8 +21,10 @@ class TCPListener: NSObject {
   fileprivate let socket: GCDAsyncSocket
   fileprivate var listening = false
 
-  fileprivate let socketQueue = DispatchQueue(label: "org.thaliproject.GCDAsyncSocket.delegateQueue",
-                                              attributes: DispatchQueue.Attributes.concurrent)
+  fileprivate let socketQueue = DispatchQueue(
+                                  label: "org.thaliproject.GCDAsyncSocket.delegateQueue",
+                                  attributes: DispatchQueue.Attributes.concurrent
+                                )
   fileprivate let activeConnections: Atomic<[GCDAsyncSocket]> = Atomic([])
 
   fileprivate var didAcceptConnectionHandler: ((GCDAsyncSocket) -> Void)?

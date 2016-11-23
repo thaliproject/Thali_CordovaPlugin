@@ -186,7 +186,6 @@ class BrowserManagerTests: XCTestCase {
         return
     }
 
-
     // Starting 2nd generation of advertiser
     advertiserManager.startUpdateAdvertisingAndListening(onPort: port2,
                                                          errorHandler: unexpectedErrorHandler)

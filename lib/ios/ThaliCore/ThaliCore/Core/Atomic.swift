@@ -82,7 +82,8 @@ public final class Atomic<Value> {
 
    - returns: The result of the action
    */
-  @discardableResult public func modify<Result>(action: (inout Value) throws -> Result) rethrows -> Result {
+  @discardableResult public func modify<Result>(action: (inout Value) throws -> Result) rethrows
+                                                -> Result {
     lock.lock()
     defer { lock.unlock() }
 
