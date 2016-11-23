@@ -42,7 +42,7 @@ class VirtualSocket: NSObject {
     if !opened {
       opened = true
       let queue = DispatchQueue.global()
-      queue.async(execute: {
+      queue.async {
         self.inputStream.delegate = self
         self.inputStream.schedule(in: RunLoop.current,
                                   forMode: RunLoopMode.defaultRunLoopMode)
@@ -54,7 +54,7 @@ class VirtualSocket: NSObject {
         self.outputStream.open()
 
         RunLoop.current.run(until: Date.distantFuture)
-      })
+      }
     }
   }
 
