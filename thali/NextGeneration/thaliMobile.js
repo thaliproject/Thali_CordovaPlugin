@@ -54,6 +54,11 @@ var networkTypes = {
 };
 module.exports.networkTypes = networkTypes;
 
+var listenersAction = {
+  add: 'on',
+  remove: 'removeListener'
+};
+
 var getMethodIfExists = function (target, method) {
   if (!target[method]) {
     throw new Error(target + ' has no method named ' +
@@ -188,6 +193,8 @@ module.exports.start = function (router, pskIdToSecret, networkType) {
     thaliMobileStates.networkType =
       networkType || global.NETWORK_TYPE || thaliMobileStates.networkType;
 
+    listenersManager(thaliMobileStates.networkType, listenersAction.add);
+
     getWifiOrNativeMethodByNetworkType('start',
       thaliMobileStates.networkType)(router, pskIdToSecret)
       .then(function (result) {
@@ -219,6 +226,8 @@ module.exports.stop = function () {
         var connectionType = connectionTypes[connectionKey];
         changePeersUnavailable(connectionType);
       });
+
+    listenersManager(thaliMobileStates.networkType, listenersAction.remove);
 
     getWifiOrNativeMethodByNetworkType('stop', thaliMobileStates.networkType)()
       .then(resolve);
@@ -981,8 +990,7 @@ var handleRecreatedPeer = function (nativePeer) {
   }
 };
 
-ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
-function (nativePeer) {
+var handlerNonTCPPeerAvailabilityChangedEvent = function (nativePeer) {
   if (nativePeer.recreated) {
     handleRecreatedPeer(nativePeer);
     return;
@@ -1004,9 +1012,9 @@ function (nativePeer) {
     recreated: Boolean(nativePeer.recreated) // Android only
   };
   handlePeer(peer);
-});
+};
 
-thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeer) {
+var handlerWifiPeerAvailabilityChanged = function (wifiPeer) {
   var peerAvailable = Boolean(wifiPeer.hostAddress && wifiPeer.portNumber);
   var peer = {
     peerIdentifier: wifiPeer.peerIdentifier,
@@ -1019,7 +1027,7 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeer) {
     recreated: false
   };
   handlePeer(peer);
-});
+};
 
 // TODO: move watchers to the separate module
 var peerAvailabilityWatchers = {};
@@ -1216,29 +1224,23 @@ var emitDiscoveryAdvertisingStateUpdate = function () {
  */
 
 
-ThaliMobileNativeWrapper.emitter.on(
-  'discoveryAdvertisingStateUpdateNonTCP',
-  function (newState) {
-    discoveryAdvertisingState.nonTCPDiscoveryActive =
-      newState.discoveryActive;
-    discoveryAdvertisingState.nonTCPAdvertisingActive =
-      newState.advertisingActive;
-    verifyDiscoveryAdvertisingState(newState);
-    emitDiscoveryAdvertisingStateUpdate();
-  }
-);
+var handlerDiscoveryAdvertisingStateUpdateNonTCP = function (newState) {
+  discoveryAdvertisingState.nonTCPDiscoveryActive =
+    newState.discoveryActive;
+  discoveryAdvertisingState.nonTCPAdvertisingActive =
+    newState.advertisingActive;
+  verifyDiscoveryAdvertisingState(newState);
+  emitDiscoveryAdvertisingStateUpdate();
+};
 
-thaliWifiInfrastructure.on(
-  'discoveryAdvertisingStateUpdateWifiEvent',
-  function (newState) {
-    discoveryAdvertisingState.wifiDiscoveryActive =
-      newState.discoveryActive;
-    discoveryAdvertisingState.wifiAdvertisingActive =
-      newState.advertisingActive;
-    verifyDiscoveryAdvertisingState(newState);
-    emitDiscoveryAdvertisingStateUpdate();
-  }
-);
+var handlerDiscoveryAdvertisingStateUpdateWifiEvent = function (newState) {
+  discoveryAdvertisingState.wifiDiscoveryActive =
+    newState.discoveryActive;
+  discoveryAdvertisingState.wifiAdvertisingActive =
+    newState.advertisingActive;
+  verifyDiscoveryAdvertisingState(newState);
+  emitDiscoveryAdvertisingStateUpdate();
+};
 
 var handleNetworkChanged = function (networkChangedValue) {
   if (networkChangedValue.wifi === 'off') {
@@ -1304,7 +1306,8 @@ var handleNetworkChangedNonTCP = function (networkChangedValue) {
 };
 
 var handleNetworkChangedWifi = function (networkChangedValue) {
-  logger.warn('networkChangedWifi should not be fired because it is not implemented');
+  logger.warn('networkChangedWifi should not be fired because' +
+  'it is not implemented');
   handleNetworkChangedNonTCP(networkChangedValue);
 };
 
@@ -1319,10 +1322,6 @@ var handleNetworkChangedWifi = function (networkChangedValue) {
  * @property {module:thaliMobileNative~networkChanged} networkChangedValue
  */
 
-ThaliMobileNativeWrapper.emitter
-  .on('networkChangedNonTCP', handleNetworkChangedNonTCP);
-thaliWifiInfrastructure
-  .on('networkChangedWifi', handleNetworkChangedWifi);
 
 /**
  * Fired when we get more peer discoveries than we have allocated space to
@@ -1347,3 +1346,47 @@ thaliWifiInfrastructure
  * @fires module:thaliMobile.event:discoveryDOS
  */
 module.exports.emitter = new EventEmitter();
+
+var listenersCollection = {
+  WIFI: {
+    'wifiPeerAvailabilityChanged': handlerWifiPeerAvailabilityChanged,
+    'discoveryAdvertisingStateUpdateWifiEvent':
+    handlerDiscoveryAdvertisingStateUpdateWifiEvent,
+    'networkChangedWifi': handleNetworkChangedWifi
+  },
+  NATIVE: {
+    'nonTCPPeerAvailabilityChangedEvent':
+    handlerNonTCPPeerAvailabilityChangedEvent,
+    'discoveryAdvertisingStateUpdateNonTCP':
+    handlerDiscoveryAdvertisingStateUpdateNonTCP,
+    'networkChangedNonTCP': handleNetworkChangedNonTCP
+  }
+};
+
+var listenersManager = function (networkType, action) {
+  switch (networkType) {
+    case networkTypes.WIFI:
+      listenersManagerWiFi(action);
+      break;
+    case networkTypes.NATIVE:
+      listenersManagerNative(action);
+      break;
+    case networkTypes.BOTH:
+      listenersManagerWiFi(action);
+      listenersManagerNative(action);
+      break;
+  }
+};
+
+var listenersManagerWiFi = function (action) {
+  Object.keys(listenersCollection.WIFI).forEach(function (event) {
+    thaliWifiInfrastructure[action](event, listenersCollection.WIFI[event]);
+  });
+};
+
+var listenersManagerNative = function (action) {
+  Object.keys(listenersCollection.NATIVE).forEach(function (event) {
+    ThaliMobileNativeWrapper
+      .emitter[action](event, listenersCollection.NATIVE[event]);
+  });
+};

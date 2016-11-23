@@ -215,7 +215,202 @@ test('#stop should clear watchers and change peers', function (t) {
     });
 });
 
-test('does not emit duplicate discoveryAdvertisingStateUpdate',
+test('#start subscribes to the WiFi infrastructure events and #stop ' +
+'unsubscribes from them (in WiFi-only mode)',
+  function (t) {
+    var sandbox = sinon.sandbox.create();
+    var wifiEmitter = ThaliMobile._getThaliWifiInfrastructure();
+    var nativeEmitter = ThaliMobileNativeWrapper.emitter;
+
+    var wifiOnSpy = sandbox.spy(wifiEmitter, 'on');
+    var nativeOnSpy = sandbox.spy(nativeEmitter, 'on');
+    var wifiOffSpy = sandbox.spy(wifiEmitter, 'removeListener');
+    var nativeOffSpy = sandbox.spy(nativeEmitter, 'removeListener');
+
+    function resetSpies() {
+      wifiOnSpy.reset();
+      nativeOnSpy.reset();
+      wifiOffSpy.reset();
+      nativeOffSpy.reset();
+    }
+
+    var expectedWifiEventNames = [
+      'wifiPeerAvailabilityChanged',
+      'discoveryAdvertisingStateUpdateWifiEvent',
+      'networkChangedWifi',
+    ].sort();
+
+    var expectedNativeEventNames = [
+      'networkChangedNonTCP',
+    ];
+
+    var router = express.Router();
+
+    ThaliMobile.start(router, pskIdToSecret, ThaliMobile.networkTypes.WIFI)
+    .then(function () {
+      var wifiEventNames = wifiOnSpy.args.map(function (callArgs) {
+        return callArgs[0];
+      }).sort();
+
+      var nativeEventNames = nativeOnSpy.args.map(function (callArgs) {
+        return callArgs[0];
+      }).sort();
+
+      t.deepEqual(wifiEventNames, expectedWifiEventNames,
+        'listen to the correct wifi events');
+      t.deepEqual(nativeEventNames, expectedNativeEventNames,
+        'does not listen to the native events except networkChangedNonTCP');
+      resetSpies();
+      return ThaliMobile.stop();
+    })
+    .then(function () {
+      var wifiEventNames = wifiOffSpy.args.map(function (callArgs) {
+        return callArgs[0];
+      }).sort();
+      t.deepEqual(wifiEventNames, expectedWifiEventNames,
+        'should remove wifi listeners');
+    })
+    .catch(t.fail)
+    .then(function () {
+      sandbox.restore();
+      t.end();
+    });
+  }
+);
+
+test('#start subscribes to the native events and ' +
+'#stop unsubscribes from them (in native-only mode)',
+  function (t) {
+    var sandbox = sinon.sandbox.create();
+    var wifiEmitter = ThaliMobile._getThaliWifiInfrastructure();
+    var nativeEmitter = ThaliMobileNativeWrapper.emitter;
+
+    var wifiOnSpy = sandbox.spy(wifiEmitter, 'on');
+    var nativeOnSpy = sandbox.spy(nativeEmitter, 'on');
+    var wifiOffSpy = sandbox.spy(wifiEmitter, 'removeListener');
+    var nativeOffSpy = sandbox.spy(nativeEmitter, 'removeListener');
+
+    function resetSpies() {
+      wifiOnSpy.reset();
+      nativeOnSpy.reset();
+      wifiOffSpy.reset();
+      nativeOffSpy.reset();
+    }
+
+    var expectedNativeEventNames = [
+      'nonTCPPeerAvailabilityChangedEvent',
+      'discoveryAdvertisingStateUpdateNonTCP',
+      'networkChangedNonTCP',
+    ].sort();
+
+    var router = express.Router();
+
+    ThaliMobile.start(router, pskIdToSecret, ThaliMobile.networkTypes.NATIVE)
+    .then(function () {
+
+      var nativeEventNames = nativeOnSpy.args.map(function (callArgs) {
+        return callArgs[0];
+      }).sort();
+
+      t.deepEqual(nativeEventNames, expectedNativeEventNames,
+        'listen to the correct native events');
+      t.deepEqual(wifiOnSpy.called, false,
+        'does not listen to the wifi events');
+      resetSpies();
+      return ThaliMobile.stop();
+    })
+    .then(function () {
+      var nativeEventNames = nativeOffSpy.args.map(function (callArgs) {
+        return callArgs[0];
+      }).sort();
+      t.deepEqual(nativeEventNames, expectedNativeEventNames,
+        'should remove native listeners');
+    })
+    .catch(t.fail)
+    .then(function () {
+      sandbox.restore();
+      t.end();
+    });
+  }
+);
+
+test('#start subscribes to the native and wifi events and ' +
+'#stop unsubscribes from them (in BOTH mode)',
+  function (t) {
+    var sandbox = sinon.sandbox.create();
+    var wifiEmitter = ThaliMobile._getThaliWifiInfrastructure();
+    var nativeEmitter = ThaliMobileNativeWrapper.emitter;
+
+    var wifiOnSpy = sandbox.spy(wifiEmitter, 'on');
+    var nativeOnSpy = sandbox.spy(nativeEmitter, 'on');
+    var wifiOffSpy = sandbox.spy(wifiEmitter, 'removeListener');
+    var nativeOffSpy = sandbox.spy(nativeEmitter, 'removeListener');
+
+    function resetSpies() {
+      wifiOnSpy.reset();
+      nativeOnSpy.reset();
+      wifiOffSpy.reset();
+      nativeOffSpy.reset();
+    }
+
+    var expectedWifiEventNames = [
+      'wifiPeerAvailabilityChanged',
+      'discoveryAdvertisingStateUpdateWifiEvent',
+      'networkChangedWifi',
+    ].sort();
+
+    var expectedNativeEventNames = [
+      'nonTCPPeerAvailabilityChangedEvent',
+      'discoveryAdvertisingStateUpdateNonTCP',
+      'networkChangedNonTCP',
+      'networkChangedNonTCP',
+    ].sort();
+
+    var router = express.Router();
+
+    ThaliMobile.start(router, pskIdToSecret, ThaliMobile.networkTypes.BOTH)
+    .then(function () {
+
+      var wifiEventNames = wifiOnSpy.args.map(function (callArgs) {
+        return callArgs[0];
+      }).sort();
+
+      var nativeEventNames = nativeOnSpy.args.map(function (callArgs) {
+        return callArgs[0];
+      }).sort();
+
+      t.deepEqual(wifiEventNames, expectedWifiEventNames,
+        'listen to the correct WiFi events');
+      t.deepEqual(nativeEventNames, expectedNativeEventNames,
+        'listen to the correct native events');
+      resetSpies();
+      return ThaliMobile.stop();
+    })
+    .then(function () {
+
+      var wifiEventNames = wifiOffSpy.args.map(function (callArgs) {
+        return callArgs[0];
+      }).sort();
+
+      var nativeEventNames = nativeOffSpy.args.map(function (callArgs) {
+        return callArgs[0];
+      }).sort();
+
+      t.deepEqual(wifiEventNames, expectedWifiEventNames,
+        'should remove WiFi listeners');
+      t.deepEqual(nativeEventNames, expectedNativeEventNames,
+        'should remove native listeners');
+
+    })
+    .catch(t.fail)
+    .then(function () {
+      sandbox.restore();
+      t.end();
+    });
+  }
+);
+
+test.only('does not emit duplicate discoveryAdvertisingStateUpdate',
   function () {
     // test is not for native transport because it fires artificial events from
     // the native layer
