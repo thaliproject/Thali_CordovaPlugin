@@ -333,7 +333,7 @@ v 0.3.1.7
 and [iOS Platform Guide](https://cordova.apache.org/docs/en/4.0.0/guide_platforms_ios_index.md.html#iOS%20Platform%20Guide) for detailed instructions.)
 
 ```
-$ npm install -g cordova@6.3.1
+$ npm install -g cordova@6.4.0
 ```
 
 ### Create a Cordova project
