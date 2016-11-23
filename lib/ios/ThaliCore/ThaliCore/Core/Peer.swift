@@ -78,7 +78,6 @@ public struct Peer: Hashable {
     self.generation = generation
   }
 
-
   /**
    Returns a new `Peer` object.
 

@@ -53,7 +53,8 @@ extension String {
     let alphabetLength = UInt32(validAlphabet.characters.count)
     for _ in 0..<length {
       let rand = Int(arc4random_uniform(alphabetLength))
-      let char = validAlphabet[validAlphabet.characters.index(validAlphabet.startIndex, offsetBy: rand)]
+      let char = validAlphabet[validAlphabet.characters.index(validAlphabet.startIndex,
+                                                              offsetBy: rand)]
       randomString.append(char)
     }
     return randomString
@@ -78,23 +79,27 @@ extension String {
       let isLastCharachter = (i == length - 1)
 
       var rand = Int(arc4random_uniform(alphabetLength))
-      var char = validAlphabet[validAlphabet.characters.index(validAlphabet.startIndex, offsetBy: rand)]
+      var char = validAlphabet[validAlphabet.characters.index(validAlphabet.startIndex,
+                                                              offsetBy: rand)]
 
       if isFirstCharachter {
         let allowedAlphabet = asciiLetters + digits
         let allowedAlphabetLength = UInt32(allowedAlphabet.characters.count)
         rand = Int(arc4random_uniform(allowedAlphabetLength))
-        char = allowedAlphabet[allowedAlphabet.characters.index(allowedAlphabet.startIndex, offsetBy: rand)]
+        char = allowedAlphabet[allowedAlphabet.characters.index(allowedAlphabet.startIndex,
+                                                                offsetBy: rand)]
       } else if isLastCharachter {
         let allowedAlphabet = asciiLetters
         let allowedAlphabetLength = UInt32(allowedAlphabet.characters.count)
         rand = Int(arc4random_uniform(allowedAlphabetLength))
-        char = allowedAlphabet[allowedAlphabet.characters.index(allowedAlphabet.startIndex, offsetBy: rand)]
+        char = allowedAlphabet[allowedAlphabet.characters.index(allowedAlphabet.startIndex,
+                                                                offsetBy: rand)]
       } else {
         if previousCharacterWasHyphen {
           while char == Character(hyphen) {
             rand = Int(arc4random_uniform(alphabetLength))
-            char = validAlphabet[validAlphabet.characters.index(validAlphabet.startIndex, offsetBy: rand)]
+            char = validAlphabet[validAlphabet.characters.index(validAlphabet.startIndex,
+                                                                offsetBy: rand)]
           }
           previousCharacterWasHyphen = false
         } else if char == Character(hyphen) {

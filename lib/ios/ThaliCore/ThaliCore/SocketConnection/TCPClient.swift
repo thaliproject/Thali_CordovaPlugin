@@ -70,7 +70,6 @@ extension TCPClient: GCDAsyncSocketDelegate {
     didDisconnectHandler(sock)
   }
 
-
   func socket(_ sock: GCDAsyncSocket, didWriteDataWithTag tag: Int) {
   }
 
