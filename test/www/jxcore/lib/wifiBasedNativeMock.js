@@ -46,10 +46,6 @@ var currentNetworkStatus = {
 
   bssidName: BSSID,
   ssidName:  SSID
-  wifi: 'on',
-  bluetooth: 'on',
-  bluetoothLowEnergy: 'doNotCare',
-  cellular: 'doNotCare'
 };
 
 var getCurrentNetworkStatus = function () {

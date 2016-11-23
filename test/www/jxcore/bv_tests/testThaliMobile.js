@@ -339,48 +339,54 @@ test('wifi peer is marked unavailable if announcements stop',
   }
 );
 
-test('network changes emitted correctly', function (t) {
-  testUtils.ensureWifi(true)
-  .then(function () {
-    return ThaliMobile.start(express.Router());
-  })
-  .then(function () {
-    return new Promise(function (resolve) {
-      function networkChangedHandler (networkStatus) {
-        t.equals(networkStatus.wifi, 'off', 'wifi should be off');
-        t.equals(networkStatus.bssidName, null, 'bssid should be null');
-        t.equals(networkStatus.ssidName,  null, 'ssid should be null');
-        resolve();
-      }
-      ThaliMobile.emitter.once('networkChanged', networkChangedHandler);
-      testUtils.toggleWifi(false);
+test(
+  'network changes emitted correctly',
+  function () {
+    return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
+  },
+  function (t) {
+    testUtils.ensureWifi(true)
+    .then(function () {
+      return ThaliMobile.start(express.Router());
+    })
+    .then(function () {
+      return new Promise(function (resolve) {
+        function networkChangedHandler (networkStatus) {
+          t.equals(networkStatus.wifi, 'off', 'wifi should be off');
+          t.equals(networkStatus.bssidName, null, 'bssid should be null');
+          t.equals(networkStatus.ssidName,  null, 'ssid should be null');
+          resolve();
+        }
+        ThaliMobile.emitter.once('networkChanged', networkChangedHandler);
+        testUtils.toggleWifi(false);
+      });
+    })
+    .then(function () {
+      return new Promise(function (resolve) {
+        function networkChangedHandler (networkStatus) {
+          t.equals(networkStatus.wifi, 'on', 'wifi should be on');
+          t.ok(
+            testUtils.validateBSSID(networkStatus.bssidName),
+            'bssid should be valid'
+          );
+          t.ok(
+            networkStatus.ssidName && networkStatus.ssidName.length > 0,
+            'ssid should exist'
+          );
+          resolve();
+        }
+        ThaliMobile.emitter.once('networkChanged', networkChangedHandler);
+        testUtils.toggleWifi(true);
+      });
+    })
+    .then(function () {
+      return testUtils.ensureWifi(true);
+    })
+    .then(function () {
+      t.end();
     });
-  })
-  .then(function () {
-    return new Promise(function (resolve) {
-      function networkChangedHandler (networkStatus) {
-        t.equals(networkStatus.wifi, 'on', 'wifi should be on');
-        t.ok(
-          testUtils.validateBSSID(networkStatus.bssidName),
-          'bssid should be valid'
-        );
-        t.ok(
-          networkStatus.ssidName && networkStatus.ssidName.length > 0,
-          'ssid should exist'
-        );
-        resolve();
-      }
-      ThaliMobile.emitter.once('networkChanged', networkChangedHandler);
-      testUtils.toggleWifi(true);
-    });
-  })
-  .then(function () {
-    return testUtils.ensureWifi(true);
-  })
-  .then(function () {
-    t.end();
-  });
-});
+  }
+);
 
 function noNetworkChanged (t, toggle) {
   return new Promise(function (resolve) {
@@ -402,75 +408,93 @@ function noNetworkChanged (t, toggle) {
   });
 }
 
-test('network changes not emitted in started state', function (t) {
-  testUtils.ensureWifi(true)
-  .then(function () {
-    return noNetworkChanged(t, function () {
-      return testUtils.toggleWifi(true);
-    });
-  })
-  .then(function () {
-    t.end();
-  });
-});
-
-test('network changes not emitted in stopped state', function (t) {
-  testUtils.ensureWifi(false)
-  .then(function () {
-    return noNetworkChanged(t, function () {
-      return testUtils.toggleWifi(false);
-    });
-  })
-  .then(function () {
-    return testUtils.ensureWifi(true);
-  })
-  .then(function () {
-    t.end();
-  });
-});
-
-test('calls correct starts when network changes', function (t) {
-  var listeningSpy   = null;
-  var advertisingSpy = null;
-
-  var networkChangedHandler = function (networkChangedValue) {
-    if (networkChangedValue.wifi !== 'off') {
-      return;
-    }
-    ThaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
-      networkChangedHandler);
-    ThaliMobile.startListeningForAdvertisements()
-    .then(function (combinedResult) {
-      t.equals(combinedResult.wifiResult.message, 'Radio Turned Off',
-              'specific error expected');
-      return ThaliMobile.startUpdateAdvertisingAndListening();
-    })
-    .then(function (combinedResult) {
-      t.equals(combinedResult.wifiResult.message, 'Radio Turned Off',
-            'specific error expected');
-      listeningSpy = sinon.spy(ThaliMobile,
-        'startListeningForAdvertisements');
-      advertisingSpy = sinon.spy(ThaliMobile,
-        'startUpdateAdvertisingAndListening');
-      return testUtils.toggleWifi(true);
+test(
+  'network changes not emitted in started state',
+  function () {
+    return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
+  },
+  function (t) {
+    testUtils.ensureWifi(true)
+    .then(function () {
+      return noNetworkChanged(t, function () {
+        return testUtils.toggleWifi(true);
+      });
     })
     .then(function () {
-      t.equals(listeningSpy.callCount, 1,
-        'startListeningForAdvertisements should have been called');
-      t.equals(advertisingSpy.callCount, 1,
-        'startUpdateAdvertisingAndListening should have been called');
-      ThaliMobile.startListeningForAdvertisements.restore();
-      ThaliMobile.startUpdateAdvertisingAndListening.restore();
       t.end();
     });
-  };
-  ThaliMobile.start(express.Router())
-  .then(function () {
-    ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
-      networkChangedHandler);
-    testUtils.toggleWifi(false);
-  });
-});
+  }
+);
+
+test(
+  'network changes not emitted in stopped state',
+  function () {
+    return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
+  },
+  function (t) {
+    testUtils.ensureWifi(false)
+    .then(function () {
+      return noNetworkChanged(t, function () {
+        return testUtils.toggleWifi(false);
+      });
+    })
+    .then(function () {
+      return testUtils.ensureWifi(true);
+    })
+    .then(function () {
+      t.end();
+    });
+  }
+);
+
+test(
+  'calls correct starts when network changes',
+  function () {
+    return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
+  },
+  function (t) {
+    var listeningSpy   = null;
+    var advertisingSpy = null;
+
+    var networkChangedHandler = function (networkChangedValue) {
+      if (networkChangedValue.wifi !== 'off') {
+        return;
+      }
+      ThaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
+        networkChangedHandler);
+      ThaliMobile.startListeningForAdvertisements()
+      .then(function (combinedResult) {
+        t.equals(combinedResult.wifiResult.message, 'Radio Turned Off',
+                'specific error expected');
+        return ThaliMobile.startUpdateAdvertisingAndListening();
+      })
+      .then(function (combinedResult) {
+        t.equals(combinedResult.wifiResult.message, 'Radio Turned Off',
+              'specific error expected');
+        listeningSpy = sinon.spy(ThaliMobile,
+          'startListeningForAdvertisements');
+        advertisingSpy = sinon.spy(ThaliMobile,
+          'startUpdateAdvertisingAndListening');
+        return testUtils.toggleWifi(true);
+      })
+      .then(function () {
+        t.equals(listeningSpy.callCount, 1,
+          'startListeningForAdvertisements should have been called');
+        t.equals(advertisingSpy.callCount, 1,
+          'startUpdateAdvertisingAndListening should have been called');
+        ThaliMobile.startListeningForAdvertisements.restore();
+        ThaliMobile.startUpdateAdvertisingAndListening.restore();
+        t.end();
+      });
+    };
+    ThaliMobile.start(express.Router())
+    .then(function () {
+      ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
+        networkChangedHandler);
+      testUtils.toggleWifi(false);
+    });
+  }
+);
 
 test('peer is marked unavailable if port number changes', function (t) {
   var somePeerIdentifier = 'urn:uuid:' + uuid.v4();

@@ -404,12 +404,14 @@ module.exports.getNetworkStatus = function () {
     switch (networkType) {
       case networkTypes.NATIVE:
       case networkTypes.BOTH:
-        ThaliMobileNativeWrapper
-         .getNonTCPNetworkStatus()
-         .then(resolve);
+        ThaliMobileNativeWrapper.getNonTCPNetworkStatus()
+            .then(resolve)
+            .catch(reject);
         break;
       case networkTypes.WIFI:
-        reject(new Error('Native stack is not on'));
+        thaliWifiInfrastructure.getNetworkStatus()
+          .then(resolve)
+          .catch(reject);
         break;
       default:
         throw new Error('Unable to execute getNetworkStatus with ' +
