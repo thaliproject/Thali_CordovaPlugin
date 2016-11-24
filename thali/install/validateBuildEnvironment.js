@@ -39,9 +39,9 @@ const versions =
   python: '2.7.10',
   cordova: '6.3.1',
   java: '1.8.0_102',
-  git: '2.10.0',
+  git: '2.10.1',
   swiftlint: '0.13.0',
-  btconnectorlib2: '0.3.5',
+  btconnectorlib2: '0.3.6-alpha',
   jxcoreCordova: '0.1.6',
   sinopiaNode: ' ',
   sinopiaJxCore: ' '
