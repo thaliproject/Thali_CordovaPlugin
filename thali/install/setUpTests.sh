@@ -148,10 +148,10 @@ build_ios_if_possible()
 # Please note that functions order is important
 prepare_project $1 $2
 add_android_platform
-# add_ios_platform_if_possible
+add_ios_platform_if_possible
 install_thali $1 $2
 build_android
-# build_ios_if_possible
+build_ios_if_possible
 # TODO: iOS builds are disabled temporarily
 
 echo "Remember to start the test coordination server by running jx index.js"
