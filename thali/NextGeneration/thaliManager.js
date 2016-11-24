@@ -372,7 +372,7 @@ ThaliManager._acl = [
         'verbs': ['GET']
       },
       {
-        'path': '/{:db}/{:id}/attachment',
+        'path': '/{:db}/{:id}/{:attachmentId}',
         'verbs': ['GET']
       },
       {
