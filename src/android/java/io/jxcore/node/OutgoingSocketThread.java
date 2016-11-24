@@ -64,7 +64,10 @@ class OutgoingSocketThread extends SocketThreadBase {
         mIsClosing = false;
 
         try {
-            mServerSocket = new ServerSocket(0);
+            mServerSocket = new ServerSocket();
+            InetSocketAddress addr = new InetSocketAddress(0);
+            mServerSocket.setReceiveBufferSize(receiveBufferSize);
+            mServerSocket.bind(addr);
             Log.d(mTag, "Server socket local port: " + mServerSocket.getLocalPort());
         } catch (IOException e) {
             Log.e(mTag, "Failed to create a server socket instance: " + e.getMessage(), e);
@@ -84,7 +87,6 @@ class OutgoingSocketThread extends SocketThreadBase {
                     mListeningOnPortNumber = mServerSocket.getLocalPort();
                     mListener.onListeningForIncomingConnections(mListeningOnPortNumber);
                 }
-                mServerSocket.setReceiveBufferSize(receiveBufferSize);
                 mLocalhostSocket = mServerSocket.accept(); // Blocking call
                 configureSocket();
                 Log.i(mTag, "Incoming data from address: " + getLocalHostAddressAsString()
