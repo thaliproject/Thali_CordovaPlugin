@@ -11,9 +11,9 @@ set -euo pipefail
 trap 'log_error $LINENO' ERR
 
 
-NVM_NODEJS_ORG_MIRROR=https://jxcore.azureedge.net
+NVM_NODEJS_ORG_MIRROR="${NVM_NODEJS_ORG_MIRROR-https://jxcore.azureedge.net}"
 export NVM_NODEJS_ORG_MIRROR
-JX_NPM_JXB=jxb311
+JX_NPM_JXB="${JX_NPM_JXB-jxb311}"
 export JX_NPM_JXB
 
 echo ""
