@@ -37,7 +37,7 @@ const versions =
     return this.androidPlatform;
   },
   python: '2.7.10',
-  cordova: '6.3.1',
+  cordova: '6.4.0',
   java: '1.8.0_102',
   git: '2.10.0',
   swiftlint: '0.13.0',
