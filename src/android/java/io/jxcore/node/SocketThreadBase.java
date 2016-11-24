@@ -277,12 +277,11 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
             mSendingThread = new StreamCopyingThread(this, mLocalInputStream, mBluetoothOutputStream, shortName + "/" + SENDING_THREAD_NAME, connectionData);
             mSendingThread.setUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
             mSendingThread.setBufferSize(sendBufferSize);
-            mSendingThread.setBufferSize(receiveBufferSize);
             mSendingThread.setNotifyStreamCopyingProgress(true);
             mSendingThread.start();
             mReceivingThread = new StreamCopyingThread(this, mBluetoothInputStream, mLocalOutputStream, shortName + "/" + RECEIVING_THREAD_NAME, connectionData);
             mReceivingThread.setUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
-            mReceivingThread.setBufferSize(sendBufferSize);
+            mReceivingThread.setBufferSize(receiveBufferSize);
             mReceivingThread.setNotifyStreamCopyingProgress(true);
             mReceivingThread.start();
 
