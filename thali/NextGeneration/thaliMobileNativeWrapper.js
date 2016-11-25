@@ -716,8 +716,9 @@ module.exports.killConnections = function () {
 };
 
 /**
- * This method is to enable/disable wifi.
+ * This method is to toggle wifi.
  *
+ * @property {boolean} value If true then enable wifi, else disable it.
  * @returns {Promise<?Error>}
  */
 module.exports.setWifiRadioState = function (value) {
