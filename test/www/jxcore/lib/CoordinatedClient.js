@@ -168,7 +168,7 @@ CoordinatedClient.prototype._schedule = function (data) {
   })
   .then(function () {
     if (hadError) {
-      throw latestError;
+      return Promise.reject(latestError);
     }
   })
   .catch(function (error) {
@@ -378,14 +378,15 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
           }
         };
         tape.on('result', resultHandler);
-
-        // This listener won't be removed, it will inspect errors forever.
-        tape.on('result', self._unexpectedResult);
+        tape.removeListener('result', self._unexpectedResult);
 
         endHandler = function () {
           tape.removeListener('result', resultHandler);
           resultHandler = null;
           endHandler    = null;
+
+          // This listener will inspect unexpected results forever.
+          tape.on('result', self._unexpectedResult);
 
           self._emit(
             event + '_finished',
@@ -500,16 +501,17 @@ CoordinatedClient.getData = function (data) {
 };
 
 CoordinatedClient.prototype.unexpectedResult = function (result) {
+  var error;
   if (result.ok) {
-    // Unexpected successfull result is ok.
+    error = new Error();
   } else {
-    var error = result.error;
-    logger.error(
-      'unexpected failed result, error: \'%s\', stack: \'%s\'',
-      String(error), error ? error.stack : null
-    );
-    this.emit('unexpected_error', error);
+    error = result.error;
   }
+  logger.error(
+    'unexpected result, error: \'%s\', stack: \'%s\'',
+    String(error), error ? error.stack : null
+  );
+  this.emit('unexpected_error', error);
 }
 
 module.exports = CoordinatedClient;
