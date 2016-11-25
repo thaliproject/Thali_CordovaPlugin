@@ -10,7 +10,8 @@ set -euo pipefail
 
 trap 'log_error $LINENO' ERR
 
-
+# These variables are set since a bug in jxcore
+# `jx npm install` and `jx install` have different behaviours
 NVM_NODEJS_ORG_MIRROR="${NVM_NODEJS_ORG_MIRROR-https://jxcore.azureedge.net}"
 export NVM_NODEJS_ORG_MIRROR
 JX_NPM_JXB="${JX_NPM_JXB-jxb311}"

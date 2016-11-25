@@ -27,7 +27,9 @@ echo "Cordova version: $(cordova -v)"
 echo "Node version: $(node -v)"
 echo "JXcore version: $(jx -jxv)"
 echo "JXcore engine: $(jx -jsv)"
-echo "xcodebuild version: $(xcodebuild -version)"
+if is_darwin_platform; then
+  echo "xcodebuild version: $(xcodebuild -version)"
+fi
 echo ""
 
 WORKING_DIR=$(pwd)
