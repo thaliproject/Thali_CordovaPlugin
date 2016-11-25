@@ -1,8 +1,5 @@
 {
-  "env": {
+  "env" : {
     "BLUEBIRD_DEBUG": false
-  },
-  "couchdb": {
-    "uuid": "3c577f21-9ab0-4059-b4bb-1574f1e8ba20"
   }
 }
