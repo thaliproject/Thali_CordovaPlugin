@@ -49,22 +49,18 @@ module.exports.toggleBluetooth = toggleBluetooth;
 
 function toggleWifi (value) {
   if (typeof Mobile === 'undefined') {
-    var error = 'Mobile is not defined';
-    logger.error(error);
-    return Promise.reject(new Error(error));
+    return Promise.reject(new Error(
+      'Mobile is not defined'
+    ));
   }
   if (platform.isIOS) {
-    var error = 'Mobile(\'setWifiRadioState\') is not implemented on ios';
-    logger.error(error);
-    return Promise.reject(new Error(error));
+    return Promise.reject(new Error(
+      'Mobile(\'setWifiRadioState\') is not implemented on ios'
+    ));
   }
   return new Promise(function (resolve, reject) {
     Mobile('setWifiRadioState').callNative(value, function (error) {
       if (error) {
-        logger.error(
-          'Mobile(\'setWifiRadioState\') returned an error: \'%s\', stack: \'%s\'',
-          error.toString(), error.stack
-        );
         reject(error);
       } else {
         resolve();
