@@ -21,7 +21,7 @@ const versions =
   brew: '1.1.',
   ruby: '2.3.0p0',
   wget: '1.18',
-  jxcore: '0.3.1.6',
+  jxcore: '0.3.1.7',
   androidHome: ' ',
   androidBuildTools: '25.0.0',
   androidPlatform: 'android-23',
@@ -42,7 +42,7 @@ const versions =
   git: '2.10.0',
   swiftlint: '0.13.0',
   btconnectorlib2: '0.3.5',
-  jxcoreCordova: '0.1.6',
+  jxcoreCordova: '0.1.7',
   sinopiaNode: ' ',
   sinopiaJxCore: ' '
 };
