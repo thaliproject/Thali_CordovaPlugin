@@ -26,12 +26,14 @@ var pskKey = new Buffer('Nothing going on here');
 
 function toggleBluetooth (value) {
   if (typeof Mobile === 'undefined') {
-    logger.warn('Mobile is not defined');
-    return Promise.resolve();
+    var error = 'Mobile is not defined';
+    logger.error(error);
+    return Promise.reject(new Error(error));
   }
   if (platform.isAndroid || platform.isIOS) {
-    logger.warn('\'toggleBluetooth\' is not implemented on android and ios');
-    return Promise.resolve();
+    var error = '\'toggleBluetooth\' is not implemented on android and ios';
+    logger.error(error);
+    return Promise.reject(new Error(error));
   }
   return new Promise(function (resolve, reject) {
     Mobile['toggleBluetooth'](value, function (error) {
@@ -48,12 +50,14 @@ module.exports.toggleBluetooth = toggleBluetooth;
 
 function toggleWifi (value) {
   if (typeof Mobile === 'undefined') {
-    logger.warn('Mobile is not defined');
-    return Promise.resolve();
+    var error = 'Mobile is not defined';
+    logger.error(error);
+    return Promise.reject(new Error(error));
   }
   if (platform.isIOS) {
-    logger.warn('Mobile(\'setWifiRadioState\') is not implemented on ios');
-    return Promise.resolve();
+    var error = 'Mobile(\'setWifiRadioState\') is not implemented on ios';
+    logger.error(error);
+    return Promise.reject(new Error(error));
   }
   return new Promise(function (resolve, reject) {
     Mobile('setWifiRadioState').callNative(value, function (error) {
