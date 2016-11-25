@@ -39,7 +39,7 @@ const versions =
   python: '2.7.10',
   cordova: '6.4.0',
   java: '1.8.0_102',
-  git: '2.10.2',
+  git: '2.10.0',
   swiftlint: '0.13.0',
   btconnectorlib2: '0.3.5',
   jxcoreCordova: '0.1.6',
