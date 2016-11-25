@@ -9,6 +9,7 @@ var express = require('express');
 var TCPServersManager = require('./mux/thaliTcpServersManager');
 var https = require('https');
 var thaliConfig = require('./thaliConfig');
+var platform = require('./utils/platform');
 
 var states = {
   started: false
@@ -127,7 +128,7 @@ function routerPortConnectionFailedHandler(failedRouterPort) {
     return;
   }
 
-  gPromiseQueue.enqueueAtTop(stop())
+  gPromiseQueue.enqueueAtTop(stop)
     .catch(function (err) {
       return err;
     })
@@ -295,27 +296,70 @@ module.exports.start = function (router, pskIdToSecret) {
         gRouterServerPort = gRouterServer.address().port;
         logger.debug('listening', gRouterServerPort);
 
-        stopCreateAndStartServersManager()
-          .then(function () {
-            states.started = true;
-            resolve();
-          })
-          .catch(function (err) {
-            reject(err);
-          });
+        if (platform.isAndroid) {
+          stopCreateAndStartServersManager()
+            .then(function () {
+              states.started = true;
+              resolve();
+            })
+            .catch(function (err) {
+              reject(err);
+            });
+        } else {
+          states.started = true;
+          resolve();
+        }
+
       });
     gRouterServer = makeIntoCloseAllServer(gRouterServer);
   });
 };
 
-function stop() {
-  return function (resolve, reject) {
-    if (!states.started) {
+function stop(resolve, reject) {
+  if (!states.started) {
+    return resolve();
+  }
+
+  states.started = false;
+
+  var errorDescriptions = {};
+
+  stopNative()
+  .catch(function (err) {
+    errorDescriptions = err;
+  })
+  .then(function () {
+    if (platform.isAndroid) {
+      return stopServersManager();
+    }
+    return Promise.resolve();
+  })
+  .catch(function (err) {
+    errorDescriptions.stopServersManagerError = err;
+  })
+  .then(function () {
+    var oldRouterServer = gRouterServer;
+    gRouterServer = null;
+    return oldRouterServer ? oldRouterServer.closeAllPromise() :
+      Promise.resolve();
+  })
+  .catch(function (err) {
+    errorDescriptions.stopRouterServerError = err;
+  })
+  .then(function () {
+    if (Object.keys(errorDescriptions).length === 0) {
       return resolve();
     }
 
-    states.started = false;
+    var error = new Error('check errorDescriptions property');
+    error.errorDescriptions = errorDescriptions;
 
+    return reject(error);
+  });
+}
+
+function stopNative() {
+  return new Promise(function (resolve, reject) {
     var errorDescriptions = {};
 
     Mobile('stopAdvertisingAndListening').callNative(function (error) {
@@ -326,32 +370,16 @@ function stop() {
         if (error) {
           errorDescriptions.stopListeningError = new Error(error);
         }
-        stopServersManager()
-          .catch(function (err) {
-            errorDescriptions.stopServersManagerError = err;
-          })
-          .then(function () {
-            var oldRouterServer = gRouterServer;
-            gRouterServer = null;
-            return oldRouterServer ? oldRouterServer.closeAllPromise() :
-              Promise.resolve();
-          })
-          .catch(function (err) {
-            errorDescriptions.stopRouterServerError = err;
-          })
-          .then(function () {
-            if (Object.getOwnPropertyNames(errorDescriptions).length === 0) {
-              return resolve();
-            }
 
-            var error = new Error('check errorDescriptions property');
-            error.errorDescriptions = errorDescriptions;
+        if (Object.keys(errorDescriptions).length === 0) {
+          resolve();
+        } else {
+          reject(errorDescriptions);
+        }
 
-            return reject(error);
-          });
       });
     });
-  };
+  });
 }
 
 /**
@@ -366,8 +394,9 @@ function stop() {
  *
  * @returns {Promise<?Error>}
  */
+
 module.exports.stop = function () {
-  return gPromiseQueue.enqueue(stop());
+  return gPromiseQueue.enqueue(stop);
 };
 
 // jscs:disable maximumLineLength
@@ -513,8 +542,13 @@ module.exports.startUpdateAdvertisingAndListening = function () {
     if (!states.started) {
       return reject(new Error('Call Start!'));
     }
+
+    var port = (platform.isAndroid) ?
+                gServersManagerLocalPort :
+                gRouterServerPort;
+
     Mobile('startUpdateAdvertisingAndListening').callNative(
-      gServersManagerLocalPort,
+      port,
       function (error) {
         if (error) {
           return reject(new Error(error));
@@ -584,6 +618,8 @@ module.exports.getNonTCPNetworkStatus = function () {
   });
 };
 
+var multiConnectCounter = 0;
+
 /**
  * This calls the native multiConnect method. This code is responsible for
  * honoring the restrictions placed on calls to multiConnect. Which is that
@@ -606,8 +642,35 @@ module.exports.getNonTCPNetworkStatus = function () {
  * @return {Promise<number|Error} The promise will either return an integer with
  * the localhost port to connect to or an Error object.
  */
+
 module.exports._multiConnect = function (peerIdentifier) {
-  return Promise.reject(new Error('Not yet implemented'));
+  return gPromiseQueue.enqueue(function (resolve, reject) {
+    var originalSyncValue = multiConnectCounter++;
+
+    Mobile('multiConnect')
+    .callNative(peerIdentifier, originalSyncValue, function (error) {
+      if (error) {
+        return reject(new Error(error));
+      }
+
+      module.exports.emitter.on('_multiConnectResolved',
+        function callback (syncValue, error, portNumber) {
+          if (originalSyncValue !== syncValue) {
+            return;
+          }
+
+          module.exports.emitter.removeListener(
+            '_multiConnectResolved', callback);
+
+          if (error) {
+            return reject(new Error(error));
+          }
+
+          resolve(portNumber);
+        }
+      );
+    });
+  });
 };
 
 // jscs:disable jsDoc
@@ -624,6 +687,9 @@ module.exports._multiConnect = function (peerIdentifier) {
  */
 // jscs:enable jsDoc
 module.exports._terminateConnection = function (incomingConnectionId) {
+  if (platform.isIOS) {
+    return Promise.reject(new Error('Not connect platform'));
+  }
   return gPromiseQueue.enqueue(function (resolve, reject) {
     gServersManager.terminateIncomingConnection(incomingConnectionId)
     .then(function () {
@@ -685,6 +751,9 @@ module.exports.disconnect = function (peerIdentifier) {
  * @returns {Promise<?error>}
  */
 module.exports.terminateListener = function (peerIdentifier, port) {
+  if (platform.isIOS) {
+    return Promise.reject(new Error('Not connect platform'));
+  }
   return gPromiseQueue.enqueue(function (resolve, reject) {
     gServersManager.terminateOutgoingConnection(peerIdentifier, port)
     .then(function () {
@@ -865,8 +934,8 @@ var handlePeerAvailabilityChanged = function (peer) {
       resolve();
     };
     if (peer.peerAvailable) {
-      gServersManager.createPeerListener(peer.peerIdentifier,
-                                         peer.pleaseConnect)
+
+      getPeerPort(peer)
       .then(function (portNumber) {
         var peerAvailabilityChangedEvent = {
           peerIdentifier: peer.peerIdentifier,
@@ -895,6 +964,15 @@ var handlePeerAvailabilityChanged = function (peer) {
     }
   });
 };
+
+function getPeerPort(peer) {
+  if (gServersManager) {
+    return gServersManager.createPeerListener(peer.peerIdentifier,
+      peer.pleaseConnect);
+  } else {
+    return Promise.resolve(null);
+  }
+}
 
 module.exports._handlePeerAvailabilityChanged = handlePeerAvailabilityChanged;
 
@@ -1036,6 +1114,15 @@ module.exports._registerToNative = function () {
     }
   );
 
+
+  registerToNative('multiConnectResolved',
+    function (syncValue, error, portNumber) {
+      module.exports.emitter.emit(
+        '_multiConnectResolved',
+        syncValue, error, portNumber);
+    }
+  );
+
   registerToNative('networkChanged', function (networkChangedValue) {
     logger.debug('networkChanged: %s', JSON.stringify(networkChangedValue));
     // The value needs to be assigned here to gNonTcpNetworkStatus
@@ -1043,6 +1130,16 @@ module.exports._registerToNative = function () {
     // can return it.
     gNonTcpNetworkStatus = networkChangedValue;
     module.exports.emitter.emit('networkChangedNonTCP', gNonTcpNetworkStatus);
+  });
+
+  registerToNative('multiConnectConnectionFailure',
+    function (failedConnection) {
+      var event = {
+        error: failedConnection.error,
+        peerIdentifier: failedConnection.peerIdentifier,
+        connectionType: connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK
+      };
+      module.exports.emitter.emit('failedNativeConnection', event);
   });
 
   registerToNative('incomingConnectionToPortNumberFailed',
@@ -1055,15 +1152,19 @@ module.exports._registerToNative = function () {
         return;
       }
 
-      if (gServersManagerLocalPort !== portNumber) {
+      var originalPortNumber = (platform.isAndroid) ?
+                                gServersManagerLocalPort :
+                                gRouterServerPort;
+
+      if (originalPortNumber !== portNumber) {
         logger.info('got incomingConnectionToPortNumberFailed for port ' +
-          portNumber + ' but we are listening on ' + gServersManagerLocalPort);
+          portNumber + ' but we are listening on ' + originalPortNumber);
         return;
       }
 
       // Enqueue the restart to prevent other calls being handled
       // while the restart is ongoing.
-      gPromiseQueue.enqueueAtTop(stop())
+      gPromiseQueue.enqueueAtTop(stop)
         .catch(function (err) {
           return err;
         })
