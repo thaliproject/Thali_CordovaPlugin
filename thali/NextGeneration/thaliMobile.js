@@ -441,7 +441,7 @@ var PeerHostInfo = function (peer) {
  * transport types available to us.
  * @returns {Promise<peerHostInfo | Error>}
  */
-module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
+module.exports.getPeerHostInfo = function (peerIdentifier, connectionType) {
   var peersByConnectionType = peerAvailabilities[connectionType];
   if (!peersByConnectionType) {
     return Promise.reject(new Error('Unsupported connection type ' +
@@ -455,7 +455,9 @@ module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
 
   var getPeerHostInfo = getPeerHostInfoStrategies[connectionType];
   if (!getPeerHostInfo) {
-    return Promise.reject(new Error('getPeerHostInfo is not implemented for ' + connectionType));
+    return Promise.reject(
+      new Error('getPeerHostInfo is not implemented for ' + connectionType)
+    );
   }
 
   return getPeerHostInfo(peer);
@@ -1065,6 +1067,35 @@ var handleRecreatedPeer = function (nativePeer) {
   }
 };
 
+var handlerFailedNativeConnection = function (failedConnection) {
+
+  if (failedConnection.connectionType !==
+    connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK) {
+    return;
+  }
+
+  var cachedPeer =
+    peerAvailabilities[failedConnection.connectionType]
+                      [failedConnection.peerIdentifier];
+
+  if (cachedPeer) {
+    var peerStatus = {
+      peerIdentifier: failedConnection.peerIdentifier,
+      connectionType: failedConnection.connectionType,
+      peerAvailable: true,
+      generation: cachedPeer.generation,
+      newAddressPort: true
+    };
+
+    module.exports.emitter.emit('peerAvailabilityChanged', peerStatus);
+  } else {
+    return;
+  }
+};
+
+ThaliMobileNativeWrapper.emitter.on('failedNativeConnection',
+  handlerFailedNativeConnection);
+
 ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
 function (nativePeer) {
   if (nativePeer.recreated) {
@@ -1388,7 +1419,8 @@ var handleNetworkChangedNonTCP = function (networkChangedValue) {
 };
 
 var handleNetworkChangedWifi = function (networkChangedValue) {
-  logger.warn('networkChangedWifi should not be fired because it is not implemented');
+  logger.warn(
+    'networkChangedWifi should not be fired because it is not implemented');
   handleNetworkChangedNonTCP(networkChangedValue);
 };
 

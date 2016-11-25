@@ -841,22 +841,100 @@ test('native available - peer with same or older generation is ignored (MPCF)',
     return !platform.isIOS;
   },
   function (t) {
-    t.skip('NOT IMPLEMENTED');
-    t.end();
+    var nativePeer = generateLowerLevelPeers().nativePeer;
+
+
+    var availabilityHandler = sinon.spy();
+
+    ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
+
+    function end() {
+      var handlerPeer = availabilityHandler.lastCall.args[0];
+      t.equal(handlerPeer.peerIdentifier,
+        nativePeer.peerIdentifier, 'should be the same peer');
+      t.equal(availabilityHandler.calledOnce, true, 'should be called once');
+      ThaliMobile.emitter
+        .removeListener('peerAvailabilityChanged', availabilityHandler);
+      t.end();
+    }
+
+    nativePeer.generation = 2;
+    emitNativePeerAvailability(nativePeer);
+    // same generation should be ignored
+    emitNativePeerAvailability(nativePeer);
+
+    // lower generation should be ignored
+    nativePeer.generation = 1;
+    emitNativePeerAvailability(nativePeer);
+
+    end();
   }
 );
 
 test('native unavailable - new peer is ignored',
   function (t) {
-    t.skip('NOT IMPLEMENTED');
-    t.end();
+    var nativePeer = generateLowerLevelPeers().nativePeer;
+    nativePeer.peerAvailable = false;
+
+    var availabilityHandler = sinon.spy();
+
+    ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
+
+    function end() {
+      t.equal(availabilityHandler.called, false, 'should not be called');
+      ThaliMobile.emitter
+        .removeListener('peerAvailabilityChanged', availabilityHandler);
+      t.end();
+    }
+
+    emitNativePeerAvailability(nativePeer);
+
+    end();
   }
 );
 
 test('native unavailable - cached peer is removed',
   function (t) {
-    t.skip('NOT IMPLEMENTED');
-    t.end();
+    var nativePeer = generateLowerLevelPeers().nativePeer;
+    var callCount = 0;
+
+    var availabilityHandler = function (peerStatus) {
+      if (peerStatus.peerIdentifier !== nativePeer.peerIdentifier) {
+        return;
+      }
+      callCount++;
+
+      switch(callCount) {
+        case 1:
+          t.equal(peerStatus.peerAvailable, true, 'peer should be available');
+
+          nativePeer.peerAvailable = false;
+          emitNativePeerAvailability(nativePeer);
+          break;
+        case 2:
+          t.equal(peerStatus.peerAvailable, false,
+            'peer should be unavailable');
+          var cache = ThaliMobile._getPeerAvailabilities();
+          var cachedPeer =
+            cache[getNativeConnectionType()][peerStatus.peerIdentifier];
+          t.equal(cachedPeer, undefined, 'should be removed from cache');
+          setImmediate(end);
+          break;
+        default:
+          t.fail('should not be called again');
+          break;
+      }
+    };
+
+    ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
+
+    function end() {
+      ThaliMobile.emitter
+        .removeListener('peerAvailabilityChanged', availabilityHandler);
+      t.end();
+    }
+
+    emitNativePeerAvailability(nativePeer);
   }
 );
 
@@ -1141,8 +1219,32 @@ test('multiconnect failure - new peer is ignored (MPCF)',
     return !platform.isIOS;
   },
   function (t) {
-    t.skip('NOT IMPLEMENTED');
-    t.end();
+    var nativePeer = generateLowerLevelPeers().nativePeer;
+
+    var failedPeer = {
+      peerIdentifier: nativePeer.peerIdentifier,
+      connectionType: getNativeConnectionType()
+    };
+
+    var availabilityHandler = sinon.spy();
+
+    function end() {
+      var cache = ThaliMobile._getPeerAvailabilities();
+      var cachedPeer =
+        cache[getNativeConnectionType()][failedPeer.peerIdentifier];
+
+      t.equal(cachedPeer, undefined, 'should not be in the cache');
+      t.equal(availabilityHandler.callCount, 0, 'should not be called');
+      ThaliMobile.emitter
+        .removeListener('peerAvailabilityChanged', availabilityHandler);
+      t.end();
+    }
+
+    ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
+
+    ThaliMobileNativeWrapper.emitter.emit('failedNativeConnection', failedPeer);
+
+    end();
   }
 );
 
@@ -1151,8 +1253,34 @@ test('multiconnect failure - cached peer fires peerAvailabilityChanged (MPCF)',
     return !platform.isIOS;
   },
   function (t) {
-    t.skip('NOT IMPLEMENTED');
-    t.end();
+    var nativePeer = generateLowerLevelPeers().nativePeer;
+
+    var failedPeer = {
+      peerIdentifier: nativePeer.peerIdentifier,
+      connectionType: getNativeConnectionType()
+    };
+
+    var availabilityHandler = sinon.spy();
+
+    function end() {
+      var cache = ThaliMobile._getPeerAvailabilities();
+      var cachedPeer =
+        cache[getNativeConnectionType()][failedPeer.peerIdentifier];
+
+      t.equal(cachedPeer.peerIdentifier, nativePeer.peerIdentifier, 'should be in the cache');
+      t.equal(availabilityHandler.calledOnce, true, 'should be called once');
+      ThaliMobile.emitter
+        .removeListener('peerAvailabilityChanged', availabilityHandler);
+      t.end();
+    }
+
+    emitNativePeerAvailability(nativePeer);
+
+    ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
+
+    ThaliMobileNativeWrapper.emitter.emit('failedNativeConnection', failedPeer);
+
+    end();
   }
 );
 
@@ -1781,7 +1909,7 @@ test('If a peer is not available (and hence is not in the thaliMobile cache)' +
   }
 );
 
-test.only('does not fire duplicate events after peer listener recreation',
+test('does not fire duplicate events after peer listener recreation',
   function () {
     return !platform.isAndroid ||
       global.NETWORK_TYPE !== ThaliMobile.networkTypes.NATIVE;
