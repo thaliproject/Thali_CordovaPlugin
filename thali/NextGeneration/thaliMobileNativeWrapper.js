@@ -723,18 +723,14 @@ module.exports.killConnections = function () {
  */
 module.exports.setWifiRadioState = function (value) {
   if (platform.isIOS) {
-    var error = 'Mobile(\'setWifiRadioState\') is not implemented on ios';
-    console.error(error);
-    return Promise.reject(new Error(error));
+    return Promise.reject(new Error(
+      'Mobile(\'setWifiRadioState\') is not implemented on ios'
+    ));
   }
 
   return gPromiseQueue.enqueue(function (resolve, reject) {
     Mobile('setWifiRadioState').callNative(value, function (error) {
       if (error) {
-        logger.error(
-          'Mobile(\'setWifiRadioState\') returned an error: \'%s\', stack: \'%s\'',
-          error.toString(), error.stack
-        );
         reject(error);
       } else {
         resolve();

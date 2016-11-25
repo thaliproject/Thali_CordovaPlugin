@@ -26,19 +26,18 @@ var pskKey = new Buffer('Nothing going on here');
 
 function toggleBluetooth (value) {
   if (typeof Mobile === 'undefined') {
-    var error = 'Mobile is not defined';
-    logger.error(error);
-    return Promise.reject(new Error(error));
+    return Promise.reject(new Error(
+      'Mobile is not defined'
+    ));
   }
   if (platform.isAndroid || platform.isIOS) {
-    var error = '\'toggleBluetooth\' is not implemented on android and ios';
-    logger.error(error);
-    return Promise.reject(new Error(error));
+    return Promise.reject(new Error(
+      '\'toggleBluetooth\' is not implemented on android and ios'
+    ));
   }
   return new Promise(function (resolve, reject) {
     Mobile['toggleBluetooth'](value, function (error) {
       if (error) {
-        logger.warn('Mobile.setWifiRadioState returned an error: \'%s\'', error.toString());
         reject(error);
       } else {
         resolve();
