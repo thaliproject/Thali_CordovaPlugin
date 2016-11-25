@@ -15,7 +15,7 @@ var logger = require('thali/ThaliLogger')('testThaliMobile');
 var Promise = require('bluebird');
 var PromiseQueue = require('thali/NextGeneration/promiseQueue');
 var net = require('net');
-var Platform =require('thali/NextGeneration/utils/platform');
+var Platform = require('thali/NextGeneration/utils/platform');
 
 var verifyCombinedResultSuccess = testUtils.verifyCombinedResultSuccess;
 
@@ -408,44 +408,32 @@ function noNetworkChanged (t, toggle) {
   });
 }
 
-test(
-  'network changes not emitted in started state',
-  function () {
-    return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
-  },
-  function (t) {
-    testUtils.ensureWifi(true)
-    .then(function () {
-      return noNetworkChanged(t, function () {
-        return testUtils.toggleWifi(true);
-      });
-    })
-    .then(function () {
-      t.end();
+test('network changes not emitted in started state', function (t) {
+  testUtils.ensureWifi(true)
+  .then(function () {
+    return noNetworkChanged(t, function () {
+      return testUtils.toggleWifi(true);
     });
-  }
-);
+  })
+  .then(function () {
+    t.end();
+  });
+});
 
-test(
-  'network changes not emitted in stopped state',
-  function () {
-    return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
-  },
-  function (t) {
-    testUtils.ensureWifi(false)
-    .then(function () {
-      return noNetworkChanged(t, function () {
-        return testUtils.toggleWifi(false);
-      });
-    })
-    .then(function () {
-      return testUtils.ensureWifi(true);
-    })
-    .then(function () {
-      t.end();
+test('network changes not emitted in stopped state', function (t) {
+  testUtils.ensureWifi(false)
+  .then(function () {
+    return noNetworkChanged(t, function () {
+      return testUtils.toggleWifi(false);
     });
-  }
-);
+  })
+  .then(function () {
+    return testUtils.ensureWifi(true);
+  })
+  .then(function () {
+    t.end();
+  });
+});
 
 test(
   'calls correct starts when network changes',
