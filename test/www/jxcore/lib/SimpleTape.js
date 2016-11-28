@@ -51,9 +51,7 @@ SimpleThaliTape.prototype.defaults = {
   },
   setupTimeout:     1 * 60 * 1000,
   testTimeout:      10 * 60 * 1000,
-  teardownTimeout:  1 * 60 * 1000,
-
-  stopAfterError: true
+  teardownTimeout:  1 * 60 * 1000
 }
 
 SimpleThaliTape.states = {
@@ -136,18 +134,18 @@ function processResult(tape, test, timeout) {
     }
     tape.once('end', endHandler);
   })
-  .timeout(
-    timeout,
-    format('timeout exceed while processing result, test: \'%s\'', test.name)
-  )
-  .finally(function () {
-    if (resultHandler) {
-      tape.removeListener('result', resultHandler);
-    }
-    if (endHandler) {
-      tape.removeListener('end', endHandler);
-    }
-  });
+    .timeout(
+      timeout,
+      format('timeout exceed while processing result, test: \'%s\'', test.name)
+    )
+    .finally(function () {
+      if (resultHandler) {
+        tape.removeListener('result', resultHandler);
+      }
+      if (endHandler) {
+        tape.removeListener('end', endHandler);
+      }
+    });
 }
 
 SimpleThaliTape.prototype._runTest = function (test) {
@@ -178,16 +176,16 @@ SimpleThaliTape.prototype._runTest = function (test) {
           return false;
         }
       })
-      .then(function (canBeSkipped) {
-        if (canBeSkipped) {
-          logger.debug('test was skipped, name: \'%s\'', test.name);
-          tape.end();
-          skipped = true;
-        } else {
-          return test.fun(tape);
-        }
-      })
-      .catch(reject);
+        .then(function (canBeSkipped) {
+          if (canBeSkipped) {
+            logger.debug('test was skipped, name: \'%s\'', test.name);
+            tape.end();
+            skipped = true;
+          } else {
+            return test.fun(tape);
+          }
+        })
+        .catch(reject);
     });
 
     tape('teardown', function (tape) {
@@ -198,13 +196,13 @@ SimpleThaliTape.prototype._runTest = function (test) {
       self._options.teardown(tape);
     });
   })
-  .then(function () {
-    if (skipped) {
-      return Promise.reject(
-        new Error('skipped')
-      );
-    }
-  });
+    .then(function () {
+      if (skipped) {
+        return Promise.reject(
+          new Error('skipped')
+        );
+      }
+    });
 }
 
 SimpleThaliTape.prototype._begin = function () {
@@ -215,8 +213,8 @@ SimpleThaliTape.prototype._begin = function () {
   );
   this._state = SimpleThaliTape.states.started;
 
-  var results  = [];
-  var promises = Promise.all(
+  var results = [];
+  var promise = Promise.all(
     this._tests.map(function (test) {
       return self._runTest(test)
         .then(function () {
@@ -237,17 +235,15 @@ SimpleThaliTape.prototype._begin = function () {
               text:  'failed',
               error: error
             });
-            if (self._options.stopAfterError) {
-              return Promise.reject(error);
-            }
+            return Promise.reject(error);
           }
         });
     })
   );
 
   return {
-    results:  results,
-    promises: promises
+    results: results,
+    promise: promise
   };
 }
 
@@ -269,36 +265,36 @@ SimpleThaliTape.begin = function (platform, version, hasRequiredHardware, native
     thaliTapes.map(function (thaliTape) {
       var data = thaliTape._begin();
       results.push(data.results);
-      return data.promises;
+      return data.promise;
     })
   )
-  .finally(function () {
-    var lastFailedResult;
-    results.reduce(function (allResults, results) {
-      return allResults.concat(results);
-    }, [])
-      .forEach(function (result) {
-        if (result.text === 'failed') {
-          var error = result.error;
-          logger.info(
-            '***TEST_LOGGER result: %s - failed, error: \'%s\', stack: \'%s\'',
-            result.text, result.name, String(error), error? error.stack: ''
-          );
-          lastFailedResult = result;
-        } else {
-          logger.info('***TEST_LOGGER result: %s - %s', result.text, result.name);
-        }
-      });
+    .finally(function () {
+      var lastFailedResult;
+      results.reduce(function (allResults, results) {
+        return allResults.concat(results);
+      }, [])
+        .forEach(function (result) {
+          if (result.text === 'failed') {
+            var error = result.error;
+            logger.info(
+              '***TEST_LOGGER result: %s - failed, error: \'%s\', stack: \'%s\'',
+              result.text, result.name, String(error), error? error.stack: ''
+            );
+            lastFailedResult = result;
+          } else {
+            logger.info('***TEST_LOGGER result: %s - %s', result.text, result.name);
+          }
+        });
 
-    if (lastFailedResult) {
-      logger.error('failed to run unit tests, platformName: \'%s\'', platform);
-      logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-      return Promise.reject(lastFailedResult.error);
-    } else {
-      logger.debug('all unit tests succeeded, platformName: \'%s\'', platform);
-      logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-    }
-  });
+      if (lastFailedResult) {
+        logger.error('failed to run unit tests, platformName: \'%s\'', platform);
+        logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+        return Promise.reject(lastFailedResult.error);
+      } else {
+        logger.debug('all unit tests succeeded, platformName: \'%s\'', platform);
+        logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+      }
+    });
 }
 
 module.exports = SimpleThaliTape;
