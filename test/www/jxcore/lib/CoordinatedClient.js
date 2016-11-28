@@ -43,7 +43,7 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware,
   // We will use emit retry options from first test as default.
   this._defaults = {
     emitRetryCount:   tests[0].options.emitRetryCount,
-    emitRetryTimeout: tests[0].options.emitRetryTimeout,
+    emitRetryTimeout: tests[0].options.emitRetryTimeout
   };
 
   this._tests = tests.slice();
