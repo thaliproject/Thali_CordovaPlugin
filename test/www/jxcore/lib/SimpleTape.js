@@ -51,7 +51,9 @@ SimpleThaliTape.prototype.defaults = {
   },
   setupTimeout:     1 * 60 * 1000,
   testTimeout:      10 * 60 * 1000,
-  teardownTimeout:  1 * 60 * 1000
+  teardownTimeout:  1 * 60 * 1000,
+
+  stopAfterError: true
 }
 
 SimpleThaliTape.states = {
@@ -97,6 +99,57 @@ SimpleThaliTape.prototype.addTest = function (name, canBeSkipped, fun) {
   return this._handler;
 }
 
+function processResult(tape, test, timeout) {
+  tape.sync = function () {
+    // noop
+    return Promise.resolve();
+  }
+
+  var resultHandler;
+  var endHandler;
+
+  return new Promise(function (resolve, reject) {
+    // 'end' can be called without 'result', so success is true by default.
+    // We can receive 'result' many times.
+    // For example each 'tape.ok' will provide a 'result'.
+    var success = true;
+    resultHandler = function (result) {
+      if (!result.ok) {
+        success = false;
+      }
+    }
+    tape.on('result', resultHandler);
+
+    endHandler = function () {
+      tape.removeListener('result', resultHandler);
+      resultHandler = null;
+      endHandler    = null;
+
+      if (success) {
+        // Only for testing purposes.
+        resolve(tape.data);
+      } else {
+        var error = format('test failed, name: \'%s\'', test.name);
+        logger.error(error);
+        reject(new Error(error));
+      }
+    }
+    tape.once('end', endHandler);
+  })
+  .timeout(
+    timeout,
+    format('timeout exceed while processing result, test: \'%s\'', test.name)
+  )
+  .finally(function () {
+    if (resultHandler) {
+      tape.removeListener('result', resultHandler);
+    }
+    if (endHandler) {
+      tape.removeListener('end', endHandler);
+    }
+  });
+}
+
 SimpleThaliTape.prototype._runTest = function (test) {
   var self = this;
 
@@ -104,67 +157,19 @@ SimpleThaliTape.prototype._runTest = function (test) {
   var skipped = false;
 
   return new Promise(function (resolve, reject) {
-    function processResult(tape, timeout) {
-      tape.sync = function () {
-        // noop
-        return Promise.resolve();
-      }
-
-      var resultHandler;
-      var endHandler;
-
-      return new Promise(function (resolve, reject) {
-        // 'end' can be called without 'result', so success is true by default.
-        // We can receive 'result' many times.
-        // For example each 'tape.ok' will provide a 'result'.
-        var success = true;
-        resultHandler = function (result) {
-          if (!result.ok) {
-            success = false;
-          }
-        }
-        tape.on('result', resultHandler);
-
-        endHandler = function () {
-          tape.removeListener('result', resultHandler);
-          resultHandler = null;
-          endHandler    = null;
-
-          if (success) {
-            // Only for testing purposes.
-            resolve(tape.data);
-          } else {
-            var error = format('test failed, name: \'%s\'', test.name);
-            logger.error(error);
-            reject(new Error(error));
-          }
-        }
-        tape.once('end', endHandler);
-      })
-      .timeout(
-        timeout,
-        format('timeout exceed while processing result, test: \'%s\'', test.name)
-      )
-      .finally(function () {
-        if (resultHandler) {
-          tape.removeListener('result', resultHandler);
-        }
-        if (endHandler) {
-          tape.removeListener('end', endHandler);
-        }
-      });
-    }
-
     // TODO This can be implemented using 'tape/lib/test' directly.
     // Example is 'tape.createHarness' https://github.com/substack/tape/blob/master/index.js#L103
 
     tape('setup', function (tape) {
-      processResult(tape, self._options.setupTimeout)
+      processResult(tape, test, self._options.setupTimeout)
+        .catch(reject);
+
       self._options.setup(tape);
     });
 
     tape(test.name, function (tape) {
-      processResult(tape, self._options.testTimeout);
+      processResult(tape, test, self._options.testTimeout)
+        .catch(reject);
 
       Promise.try(function () {
         if (test.canBeSkipped) {
@@ -186,7 +191,9 @@ SimpleThaliTape.prototype._runTest = function (test) {
     });
 
     tape('teardown', function (tape) {
-      processResult(tape, self._options.teardownTimeout);
+      processResult(tape, test, self._options.teardownTimeout)
+        .catch(reject);
+
       tape.once('end', resolve);
       self._options.teardown(tape);
     });
@@ -208,22 +215,40 @@ SimpleThaliTape.prototype._begin = function () {
   );
   this._state = SimpleThaliTape.states.started;
 
-  var skippedTests = [];
-  return Promise.all(
+  var results  = [];
+  var promises = Promise.all(
     this._tests.map(function (test) {
       return self._runTest(test)
-      .catch(function (error) {
-        if (error.message === 'skipped') {
-          skippedTests.push(test.name);
-          return;
-        }
-        return Promise.reject(error);
-      });
+        .then(function () {
+          results.push({
+            name: test.name,
+            text: 'passed'
+          });
+        })
+        .catch(function (error) {
+          if (error.message === 'skipped') {
+            results.push({
+              name: test.name,
+              text: 'skipped'
+            });
+          } else {
+            results.push({
+              name:  test.name,
+              text:  'failed',
+              error: error
+            });
+            if (self._options.stopAfterError) {
+              return Promise.reject(error);
+            }
+          }
+        });
     })
-  )
-  .then(function () {
-    return skippedTests;
-  });
+  );
+
+  return {
+    results:  results,
+    promises: promises
+  };
 }
 
 // We will run 'begin' on all 'SimpleThaliTape' instances.
@@ -239,31 +264,40 @@ SimpleThaliTape.begin = function (platform, version, hasRequiredHardware, native
   var thaliTapes = SimpleThaliTape.instances;
   SimpleThaliTape.instances = [];
 
+  var results = [];
   return Promise.all(
     thaliTapes.map(function (thaliTape) {
-      return thaliTape._begin();
+      var data = thaliTape._begin();
+      results.push(data.results);
+      return data.promises;
     })
   )
-  .then(function (skippedTests) {
-    logger.debug(
-      'all unit tests succeeded, platformName: \'%s\'',
-      platform
-    );
-    skippedTests = skippedTests.reduce(function (allTests, tests) {
-      return allTests.concat(tests);
-    }, []);
-    logger.debug(
-      'skipped tests: \'%s\'', JSON.stringify(skippedTests)
-    );
-    logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-  })
-  .catch(function (error) {
-    logger.error(
-      'failed to run unit tests, platformName: \'%s\', error: \'%s\', stack: \'%s\'',
-      platform, error.toString(), error.stack
-    );
-    logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-    return Promise.reject(error);
+  .finally(function () {
+    var lastFailedResult;
+    results.reduce(function (allResults, results) {
+      return allResults.concat(results);
+    }, [])
+      .forEach(function (result) {
+        if (result.text === 'failed') {
+          var error = result.error;
+          logger.info(
+            '***TEST_LOGGER result: %s - failed, error: \'%s\', stack: \'%s\'',
+            result.text, result.name, String(error), error? error.stack: ''
+          );
+          lastFailedResult = result;
+        } else {
+          logger.info('***TEST_LOGGER result: %s - %s', result.text, result.name);
+        }
+      });
+
+    if (lastFailedResult) {
+      logger.error('failed to run unit tests, platformName: \'%s\'', platform);
+      logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+      return Promise.reject(lastFailedResult.error);
+    } else {
+      logger.debug('all unit tests succeeded, platformName: \'%s\'', platform);
+      logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+    }
   });
 }
 
