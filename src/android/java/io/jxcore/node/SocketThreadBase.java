@@ -5,7 +5,9 @@ package io.jxcore.node;
 
 import android.bluetooth.BluetoothSocket;
 import android.util.Log;
+
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -33,6 +35,8 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
         void onDisconnected(SocketThreadBase who, String errorMessage);
 
         void onDisconnected(SocketThreadBase who, Exception exception);
+
+        void onTransferError(SocketThreadBase who, String errorMessage);
     }
 
     private static final String SENDING_THREAD_NAME = "Sender";
@@ -168,7 +172,6 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
     }
 
     /**
-     *
      * @param who The StreamCopyingThread that is done.
      */
     @Override
@@ -219,7 +222,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
                 Log.e(mTag, "Unidentified stream copying thread failed with error: " + errorMessage);
             }
 
-            mListener.onDisconnected(this, errorMessage);
+            mListener.onTransferError(this, errorMessage);
         }
     }
 

@@ -908,9 +908,8 @@ var setupListeners = function (thaliWifiInfrastructure) {
  * SSDP:byebye or a response to one of our periodic queries we should use it to
  * create a peerAvailabilityChanged call back. In practice we don't really need
  * to batch these messages so we can just fire them as we get them. The
- * peerIdentifier is the USN from the SSDP message, peerAvailable is true or
- * false based on the SSDP response and pleaseConnect is false except for the
- * situation described above for /ConnectToMeforMock.
+ * peerIdentifier is the USN from the SSDP message, and peerAvailable is true or
+ * false based on the SSDP response.
  *
  * @param {module:thaliMobileNative~peerAvailabilityChangedCallback} callback
  */

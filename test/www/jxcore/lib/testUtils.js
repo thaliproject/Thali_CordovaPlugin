@@ -288,10 +288,7 @@ module.exports.put = function (host, port, path, pskIdentity, pskKey,
       method: 'PUT',
       agent: new ForeverAgent.SSL({
         rejectUnauthorized: false,
-        keepAlive: true,
-        keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-        maxSockets: Infinity,
-        maxFreeSockets: 256,
+        maxSockets: 8,
         ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
         pskIdentity: pskIdentity,
         pskKey: pskKey
@@ -334,10 +331,7 @@ module.exports.get = function (host, port, path, pskIdentity, pskKey) {
     port: port,
     path: path,
     agent: new ForeverAgent.SSL({
-      keepAlive: true,
-      keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-      maxSockets: Infinity,
-      maxFreeSockets: 256,
+      maxSockets: 8,
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
       pskIdentity: pskIdentity,
       pskKey: pskKey
@@ -695,10 +689,7 @@ var createPskPouchDBRemote = function (
     serverUrl, {
       ajax: {
         agent: new ForeverAgent.SSL({
-          keepAlive: true,
-          keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-          maxSockets: Infinity,
-          maxFreeSockets: 256,
+          maxSockets: 8,
           ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
           pskIdentity: pskId,
           pskKey: pskKey

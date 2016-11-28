@@ -98,9 +98,6 @@ function ThaliTcpServersManager(routerPort) {
   // The set of peer servers created by createPeerListener
   this._peerServers = {};
 
-  // See note in createPeerListener
-  this._pendingReverseConnections = {};
-
   // The port on which we expect the application to be
   // listening
   this._routerPort = routerPort;
@@ -233,10 +230,9 @@ ThaliTcpServersManager.prototype._createNativeListener = function () {
  * @param {string} peerIdentifier
  * @returns {Promise<number|Error>}
  */
-ThaliTcpServersManager.prototype.createPeerListener = function (peerIdentifier,
-                                                                pleaseConnect) {
-  return createPeerListener.createPeerListener(this, peerIdentifier,
-                                                pleaseConnect);
+ThaliTcpServersManager.prototype.createPeerListener = function (peerIdentifier)
+{
+  return createPeerListener.createPeerListener(this, peerIdentifier);
 };
 
 /**
