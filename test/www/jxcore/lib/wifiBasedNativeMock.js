@@ -36,11 +36,16 @@ var platformChoice = {
   IOS: 'iOS'
 };
 
+var BSSID = 'c1:5b:05:5a:41:1e'; // 'c1-5b-05-5a-41-1e' is valid too.
+var SSID  = 'myWifi';
 var currentNetworkStatus = {
-  wifi: 'on',
-  bluetooth: 'on',
-  bluetoothLowEnergy: 'doNotCare',
-  cellular: 'doNotCare'
+  wifi:               'on',
+  bluetooth:          'on',
+  bluetoothLowEnergy: 'on',
+  cellular:           'on',
+
+  bssidName: BSSID,
+  ssidName:  SSID
 };
 
 var getCurrentNetworkStatus = function () {
@@ -711,6 +716,10 @@ MobileCallInstance.prototype.didRegisterToNative = function (method, callback) {
   setImmediate(callback);
 };
 
+MobileCallInstance.prototype.setWifiRadioState = function (setting, callback) {
+  doToggle(setting, 'wifi', callback);
+};
+
 /**
  * Handles processing callNative requests. The actual params differ based on
  * the particular Mobile method that is being called.
@@ -742,6 +751,9 @@ MobileCallInstance.prototype.callNative = function () {
     }
     case 'didRegisterToNative': {
       return this.didRegisterToNative(arguments[0], arguments[1]);
+    }
+    case 'setWifiRadioState': {
+      return this.setWifiRadioState(arguments[0], arguments[1]);
     }
     default: {
       throw new Error('The supplied mobileName does not have a matching ' +
@@ -891,6 +903,15 @@ var doToggle = function (setting, property, callback) {
     return;
   }
   currentNetworkStatus[property] = newStatus;
+  if (property === 'wifi') {
+    if (setting) {
+      currentNetworkStatus.bssidName = BSSID;
+      currentNetworkStatus.ssidName  = SSID;
+    } else {
+      currentNetworkStatus.bssidName = null;
+      currentNetworkStatus.ssidName  = null;
+    }
+  }
 
   if (networkChangedCallback !== null) {
     // Record the status on this event loop to make sure
@@ -924,26 +945,6 @@ var doToggle = function (setting, property, callback) {
 function toggleBluetooth () {
   return function (setting, callback) {
     doToggle(setting, 'bluetooth', callback);
-  };
-}
-
-// jscs:disable jsDoc
-/**
- * If we are on Android then then is a NOOP since we don't care (although to
- * be good little programmers we should still fire a network changed event). We
- * won't be using Wifi for discovery or connectivity in the near future.
- *
- * __Open Issue:__ I believe that JXCore will treat this as a NOOP if called
- * on iOS. We need to check and emulate their behavior.
- *
- * @param {platformChoice} platform
- * @param {ThaliWifiInfrastructure} thaliWifiInfrastructure
- * @returns {Function}
- */
-// jscs:enable jsDoc
-function toggleWiFi() {
-  return function (setting, callback) {
-    doToggle(setting, 'wifi', callback);
   };
 }
 
@@ -1027,9 +1028,6 @@ function WifiBasedNativeMock(platform, router) {
 
   mobileHandler.toggleBluetooth =
     toggleBluetooth(platform, thaliWifiInfrastructure);
-
-  mobileHandler.toggleWiFi =
-    toggleWiFi(platform, thaliWifiInfrastructure);
 
   mobileHandler.firePeerAvailabilityChanged =
     firePeerAvailabilityChanged(platform, thaliWifiInfrastructure);

@@ -711,4 +711,8 @@ function (skipPromiseQueue, changeTarget) {
  *
  */
 
+ThaliWifiInfrastructure.prototype.getNetworkStatus = function () {
+  return ThaliMobileNativeWrapper.getNonTCPNetworkStatus();
+}
+
 module.exports = ThaliWifiInfrastructure;
