@@ -171,6 +171,10 @@ public final class AdvertiserManager {
    it MUST keep the old object for at least *disposeTimeout*.
    This is to allow any in progress invites to finish.
    After *disposeTimeout* the old `MCNearbyServiceAdvertiser` objects MUST be closed.
+
+   - parameters:
+     - advertiserToBeDisposedOf:
+       `Advertiser` object that should be disposed of after `disposeTimeout`.
    */
   private func disposeOfAdvertiserAfterTimeoutToFinishInvites(
     advertiserToBeDisposedOf: Advertiser) {

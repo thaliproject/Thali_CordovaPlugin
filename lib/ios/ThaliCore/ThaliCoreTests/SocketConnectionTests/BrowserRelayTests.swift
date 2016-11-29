@@ -299,7 +299,6 @@ class BrowserRelayTests: XCTestCase {
     browserNodeClientMock.connectToLocalHost(on: browserNativeTCPListenerPort,
                                              errorHandler: unexpectedErrorHandler)
 
-
     // When
     // Send message from advertiser's node mock server to browser's node mock client
     browserNodeClientReceivedMessage =

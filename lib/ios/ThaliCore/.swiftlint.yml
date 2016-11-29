@@ -6,6 +6,7 @@ opt_in_rules: # some rules are only opt-in
   - force_unwrapping: warning
   - function_parameter_count
   - missing_docs
+  - private_outlet: warning
 
 included: # paths to include during linting. `--path` is ignored if present.
   - ThaliCore
@@ -46,7 +47,6 @@ mark: warning
 nesting: warning
 opening_brace: error
 operator_whitespace: error
-private_outlet: warning
 return_arrow_whitespace: error
 statement_position:
   severity: error
@@ -54,6 +54,7 @@ todo: warning
 trailing_newline: error
 trailing_semicolon: error
 trailing_whitespace:
+  ignores_comment: true
   ignores_empty_lines: false
   severity: error
 type_body_length:
@@ -76,7 +77,7 @@ variable_name:
      - lhs
      - rhs
      - uuid
-vertical_whitespace: warning
+vertical_whitespace: error
 
 custom_rules:
   comments_space:

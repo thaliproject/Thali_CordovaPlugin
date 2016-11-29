@@ -32,7 +32,6 @@ class RelayTests: XCTestCase {
   let browserConnectTimeout = 5.0
   let moveDataTimeout = 15.0
 
-
   // MARK: - Setup & Teardown
   override func setUp() {
     super.setUp()
