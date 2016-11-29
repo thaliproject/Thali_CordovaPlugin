@@ -455,8 +455,7 @@ if (!platform.isMobile) {
         for (var i = 1; i <= peerCount; i++) {
           dummyPeers.push({
             peerIdentifier: i + '',
-            peerAvailable: peerAvailable,
-            pleaseConnect: false
+            peerAvailable: peerAvailable
           });
         }
         return dummyPeers;
@@ -651,7 +650,6 @@ test('can do HTTP requests after connections are cut', function (t) {
 
   if (platform.isAndroid) {
     var networkChangeHandler = function(networkChangedValue) {
-      t.pass('Delete me - we got a network changed value ' + networkChangedValue);
       if (networkChangedValue.bluetoothLowEnergy &&
           networkChangedValue.bluetooth) {
         thaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',

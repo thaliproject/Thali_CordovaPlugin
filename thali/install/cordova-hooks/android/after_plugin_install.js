@@ -24,18 +24,6 @@ var path = require('path');
  * @param {Object} appRoot
  */
 
-var updateAndroidSDKVersion = function (appRoot) {
-  var androidManifestLocation =
-    path.join(appRoot, 'platforms/android/AndroidManifest.xml');
-  var originalContent = fs.readFileSync(androidManifestLocation).toString();
-  // Different version of Cordova use different mins, yes we need to replace
-  // this with xpath
-  var newContent = originalContent
-    .replace('android:minSdkVersion="10"', 'android:minSdkVersion="21"')
-    .replace('android:minSdkVersion="14"', 'android:minSdkVersion="21"');
-  fs.writeFileSync(androidManifestLocation, newContent);
-};
-
 var replaceJXCoreExtension = function (appRoot) {
   var sourceFile = path.join(appRoot, 'plugins/org.thaliproject.p2p/src/' +
     'android/java/io/jxcore/node/JXcoreExtension.java');
@@ -190,7 +178,6 @@ var updateJXCoreExtensionWithUTMethod = function (appRoot) {
 
 module.exports = function (context) {
   var appRoot = context.opts.projectRoot;
-  updateAndroidSDKVersion(appRoot);
   replaceJXCoreExtension(appRoot);
   updateBtconnectorlibVersion(appRoot);
   copyTestFiles(appRoot);

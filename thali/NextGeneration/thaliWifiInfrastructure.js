@@ -207,6 +207,7 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
     peer.hostAddress = peer.portNumber = null;
   }
 
+  logger.debug('Emitting wifiPeerAvailabilityChanged ' + JSON.stringify(peer));
   this.emit('wifiPeerAvailabilityChanged', peer);
   return true;
 };
@@ -217,11 +218,7 @@ ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
   // First check if the data contains the Thali-specific NT.
   if (data.NT === thaliConfig.SSDP_NT) {
     // Filtering out messages from ourselves.
-    if (data.USN === this.usn || data.USN === this.previousUsn) {
-      return true;
-    } else {
-      return false;
-    }
+    return !!(data.USN === this.usn || data.USN === this.previousUsn);
   }
   return true;
 };
@@ -713,5 +710,9 @@ function (skipPromiseQueue, changeTarget) {
  * @property {module:thaliMobileNative~networkChanged} networkChangedValue
  *
  */
+
+ThaliWifiInfrastructure.prototype.getNetworkStatus = function () {
+  return ThaliMobileNativeWrapper.getNonTCPNetworkStatus();
+}
 
 module.exports = ThaliWifiInfrastructure;

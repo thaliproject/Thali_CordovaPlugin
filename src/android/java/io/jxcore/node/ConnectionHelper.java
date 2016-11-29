@@ -97,7 +97,6 @@ public class ConnectionHelper
         }
 
         mConnectivityMonitor = new ConnectivityMonitor(mDiscoveryManager);
-        mConnectivityMonitor.start(); // Should be running as long as the app is alive
 
         mStartStopOperationHandler = new StartStopOperationHandler(mConnectionManager, mDiscoveryManager);
 
@@ -614,6 +613,14 @@ public class ConnectionHelper
                         final String peerId = who.getPeerProperties().getId();
                         mConnectionModel.closeAndRemoveOutgoingConnectionThread(peerId);
                     }
+
+                    @Override
+                    public void onTransferError(SocketThreadBase who, String errorMessage) {
+                        Log.w(TAG, "onTransferError: Outgoing connection, peer "
+                            + who.getPeerProperties().toString()
+                            + ", data transfer error: " + errorMessage);
+                        onDisconnected(who, errorMessage);
+                    }
                 });
         } catch (IOException e) {
             Log.e(TAG, "handleOutgoingConnection: Failed to create an outgoing connection thread instance: " + e.getMessage(), e);
@@ -701,6 +708,19 @@ public class ConnectionHelper
                         Log.w(TAG, "onDisconnected: Incoming connection, peer "
                             + who.getPeerProperties().toString()
                             + " disconnected: " + errorMessage);
+
+                        final IncomingSocketThread incomingSocketThread = (IncomingSocketThread) who;
+                        boolean closed = mConnectionModel.closeAndRemoveIncomingConnectionThread(incomingSocketThread.getId());
+                        if (!closed) {
+                            throw new RuntimeException("Trying to close nonexistent incoming connection");
+                        }
+                        JXcoreExtension.notifyIncomingConnectionToPortNumberFailed(incomingSocketThread.getTcpPortNumber());
+                    }
+
+                    @Override
+                    public void onTransferError(SocketThreadBase who, String errorMessage) {
+                        Log.i(TAG, "onTransferError: Incoming connection, peer "
+                            + who.getPeerProperties().toString() + ", data transfer error, closing connection...");
 
                         final IncomingSocketThread incomingSocketThread = (IncomingSocketThread) who;
                         mConnectionModel.closeAndRemoveIncomingConnectionThread(incomingSocketThread.getId());

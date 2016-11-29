@@ -151,8 +151,6 @@ test('peerAvailabilityChange is called', function (t) {
 
       t.ok(peers[0].hasOwnProperty('peerAvailable'),
         'peer must have peerAvailable');
-      t.ok(peers[0].hasOwnProperty('pleaseConnect'),
-        'peer must have pleaseConnect');
 
       complete = true;
       t.end();
@@ -371,31 +369,10 @@ test('Can connect to a remote peer', function (t) {
       'Must have listeningPort');
     t.ok(typeof connection.listeningPort === 'number',
       'listeningPort must be a number');
-    t.ok(connection.hasOwnProperty('clientPort'),
-      'Connection must have clientPort');
-    t.ok(typeof connection.clientPort === 'number',
-      'clientPort must be a number');
-    t.ok(connection.hasOwnProperty('serverPort'),
-      'Connection must have serverPort');
-    t.ok(typeof connection.serverPort === 'number',
-      'serverPort must be a number');
 
-    if (connection.listeningPort !== 0)
-    {
-      // Forward connection
-      t.ok(connection.clientPort === 0,
-        'forward connection must have clientPort == 0');
-      t.ok(connection.serverPort === 0,
-        'forward connection must have serverPort == 0');
-    }
-    else
-    {
-      // Reverse connection
-      t.ok(connection.clientPort !== 0,
-        'reverse connection must have clientPort != 0');
-      t.ok(connection.serverPort !== 0,
-        'reverse connection must have serverPort != 0');
-    }
+    // A check if any of our old reverse connection or please connect code
+    // is still hiding around.
+    t.ok(connection.listeningPort !== 0, 'listening port should not be 0');
 
     t.end();
   }
@@ -450,11 +427,6 @@ function getConnectionToOnePeerAndTest(t, connectTest) {
     connectToPeerPromise(currentTestPeer, RETRIES)
       .then(function (connectionCallback) {
         connectionCallback = JSON.parse(connectionCallback);
-        if (connectionCallback.listeningPort === 0) {
-          runningTest = false;
-          return;
-        }
-
         connectTest(connectionCallback.listeningPort, currentTestPeer);
       })
       .catch(function () {
@@ -522,7 +494,8 @@ test('Connect port dies if not connected to in time', function (t) {
   This test should not be ran on Android until #714 is solved (implemented).
    */
   if (platform.isAndroid) {
-    t.ok(true, 'This test is not ran on Android, since it lacks the timeout implementation');
+    t.ok(true, 'This test is not ran on Android, since it lacks the ' +
+      'timeout implementation');
     t.end();
   } else {
     getConnectionToOnePeerAndTest(t, function (listeningPort) {
@@ -532,8 +505,8 @@ test('Connect port dies if not connected to in time', function (t) {
             t.fail('Connection should have failed due to time out');
           });
         connection.on('error', function (err) {
-          t.equal(err.message, 'connect ECONNREFUSED', 'failed correctly due to' +
-            ' refused connection');
+          t.equal(err.message, 'connect ECONNREFUSED', 'failed correctly due ' +
+            'to refused connection');
           t.end();
         });
       }, 3000);
@@ -562,7 +535,7 @@ test('Can shift large amounts of data', function (t) {
   var dataSize = 4096;
   var toSend = randomstring.generate(dataSize);
 
-  function shiftData(sock, reverseConnection) {
+  function shiftData(sock) {
 
     sock.on('error', function (error) {
       logger.warn('Error on client socket: ' + error);
@@ -571,73 +544,32 @@ test('Can shift large amounts of data', function (t) {
 
     var toRecv = '';
 
-    if (reverseConnection) {
-      // Since this is a reverse connection, the socket we've been handed has
-      // already been accepted by our server and there's a client on the other
-      // end already sending data.
-      // Without multiplex support we can't both talk at the same time so
-      // wait for the other side to finish before sending our data.
+    var done = false;
+    sock.on('data', function (data) {
+      var remaining = dataSize - toRecv.length;
 
-      var totalRecvd = 0;
-      sock.on('data', function (data) {
+      if (remaining >= data.length) {
+        toRecv += data.toString();
+        data = data.slice(0, 0);
+      }
+      else {
+        toRecv += data.toString('utf8', 0, remaining);
+        data = data.slice(remaining);
+      }
 
-        logger.info('reverseData');
-        totalRecvd += data.length;
-
-        if (totalRecvd === dataSize) {
-          logger.info('reverseSend');
-          // We've seen all the remote's data, send our own
-          sock.write(toSend);
-        }
-
-        if (totalRecvd > dataSize) {
-          // This should now be our own data echoing back
-          toRecv += data.toString();
-        }
-
-        if (toRecv.length === dataSize) {
-          // Should have an exact copy of what we sent
-          t.ok(toRecv === toSend, 'received should match sent reverse');
+      if (toRecv.length === dataSize) {
+        if (!done) {
+          done = true;
+          t.ok(toSend === toRecv, 'received should match sent forward');
           t.end();
         }
-      });
-    }
-    else {
-
-      // This one's more straightforward.. we're going to send first,
-      // read back our echo and then echo out any extra data
-
-      var done = false;
-      sock.on('data', function (data) {
-
-        logger.info('forwardData');
-
-        var remaining = dataSize - toRecv.length;
-
-        if (remaining >= data.length) {
-          toRecv += data.toString();
-          data = data.slice(0, 0);
+        if (data.length) {
+          sock.write(data);
         }
-        else {
-          toRecv += data.toString('utf8', 0, remaining);
-          data = data.slice(remaining);
-        }
+      }
+    });
 
-        if (toRecv.length === dataSize) {
-          if (!done) {
-            done = true;
-            t.ok(toSend === toRecv, 'received should match sent forward');
-            t.end();
-          }
-          if (data.length) {
-            sock.write(data);
-          }
-        }
-      });
-
-      logger.info('forwardSend');
-      sock.write(toSend);
-    }
+    sock.write(toSend);
   }
 
   function onConnectSuccess(err, connection) {
@@ -647,19 +579,9 @@ test('Can shift large amounts of data', function (t) {
     // We're happy here if we make a connection to anyone
     connection = JSON.parse(connection);
     logger.info(connection);
-
-    if (connection.listeningPort) {
-      logger.info('Forward connection');
-      // We made a forward connection
-      client = net.connect(connection.listeningPort, function () {
-        shiftData(client, false);
-      });
-    } else {
-      logger.info('Reverse connection');
-      // We made a reverse connection
-      client = sockets[connection.clientPort];
-      shiftData(client, true);
-    }
+    client = net.connect(connection.listeningPort, function () {
+      shiftData(client);
+    });
   }
 
   function onConnectFailure() {
@@ -715,10 +637,6 @@ function killSkeleton(t, createServerWriteSuccessHandler,
   function onConnectSuccess(err, connection, peer) {
     connection = JSON.parse(connection);
     var gotCloseMessage = false;
-    if (connection.listeningPort === 0) {
-      // This is a reverse connection, we aren't testing that
-      return t.end();
-    }
 
     logger.info('connection ' + JSON.stringify(connection));
 
@@ -1074,13 +992,8 @@ function clientSuccessConnect(t, roundNumber, connection, peersWeSucceededWith)
     connection = JSON.parse(connection);
     var error = null;
 
-    if (connection.listeningPort === 0) {
-      // We couldn't connect but that could be a transient error
-      // or this could be iOS in which case we have a problem
-      error = new Error('ListeningPort is 0');
-      error.fatal = false;
-      return reject(error);
-    }
+    t.ok(connection.listeningPort !== 0, 'Just testing if old code managed' +
+      ' to hide out');
 
     var clientMessage = createMessage(roundNumber.toString());
 

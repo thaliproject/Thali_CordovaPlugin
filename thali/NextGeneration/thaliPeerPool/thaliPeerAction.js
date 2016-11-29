@@ -4,6 +4,9 @@ var Promise = require('lie');
 var util = require('util');
 var urlsafeBase64 = require('urlsafe-base64');
 
+var logger = require('../../ThaliLogger')('thaliPeerAction');
+
+
 /** @module thaliPeerAction */
 
 /**
@@ -187,6 +190,7 @@ PeerAction.prototype.getId = function () {
  */
 // jscs:disable disallowUnusedParams
 PeerAction.prototype.start = function (httpAgentPool) {
+  this._httpAgentPool = httpAgentPool;
   switch (this._actionState) {
     case PeerAction.actionState.CREATED: {
       this._actionState = PeerAction.actionState.STARTED;
@@ -239,6 +243,15 @@ PeerAction.START_AFTER_KILLED = 'action has completed';
  * @returns {?Error}
  */
 PeerAction.prototype.kill = function () {
+  if (this._httpAgentPool) {
+    if (typeof this._httpAgentPool.destroy === 'function') {
+      this._httpAgentPool.destroy();
+    } else {
+      logger.debug('we couldn\'t destroy http agent explicitly');
+    }
+    this._httpAgentPool = null;
+  }
+
   this._actionState = PeerAction.actionState.KILLED;
   return null;
 };

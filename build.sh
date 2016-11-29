@@ -1,6 +1,6 @@
 #!/bin/sh
 
-### START - JXcore Test Server --------............................
+### START - JXcore Test Server --------.............................
 ### Testing environment prepares separate packages for each node.
 ### Package builder calls this script with each node's IP address
 ### Make sure multiple calls to this script file compiles the application file
@@ -55,9 +55,13 @@ cordova -v;ERROR_ABORT
 # Run first the tests that can be run on desktop
 thali/install/setUpDesktop.sh;ERROR_ABORT
 cd test/www/jxcore/;ERROR_ABORT
-jx npm test;ERROR_ABORT
+jx runTests.js --networkType WIFI;ERROR_ABORT
+jx runTests.js --networkType NATIVE;ERROR_ABORT
+jx runTests.js --networkType BOTH;ERROR_ABORT
 jx npm run test-meta;ERROR_ABORT
-jx npm run test-coordinated;ERROR_ABORT
+jx runCoordinatedTests.js --networkType NATIVE;ERROR_ABORT
+jx runCoordinatedTests.js --networkType WIFI;ERROR_ABORT
+jx runCoordinatedTests.js --networkType BOTH;ERROR_ABORT
 
 # Verify that docs can be generated
 #cd $WORKING_DIR/thali/;ERROR_ABORT

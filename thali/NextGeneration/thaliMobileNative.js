@@ -437,7 +437,7 @@
  * @function external:"Mobile('setWifiRadioState')".callNative
  * @param {boolean} setRadioTo If true then turn the WiFi radio on. If the Wifi
  * radio was already on then that is not an error. If false then turn the Wifi
- * radio off. If the Wifi radio was laready off then that is not an error.
+ * radio off. If the Wifi radio was already off then that is not an error.
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 
@@ -461,7 +461,6 @@
  * | Illegal peerID | The peerID has a format that could not have been returned by the local platform |
  * | startListeningForAdvertisements is not active | Go start it! |
  * | Connection could not be established | The attempt to connect to the peerID failed. This could be because the peer is gone, no longer accepting connections or the radio stack is just horked. |
- * | Connection wait timed out | This is for the case where we are a lexically smaller peer and the lexically larger peer doesn't establish a connection within a reasonable period of time. |
  * | Max connections reached | The native layers have practical limits on how many connections they can handle at once. If that limit has been reached then this error is returned. The only action to take is to wait for an existing connection to be closed before retrying.  |
  * | No Native Non-TCP Support | There are no non-TCP radios on this platform. |
  * | No available TCP ports | There are no TCP ports available to listen on. |
