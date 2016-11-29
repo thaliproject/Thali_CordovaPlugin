@@ -153,14 +153,28 @@ CoordinatedClient.prototype._schedule = function (data) {
   asserts.arrayEquals(testNames, this._testNames);
 
   var results = [];
+
+  var hadUnexpectedError = false;
+  var lastUnexpectedError;
+  function unexpectedError (error) {
+    hadUnexpectedError  = true;
+    lastUnexpectedError = error;
+    results.push({
+      name:  'unknown',
+      text:  'failed',
+      error: error
+    });
+  }
+  this.on('unexpected_error', unexpectedError);
+
   function resolveResults () {
     var lastFailedResult;
     results.forEach(function (result) {
       if (result.text === 'failed') {
         var error = result.error;
         logger.info(
-          '***TEST_LOGGER result: %s - failed, error: \'%s\', stack: \'%s\'',
-          result.text, result.name, String(error), error? error.stack: ''
+          '***TEST_LOGGER result: failed - %s, error: \'%s\', stack: \'%s\'',
+          result.name, String(error), error? error.stack: ''
         );
         lastFailedResult = result;
       } else {
@@ -175,7 +189,6 @@ CoordinatedClient.prototype._schedule = function (data) {
       logger.debug('all unit tests succeeded, platformName: \'%s\'', self._platform);
     }
   }
-  //this.on('unexpected_error', unexpectedError);
 
   this._emit('schedule_confirmed', data)
     .then(function () {
@@ -205,6 +218,12 @@ CoordinatedClient.prototype._schedule = function (data) {
             });
         })
       );
+    })
+    .then(function () {
+      if (hadUnexpectedError) {
+        return Promise.reject(lastUnexpectedError);
+      }
+      self.removeListener('unexpected_error', unexpectedError);
     })
     .then(resolveResults)
     .catch(resolveResults);

@@ -1,12 +1,14 @@
 'use strict';
 
-var util   = require('util');
-var format = util.format;
+var util     = require('util');
+var format   = util.format;
+var inherits = util.inherits;
 
 var objectAssign = require('object-assign');
 var tape         = require('tape-catch');
 var assert       = require('assert');
 var uuid         = require('node-uuid');
+var EventEmitter = require('events').EventEmitter;
 
 var asserts = require('./utils/asserts');
 var Promise = require('./utils/Promise');
@@ -35,12 +37,16 @@ function SimpleThaliTape (options) {
 
   this._resolveInstance();
 
+  this._unexpectedResult = this.unexpectedResult.bind(this);
+
   // test('name', ...)      -> 'this.addTest('name, ...)'
   // test.only('name', ...) -> 'this.only('name, ...)'
   this._handler      = this.addTest.bind(this);
   this._handler.only = this.only.bind(this);
   return this._handler;
 }
+
+inherits(SimpleThaliTape, EventEmitter);
 
 SimpleThaliTape.prototype.defaults = {
   setup: function (t) {
@@ -97,7 +103,9 @@ SimpleThaliTape.prototype.addTest = function (name, canBeSkipped, fun) {
   return this._handler;
 }
 
-function processResult(tape, test, timeout) {
+SimpleThaliTape.prototype._processResult = function (tape, test, timeout) {
+  var self = this;
+
   tape.sync = function () {
     // noop
     return Promise.resolve();
@@ -117,11 +125,15 @@ function processResult(tape, test, timeout) {
       }
     }
     tape.on('result', resultHandler);
+    tape.removeListener('result', self._unexpectedResult);
 
     endHandler = function () {
       tape.removeListener('result', resultHandler);
       resultHandler = null;
       endHandler    = null;
+
+      // This listener will inspect unexpected results forever.
+      tape.on('result', self._unexpectedResult);
 
       if (success) {
         // Only for testing purposes.
@@ -159,14 +171,14 @@ SimpleThaliTape.prototype._runTest = function (test) {
     // Example is 'tape.createHarness' https://github.com/substack/tape/blob/master/index.js#L103
 
     tape('setup', function (tape) {
-      processResult(tape, test, self._options.setupTimeout)
+      self._processResult(tape, test, self._options.setupTimeout)
         .catch(reject);
 
       self._options.setup(tape);
     });
 
     tape(test.name, function (tape) {
-      processResult(tape, test, self._options.testTimeout)
+      self._processResult(tape, test, self._options.testTimeout)
         .catch(reject);
 
       Promise.try(function () {
@@ -189,7 +201,7 @@ SimpleThaliTape.prototype._runTest = function (test) {
     });
 
     tape('teardown', function (tape) {
-      processResult(tape, test, self._options.teardownTimeout)
+      self._processResult(tape, test, self._options.teardownTimeout)
         .catch(reject);
 
       tape.once('end', resolve);
@@ -214,6 +226,20 @@ SimpleThaliTape.prototype._begin = function () {
   this._state = SimpleThaliTape.states.started;
 
   var results = [];
+
+  var hadUnexpectedError = false;
+  var lastUnexpectedError;
+  function unexpectedError (error) {
+    hadUnexpectedError  = true;
+    lastUnexpectedError = error;
+    results.push({
+      name:  'unknown',
+      text:  'failed',
+      error: error
+    });
+  }
+  this.on('unexpected_error', unexpectedError);
+
   var promise = Promise.all(
     this._tests.map(function (test) {
       return self._runTest(test)
@@ -239,12 +265,32 @@ SimpleThaliTape.prototype._begin = function () {
           }
         });
     })
-  );
+  )
+  .then(function () {
+    if (hadUnexpectedError) {
+      return Promise.reject(lastUnexpectedError);
+    }
+    self.removeListener('unexpected_error', unexpectedError);
+  });
 
   return {
     results: results,
     promise: promise
   };
+}
+
+SimpleThaliTape.prototype.unexpectedResult = function (result) {
+  var error;
+  if (result.ok) {
+    error = new Error();
+  } else {
+    error = result.error;
+  }
+  logger.error(
+    'unexpected result, error: \'%s\', stack: \'%s\'',
+    String(error), error ? error.stack : null
+  );
+  this.emit('unexpected_error', error);
 }
 
 // We will run 'begin' on all 'SimpleThaliTape' instances.
@@ -270,8 +316,8 @@ SimpleThaliTape.begin = function (platform, version, hasRequiredHardware, native
         if (result.text === 'failed') {
           var error = result.error;
           logger.info(
-            '***TEST_LOGGER result: %s - failed, error: \'%s\', stack: \'%s\'',
-            result.text, result.name, String(error), error? error.stack: ''
+            '***TEST_LOGGER result: failed - %s, error: \'%s\', stack: \'%s\'',
+            result.name, String(error), error? error.stack: ''
           );
           lastFailedResult = result;
         } else {
