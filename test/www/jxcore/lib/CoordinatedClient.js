@@ -96,6 +96,8 @@ CoordinatedClient.states = {
 };
 
 CoordinatedClient.prototype._bind = function () {
+  this._unexpectedResult = this.unexpectedResult.bind(this);
+
   this._io
     .on  ('connect',           this._connect.bind(this))
     .on  ('connect_timeout',   logger.debug.bind(logger))
@@ -173,6 +175,7 @@ CoordinatedClient.prototype._schedule = function (data) {
       logger.debug('all unit tests succeeded, platformName: \'%s\'', self._platform);
     }
   }
+  //this.on('unexpected_error', unexpectedError);
 
   this._emit('schedule_confirmed', data)
     .then(function () {
@@ -245,7 +248,7 @@ CoordinatedClient.prototype._disqualify = function (data) {
 
   if (!data) {
     // We are waiting for 'disconnect' event.
-    self._state = CoordinatedClient.states.completed;
+    this._state = CoordinatedClient.states.completed;
   }
 };
 
@@ -400,11 +403,15 @@ CoordinatedClient.prototype._processEvent = function (tape, test, event, fun, ti
           }
         };
         tape.on('result', resultHandler);
+        tape.removeListener('result', self._unexpectedResult);
 
         endHandler = function () {
           tape.removeListener('result', resultHandler);
           resultHandler = null;
           endHandler    = null;
+
+          // This listener will inspect unexpected results forever.
+          tape.on('result', self._unexpectedResult);
 
           self._emit(
             event + '_finished',
@@ -533,5 +540,19 @@ CoordinatedClient.getData = function (data) {
   );
   return data.content;
 };
+
+CoordinatedClient.prototype.unexpectedResult = function (result) {
+  var error;
+  if (result.ok) {
+    error = new Error();
+  } else {
+    error = result.error;
+  }
+  logger.error(
+    'unexpected result, error: \'%s\', stack: \'%s\'',
+    String(error), error ? error.stack : null
+  );
+  this.emit('unexpected_error', error);
+}
 
 module.exports = CoordinatedClient;

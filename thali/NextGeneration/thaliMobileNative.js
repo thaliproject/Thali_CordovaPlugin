@@ -437,7 +437,7 @@
  * @function external:"Mobile('setWifiRadioState')".callNative
  * @param {boolean} setRadioTo If true then turn the WiFi radio on. If the Wifi
  * radio was already on then that is not an error. If false then turn the Wifi
- * radio off. If the Wifi radio was laready off then that is not an error.
+ * radio off. If the Wifi radio was already off then that is not an error.
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 
