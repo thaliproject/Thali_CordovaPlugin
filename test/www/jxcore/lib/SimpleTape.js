@@ -261,6 +261,34 @@ SimpleThaliTape.begin = function (platform, version, hasRequiredHardware, native
   SimpleThaliTape.instances = [];
 
   var results = [];
+  function resolveResults () {
+    var lastFailedResult;
+    results.reduce(function (allResults, results) {
+      return allResults.concat(results);
+    }, [])
+      .forEach(function (result) {
+        if (result.text === 'failed') {
+          var error = result.error;
+          logger.info(
+            '***TEST_LOGGER result: %s - failed, error: \'%s\', stack: \'%s\'',
+            result.text, result.name, String(error), error? error.stack: ''
+          );
+          lastFailedResult = result;
+        } else {
+          logger.info('***TEST_LOGGER result: %s - %s', result.text, result.name);
+        }
+      });
+
+    if (lastFailedResult) {
+      logger.error('failed to run unit tests, platformName: \'%s\'', platform);
+      logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+      return Promise.reject(lastFailedResult.error);
+    } else {
+      logger.debug('all unit tests succeeded, platformName: \'%s\'', platform);
+      logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+    }
+  }
+
   return Promise.all(
     thaliTapes.map(function (thaliTape) {
       var data = thaliTape._begin();
@@ -268,33 +296,8 @@ SimpleThaliTape.begin = function (platform, version, hasRequiredHardware, native
       return data.promise;
     })
   )
-    .finally(function () {
-      var lastFailedResult;
-      results.reduce(function (allResults, results) {
-        return allResults.concat(results);
-      }, [])
-        .forEach(function (result) {
-          if (result.text === 'failed') {
-            var error = result.error;
-            logger.info(
-              '***TEST_LOGGER result: %s - failed, error: \'%s\', stack: \'%s\'',
-              result.text, result.name, String(error), error? error.stack: ''
-            );
-            lastFailedResult = result;
-          } else {
-            logger.info('***TEST_LOGGER result: %s - %s', result.text, result.name);
-          }
-        });
-
-      if (lastFailedResult) {
-        logger.error('failed to run unit tests, platformName: \'%s\'', platform);
-        logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-        return Promise.reject(lastFailedResult.error);
-      } else {
-        logger.debug('all unit tests succeeded, platformName: \'%s\'', platform);
-        logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-      }
-    });
+    .then(resolveResults)
+    .catch(resolveResults);
 }
 
 module.exports = SimpleThaliTape;

@@ -151,6 +151,29 @@ CoordinatedClient.prototype._schedule = function (data) {
   asserts.arrayEquals(testNames, this._testNames);
 
   var results = [];
+  function resolveResults () {
+    var lastFailedResult;
+    results.forEach(function (result) {
+      if (result.text === 'failed') {
+        var error = result.error;
+        logger.info(
+          '***TEST_LOGGER result: %s - failed, error: \'%s\', stack: \'%s\'',
+          result.text, result.name, String(error), error? error.stack: ''
+        );
+        lastFailedResult = result;
+      } else {
+        logger.info('***TEST_LOGGER result: %s - %s', result.text, result.name);
+      }
+    });
+
+    if (lastFailedResult) {
+      logger.error('failed to run unit tests, platformName: \'%s\'', self._platform);
+      self._failed(lastFailedResult.error);
+    } else {
+      logger.debug('all unit tests succeeded, platformName: \'%s\'', self._platform);
+    }
+  }
+
   this._emit('schedule_confirmed', data)
     .then(function () {
       return Promise.all(
@@ -180,28 +203,8 @@ CoordinatedClient.prototype._schedule = function (data) {
         })
       );
     })
-    .finally(function () {
-      var lastFailedResult;
-      results.forEach(function (result) {
-        if (result.text === 'failed') {
-          var error = result.error;
-          logger.info(
-            '***TEST_LOGGER result: %s - failed, error: \'%s\', stack: \'%s\'',
-            result.text, result.name, String(error), error? error.stack: ''
-          );
-          lastFailedResult = result;
-        } else {
-          logger.info('***TEST_LOGGER result: %s - %s', result.text, result.name);
-        }
-      });
-
-      if (lastFailedResult) {
-        logger.error('failed to run unit tests, platformName: \'%s\'', self._platform);
-        self._failed(lastFailedResult.error);
-      } else {
-        logger.debug('all unit tests succeeded, platformName: \'%s\'', self._platform);
-      }
-    });
+    .then(resolveResults)
+    .catch(resolveResults);
 };
 
 CoordinatedClient.prototype._discard = function (data) {
