@@ -95,6 +95,8 @@ CoordinatedClient.states = {
 };
 
 CoordinatedClient.prototype._bind = function () {
+  this._unexpectedResult = this.unexpectedResult.bind(this);
+
   this._io
   .on  ('connect',           this._connect.bind(this))
   .on  ('connect_timeout',   logger.debug.bind(logger))
@@ -149,12 +151,25 @@ CoordinatedClient.prototype._schedule = function (data) {
   var testNames = CoordinatedClient.getData(data);
   asserts.arrayEquals(testNames, this._testNames);
 
+  var hadError = false;
+  var latestError;
+  function unexpectedError (error) {
+    hadError    = true;
+    latestError = error;
+  }
+  this.on('unexpected_error', unexpectedError);
+
   this._emit('schedule_confirmed', data)
   .then(function () {
     var promises = self._tests.map(function (test) {
       return self._scheduleTest(test);
     });
     return Promise.all(promises);
+  })
+  .then(function () {
+    if (hadError) {
+      return Promise.reject(latestError);
+    }
   })
   .catch(function (error) {
     var stack = error ? error.stack : null;
@@ -163,6 +178,9 @@ CoordinatedClient.prototype._schedule = function (data) {
       String(error), stack
     );
     self._failed(error);
+  })
+  .then(function () {
+    self.removeListener('unexpected_error', unexpectedError);
   });
 };
 
@@ -360,11 +378,15 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
           }
         };
         tape.on('result', resultHandler);
+        tape.removeListener('result', self._unexpectedResult);
 
         endHandler = function () {
           tape.removeListener('result', resultHandler);
           resultHandler = null;
           endHandler    = null;
+
+          // This listener will inspect unexpected results forever.
+          tape.on('result', self._unexpectedResult);
 
           self._emit(
             event + '_finished',
@@ -477,5 +499,19 @@ CoordinatedClient.getData = function (data) {
   );
   return data.content;
 };
+
+CoordinatedClient.prototype.unexpectedResult = function (result) {
+  var error;
+  if (result.ok) {
+    error = new Error();
+  } else {
+    error = result.error;
+  }
+  logger.error(
+    'unexpected result, error: \'%s\', stack: \'%s\'',
+    String(error), error ? error.stack : null
+  );
+  this.emit('unexpected_error', error);
+}
 
 module.exports = CoordinatedClient;
