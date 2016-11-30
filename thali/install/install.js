@@ -13,6 +13,7 @@ var unzip = require('unzip');
 var url = require('url');
 var Promise = require('./utils/Promise');
 var FILE_NOT_FOUND = 'ENOENT';
+var util = require('util');
 
 // If this file exists in the thaliDontCheckIn directory then
 // we will copy the Cordova plugin from a sibling Thali_CordovaPlugin
@@ -223,8 +224,8 @@ function uninstallPluginsIfNecessary(weAddedPluginsFile, appRootDirectory) {
         console.log('Ignoring a non-critical error: ' + error);
         // Resolve the promise even if plugin removal fails, because it is
         // possible that the user has removed the plugin outside of this install
-        // script, but there is still the left-over file that says this script has
-        // added the plugins.
+        // script, but there is still the left-over file that says this script
+        // has added the plugins.
         return Promise.resolve();
       });
   });
@@ -295,6 +296,27 @@ function fetchAndInstallJxCoreCordovaPlugin(
     });
 }
 
+function generateGradlePropertiesFile(thaliDepotName, thaliBranchName,
+  thaliDontCheckIn, releaseConf) {
+  // This step is used to prepare the gradle.properties file
+  // containing the btconnectorlib2 version
+  var projectDir = createUnzippedDirectoryPath(
+    thaliDepotName, thaliBranchName, thaliDontCheckIn);
+  var gradleFileName = path.join(
+    projectDir, 'src', 'android', 'gradle.properties');
+  var fileContents = util.format(
+    'btconnectorlib2Version = %s\n' +
+    'ext.cdvMinSdkVersion = %s\n' +
+    'ext.cdvBuildToolsVersion = %s\n' +
+    'ext.cdvCompileSdkVersion = %s\n',
+    releaseConf.btconnectorlib2,
+    releaseConf.androidConfig.minSdkVersion,
+    releaseConf.androidConfig.buildToolsVersion,
+    releaseConf.androidConfig.compileSdkVersion);
+
+  return fs.writeFileAsync(gradleFileName, fileContents);
+}
+
 module.exports = function (callback, appRootDirectory) {
   // Get the app root as an argument or from app/www/jxcore/node_modules/thali.
   // Passing as argument can be leveraged in local development and testing
@@ -303,7 +325,7 @@ module.exports = function (callback, appRootDirectory) {
                      path.join(__dirname, '..', '..', '..', '..', '..');
   var thaliDontCheckIn = path.join(appRootDirectory, 'thaliDontCheckIn' );
 
-  var thaliProjectName, thaliDepotName, thaliBranchName, btconnectorlib2;
+  var thaliProjectName, thaliDepotName, thaliBranchName, releaseConf;
 
   getReleaseConfig()
     .then(function (conf) {
@@ -311,7 +333,7 @@ module.exports = function (callback, appRootDirectory) {
       thaliProjectName = conf.thali.projectName;
       thaliDepotName = conf.thali.depotName;
       thaliBranchName = conf.thali.branchName;
-      btconnectorlib2 = conf.btconnectorlib2;
+      releaseConf = conf;
 
       return fetchAndInstallJxCoreCordovaPlugin(
         appRootDirectory,
@@ -342,15 +364,8 @@ module.exports = function (callback, appRootDirectory) {
       }
     })
     .then(function (thaliCordovaPluginUnZipResult) {
-      // This step is used to prepare the gradle.properties file
-      // containing the btconnectorlib2 version
-      var projectDir = createUnzippedDirectoryPath(
-        thaliDepotName, thaliBranchName, thaliDontCheckIn);
-      var gradleFileName = path.join(
-        projectDir, 'src', 'android', 'gradle.properties');
-
-      return fs.writeFileAsync(gradleFileName,
-        'btconnectorlib2Version=' + btconnectorlib2)
+      return generateGradlePropertiesFile(thaliDepotName, thaliBranchName,
+        thaliDontCheckIn, releaseConf)
         .then(function () {
           return thaliCordovaPluginUnZipResult;
         });
