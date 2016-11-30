@@ -100,10 +100,10 @@ public class ConnectivityMonitorTest {
             int counter = 0;
             @Override
             public Boolean call() {
-                while (!mBluetoothAdapter.isEnabled() && counter < ThaliTestRunner.counterLimit) {
+                while (!mBluetoothAdapter.isEnabled() && counter < ThaliTestRunner.COUNTER_LIMIT) {
                     try {
                         mBluetoothAdapter.enable();
-                        Thread.sleep(ThaliTestRunner.timeoutLimit);
+                        Thread.sleep(ThaliTestRunner.TIMEOUT_LIMIT);
                         counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
@@ -112,7 +112,7 @@ public class ConnectivityMonitorTest {
                 }
                 mConnectivityMonitor.updateConnectivityInfo(false);
 
-                if (counter < ThaliTestRunner.counterLimit) {
+                if (counter < ThaliTestRunner.COUNTER_LIMIT) {
                     return true;
                 } else {
                     Log.e(mTag, "BT is not enabled after 5s!");
@@ -127,10 +127,10 @@ public class ConnectivityMonitorTest {
             int counter = 0;
             @Override
             public Boolean call() {
-                while (mBluetoothAdapter.isEnabled() && counter < ThaliTestRunner.counterLimit) {
+                while (mBluetoothAdapter.isEnabled() && counter < ThaliTestRunner.COUNTER_LIMIT) {
                     try {
                         mBluetoothAdapter.disable();
-                        Thread.sleep(ThaliTestRunner.timeoutLimit);
+                        Thread.sleep(ThaliTestRunner.TIMEOUT_LIMIT);
                         counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
@@ -138,7 +138,7 @@ public class ConnectivityMonitorTest {
                     }
                 }
                 mConnectivityMonitor.updateConnectivityInfo(false);
-                if (counter < ThaliTestRunner.counterLimit) {
+                if (counter < ThaliTestRunner.COUNTER_LIMIT) {
                     return true;
                 } else {
                     Log.e(mTag, "BT is not disabled after 5s!");
@@ -153,10 +153,10 @@ public class ConnectivityMonitorTest {
             int counter = 0;
             @Override
             public Boolean call() {
-                while (!mWifiManager.isWifiEnabled() && counter < ThaliTestRunner.counterLimit) {
+                while (!mWifiManager.isWifiEnabled() && counter < ThaliTestRunner.COUNTER_LIMIT) {
                     try {
                         mWifiManager.setWifiEnabled(true);
-                        Thread.sleep(ThaliTestRunner.timeoutLimit);
+                        Thread.sleep(ThaliTestRunner.TIMEOUT_LIMIT);
                         counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
@@ -164,7 +164,7 @@ public class ConnectivityMonitorTest {
                     }
                 }
                 mConnectivityMonitor.updateConnectivityInfo(false);
-                if (counter < ThaliTestRunner.counterLimit) {
+                if (counter < ThaliTestRunner.COUNTER_LIMIT) {
                     return true;
                 } else {
                     Log.e(mTag, "Wifi is not enabled after 5s!");
@@ -179,17 +179,17 @@ public class ConnectivityMonitorTest {
             int counter = 0;
             @Override
             public Boolean call() {
-                while (mWifiManager.isWifiEnabled() && counter < ThaliTestRunner.counterLimit) {
+                while (mWifiManager.isWifiEnabled() && counter < ThaliTestRunner.COUNTER_LIMIT) {
                     try {
                         mWifiManager.setWifiEnabled(false);
-                        Thread.sleep(ThaliTestRunner.timeoutLimit);
+                        Thread.sleep(ThaliTestRunner.TIMEOUT_LIMIT);
                         counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
                 mConnectivityMonitor.updateConnectivityInfo(false);
-                if (counter < ThaliTestRunner.counterLimit) {
+                if (counter < ThaliTestRunner.COUNTER_LIMIT) {
                     return true;
                 } else {
                     Log.e(mTag, "Wifi is not disabled after 5s!");

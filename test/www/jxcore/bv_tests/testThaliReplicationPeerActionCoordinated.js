@@ -38,12 +38,7 @@ var test = tape({
   }
 });
 
-test('Coordinated replication action test',
-function () {
-  // FIXME: temporarily disabled (iOS branch is not complete - issue #899)
-  return true;
-},
-function (t) {
+test('Coordinated replication action test', function (t) {
   var router = express.Router();
   router.use(
     '/db',
@@ -120,10 +115,7 @@ function (t) {
 
           var httpAgentPool = new ForeverAgent.SSL({
             rejectUnauthorized: false,
-            keepAlive: true,
-            keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-            maxSockets: Infinity,
-            maxFreeSockets: 256,
+            maxSockets: 8,
             ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
             pskIdentity: thaliReplicationPeerAction.getPskIdentity(),
             pskKey: thaliReplicationPeerAction.getPskKey()

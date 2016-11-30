@@ -32,8 +32,7 @@ function httpRequestPromise(method, urlObject) {
     var httpsRequestOptions = {
       host: urlObject.host,
       method: method,
-      path: urlObject.path,
-      keepAlive: true
+      path: urlObject.path
     };
 
     var req = https.request(httpsRequestOptions, function (res) {

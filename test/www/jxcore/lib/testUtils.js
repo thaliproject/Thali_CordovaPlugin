@@ -288,10 +288,7 @@ module.exports.put = function (host, port, path, pskIdentity, pskKey,
       method: 'PUT',
       agent: new ForeverAgent.SSL({
         rejectUnauthorized: false,
-        keepAlive: true,
-        keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-        maxSockets: Infinity,
-        maxFreeSockets: 256,
+        maxSockets: 8,
         ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
         pskIdentity: pskIdentity,
         pskKey: pskKey
@@ -334,10 +331,7 @@ module.exports.get = function (host, port, path, pskIdentity, pskKey) {
     port: port,
     path: path,
     agent: new ForeverAgent.SSL({
-      keepAlive: true,
-      keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-      maxSockets: Infinity,
-      maxFreeSockets: 256,
+      maxSockets: 8,
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
       pskIdentity: pskIdentity,
       pskKey: pskKey
@@ -695,10 +689,7 @@ var createPskPouchDBRemote = function (
     serverUrl, {
       ajax: {
         agent: new ForeverAgent.SSL({
-          keepAlive: true,
-          keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-          maxSockets: Infinity,
-          maxFreeSockets: 256,
+          maxSockets: 8,
           ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
           pskIdentity: pskId,
           pskKey: pskKey
@@ -742,4 +733,47 @@ module.exports.setUpServer = function (testBody, appConfig) {
     }
   );
   return testCloseAllServer;
+};
+
+/**
+ * Stubs `dns.lookup` function such a way, that attempt to connect to
+ * `unresolvableDomain` fails immediately.
+ *
+ * TODO: update implementation to allow multiple domains to be unresolvable
+ *
+ * @param {string} unresolvableDomain
+ */
+module.exports.makeDomainUnresolvable = function (unresolvableDomain) {
+  var dns = require('dns');
+  if (dns.__originalLookup) {
+    throw new Error('makeDomainUnresolvable can\'t be called twice without ' +
+      'calling restoreUnresolvableDomains');
+  }
+  dns.__originalLookup = dns.lookup;
+  dns.lookup = function (domain, family_, callback_) {
+    var family = family_,
+        callback = callback_;
+    // parse arguments
+    if (arguments.length === 2) {
+      callback = family;
+    }
+    if (domain === unresolvableDomain) {
+      var syscall = 'getaddrinfo';
+      var errorno = 'ENOTFOUND';
+      var e = new Error(syscall + ' ' + errorno);
+      e.errno = e.code = errorno;
+      e.syscall = syscall;
+      setImmediate(callback, e);
+    } else {
+      return dns.__originalLookup.apply(dns, arguments);
+    }
+  };
+};
+
+module.exports.restoreUnresolvableDomains = function () {
+  var dns = require('dns');
+  if (dns.__originalLookup) {
+    dns.lookup = dns.__originalLookup;
+    delete dns.__originalLookup;
+  }
 };

@@ -336,7 +336,7 @@ test('make sure terminateConnection is properly hooked up', function (t) {
 });
 
 test('make sure terminateListener is properly hooked up', function (t) {
-  verifyCallWithArguments(t, 'terminateListener', ['peer-id', 8080]);
+  verifyCallWithArguments(t, '_terminateListener', ['peer-id', 8080]);
 });
 
 test('make sure we actually call kill connections properly', function (t) {
@@ -655,7 +655,6 @@ test('can do HTTP requests after connections are cut', function (t) {
 
   if (platform.isAndroid) {
     var networkChangeHandler = function(networkChangedValue) {
-      t.pass('Delete me - we got a network changed value ' + networkChangedValue);
       if (networkChangedValue.bluetoothLowEnergy &&
           networkChangedValue.bluetooth) {
         thaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
@@ -681,10 +680,6 @@ test('will fail bad PSK connection between peers', function (t) {
 });
 
 test('We provide notification when a listener dies and we recreate it',
-  function () {
-    // FIXME: temporarily disabled (iOS branch is not complete - issue #899)
-    return true;
-  },
   function (t) {
     var recreatedPort = null;
     trivialEndToEndTest(t, false, function (peerId) {
@@ -747,12 +742,8 @@ test('We provide notification when a listener dies and we recreate it',
     });
   });
 
-test('We fire nonTCPPeerAvailabilityChangedEvent with the same ' +
-  'generation and different port when listener is recreated',
-  function () {
-    // FIXME: temporarily disabled (iOS branch is not complete - issue #899)
-    return true;
-  },
+test('We fire nonTCPPeerAvailabilityChangedEvent with the same generation ' +
+  'and different port when listener is recreated',
   function (t) {
     trivialEndToEndTest(t, false, function (peerId) {
       var beforeRecreatePeer = null;
