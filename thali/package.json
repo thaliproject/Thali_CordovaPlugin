@@ -31,7 +31,7 @@
       "branchName": "iOS"
     },
     "androidConfig": {
-      "minSdkVersion": "22",
+      "minSdkVersion": "21",
       "buildToolsVersion": "25.0.0",
       "compileSdkVersion": "android-23"
     },
