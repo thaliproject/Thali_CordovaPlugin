@@ -89,8 +89,12 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
 
     private void setBufferSizes(){
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && mBluetoothSocket!=null) {
-            receiveBufferSize = mBluetoothSocket.getMaxReceivePacketSize();
-            sendBufferSize = mBluetoothSocket.getMaxTransmitPacketSize();
+            if(mBluetoothSocket.getMaxReceivePacketSize()!=0) {
+                receiveBufferSize = mBluetoothSocket.getMaxReceivePacketSize();
+            }
+            if(mBluetoothSocket.getMaxTransmitPacketSize()!=0) {
+                sendBufferSize = mBluetoothSocket.getMaxTransmitPacketSize();
+            }
         }
     }
 
