@@ -448,20 +448,24 @@ test('We fire failedNativeConnection event when we get failedConnection from ' +
 
 test('can do HTTP requests between peers without coordinator',
   function() {
-    return platform.isMobile;
-  }, function (t) {
-  trivialEndToEndTest(t, true);
-});
+    return platform._isRealMobile;
+  },
+  function (t) {
+    trivialEndToEndTest(t, true);
+  });
 
 test('make sure bad PSK connections fail',
   function () {
-    return platform.isMobile;
-  }, function (t) {
-  //trivialBadEndtoEndTest(t, true);
-  // TODO: Re-enable and fix
-  t.ok(true, 'FIX ME, PLEASE!!!');
-  t.end();
-});
+    // #1587
+    // return platform._isRealMobile;
+    return true;
+  },
+  function (t) {
+    //trivialBadEndtoEndTest(t, true);
+    // TODO: Re-enable and fix
+    t.ok(true, 'FIX ME, PLEASE!!!');
+    t.end();
+  });
 
 test('peer changes handled from a queue',
   function () {
@@ -510,31 +514,32 @@ test('peer changes handled from a queue',
 
 test('relaying discoveryAdvertisingStateUpdateNonTCP',
   function() {
-    return platform.isMobile;
-  }, function (t) {
-  thaliMobileNativeWrapper.start(express.Router())
-    .then(function () {
-      thaliMobileNativeWrapper.emitter.once(
-        'discoveryAdvertisingStateUpdateNonTCP',
-        function (discoveryAdvertisingStateUpdateValue) {
-          t.ok(discoveryAdvertisingStateUpdateValue.discoveryActive,
-            'discovery is active');
-          t.ok(discoveryAdvertisingStateUpdateValue.advertisingActive,
-            'advertising is active');
-          t.end();
-        }
-      );
-      Mobile.fireDiscoveryAdvertisingStateUpdateNonTCP({
-        discoveryActive: true,
-        advertisingActive: true
+    return platform._isRealMobile;
+  },
+  function (t) {
+    thaliMobileNativeWrapper.start(express.Router())
+      .then(function () {
+        thaliMobileNativeWrapper.emitter.once(
+          'discoveryAdvertisingStateUpdateNonTCP',
+          function (discoveryAdvertisingStateUpdateValue) {
+            t.ok(discoveryAdvertisingStateUpdateValue.discoveryActive,
+              'discovery is active');
+            t.ok(discoveryAdvertisingStateUpdateValue.advertisingActive,
+              'advertising is active');
+            t.end();
+          }
+        );
+        Mobile.fireDiscoveryAdvertisingStateUpdateNonTCP({
+          discoveryActive: true,
+          advertisingActive: true
+        });
       });
-    });
-});
+  });
 
 test('thaliMobileNativeWrapper is stopped when ' +
   'incomingConnectionToPortNumberFailed is received',
   function () {
-    return platform.isMobile;
+    return platform._isRealMobile;
   },
   function (t) {
     var routerPort = 0;
