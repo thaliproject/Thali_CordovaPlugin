@@ -144,6 +144,13 @@ test('One action on bluetooth',
     t.notOk(testThaliPeerPoolOneAtATime.enqueue(action), 'Got null');
     action.startPromise
       .then(function () {
+        // FIXME: race condition, when startPromise resolved before action is
+        // killed
+        return new Promise(function (resolve) {
+          setImmediate(resolve);
+        });
+      })
+      .then(function () {
         t.ok(killSpy.called, 'Got killed at least once');
       })
       .catch(function (err) {
@@ -171,13 +178,27 @@ test('Two notification actions',
     var action1PromiseResolved = false;
     action1.startPromise
       .then(function () {
-        t.ok(killSpy1.called, 'Action 1 killed at least once');
         action1PromiseResolved = true;
+        // FIXME: race condition, when startPromise resolved before action is
+        // killed
+        return new Promise(function (resolve) {
+          setImmediate(resolve);
+        });
+      })
+      .then(function () {
+        t.ok(killSpy1.called, 'Action 1 killed at least once');
       })
       .catch(function (err) {
         t.fail('Unexpected err ' + err);
       });
     action2.startPromise
+      .then(function () {
+        // FIXME: race condition, when startPromise resolved before action is
+        // killed
+        return new Promise(function (resolve) {
+          setImmediate(resolve);
+        });
+      })
       .then(function () {
         t.ok(action1PromiseResolved, 'Action 1 went first');
         t.ok(killSpy2.called, 'Action 2 killed at least once');

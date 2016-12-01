@@ -45,12 +45,7 @@ function bufferIndexOf(bufferArray, entryToFind) {
   return -1;
 }
 
-test('Coordinated pull replication from notification test',
-function () {
-  // FIXME: temporarily disabled (iOS branch is not complete - issue #899)
-  return true;
-},
-function (t) {
+test('Coordinated pull replication from notification test', function (t) {
   var thaliPeerPoolDefault = new ThaliPeerPoolDefault();
   var router = express.Router();
   router.use(
