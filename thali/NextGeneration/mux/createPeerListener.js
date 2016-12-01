@@ -27,7 +27,7 @@ function closeServer(self, server, failedConnectionErr, canRetry)
   server._mux = null;
   delete self._peerServers[server._peerIdentifier];
   if (failedConnectionErr) {
-    logger.debug('We are emitting failedConnection with error "%s" and ' +
+    logger.error('We are emitting failedConnection with error "%s" and ' +
       'peerIdentifier "%s"', failedConnectionErr, server._peerIdentifier);
     self.emit('failedConnection', {
       error: failedConnectionErr,
@@ -82,21 +82,21 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
       });
 
       mux.on('error', function (err) {
-        logger.debug('mux - mux <-> outgoing TCP/IP client connection to ' +
+        logger.error('mux - mux <-> outgoing TCP/IP client connection to ' +
           'Android - %s - err %s',
             peerIdentifier, err);
         outgoing.destroy();
       });
 
       mux.on('finish', function () {
-        logger.debug('mux - mux <-> outgoing TCP/IP client connection to ' +
+        logger.silly('mux - mux <-> outgoing TCP/IP client connection to ' +
           'Android - %s - finish',
           peerIdentifier);
         outgoing.end();
       });
 
       mux.on('close', function () {
-        logger.debug('mux - mux <-> outgoing TCP/IP client connection to ' +
+        logger.silly('mux - mux <-> outgoing TCP/IP client connection to ' +
           'Android - %s - close',
           peerIdentifier);
         outgoing.end();
@@ -121,21 +121,21 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
       });
 
       outgoing.on('finish', function () {
-        logger.debug('outgoing - mux <-> outgoing TCP/IP client connection ' +
+        logger.silly('outgoing - mux <-> outgoing TCP/IP client connection ' +
           'to Android - %s - finish',
           peerIdentifier);
         mux.end();
       });
 
       outgoing.on('close', function () {
-        logger.debug('outgoing - mux <-> outgoing TCP/IP client connection ' +
+        logger.silly('outgoing - mux <-> outgoing TCP/IP client connection ' +
           'to Android  - %s - close',
           peerIdentifier);
         mux.destroy();
       });
 
       outgoing.on('timeout', function () {
-        logger.debug('outgoing - mux <-> outgoing TCP/IP client connection ' +
+        logger.silly('outgoing - mux <-> outgoing TCP/IP client connection ' +
           'to Android - %s - timeout');
       });
 
@@ -154,7 +154,7 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
 
 function handleConnection(self, listenerOrIncomingConnection, server,
                                  peerIdentifier, resolve, reject) {
-  logger.debug('Creating outgoing connection to native layer for ' +
+  logger.info('Creating outgoing connection to native layer for ' +
     'peerID ' + peerIdentifier);
   var promiseResolved = false;
   var error = null;
@@ -377,7 +377,7 @@ function createPeerListener(self, peerIdentifier) {
       ++incomingConnectionId;
       var localIncomingConnectionId = incomingConnectionId;
 
-      logger.debug('incoming (TCP) - Node TCP/IP client <-> Mux stream' +
+      logger.silly('incoming (TCP) - Node TCP/IP client <-> Mux stream' +
         ' - %s - %d - got a new incoming connection', peerIdentifier,
         localIncomingConnectionId);
       // Handle a new connection from the app to the server
@@ -400,14 +400,14 @@ function createPeerListener(self, peerIdentifier) {
         }
       })
       .on('finish', function () {
-        logger.debug('incoming (TCP) - Node TCP/IP client <-> Mux stream ' +
+        logger.silly('incoming (TCP) - Node TCP/IP client <-> Mux stream ' +
           '- %s - %d - finish', peerIdentifier, localIncomingConnectionId);
         if (incomingStream) {
           incomingStream.destroy();
         }
       })
       .on('close', function () {
-        logger.debug('incoming (TCP) - Node TCP/IP client <-> Mux stream' +
+        logger.silly('incoming (TCP) - Node TCP/IP client <-> Mux stream' +
           ' - %s - %d - close', peerIdentifier, localIncomingConnectionId);
         if (incomingStream) {
           incomingStream.destroy();
@@ -434,13 +434,13 @@ function createPeerListener(self, peerIdentifier) {
             incoming.destroy();
           })
           .on('finish', function () {
-            logger.debug('incomingStream (mux) - Node TCP/IP client <-> ' +
+            logger.silly('incomingStream (mux) - Node TCP/IP client <-> ' +
               'Mux stream - %s - %d - finish', peerIdentifier,
               localIncomingConnectionId);
             incoming.destroy();
           })
           .on('close', function () {
-            logger.debug('incomingStream (mux) - Node TCP/IP client <-> ' +
+            logger.silly('incomingStream (mux) - Node TCP/IP client <-> ' +
               'Mux stream -  %s - %d - close', peerIdentifier,
               localIncomingConnectionId);
             incoming.destroy();
@@ -492,7 +492,7 @@ function createPeerListener(self, peerIdentifier) {
       server.on('connection', onNewConnection);
 
       server.on('close', function onClose() {
-        logger.debug('Closed Node TCP/IP listener (server) for %s',
+        logger.silly('Closed Node TCP/IP listener (server) for %s',
           peerIdentifier);
       });
 
