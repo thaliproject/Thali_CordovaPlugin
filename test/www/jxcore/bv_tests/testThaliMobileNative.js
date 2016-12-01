@@ -187,7 +187,13 @@ function getMessageByLength(socket, lengthOfMessage) {
 function getMessageAndThen(t, socket, messageToReceive, cb) {
   return getMessageByLength(socket, messageToReceive.length)
     .then(function (data) {
-      t.ok(Buffer.compare(messageToReceive, data) === 0, 'Data matches');
+      // This method can be called from a server where other peers are still
+      // sending us requests even though we are done. But if we call 't' after
+      // calling t.end then we get an unexpected event error. So we won't call
+      // t unless there is a problem.
+      if (Buffer.compare(messageToReceive, data) !== 0) {
+        t.fail('Data does not match');
+      }
       return cb();
     })
     .catch(function (err) {

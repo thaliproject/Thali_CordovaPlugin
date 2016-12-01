@@ -57,7 +57,7 @@ function makeIntoCloseAllServer(server, eatNotRunning) {
     // are destroyed because the destroy calls are synchronous.
     try {
       server.close(callback);
-    } catch(err){
+    } catch (err){
       if (!eatNotRunning || !(err instanceof Error) ||
         (err && err.message !== 'Not running')) {
         throw err;

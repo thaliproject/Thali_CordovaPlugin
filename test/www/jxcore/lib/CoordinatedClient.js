@@ -398,7 +398,8 @@ CoordinatedClient.prototype._skipEvent = function (tape, test, event, timeout) {
     );
 }
 
-CoordinatedClient.prototype._processEvent = function (tape, test, event, fun, timeout) {
+CoordinatedClient.prototype._processEvent = function (tape, test, event, fun,
+                                                      timeout) {
   var self = this;
 
   return this._runEvent(event, test)
@@ -568,10 +569,10 @@ CoordinatedClient.prototype.unexpectedResult = function (result) {
     error = result.error;
   }
   logger.error(
-    'unexpected result, error: \'%s\', stack: \'%s\'',
-    String(error), error ? error.stack : null
+    'unexpected result, error: \'%s\', stack: \'%s\', original result: \'%s\'',
+    String(error), error ? error.stack : null, JSON.stringify(result)
   );
   this.emit('unexpected_error', error);
-}
+};
 
 module.exports = CoordinatedClient;
