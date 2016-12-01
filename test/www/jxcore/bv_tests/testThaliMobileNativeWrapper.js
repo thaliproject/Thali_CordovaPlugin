@@ -184,7 +184,16 @@ var pskKey = new Buffer('I am a reasonable long string');
 var testData = 'foobar';
 function trivialEndToEndTest(t, needManualNotify, callback) {
   function pskIdToSecret(id) {
-    t.equal(id, pskIdentity, 'Should only get expected id');
+    // There is a race condition where we could still get an incoming
+    // request even after we think we are done with the test. This will cause
+    // us to do a test but it will be a test called after we called end and
+    // thus causes an unexpected error. To prevent this race condition we will
+    // pre-vet the result and only if it's wrong will we call t.fail. That
+    // way any extraneous connections won't cause us to fail just because we
+    // did a test after we had called end.
+    if (id !== pskIdentity) {
+      t.fail('Should only get expected id');
+    }
     return id === pskIdentity ? pskKey : null;
   }
 
@@ -427,100 +436,121 @@ test('We repeat failedConnection event when we get it from ' +
   }
 );
 
-if (!platform.isMobile) {
-  // This test primarily exists to make sure that we can easily debug the full
-  // connection life cycle from the HTTP client through thaliMobileNativeWrapper
-  // down through the mux layer down to mobile and back up all the way to the
-  // HTTP server we are hosting for the user. Since it is just meant for
-  // debugging it is only intended to be run on a desktop. So this test really
-  // needs to stay not running when we are on mobile.
-  test('can do HTTP requests between peers without coordinator', function (t) {
+// This test primarily exists to make sure that we can easily debug the full
+// connection life cycle from the HTTP client through thaliMobileNativeWrapper
+// down through the mux layer down to mobile and back up all the way to the
+// HTTP server we are hosting for the user. Since it is just meant for
+// debugging it is only intended to be run on a desktop. So this test really
+// needs to stay not running when we are on mobile.
+
+test('can do HTTP requests between peers without coordinator',
+  function() {
+    return platform._isRealMobile;
+  },
+  function (t) {
     trivialEndToEndTest(t, true);
   });
 
-  test('make sure bad PSK connections fail', function (t) {
+test('make sure bad PSK connections fail',
+  function () {
+    // #1587
+    // return platform._isRealMobile;
+    return true;
+  },
+  function (t) {
     //trivialBadEndtoEndTest(t, true);
     // TODO: Re-enable and fix
     t.ok(true, 'FIX ME, PLEASE!!!');
     t.end();
   });
 
-  test('peer changes handled from a queue', function (t) {
+test('peer changes handled from a queue',
+  function () {
+    return platform._isRealMobile;
+  },
+  function (t) {
     thaliMobileNativeWrapper.start(express.Router())
-    .then(function () {
-      var peerAvailabilityHandler;
-      var peerCount = 10;
-      var getDummyPeers = function (peerAvailable) {
-        var dummyPeers = [];
-        for (var i = 1; i <= peerCount; i++) {
-          dummyPeers.push({
-            peerIdentifier: i + '',
-            peerAvailable: peerAvailable
-          });
-        }
-        return dummyPeers;
-      };
-      var endTest = function () {
-        thaliMobileNativeWrapper.emitter.removeListener(
-          'nonTCPPeerAvailabilityChangedEvent',
+      .then(function () {
+        var peerAvailabilityHandler;
+        var peerCount = 10;
+        var getDummyPeers = function (peerAvailable) {
+          var dummyPeers = [];
+          for (var i = 1; i <= peerCount; i++) {
+            dummyPeers.push({
+              peerIdentifier: i + '',
+              peerAvailable: peerAvailable
+            });
+          }
+          return dummyPeers;
+        };
+        var endTest = function () {
+          thaliMobileNativeWrapper.emitter.removeListener(
+            'nonTCPPeerAvailabilityChangedEvent',
+            peerAvailabilityHandler);
+          Mobile.firePeerAvailabilityChanged(getDummyPeers(false));
+          t.end();
+        };
+        var previousPeerNumber = 0;
+        peerAvailabilityHandler = function (peer) {
+          var peerNumber = parseInt(peer.peerIdentifier);
+          if (peerNumber - 1 !== previousPeerNumber) {
+            t.fail('peers should be handled in order');
+            endTest();
+          }
+          previousPeerNumber = peerNumber;
+          if (peerNumber === peerCount) {
+            t.ok(true, 'peers were handled in the right order');
+            endTest();
+          }
+        };
+        thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
           peerAvailabilityHandler);
-        Mobile.firePeerAvailabilityChanged(getDummyPeers(false));
-        t.end();
-      };
-      var previousPeerNumber = 0;
-      peerAvailabilityHandler = function (peer) {
-        var peerNumber = parseInt(peer.peerIdentifier);
-        if (peerNumber - 1 !== previousPeerNumber) {
-          t.fail('peers should be handled in order');
-          endTest();
-        }
-        previousPeerNumber = peerNumber;
-        if (peerNumber === peerCount) {
-          t.ok(true, 'peers were handled in the right order');
-          endTest();
-        }
-      };
-      thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
-        peerAvailabilityHandler);
-      Mobile.firePeerAvailabilityChanged(getDummyPeers(true));
-    });
-  });
-
-  test('relaying discoveryAdvertisingStateUpdateNonTCP', function (t) {
-    thaliMobileNativeWrapper.start(express.Router())
-    .then(function () {
-      thaliMobileNativeWrapper.emitter.once(
-        'discoveryAdvertisingStateUpdateNonTCP',
-        function (discoveryAdvertisingStateUpdateValue) {
-          t.ok(discoveryAdvertisingStateUpdateValue.discoveryActive,
-            'discovery is active');
-          t.ok(discoveryAdvertisingStateUpdateValue.advertisingActive,
-            'advertising is active');
-          t.end();
-        }
-      );
-      Mobile.fireDiscoveryAdvertisingStateUpdateNonTCP({
-        discoveryActive: true,
-        advertisingActive: true
+        Mobile.firePeerAvailabilityChanged(getDummyPeers(true));
       });
-    });
   });
 
-  test('thaliMobileNativeWrapper is stopped when ' +
-    'incomingConnectionToPortNumberFailed is received',
-    function (t) {
-      var routerPort = 0;
-      thaliMobileNativeWrapper.emitter
-        .once('incomingConnectionToPortNumberFailed', function (err) {
-          t.equal(err.reason,
-                  thaliMobileNativeWrapper.routerFailureReason.NATIVE_LISTENER,
-                  'right error reason');
-          t.ok(err.errors.length === 0, 'Stop should be fine');
-          t.equal(err.routerPort, routerPort, 'same port');
-          t.notOk(thaliMobileNativeWrapper._isStarted(), 'we should be off');
-          t.end();
+test('relaying discoveryAdvertisingStateUpdateNonTCP',
+  function() {
+    return platform._isRealMobile;
+  },
+  function (t) {
+    thaliMobileNativeWrapper.start(express.Router())
+      .then(function () {
+        thaliMobileNativeWrapper.emitter.once(
+          'discoveryAdvertisingStateUpdateNonTCP',
+          function (discoveryAdvertisingStateUpdateValue) {
+            t.ok(discoveryAdvertisingStateUpdateValue.discoveryActive,
+              'discovery is active');
+            t.ok(discoveryAdvertisingStateUpdateValue.advertisingActive,
+              'advertising is active');
+            t.end();
+          }
+        );
+        Mobile.fireDiscoveryAdvertisingStateUpdateNonTCP({
+          discoveryActive: true,
+          advertisingActive: true
         });
-      thaliMobileNativeWrapper.start(express.Router())
+      });
+  });
+
+test('thaliMobileNativeWrapper is stopped when ' +
+  'incomingConnectionToPortNumberFailed is received',
+  function () {
+    return platform._isRealMobile;
+  },
+  function (t) {
+    var routerPort = 0;
+    thaliMobileNativeWrapper.emitter
+      .once('incomingConnectionToPortNumberFailed', function (err) {
+        t.equal(err.reason,
+          thaliMobileNativeWrapper.routerFailureReason.NATIVE_LISTENER,
+          'right error reason');
+        t.ok(err.errors.length === 0, 'Stop should be fine');
+        t.equal(err.routerPort, routerPort, 'same port');
+        t.notOk(thaliMobileNativeWrapper._isStarted(), 'we should be off');
+        t.end();
+      });
+    thaliMobileNativeWrapper.start(express.Router())
       .then(function () {
         routerPort = thaliMobileNativeWrapper._getServersManagerLocalPort();
         return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
@@ -528,9 +558,7 @@ if (!platform.isMobile) {
       .then(function () {
         Mobile.fireIncomingConnectionToPortNumberFailed(routerPort);
       });
-    }
-  );
-}
+  });
 
 test('we successfully receive and replay discoveryAdvertisingStateUpdate',
   function (t) {
@@ -617,11 +645,11 @@ var endToEndWithStateCheck = function (t) {
   });
 };
 
-test('can do HTTP requests between peers', function (t) {
+test('can do HTTP requests between peers with coordinator', function (t) {
   endToEndWithStateCheck(t);
 });
 
-test('can still do HTTP requests between peers', function (t) {
+test('can still do HTTP requests between peers with coordinator', function (t) {
   endToEndWithStateCheck(t);
 });
 
