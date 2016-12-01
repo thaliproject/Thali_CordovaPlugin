@@ -254,6 +254,11 @@ test('Can connect to a remote peer', function (t) {
       'Must have listeningPort');
     t.ok(typeof connection.listeningPort === 'number',
       'listeningPort must be a number');
+
+    // A check if any of our old reverse connection or please connect code
+    // is still hiding around.
+    t.ok(connection.listeningPort !== 0, 'listening port should not be 0');
+
     t.end();
   }
 
@@ -344,7 +349,6 @@ test('Can shift large amounts of data', function (t) {
       }
     });
 
-    logger.info('forwardSend');
     sock.write(toSend);
   }
 

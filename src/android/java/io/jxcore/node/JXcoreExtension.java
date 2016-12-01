@@ -5,6 +5,7 @@ package io.jxcore.node;
 import com.test.thalitest.RegisterExecuteUT;
 
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.util.Log;
@@ -45,6 +46,7 @@ public class JXcoreExtension {
     private static final String METHOD_NAME_DID_REGISTER_TO_NATIVE = "didRegisterToNative";
     private static final String METHOD_NAME_MULTICONNECT = "multiConnect";
     private static final String METHOD_NAME_DISCONNECT = "disconnect";
+    private static final String METHOD_NAME_SET_WIFI_RADIO_STATE = "setWifiRadioState";
 
     private static final String EVENT_NAME_PEER_AVAILABILITY_CHANGED = "peerAvailabilityChanged";
     private static final String EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE = "discoveryAdvertisingStateUpdateNonTCP";
@@ -366,6 +368,35 @@ public class JXcoreExtension {
          * Android specific methods start here
          */
 
+        jxcore.RegisterMethod(METHOD_NAME_SET_WIFI_RADIO_STATE, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+                String errorString = null;
+                ArrayList<Object> args = new ArrayList<Object>();
+                if (jxcore.activity.getPackageManager().hasSystemFeature(PackageManager.FEATURE_WIFI)) {
+                    if (params != null && params.size() > 0) {
+                        Object parameterObject = params.get(0);
+                        if (parameterObject instanceof Boolean) {
+                            WifiManager wifiManager = (WifiManager) jxcore.activity.getBaseContext().getSystemService(Context.WIFI_SERVICE);
+                            wifiManager.setWifiEnabled((Boolean) parameterObject);
+                        } else {
+                            errorString = "Required parameter, setRadioTo, is invalid - must be a boolean";
+                        }
+                    } else {
+                        errorString = "Required parameter, setRadioTo, missing";
+                    }
+                } else {
+                    errorString = "Wifi is not enabled";
+                }
+
+                if (errorString != null) {
+                    args.add(errorString);
+                }
+                args.add(null);
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
+
         /**
          * Method for checking whether or not the device supports Bluetooth LE multi advertisement.
          *
@@ -640,8 +671,7 @@ public class JXcoreExtension {
             jsonObject.put(EVENT_VALUE_WIFI, radioStateEnumValueToString(wifiRadioState));
             jsonObject.put(EVENT_VALUE_CELLULAR, radioStateEnumValueToString(cellularRadioState));
             jsonObject.put(EVENT_VALUE_BSSID_NAME, bssidName);
-            jsonObject.put(EVENT_VALUE_SSID_NAME,
-                    ssidName);
+            jsonObject.put(EVENT_VALUE_SSID_NAME, ssidName);
             jsonObjectCreated = true;
         } catch (JSONException e) {
             Log.e(TAG, "notifyNetworkChanged: Failed to populate the JSON object: " + e.getMessage(), e);

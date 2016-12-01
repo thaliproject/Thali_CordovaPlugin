@@ -645,6 +645,14 @@ public class ConnectionHelper
                             + ", data transfer error: " + errorMessage);
                         onDisconnected(who, errorMessage);
                     }
+
+                    @Override
+                    public void onTransferError(SocketThreadBase who, String errorMessage) {
+                        Log.w(TAG, "onTransferError: Outgoing connection, peer "
+                            + who.getPeerProperties().toString()
+                            + ", data transfer error: " + errorMessage);
+                        onDisconnected(who, errorMessage);
+                    }
                 });
         } catch (IOException e) {
             Log.e(TAG, "handleOutgoingConnection: Failed to create an outgoing connection thread instance: " + e.getMessage(), e);

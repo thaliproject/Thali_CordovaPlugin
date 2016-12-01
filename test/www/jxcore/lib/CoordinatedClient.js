@@ -95,19 +95,21 @@ CoordinatedClient.states = {
 };
 
 CoordinatedClient.prototype._bind = function () {
+  this._unexpectedResult = this.unexpectedResult.bind(this);
+
   this._io
-  .on  ('connect',           this._connect.bind(this))
-  .on  ('connect_timeout',   logger.debug.bind(logger))
-  .on  ('connect_error',     this._connectionError.bind(this))
-  .on  ('reconnect',         this._reconnect.bind(this))
-  .on  ('reconnect_error',   this._connectionError.bind(this))
-  .on  ('reconnect_failed',  this._error.bind(this))
-  .once('schedule',          this._schedule.bind(this))
-  .on  ('discard',           this._discard.bind(this))
-  .on  ('disqualify',        this._disqualify.bind(this))
-  .on  ('disconnect',        this._disconnect.bind(this))
-  .on  ('error',             this._error.bind(this))
-  .once('complete',          this._complete.bind(this));
+    .on  ('connect',           this._connect.bind(this))
+    .on  ('connect_timeout',   logger.debug.bind(logger))
+    .on  ('connect_error',     this._connectionError.bind(this))
+    .on  ('reconnect',         this._reconnect.bind(this))
+    .on  ('reconnect_error',   this._connectionError.bind(this))
+    .on  ('reconnect_failed',  this._error.bind(this))
+    .once('schedule',          this._schedule.bind(this))
+    .on  ('discard',           this._discard.bind(this))
+    .on  ('disqualify',        this._disqualify.bind(this))
+    .on  ('disconnect',        this._disconnect.bind(this))
+    .on  ('error',             this._error.bind(this))
+    .once('complete',          this._complete.bind(this));
 };
 
 // We are having similar logic in both connect reconnect
@@ -149,64 +151,122 @@ CoordinatedClient.prototype._schedule = function (data) {
   var testNames = CoordinatedClient.getData(data);
   asserts.arrayEquals(testNames, this._testNames);
 
-  this._emit('schedule_confirmed', data)
-  .then(function () {
-    var promises = self._tests.map(function (test) {
-      return self._scheduleTest(test);
+  var results = [];
+
+  var hadUnexpectedError = false;
+  var lastUnexpectedError;
+  function unexpectedError (error) {
+    hadUnexpectedError  = true;
+    lastUnexpectedError = error;
+    results.push({
+      name:  'unknown',
+      text:  'failed',
+      error: error
     });
-    return Promise.all(promises);
-  })
-  .catch(function (error) {
-    var stack = error ? error.stack : null;
-    logger.error(
-      'unexpected error: \'%s\', stack: \'%s\'',
-      String(error), stack
-    );
-    self._failed(error);
-  });
+  }
+  this.on('unexpected_error', unexpectedError);
+
+  function resolveResults () {
+    var lastFailedResult;
+    results.forEach(function (result) {
+      if (result.text === 'failed') {
+        var error = result.error;
+        logger.info(
+          '***TEST_LOGGER result: failed - %s, error: \'%s\', stack: \'%s\'',
+          result.name, String(error), error? error.stack: ''
+        );
+        lastFailedResult = result;
+      } else {
+        logger.info('***TEST_LOGGER result: %s - %s', result.text, result.name);
+      }
+    });
+
+    if (lastFailedResult) {
+      logger.error('failed to run unit tests, platformName: \'%s\'', self._platform);
+      self._failed(lastFailedResult.error);
+    } else {
+      logger.debug('all unit tests succeeded, platformName: \'%s\'', self._platform);
+    }
+  }
+
+  this._emit('schedule_confirmed', data)
+    .then(function () {
+      return Promise.all(
+        self._tests.map(function (test) {
+          return self._scheduleTest(test)
+            .then(function () {
+              results.push({
+                name: test.name,
+                text: 'passed'
+              });
+            })
+            .catch(function (error) {
+              if (error.message === 'skipped') {
+                results.push({
+                  name: test.name,
+                  text: 'skipped'
+                });
+              } else {
+                results.push({
+                  name:  test.name,
+                  text:  'failed',
+                  error: error
+                });
+                return Promise.reject(error);
+              }
+            });
+        })
+      );
+    })
+    .then(function () {
+      if (hadUnexpectedError) {
+        return Promise.reject(lastUnexpectedError);
+      }
+      self.removeListener('unexpected_error', unexpectedError);
+    })
+    .then(resolveResults)
+    .catch(resolveResults);
 };
 
 CoordinatedClient.prototype._discard = function (data) {
-  var self = this;
-
   this._emit('discard_confirmed', data)
-  .then(function () {
-    logger.debug('device discarded as surplus from the test server');
-  });
+    .then(function () {
+      logger.debug('device discarded as surplus from the test server');
+    });
 
   // We are waiting for 'disconnect' event.
-  self._state = CoordinatedClient.states.completed;
+  this._state = CoordinatedClient.states.completed;
 };
 
 CoordinatedClient.prototype._disqualify = function (data) {
   var self = this;
 
   this._emit('disqualify_confirmed', data)
-  .then(function () {
-    if (data) {
-      var errorText = CoordinatedClient.getData(data);
-      logger.error('device disqualified from the test server, reason: \'%s\'',
-        errorText);
-      self._failed(new Error(
-        'Test client failed: ' + errorText
-      ));
-      return;
-    }
-    logger.debug('device disqualified from the test server');
-
-    return testUtils.returnsValidNetworkStatus()
-    .then(function (validStatus) {
-      if (!validStatus) {
+    .then(function () {
+      if (data) {
+        var errorText = CoordinatedClient.getData(data);
+        logger.error('device disqualified from the test server, reason: \'%s\'',
+          errorText);
         self._failed(new Error(
-          'test client failed, network status is not valid'
+          'Test client failed: ' + errorText
         ));
+        return;
       }
+      logger.debug('device disqualified from the test server');
+
+      return testUtils.returnsValidNetworkStatus()
+        .then(function (validStatus) {
+          if (!validStatus) {
+            self._failed(new Error(
+              'test client failed, network status is not valid'
+            ));
+          }
+        });
     });
-  });
 
   if (!data) {
     // We are waiting for 'disconnect' event.
-    self._state = CoordinatedClient.states.completed;
+    this._state = CoordinatedClient.states.completed;
   }
 };
 
@@ -240,15 +300,13 @@ CoordinatedClient.prototype._connectionError = function (error) {
 };
 
 CoordinatedClient.prototype._complete = function (data) {
-  var self = this;
-
   this._emit('complete_confirmed', data)
   .then(function () {
     logger.debug('all tests completed');
   });
 
   // We are waiting for 'disconnect' event.
-  self._state = CoordinatedClient.states.completed;
+  this._state = CoordinatedClient.states.completed;
 };
 
 CoordinatedClient.prototype._succeed = function () {
@@ -292,42 +350,43 @@ CoordinatedClient.prototype._emit = function (event, data, externalOptions) {
     }
     emit();
   })
-  .catch(function (error) {
-    var stack = error ? error.stack : null;
-    logger.error(
-      'unexpected error: \'%s\', stack: \'%s\'',
-      String(error), stack
-    );
-    return Promise.reject(error);
-  })
-  .finally(function () {
-    clearTimeout(timeout);
-  });
+    .catch(function (error) {
+      var stack = error ? error.stack : null;
+      logger.error(
+        'unexpected error: \'%s\', stack: \'%s\'',
+        String(error), stack
+      );
+      return Promise.reject(error);
+    })
+    .finally(function () {
+      clearTimeout(timeout);
+    });
 };
 
-CoordinatedClient.prototype._scheduleTest = function (test) {
+CoordinatedClient.prototype._runEvent = function (event, test) {
   var self = this;
 
-  function runEvent (event) {
-    return new Promise(function (resolve, reject) {
-      self._io.once(event, function (data) {
-        self._emit(event + '_confirmed', data, test.options)
+  return new Promise(function (resolve, reject) {
+    self._io.once(event, function (data) {
+      self._emit(event + '_confirmed', data, test.options)
         .then(function () {
           resolve(CoordinatedClient.getData(data));
         })
         .catch(reject);
-      });
     });
-  }
+  });
+}
 
-  function skipEvent (tape, event, timeout) {
-    return runEvent(event)
+CoordinatedClient.prototype._skipEvent = function (tape, test, event, timeout) {
+  var self = this;
+
+  return this._runEvent(event, test)
     .then(function () {
       return new Promise(function (resolve, reject) {
         tape.once('end', function () {
           self._emit(event + '_skipped', undefined, test.options)
-          .then(resolve)
-          .catch(reject);
+            .then(resolve)
+            .catch(reject);
         });
         tape.end();
       });
@@ -336,10 +395,13 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
       timeout,
       format('timeout exceed while skipping test: \'%s\'', test.name)
     );
-  }
+}
 
-  function processEvent(tape, event, fun, timeout) {
-    return runEvent(event)
+CoordinatedClient.prototype._processEvent = function (tape, test, event, fun,
+                                                      timeout) {
+  var self = this;
+
+  return this._runEvent(event, test)
     .then(function (parsedData) {
       // Only for testing purposes.
       if (parsedData) {
@@ -360,11 +422,15 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
           }
         };
         tape.on('result', resultHandler);
+        tape.removeListener('result', self._unexpectedResult);
 
         endHandler = function () {
           tape.removeListener('result', resultHandler);
           resultHandler = null;
           endHandler    = null;
+
+          // This listener will inspect unexpected results forever.
+          tape.on('result', self._unexpectedResult);
 
           self._emit(
             event + '_finished',
@@ -403,41 +469,49 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
       timeout,
       format('timeout exceed while processing test: \'%s\'', test.name)
     );
+}
+
+CoordinatedClient.prototype._sync = function (tape, test, timeout) {
+  var self = this;
+
+  // returns something like 'at file:lineNumber'.
+  function getCaller (level) {
+    var traces = (new Error()).stack.split('\n');
+    assert(
+      traces.length > level,
+      format('stack should have a least %d lines', level + 1)
+    );
+    return traces[level].trim();
   }
+  var callerId = getCaller(3);
 
-  function sync (tape, timeout) {
-    // returns something like 'at file:lineNumber'.
-    function getCaller (level) {
-      var traces = (new Error()).stack.split('\n');
-      assert(
-        traces.length > level,
-        format('stack should have a least %d lines', level + 1)
-      );
-      return traces[level].trim();
-    }
-    var callerId = getCaller(3);
-
-    return self._emit('sync', callerId, test.options)
+  return this._emit('sync', callerId, test.options)
     .then(function () {
-      return runEvent('syncFinished');
+      return self._runEvent('syncFinished', test);
     })
     .timeout(
       timeout,
       format('timeout exceed while syncing test: \'%s\'', test.name)
     );
-  }
+}
+
+CoordinatedClient.prototype._scheduleTest = function (test) {
+  var self = this;
+
+  // Test was skipped.
+  var skipped = false;
 
   return new Promise(function (resolve, reject) {
     tape('setup', function (tape) {
-      tape.sync = sync.bind(undefined, tape, test.options.setupTimeout);
+      tape.sync = self._sync.bind(self, tape, test, test.options.setupTimeout);
 
-      processEvent(tape, 'setup_' + test.name, test.options.setup,
+      self._processEvent(tape, test, 'setup_' + test.name, test.options.setup,
         test.options.setupTimeout)
-      .catch(reject);
+        .catch(reject);
     });
 
     tape(test.name, function (tape) {
-      tape.sync = sync.bind(undefined, tape, test.options.testTimeout);
+      tape.sync = self._sync.bind(self, tape, test, test.options.testTimeout);
 
       Promise.try(function () {
         if (test.canBeSkipped) {
@@ -446,27 +520,35 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
           return false;
         }
       })
-      .then(function (canBeSkipped) {
-        if (canBeSkipped) {
-          logger.info('test was skipped, name: \'%s\'', test.name);
-          return skipEvent(tape, 'run_' + test.name, test.options.testTimeout);
-        } else {
-          return processEvent(tape, 'run_' + test.name, test.fun,
-            test.options.testTimeout);
-        }
-      })
-      .catch(reject);
+        .then(function (canBeSkipped) {
+          if (canBeSkipped) {
+            logger.debug('test was skipped, name: \'%s\'', test.name);
+            skipped = true;
+            return self._skipEvent(tape, test, 'run_' + test.name, test.options.testTimeout);
+          } else {
+            return self._processEvent(tape, test, 'run_' + test.name, test.fun,
+              test.options.testTimeout);
+          }
+        })
+        .catch(reject);
     });
 
     tape('teardown', function (tape) {
-      tape.sync = sync.bind(undefined, tape, test.options.teardownTimeout);
+      tape.sync = self._sync.bind(self, tape, test, test.options.teardownTimeout);
 
-      processEvent(tape, 'teardown_' + test.name, test.options.teardown,
+      self._processEvent(tape, test, 'teardown_' + test.name, test.options.teardown,
         test.options.teardownTimeout)
-      // We should exit after test teardown.
-      .then(resolve)
-      .catch(reject);
+        // We should exit after test teardown.
+        .then(resolve)
+        .catch(reject);
     });
+  })
+  .then(function () {
+    if (skipped) {
+      return Promise.reject(
+        new Error('skipped')
+      );
+    }
   });
 };
 
@@ -477,6 +559,20 @@ CoordinatedClient.getData = function (data) {
     'we should have a valid uuid.v4'
   );
   return data.content;
+};
+
+CoordinatedClient.prototype.unexpectedResult = function (result) {
+  var error;
+  if (result.ok) {
+    error = new Error();
+  } else {
+    error = result.error;
+  }
+  logger.error(
+    'unexpected result, error: \'%s\', stack: \'%s\', original result: \'%s\'',
+    String(error), error ? error.stack : null, JSON.stringify(result)
+  );
+  this.emit('unexpected_error', error);
 };
 
 module.exports = CoordinatedClient;
