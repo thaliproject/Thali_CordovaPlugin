@@ -661,6 +661,7 @@ module.exports._multiConnect = function (peerIdentifier) {
             '_multiConnectResolved', callback);
 
           if (error) {
+            handleFailedNativeConnectionMPCF(peerIdentifier);
             return reject(new Error(error));
           }
 
@@ -668,6 +669,9 @@ module.exports._multiConnect = function (peerIdentifier) {
         }
       );
     });
+  })
+  .catch(function () {
+    handleFailedNativeConnectionMPCF(peerIdentifier);
   });
 };
 
@@ -736,7 +740,7 @@ module.exports._disconnect = function (peerIdentifier) {
  * reject with an Error will be returned) the response will be a resolve with
  * a null result.
  */
-module.exports.disconnect = function(peerIdentifier, portNumber) {
+module.exports.disconnect = function (peerIdentifier, portNumber) {
   if (platform.isAndroid) {
     return this._terminateListener(peerIdentifier, portNumber);
   }
@@ -765,7 +769,7 @@ module.exports.disconnect = function(peerIdentifier, portNumber) {
  * @param {number} port
  * @returns {Promise<?error>}
  */
-module.exports.terminateListener = function (peerIdentifier, port) {
+module.exports._terminateListener = function (peerIdentifier, port) {
   if (platform.isIOS) {
     return Promise.reject(new Error('Not connect platform'));
   }
@@ -1012,6 +1016,29 @@ function getPeerPort(peer) {
   }
 }
 
+var handleFailedNativeConnectionMPCF = function (peerIdentifier) {
+  var peerUnavailable = {
+    peerIdentifier: peerIdentifier,
+    peerAvailable: false,
+    portNumber: null,
+    recreated: true
+  };
+
+  handlePeerAvailabilityChanged(peerUnavailable);
+
+  var generation = peerGenerations[peerIdentifier];
+
+  var peerAvailable = {
+    peerIdentifier: peerIdentifier,
+    peerAvailable: true,
+    generation: generation,
+    portNumber: null,
+    recreated: true
+  };
+
+  handlePeerAvailabilityChanged(peerAvailable);
+};
+
 // jscs:disable maximumLineLength
 /**
  * This is used whenever discovery or advertising starts or stops. Since it's
@@ -1176,11 +1203,14 @@ module.exports._registerToNative = function () {
         connectionType: connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK
       };
       module.exports.emitter.emit('failedNativeConnection', event);
-  });
+      handleFailedNativeConnectionMPCF(failedConnection.peerIdentifier);
+    }
+  );
 
   registerToNative('incomingConnectionToPortNumberFailed',
     function (portNumber) {
-      logger.info('incomingConnectionToPortNumberFailed: %s', JSON.stringify(portNumber));
+      logger.info('incomingConnectionToPortNumberFailed: %s',
+        JSON.stringify(portNumber));
 
       if (!states.started) {
         logger.info('got incomingConnectionToPortNumberFailed while not in ' +
