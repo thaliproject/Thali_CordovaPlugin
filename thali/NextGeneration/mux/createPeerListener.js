@@ -27,7 +27,7 @@ function closeServer(self, server, failedConnectionErr, canRetry)
   server._mux = null;
   delete self._peerServers[server._peerIdentifier];
   if (failedConnectionErr) {
-    logger.error('We are emitting failedConnection with error "%s" and ' +
+    logger.debug('We are emitting failedConnection with error "%s" and ' +
       'peerIdentifier "%s"', failedConnectionErr, server._peerIdentifier);
     self.emit('failedConnection', {
       error: failedConnectionErr,
@@ -82,7 +82,7 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
       });
 
       mux.on('error', function (err) {
-        logger.error('mux - mux <-> outgoing TCP/IP client connection to ' +
+        logger.debug('mux - mux <-> outgoing TCP/IP client connection to ' +
           'Android - %s - err %s',
             peerIdentifier, err);
         outgoing.destroy();
@@ -154,7 +154,7 @@ function multiplexToNativeListener(self, listenerOrIncomingConnection, server,
 
 function handleConnection(self, listenerOrIncomingConnection, server,
                                  peerIdentifier, resolve, reject) {
-  logger.info('Creating outgoing connection to native layer for ' +
+  logger.debug('Creating outgoing connection to native layer for ' +
     'peerID ' + peerIdentifier);
   var promiseResolved = false;
   var error = null;

@@ -766,6 +766,7 @@ test('We provide notification when a listener dies and we recreate it',
 test('We fire nonTCPPeerAvailabilityChangedEvent with the same generation ' +
   'and different port when listener is recreated',
   function () {
+    // #1597
     // FIXME: it looks like this test expects native layer to repeat
     // peerAvailabilityChanged events but it doesn't work this way anymore
     return true;

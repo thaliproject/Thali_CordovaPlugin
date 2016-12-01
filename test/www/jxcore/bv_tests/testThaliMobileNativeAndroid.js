@@ -226,6 +226,7 @@ function killRemote(t, end) {
 test('#startUpdateAdvertisingAndListening - ending remote peers connection ' +
 'kills the local connection',
 function () {
+  // #1231 & #1374
   // FIXME: requires connection retries
   return true;
 },
@@ -236,6 +237,7 @@ function (t) {
 test('#startUpdateAdvertisingAndListening - destroying remote peers ' +
 'connection kills the local connection',
 function () {
+  // #1231 & #1374
   // FIXME: requires connection retries
   return true;
 },

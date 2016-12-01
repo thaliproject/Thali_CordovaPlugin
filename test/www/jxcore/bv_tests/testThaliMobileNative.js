@@ -819,6 +819,7 @@ function setUpPretendLocalMux() {
 
 test('Test updating advertising and parallel data transfer',
 function () {
+  // #984
   // FIXME: fails on 3 devices
   return true;
 },

@@ -116,6 +116,7 @@ var peersFromPreviousTest;
 
 test('initial peer discovery',
 function () {
+  // #1377 & #1520
   // FIXME: It looks like this test has race conditions so we end up discovering
   // the same peer with different generation in one test.
   return true;
@@ -178,6 +179,7 @@ function (t) {
 
   test('update peer discovery ' + (testIndex + 1),
   function () {
+    // #1377 & #1520
     // FIXME: It looks like this test has race conditions so we end up
     // discovering the same peer with different generation in one test.
     return true;
@@ -232,6 +234,7 @@ function (t) {
 });
 
 test('check latest peer discovery', function() {
+    // #1377 & #1520
     // FIXME: It looks like this test has race conditions so we end up
     // discovering the same peer with different generation in one test.
     return true;
@@ -296,6 +299,7 @@ test('check latest peer discovery', function() {
 
 test('Set up for no peer discovery test',
   function () {
+    // #1377 & #1520
     // FIXME: It looks like this test has race conditions so we end up
     // discovering the same peer with different generation in one test.
     return true;
@@ -315,6 +319,7 @@ test('Set up for no peer discovery test',
 
 test('no peer discovery',
   function () {
+    // #1377 & #1520
     // FIXME: It looks like this test has race conditions so we end up
     // discovering the same peer with different generation in one test.
     return true;
