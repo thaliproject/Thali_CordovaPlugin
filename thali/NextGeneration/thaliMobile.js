@@ -450,7 +450,7 @@ var PeerHostInfo = function (peer) {
  * transport types available to us.
  * @returns {Promise<peerHostInfo | Error>}
  */
-module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
+module.exports.getPeerHostInfo = function (peerIdentifier, connectionType) {
   var peersByConnectionType = peerAvailabilities[connectionType];
   if (!peersByConnectionType) {
     return Promise.reject(new Error('Unsupported connection type ' +
@@ -464,7 +464,8 @@ module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
 
   var getPeerHostInfo = getPeerHostInfoStrategies[connectionType];
   if (!getPeerHostInfo) {
-    return Promise.reject(new Error('getPeerHostInfo is not implemented for ' + connectionType));
+    return Promise.reject(new Error('getPeerHostInfo is not implemented for ' +
+      connectionType));
   }
 
   return getPeerHostInfo(peer);
@@ -1042,13 +1043,18 @@ var handlePeer = function (peer) {
 };
 
 var handleRecreatedPeer = function (nativePeer) {
+  var connectionType =
+    platform.isAndroid ?
+    connectionTypes.BLUETOOTH :
+    connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK;
+
   var cachedPeer =
-    peerAvailabilities[connectionTypes.BLUETOOTH][nativePeer.peerIdentifier];
+    peerAvailabilities[connectionType][nativePeer.peerIdentifier];
 
   if (cachedPeer) {
     var peerStatus = {
       peerIdentifier: nativePeer.peerIdentifier,
-      connectionType: connectionTypes.BLUETOOTH,
+      connectionType: connectionType,
       peerAvailable: nativePeer.peerAvailable,
       generation: nativePeer.generation,
       newAddressPort: nativePeer.peerAvailable ? false : null
@@ -1397,7 +1403,8 @@ var handleNetworkChangedNonTCP = function (networkChangedValue) {
 };
 
 var handleNetworkChangedWifi = function (networkChangedValue) {
-  logger.warn('networkChangedWifi should not be fired because it is not implemented');
+  logger.warn('networkChangedWifi should not be ' +
+    'fired because it is not implemented');
   handleNetworkChangedNonTCP(networkChangedValue);
 };
 

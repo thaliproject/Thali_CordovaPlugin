@@ -426,7 +426,7 @@ test('make sure terminateConnection is return error if we get called on iOS',
 test('make sure terminateListener is properly hooked up',
   testUtils.skipOnIOS,
   function (t) {
-    verifyCallWithArguments(t, 'terminateListener', ['peer-id', 8080]);
+    verifyCallWithArguments(t, '_terminateListener', ['peer-id', 8080]);
   }
 );
 
@@ -435,7 +435,7 @@ test('make sure terminateListener is return error if we get called on iOS',
   function (t) {
     var error = 'Not connect platform';
 
-    thaliMobileNativeWrapper.terminateListener()
+    thaliMobileNativeWrapper._terminateListener()
     .then(function() {
       t.fail('should not succeed on iOS');
       t.end();
@@ -579,11 +579,83 @@ test('We fire failedNativeConnection event when we get failedConnection from ' +
   }
 );
 
-test('can do HTTP requests between peers without coordinator',
+test('We fire nonTCPPeerAvailabilityChangedEvent event when we get ' +
+  'failedConnection from multiConnectConnection',
   function() {
     return platform._isRealMobile;
   },
   function (t) {
+    thaliMobileNativeWrapper.start(express.Router())
+    .then(function () {
+      var peerIdentifier = 'some-identifier';
+      var callCounter = 0;
+      var peer = {
+        peerIdentifier: peerIdentifier,
+        peerAvailable: true,
+        generation: 5,
+        portNumber: null
+      }
+
+      var peerAvailabilityHandler = function (peer) {
+        ++callCounter;
+
+        switch (callCounter) {
+          case 1: {
+            t.equal(peer.peerIdentifier, peerIdentifier, 'peerIds match');
+            Mobile.fireMultiConnectConnectionFailure({
+              peerIdentifier: peerIdentifier
+            });
+            return;
+          }
+          case 2: {
+            t.equal(peer.peerIdentifier, peerIdentifier, 'peerIds match');
+            t.equal(peer.peerAvailable, false, 'peer is unavailable');
+            return;
+          }
+          case 3: {
+            t.equal(peer.peerIdentifier, peerIdentifier, 'peerIds match');
+            t.equal(peer.peerAvailable, true, 'peer should be available');
+            return cleanUp();
+          }
+        }
+      }
+
+      var cleanUpCalled = false;
+
+      function cleanUp() {
+        if (cleanUpCalled) {
+          return;
+        }
+        cleanUpCalled = true;
+        thaliMobileNativeWrapper.emitter.removeListener(
+          'nonTCPPeerAvailabilityChangedEvent', peerAvailabilityHandler);
+        t.end();
+      }
+
+      thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
+        peerAvailabilityHandler);
+
+      thaliMobileNativeWrapper._handlePeerAvailabilityChanged(peer);
+    });
+  }
+);
+
+test('We fire nonTCPPeerAvailabilityChangedEvent event when we get ' +
+  'fail from _multiConnectResolved',
+  function (t) {
+    t.skip('NOT IMPLEMENTED');
+    t.end();
+  }
+);
+
+if (!platform._isRealMobile) {
+  // This test primarily exists to make sure that we can easily debug the full
+  // connection life cycle from the HTTP client through thaliMobileNativeWrapper
+  // down through the mux layer down to mobile and back up all the way to the
+  // HTTP server we are hosting for the user. Since it is just meant for
+  // debugging it is only intended to be run on a desktop. So this test really
+  // needs to stay not running when we are on mobile.
+  test('can do HTTP requests between peers without coordinator', function (t) {
     trivialEndToEndTest(t, true);
   });
 
