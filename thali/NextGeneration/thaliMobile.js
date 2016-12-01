@@ -201,7 +201,7 @@ module.exports.start = function (router, pskIdToSecret, networkType) {
 
 module.exports.isStarted = function () {
   return thaliMobileStates.started;
-}
+};
 
 /**
  * This calls stop on both stacks even if start failed.
@@ -362,19 +362,22 @@ module.exports.getNetworkStatus = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
     switch (networkType) {
       case networkTypes.NATIVE:
-      case networkTypes.BOTH:
+      case networkTypes.BOTH: {
         ThaliMobileNativeWrapper.getNonTCPNetworkStatus()
-            .then(resolve)
-            .catch(reject);
+          .then(resolve)
+          .catch(reject);
         break;
-      case networkTypes.WIFI:
+      }
+      case networkTypes.WIFI: {
         thaliWifiInfrastructure.getNetworkStatus()
           .then(resolve)
           .catch(reject);
         break;
-      default:
-        throw new Error('Unable to execute getNetworkStatus with ' +
-          'network type ' + networkType);
+      }
+      default: {
+        reject(new Error('Unable to execute getNetworkStatus with ' +
+          'network type ' + networkType));
+      }
     }
   });
 };

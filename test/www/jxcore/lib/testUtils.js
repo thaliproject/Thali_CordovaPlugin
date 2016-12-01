@@ -81,32 +81,29 @@ var ensureNetwork = function (type, toggle, value) {
 
       // We will wait until network status will reach required 'value'.
       // We need to start ThaliMobile to receive 'networkChanged' event.
-      // We can't use Mobile('networkChanged').registerToNative here because it can replace existing listener.
-      var promise;
+      // We can't use Mobile('networkChanged').registerToNative here because it
+      // can replace existing listener.
       var isStarted = ThaliMobile.isStarted();
-      if (isStarted) {
-        promise = Promise.resolve();
-      } else {
-        promise = ThaliMobile.start(express.Router());
-      }
-
-      return promise.then(function () {
-        return new Promise(function (resolve) {
-          function networkChangedHandler (networkStatus) {
-            if (networkStatus[type] === valueString) {
-              ThaliMobile.emitter.removeListener('networkChanged', networkChangedHandler);
-              resolve();
-            } else {
-              logger.warn(
-                'we are %s %s network, but it don\'t want to obey',
-                value? 'enabling' : 'disabling', type
-              );
+      return (ThaliMobile.isStarted() ? Promise.resolve() :
+          ThaliMobile.start(express.Router()))
+        .then(function () {
+          return new Promise(function (resolve) {
+            function networkChangedHandler (networkStatus) {
+              if (networkStatus[type] === valueString) {
+                ThaliMobile.emitter.removeListener('networkChanged',
+                  networkChangedHandler);
+                resolve();
+              } else {
+                logger.warn(
+                  'we are %s %s network, but it don\'t want to obey',
+                  value? 'enabling' : 'disabling', type
+                );
+              }
             }
-          }
-          ThaliMobile.emitter.on('networkChanged', networkChangedHandler);
-          toggle(value);
-        });
-      })
+            ThaliMobile.emitter.on('networkChanged', networkChangedHandler);
+            toggle(value);
+          });
+        })
 
       .then(function () {
         if (!isStarted) {

@@ -375,12 +375,12 @@ CoordinatedClient.prototype._runEvent = function (event, test) {
         .catch(reject);
     });
   });
-}
+};
 
 CoordinatedClient.prototype._skipEvent = function (tape, test, event, timeout) {
   var self = this;
 
-  return this._runEvent(event, test)
+  return self._runEvent(event, test)
     .then(function () {
       return new Promise(function (resolve, reject) {
         tape.once('end', function () {
@@ -395,13 +395,13 @@ CoordinatedClient.prototype._skipEvent = function (tape, test, event, timeout) {
       timeout,
       format('timeout exceed while skipping test: \'%s\'', test.name)
     );
-}
+};
 
 CoordinatedClient.prototype._processEvent = function (tape, test, event, fun,
                                                       timeout) {
   var self = this;
 
-  return this._runEvent(event, test)
+  return self._runEvent(event, test)
     .then(function (parsedData) {
       // Only for testing purposes.
       if (parsedData) {
@@ -485,7 +485,7 @@ CoordinatedClient.prototype._sync = function (tape, test, timeout) {
   }
   var callerId = getCaller(3);
 
-  return this._emit('sync', callerId, test.options)
+  return self._emit('sync', callerId, test.options)
     .then(function () {
       return self._runEvent('syncFinished', test);
     })

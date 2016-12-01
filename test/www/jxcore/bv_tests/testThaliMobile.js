@@ -1508,47 +1508,51 @@ test('#disconnect delegates native peers to the native wrapper',
   }
 );
 
-test('network changes emitted correctly', function (t) {
-  testUtils.ensureWifi(true)
-    .then(function () {
-      return ThaliMobile.start(express.Router());
-    })
-    .then(function () {
-      return new Promise(function (resolve) {
-        function networkChangedHandler (networkStatus) {
-          t.equals(networkStatus.wifi, 'off', 'wifi should be off');
-          t.equals(networkStatus.bssidName, null, 'bssid should be null');
-          t.equals(networkStatus.ssidName,  null, 'ssid should be null');
-          resolve();
-        }
-        ThaliMobile.emitter.once('networkChanged', networkChangedHandler);
-        testUtils.toggleWifi(false);
+test('network changes emitted correctly',
+  function () {
+    return !platform.isAndroid;
+  },
+  function (t) {
+    testUtils.ensureWifi(true)
+      .then(function () {
+        return ThaliMobile.start(express.Router());
+      })
+      .then(function () {
+        return new Promise(function (resolve) {
+          function networkChangedHandler (networkStatus) {
+            t.equals(networkStatus.wifi, 'off', 'wifi should be off');
+            t.equals(networkStatus.bssidName, null, 'bssid should be null');
+            t.equals(networkStatus.ssidName,  null, 'ssid should be null');
+            resolve();
+          }
+          ThaliMobile.emitter.once('networkChanged', networkChangedHandler);
+          testUtils.toggleWifi(false);
+        });
+      })
+      .then(function () {
+        return new Promise(function (resolve) {
+          function networkChangedHandler (networkStatus) {
+            t.equals(networkStatus.wifi, 'on', 'wifi should be on');
+            t.ok(
+              testUtils.validateBSSID(networkStatus.bssidName),
+              'bssid should be valid'
+            );
+            t.ok(
+              networkStatus.ssidName && networkStatus.ssidName.length > 0,
+              'ssid should exist'
+            );
+            resolve();
+          }
+          ThaliMobile.emitter.once('networkChanged', networkChangedHandler);
+          testUtils.toggleWifi(true);
+        });
+      })
+      .then(function () {
+        return testUtils.ensureWifi(true);
+      })
+      .then(function () {
+        t.end();
       });
-    })
-    .then(function () {
-      return new Promise(function (resolve) {
-        function networkChangedHandler (networkStatus) {
-          t.equals(networkStatus.wifi, 'on', 'wifi should be on');
-          t.ok(
-            testUtils.validateBSSID(networkStatus.bssidName),
-            'bssid should be valid'
-          );
-          t.ok(
-            networkStatus.ssidName && networkStatus.ssidName.length > 0,
-            'ssid should exist'
-          );
-          resolve();
-        }
-        ThaliMobile.emitter.once('networkChanged', networkChangedHandler);
-        testUtils.toggleWifi(true);
-      });
-    })
-    .then(function () {
-      return testUtils.ensureWifi(true);
-    })
-    .then(function () {
-      t.end();
-    });
   });
 
 function noNetworkChanged (t, toggle) {
@@ -1576,16 +1580,16 @@ test('network changes not emitted in started state',
     return !platform.isAndroid;
   },
   function (t) {
-  testUtils.ensureWifi(true)
-    .then(function () {
-      return noNetworkChanged(t, function () {
-        return testUtils.toggleWifi(true);
+    testUtils.ensureWifi(true)
+      .then(function () {
+        return noNetworkChanged(t, function () {
+          return testUtils.toggleWifi(true);
+        });
+      })
+      .then(function () {
+        t.end();
       });
-    })
-    .then(function () {
-      t.end();
-    });
-});
+  });
 
 test('network changes not emitted in stopped state',
   function () {
@@ -1657,7 +1661,7 @@ test('calls correct starts when network changes',
         ThaliMobile.startUpdateAdvertisingAndListening.restore();
         t.end();
       });
-  }
+  };
 
   ThaliMobile.start(express.Router())
     .then(function () {
@@ -2297,46 +2301,6 @@ test('test for data corruption',
     });
   }
 );
-        return numberOfParallelRequests(t, peer.hostAddress, peer.portNumber,
-          echoPath, pskIdentity, pskKey)
-        .then(function () {
-          logger.debug('Got back from parallel requests - ' + uuid);
-          participantsState[uuid] = participantState.finished;
-          areWeDone = Object.getOwnPropertyNames(participantsState)
-            .every(
-              function (participant) {
-                return participantsState[participant] ===
-                  participantState.finished;
-              });
-          if (areWeDone) {
-            t.ok(true, 'received all uuids');
-            done();
-          }
-          return false;
-        });
-      })
-      .catch(function (error) {
-        logger.debug('Got an error on HTTP requests: ' + error);
-        return true;
-      })
-      .then(function (isError) {
-        if (areWeDone) {
-          return resolve(null);
-        }
-        ThaliMobileNativeWrapper._getServersManager()
-          .terminateOutgoingConnection(peer.peerIdentifier, peer.portNumber);
-        // We have to give Android enough time to notice the killed connection
-        // and recycle everything
-        setTimeout(function () {
-          if (isError) {
-            participantsState[uuid] = participantState.notRunning;
-          }
-          return resolve(null);
-        }, 1000);
-      });
-    });
-  });
-});
 
 test('Discovered peer should be removed if no availability updates ' +
   'were received during availability timeout', function (t) {

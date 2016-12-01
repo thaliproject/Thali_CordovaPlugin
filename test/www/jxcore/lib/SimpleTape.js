@@ -109,7 +109,7 @@ SimpleThaliTape.prototype._processResult = function (tape, test, timeout) {
   tape.sync = function () {
     // noop
     return Promise.resolve();
-  }
+  };
 
   var resultHandler;
   var endHandler;
@@ -277,7 +277,7 @@ SimpleThaliTape.prototype._begin = function () {
     results: results,
     promise: promise
   };
-}
+};
 
 SimpleThaliTape.prototype.unexpectedResult = function (result) {
   var error;
@@ -291,18 +291,19 @@ SimpleThaliTape.prototype.unexpectedResult = function (result) {
     String(error), error ? error.stack : null
   );
   this.emit('unexpected_error', error);
-}
+};
 
 // We will run 'begin' on all 'SimpleThaliTape' instances.
 SimpleThaliTape.instances = [];
 
 SimpleThaliTape.prototype._resolveInstance = function () {
   SimpleThaliTape.instances.push(this);
-}
+};
 
-// Note that version, hasRequiredHardware and nativeUTFailed fields are not used and are added
-// here for consistency with CoordinatedTape
-SimpleThaliTape.begin = function (platform, version, hasRequiredHardware, nativeUTFailed) {
+// Note that version, hasRequiredHardware and nativeUTFailed fields are not used
+// and are added here for consistency with CoordinatedTape
+SimpleThaliTape.begin = function (platform, version, hasRequiredHardware,
+                                  nativeUTFailed) {
   var thaliTapes = SimpleThaliTape.instances;
   SimpleThaliTape.instances = [];
 

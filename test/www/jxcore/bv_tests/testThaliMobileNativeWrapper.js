@@ -556,8 +556,7 @@ test('thaliMobileNativeWrapper is stopped when ' +
       .then(function () {
         Mobile.fireIncomingConnectionToPortNumberFailed(routerPort);
       });
-  }
-);
+  });
 
 test('we successfully receive and replay discoveryAdvertisingStateUpdate',
   function (t) {
