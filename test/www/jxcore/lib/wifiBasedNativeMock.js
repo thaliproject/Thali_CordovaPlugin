@@ -1062,15 +1062,12 @@ var doToggle = function (setting, property, callback) {
       networkChangedCallback(statusSnapshot);
     });
   }
-  setImmediate(callback);
+  return setImmediate(callback);
 };
 
 // jscs:disable jsDoc
 /**
  * This simulates turning Bluetooth on and off.
- *
- * If we are emulating Android then we MUST start with Bluetooth and WiFi
- * turned off.
  *
  * __Open Issue:__ I believe that JXCore will treat this as a NOOP if called
  * on iOS. We need to check and emulate their behavior.
@@ -1082,6 +1079,9 @@ var doToggle = function (setting, property, callback) {
 // jscs:enable jsDoc
 function toggleBluetooth () {
   return function (setting, callback) {
+    if (platform.isIOS) {
+      callback(new Error('toggleBluetooth not supported on iOS'));
+    }
     doToggle(setting, 'bluetooth', callback);
   };
 }

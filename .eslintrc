@@ -24,7 +24,13 @@
     ],
     "no-irregular-whitespace": 2,
     "guard-for-in": 2,
-    "no-unused-expressions": 2,
+    "no-unused-expressions": [
+      2,
+      {
+        "allowShortCircuit": true,
+        "allowTernary": true
+      }
+    ],
     "no-new": 2,
     "no-extra-parens": 2,
     "no-use-before-define": [
@@ -38,14 +44,22 @@
       2,
       3
     ],
-    "valid-jsdoc": 2,
+    "valid-jsdoc": [
+      2,
+      {
+        "requireReturn": false,
+        "requireParamDescription": false,
+        "requireReturnDescription": false
+      }
+    ],
     "max-len": [
       2,
       80,
       2,
       {
         "ignoreTrailingComments": true,
-        "ignoreStrings": true
+        "ignoreStrings": true,
+        "ignoreUrls": true
       }
     ],
     "camelcase": [

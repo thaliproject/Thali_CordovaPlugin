@@ -1,7 +1,6 @@
 'use strict';
 var tape = require('../lib/thaliTape');
 var PromiseQueue = require('thali/NextGeneration/promiseQueue');
-var Promise = require('lie');
 
 var currentUnhandledRejectionHandler = null;
 
@@ -202,19 +201,19 @@ test('queues handled independently', function (t) {
   var longInterval = shortInterval * 100;
   var longOperationTimeout = null;
 
-  var shortOperation = function (resolve, reject) {
+  var shortOperation = function (resolve) {
     setTimeout(function () {
       resolve();
     }, shortInterval);
   };
   secondQueue.enqueue(shortOperation);
 
-  firstQueue.enqueue(function (resolve, reject) {
+  firstQueue.enqueue(function (resolve) {
     longOperationTimeout = setTimeout(function () {
       resolve();
     }, longInterval);
   })
-  .then(function () {
+  .then(function () {
     t.fail();
     t.end();
   });

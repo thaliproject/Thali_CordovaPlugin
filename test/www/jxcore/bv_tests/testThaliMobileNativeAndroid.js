@@ -1,12 +1,7 @@
 'use strict';
 
-// Issue #419
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var platform = require('thali/NextGeneration/utils/platform');
-if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
-    !platform.isAndroid) {
-  return;
-}
 
 var net = require('net');
 var tape = require('../lib/thaliTape');
@@ -53,6 +48,10 @@ var test = tape({
 
 test('cannot call connect when start listening for advertisements is not ' +
   'active',
+  function () {
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
+            !platform.isAndroid;
+  },
   function (t) {
     Mobile('connect').callNative('foo', function (err) {
       t.equal(err, 'startListeningForAdvertisements is not active',
@@ -66,6 +65,10 @@ if (!tape.coordinated) {
 }
 
 test('Get error when trying to double connect to a peer on Android',
+  function () {
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
+      !platform.isAndroid;
+  },
   function (t) {
     /*
      We call connect twice in a row synchronously and one should connect and
@@ -100,13 +103,15 @@ test('Get error when trying to double connect to a peer on Android',
             t.end();
           });
         });
-      });
+  });
 
 function getMessageAndThen(t, socket, messageToReceive, cb) {
   return thaliMobileNativeTestUtils.
             getMessageByLength(socket, messageToReceive.length)
     .then(function (data) {
-      t.ok(Buffer.compare(messageToReceive, data) === 0, 'Data matches');
+      if (Buffer.compare(messageToReceive, data) !== 0) {
+        t.fail('Data does not match');
+      }
       return cb();
     })
     .catch(function (err) {
@@ -225,25 +230,29 @@ function killRemote(t, end) {
 
 test('#startUpdateAdvertisingAndListening - ending remote peers connection ' +
 'kills the local connection',
-function () {
-  // #1231 & #1374
-  // FIXME: requires connection retries
-  return true;
-},
-function (t) {
-  killRemote(t, true);
-});
+  function () {
+    // #1231 & #1374
+    // FIXME: requires connection retries
+    return true;
+    // return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
+    //   !platform.isAndroid;
+  },
+  function (t) {
+    killRemote(t, true);
+  });
 
 test('#startUpdateAdvertisingAndListening - destroying remote peers ' +
 'connection kills the local connection',
-function () {
-  // #1231 & #1374
-  // FIXME: requires connection retries
-  return true;
-},
-function (t) {
-  killRemote(t, false);
-});
+  function () {
+    // #1231 & #1374
+    // FIXME: requires connection retries
+    return true;
+    // return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
+    //   !platform.isAndroid;
+  },
+  function (t) {
+    killRemote(t, false);
+  });
 
 function killLocal(t, end) {
   // pretendLocalMux ---> listeningPort ---> remoteServerNativeListener --->
@@ -294,17 +303,27 @@ function killLocal(t, end) {
           t.end();
         })
         .catch(function (err) {
-          t.fail("We should be able to reconnect" + err);
+          t.fail('We should be able to reconnect' + err);
         });
     });
 }
 
 test('#startUpdateAdvertisingAndListening - destroying the local connection ' +
-  'kills the connection to the remote peer', function (t) {
-  killLocal(t, false);
-});
+  'kills the connection to the remote peer',
+  function () {
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
+      !platform.isAndroid;
+  },
+  function (t) {
+    killLocal(t, false);
+  });
 
 test('#startUpdateAdvertisingAndListening - ending the local connection ' +
-  'kills the connection to the remote peer', function (t) {
-  killLocal(t, true);
-});
+  'kills the connection to the remote peer',
+  function () {
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
+      !platform.isAndroid;
+  },
+  function (t) {
+    killLocal(t, true);
+  });

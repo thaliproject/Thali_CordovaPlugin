@@ -469,7 +469,7 @@ CoordinatedClient.prototype._processEvent = function (tape, test, event, fun,
       timeout,
       format('timeout exceed while processing test: \'%s\'', test.name)
     );
-}
+};
 
 CoordinatedClient.prototype._sync = function (tape, test, timeout) {
   var self = this;
@@ -493,7 +493,7 @@ CoordinatedClient.prototype._sync = function (tape, test, timeout) {
       timeout,
       format('timeout exceed while syncing test: \'%s\'', test.name)
     );
-}
+};
 
 CoordinatedClient.prototype._scheduleTest = function (test) {
   var self = this;
@@ -524,7 +524,8 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
           if (canBeSkipped) {
             logger.debug('test was skipped, name: \'%s\'', test.name);
             skipped = true;
-            return self._skipEvent(tape, test, 'run_' + test.name, test.options.testTimeout);
+            return self._skipEvent(tape, test, 'run_' + test.name,
+              test.options.testTimeout);
           } else {
             return self._processEvent(tape, test, 'run_' + test.name, test.fun,
               test.options.testTimeout);
@@ -534,10 +535,11 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
     });
 
     tape('teardown', function (tape) {
-      tape.sync = self._sync.bind(self, tape, test, test.options.teardownTimeout);
+      tape.sync = self._sync.bind(self, tape, test,
+        test.options.teardownTimeout);
 
-      self._processEvent(tape, test, 'teardown_' + test.name, test.options.teardown,
-        test.options.teardownTimeout)
+      self._processEvent(tape, test, 'teardown_' + test.name,
+        test.options.teardown, test.options.teardownTimeout)
         // We should exit after test teardown.
         .then(resolve)
         .catch(reject);

@@ -22,6 +22,8 @@ if (isMobile) {
 * Log a message to the screen - only applies when running on Mobile.
 * It assumes we are using our test framework with our Cordova WebView
 * who is setup to receive logging messages and display them.
+* @param {object} meta Winston's meta object
+* @returns {object} A Winston logger object
 */
 module.exports = function (meta) {
   var logger = Logger(meta);
@@ -37,4 +39,4 @@ module.exports = function (meta) {
     });
   }
   return logger;
-}
+};

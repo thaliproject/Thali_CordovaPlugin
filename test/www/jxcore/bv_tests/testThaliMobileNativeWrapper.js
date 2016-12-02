@@ -150,7 +150,7 @@ function trivialEndToEndTestScaffold(t, needManualNotify,
   });
 
   var end = function (peerId, fail) {
-    callback ? callback(peerId, fail) : t.end();
+    return callback ? callback(peerId, fail) : t.end();
   };
 
   testUtils.getSamePeerWithRetry(testPath, pskIdentity, pskKey)
@@ -461,7 +461,7 @@ test('make sure bad PSK connections fail',
     return true;
   },
   function (t) {
-    //trivialBadEndtoEndTest(t, true);
+    // trivialBadEndtoEndTest(t, true);
     // TODO: Re-enable and fix
     t.ok(true, 'FIX ME, PLEASE!!!');
     t.end();
@@ -659,22 +659,32 @@ test('can still do HTTP requests between peers with coordinator', function (t) {
 // The connection cut is implemented as a separate test instead
 // of doing it in the middle of the actual test so that the
 // step gets coordinated between peers.
-test('test to coordinate connection cut', function (t) {
-  // This cuts connections on Android.
-  testUtils.toggleBluetooth(false)
-  .then(function () {
-    // This cuts connections on iOS.
-    return thaliMobileNativeWrapper.killConnections();
-  })
-  .then(function () {
-    t.end();
-  })
-  .catch(function () {
-    t.end();
+test('test to coordinate connection cut',
+  function () {
+    // This should be running on Android too but see #1600
+    return platform._isRealAndroid;
+  },
+  function (t) {
+    // This cuts connections on Android.
+    testUtils.toggleBluetooth(false)
+    .then(function () {
+      // This cuts connections on iOS.
+      return thaliMobileNativeWrapper.killConnections();
+    })
+    .then(function () {
+      t.end();
+    })
+    .catch(function () {
+      t.end();
+    });
   });
-});
 
-test('can do HTTP requests after connections are cut', function (t) {
+test('can do HTTP requests after connections are cut',
+  function () {
+    // This should be running on Android too but see #1600
+    return platform._isRealAndroid;
+  },
+  function (t) {
   // Turn Bluetooth back on so that Android can operate
   // (iOS does not require separate call to operate since
   // killConnections is more like a single-shot thing).
@@ -699,7 +709,8 @@ test('can do HTTP requests after connections are cut', function (t) {
 });
 
 test('will fail bad PSK connection between peers', function (t) {
-  //trivialBadEndtoEndTest(t, true);
+  // #1587
+  // trivialBadEndtoEndTest(t, true);
   // TODO: Re-enable and fix
   t.ok(true, 'FIX ME, PLEASE!!!');
   t.end();

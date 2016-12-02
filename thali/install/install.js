@@ -74,7 +74,7 @@ function getEtagFromEtagFile(depotName, branchName, directoryToInstallIn) {
  * This method is used to retrieve the release configuration data
  * stored in the releaseConfig.json.
  *
- * @returns {Promise}
+ * @returns {Promise} Returns release config
  */
 function getReleaseConfig() {
   var configFileName = path.join(__dirname, '..', 'package.json');
@@ -107,7 +107,7 @@ function writeToEtagFile(depotName, branchName, directoryToInstallIn,
                          httpResponse) {
   var etag = returnEtagFromResponse(httpResponse);
 
-  if (etag == null) {
+  if (etag === null) {
     return Promise.reject(
       new Error('Did not get ETag header, something is wrong because Github' +
         'always sends one!'));
@@ -128,11 +128,11 @@ function getGitHubZipUrlObject(projectName, depotName, branchName) {
  * if-none-match headers. So instead I'm doing a HEAD request and manually
  * checking if the etags match.
  *
- * @param {string} projectName
- * @param {string} depotName
- * @param {string} branchName
- * @param {string} directoryToInstallIn
- * @returns {boolean}
+ * @param {string} projectName The project name
+ * @param {string} depotName The depot name
+ * @param {string} branchName The branch name
+ * @param {string} directoryToInstallIn The directory to install in
+ * @returns {boolean} Do the etags match?
  */
 function doGitHubEtagsMatch(projectName, depotName, branchName,
                             directoryToInstallIn) {
@@ -192,13 +192,13 @@ function installGitHubZip(projectName, depotName, branchName,
               });
           })
           .then(function () {
-              return writeToEtagFile(depotName, branchName,
+            return writeToEtagFile(depotName, branchName,
                                      directoryToInstallIn, res);
-            })
-            .then(function () {
-              return createGitHubZipResponse(depotName, branchName,
-                                             directoryToInstallIn, true);
-            });
+          })
+          .then(function () {
+            return createGitHubZipResponse(depotName, branchName,
+                                           directoryToInstallIn, true);
+          });
         });
     });
 }

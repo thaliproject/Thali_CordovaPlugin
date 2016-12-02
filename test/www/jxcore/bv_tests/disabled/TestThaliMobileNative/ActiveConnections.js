@@ -9,7 +9,8 @@ var logger = require('../../../lib/testLogger')('ActiveConnections');
 
 // We are going to add a new connections to the list.
 // We want to limit the lifetime of this connection.
-// We want each connection to be autoremoved from the list when it will become completed.
+// We want each connection to be autoremoved from the list when it will become
+// completed.
 // We want to be able to do an emergency shutdown for all connections.
 // We want to verify that each connection made shutdown correctly.
 // We are completed only when the list will become empty.
@@ -28,18 +29,18 @@ function ActiveConnections(quitSignal, options) {
 
 ActiveConnections.defaults = {
   timeout: 3000
-}
+};
 
 ActiveConnections.states = {
   CREATED:  'created',
   STOPPING: 'stopping',
   STOPPED:  'stopped'
-}
+};
 
 ActiveConnections.prototype.bind = function () {
   // We will not unbind this handler.
   this._quitSignal.bindHandler(this._kill.bind(this));
-}
+};
 
 ActiveConnections.prototype.add = function (data) {
   var self = this;
@@ -58,7 +59,7 @@ ActiveConnections.prototype.add = function (data) {
   this._bind_timeout(data);
   this._bind_autoremove(data);
   this._bind_connection(data);
-}
+};
 
 ActiveConnections.prototype._bind_autoremove = function (data) {
   var self = this;
@@ -86,18 +87,18 @@ ActiveConnections.prototype._bind_autoremove = function (data) {
     assert(index !== -1, 'connection data should be in the list');
     self._connections.splice(index, 1);
   });
-}
+};
 
 ActiveConnections.prototype._bind_timeout = function (data) {
   data._timeout = setTimeout(function () {
     data.reject(new Error('connection timeout'));
   }, this.options.timeout);
-}
+};
 
 ActiveConnections.prototype._unbind_timeout = function (data) {
   assert(data._timeout, '\'data._timeout\' should exist');
   clearTimeout(data._timeout);
-}
+};
 
 ActiveConnections.prototype._bind_connection = function (data) {
   if (!data.connection) {
@@ -142,7 +143,7 @@ ActiveConnections.prototype._bind_connection = function (data) {
   .catch(function (error) {
     data.reject(error);
   });
-}
+};
 
 ActiveConnections.prototype.reset = function () {
   assert(
@@ -155,7 +156,7 @@ ActiveConnections.prototype.reset = function () {
     this._connections.length === 0,
     'we should have empty list'
   );
-}
+};
 
 ActiveConnections.prototype.stop = function () {
   var self = this;
@@ -203,7 +204,7 @@ ActiveConnections.prototype.stop = function () {
   });
 
   return this._stopPromise;
-}
+};
 
 ActiveConnections.prototype._kill = function () {
   var self = this;
@@ -236,6 +237,6 @@ ActiveConnections.prototype._kill = function () {
   });
 
   return this._killPromise;
-}
+};
 
 module.exports = ActiveConnections;

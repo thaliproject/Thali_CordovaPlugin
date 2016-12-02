@@ -52,17 +52,18 @@ var test = tape({
 
 // We have 'localDoc' and 'oldRemoteDocs' already in DB.
 // We are waiting until 'newRemoteDocs' will appears in DB.
-// We are waiting for confirmation that 'localDoc' and 'oldRemoteDocs' is in DB too.
+// We are waiting for confirmation that 'localDoc' and 'oldRemoteDocs' is in DB
+// too.
 function waitForRemoteDocs(
-  pouchDB, localDoc, oldRemoteDocs, newRemoteDocs, ignoreRev
-) {
-  // We can remove '_rev' key from compared values.
+  pouchDB, localDoc, oldRemoteDocs, newRemoteDocs, ignoreRev) {
   // We can just stringify docs, they wont be circular.
   function toString(doc) {
     var keys = Object.keys(doc);
-    var keyIndex = keys.indexOf('_rev');
-    if (keyIndex !== -1) {
-      keys.splice(keyIndex, 1);
+    if (ignoreRev) {
+      var keyIndex = keys.indexOf('_rev');
+      if (keyIndex !== -1) {
+        keys.splice(keyIndex, 1);
+      }
     }
     return JSON.stringify(doc, keys.sort());
   }

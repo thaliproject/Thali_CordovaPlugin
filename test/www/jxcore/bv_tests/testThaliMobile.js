@@ -2219,7 +2219,7 @@ function setUpRouter() {
 test('test for data corruption',
   function () {
     // Bug 1594
-    return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
+    return true;
   },
   function (t) {
     var router = setUpRouter();

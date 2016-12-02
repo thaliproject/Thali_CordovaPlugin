@@ -14,8 +14,7 @@ var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var expressPouchdb = require('express-pouchdb');
 var platform = require('thali/NextGeneration/utils/platform');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-var notificationBeacons =
-  require('thali/NextGeneration/notification/thaliNotificationBeacons');
+var notificationBeacons = require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var express = require('express');
 var fs = require('fs-extra-promise');
 
@@ -28,13 +27,13 @@ function toggleBluetooth (value) {
       'Mobile is not defined'
     ));
   }
-  if (platform.isAndroid || platform.isIOS) {
+  if (platform._isRealAndroid || platform.isIOS) {
     return Promise.reject(new Error(
       '\'toggleBluetooth\' is not implemented on android and ios'
     ));
   }
   return new Promise(function (resolve, reject) {
-    Mobile['toggleBluetooth'](value, function (error) {
+    Mobile.toggleBluetooth(value, function (error) {
       if (error) {
         reject(error);
       } else {
@@ -42,7 +41,8 @@ function toggleBluetooth (value) {
       }
     });
   });
-};
+}
+
 module.exports.toggleBluetooth = toggleBluetooth;
 
 function toggleWifi (value) {
@@ -113,19 +113,19 @@ var ensureNetwork = function (type, toggle, value) {
       });
     }
   });
-}
+};
 
 module.exports.ensureWifi = function (value) {
   return ensureNetwork('wifi', toggleWifi, value);
-}
+};
 module.exports.ensureBluetooth = function (value) {
   return ensureNetwork('bluetooth', toggleBluetooth, value);
-}
+};
 
 module.exports.validateBSSID = function (value) {
   // Both 'c1:5b:05:5a:41:1e' and 'c1-5b-05-5a-41-1e' are valid.
   return /([0-9a-f]{2}[:-]|$){6}/i.test(value);
-}
+};
 
 /**
  * Turn Bluetooth and Wifi either on or off.
@@ -133,7 +133,7 @@ module.exports.validateBSSID = function (value) {
  * environment, the network changes will be simulated (i.e., doesn't affect
  * the network status of the host machine).
  * @param {boolean} on Pass true to turn radios on and false to turn them off
- * @returns {Promise<?Error>}
+ * @returns {Promise<?Error>} Result of operation
  */
 module.exports.toggleRadios = function (on) {
   logger.info('Toggling radios to: %s', on);
@@ -155,7 +155,8 @@ var myNameCallback = null;
 /**
  * Set the name given used by this device. The name is
  * retrievable via a function exposed to the Cordova side.
- * @param {string} name
+ * @param {string} name Device name
+ * @returns {null} Returns null
  */
 module.exports.setName = function (name) {
   myName = name;
@@ -164,10 +165,12 @@ module.exports.setName = function (name) {
   } else {
     logger.warn('myNameCallback not set!');
   }
+  return null;
 };
 
 /**
  * Get the name of this device.
+ * @returns {string} Name of device
  */
 module.exports.getName = function () {
   return myName;
@@ -341,7 +344,7 @@ function createResponseBody(response) {
   return new Promise(function (resolve, reject) {
     var responseBody = '';
     response.on('data', function (data) {
-      logger.debug('Got response data')
+      logger.debug('Got response data');
       responseBody += data;
     });
     response.on('end', function () {
@@ -833,7 +836,7 @@ module.exports.makeDomainUnresolvable = function (unresolvableDomain) {
   dns.__originalLookup = dns.lookup;
   dns.lookup = function (domain, family_, callback_) {
     var family = family_,
-        callback = callback_;
+      callback = callback_;
     // parse arguments
     if (arguments.length === 2) {
       callback = family;

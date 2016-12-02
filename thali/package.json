@@ -22,7 +22,8 @@
     "js-extend": "1.0.1"
   },
   "devDependencies": {
-    "jsdoc": "3.3.3"
+    "jsdoc": "3.3.3",
+    "eslint": "3.11.1"
   },
   "thaliInstall": {
     "thali": {
