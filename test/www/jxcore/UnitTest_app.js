@@ -24,41 +24,8 @@ var Promise = require('bluebird');
 
 var utResult = false;
 
-if (platform._isRealMobile) {
-  Mobile('executeNativeTests').callNative(function (result) {
-    logger.debug('Running unit tests');
-    if (result) {
-      if (!result.executed) {
-        console.log('*Native tests were not executed*');
-
-        utResult = false;
-      } else {
-        console.log('*Native tests were executed*');
-
-        utResult = result.failed <= 0;
-      }
-
-      console.log('Total number of executed tests: ', result.total);
-      console.log('Number of passed tests: ', result.passed);
-      console.log('Number of failed tests: ', result.failed);
-      console.log('Number of ignored tests: ', result.ignored);
-      console.log('Total duration: ', result.duration);
-    } else {
-      console.log('*Native tests results are empty*');
-
-      utResult = false;
-    }
-  });
-
-  if (!utResult) {
-    console.log('Failed to execute UT.');
-    global.nativeUTFailed = true;
-
-  }
-} else {
-  // We aren't on a device so we can't run those tests anyway
-  utResult = true;
-}
+// We aren't on a device so we can't run those tests anyway
+utResult = true;
 
 if (!utResult) {
   logger.debug('Failed to execute UT.');
