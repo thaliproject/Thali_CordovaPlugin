@@ -41,7 +41,7 @@ const versions =
   java: '1.8.0_102',
   git: '2.10.0',
   swiftlint: '0.13.0',
-  btconnectorlib2: '0.3.5',
+  btconnectorlib2: '0.3.6-alpha',
   jxcoreCordova: '0.1.7',
   sinopiaNode: ' ',
   sinopiaJxCore: ' '

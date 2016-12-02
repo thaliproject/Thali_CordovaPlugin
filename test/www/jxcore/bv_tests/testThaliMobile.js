@@ -182,8 +182,7 @@ test('#stop should clear watchers and change peers', function (t) {
     .then(function () {
       return ThaliMobileNativeWrapper._handlePeerAvailabilityChanged({
         peerIdentifier: somePeerIdentifier,
-        peerAvailable: true,
-        pleaseConnect: false
+        peerAvailable: true
       });
     })
     .then(function () {
@@ -1501,7 +1500,7 @@ test('If a peer is not available (and hence is not in the thaliMobile cache)' +
       // a nonTCPPeerAvailabilityChanged event that would put this peer into
       // thaliMobile's cache.
       return ThaliMobileNativeWrapper._getServersManager().
-        createPeerListener(somePeerIdentifier, false);
+        createPeerListener(somePeerIdentifier);
     })
     .then(function (port) {
       var socket = net.createConnection(port, '127.0.0.1');
