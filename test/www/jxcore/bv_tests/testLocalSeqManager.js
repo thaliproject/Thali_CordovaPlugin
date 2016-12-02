@@ -3,16 +3,13 @@
 var tape = require('../lib/thaliTape');
 var LocalSeqManager = require('thali/NextGeneration/replication/localSeqManager');
 var net = require('net');
-var thaliMobile = require('thali/NextGeneration/thaliMobile');
 var crypto = require('crypto');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var Promise = require('lie');
 var testUtils = require('../lib/testUtils');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var https = require('https');
-var thaliNotificationBeacons = require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var httpTester = require('../lib/httpTester');
-var express = require('express');
 
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var devicePublicKey = devicePublicPrivateKey.generateKeys();

@@ -2,16 +2,14 @@
  * See the license file delivered with this project for further information.
  */
 package io.jxcore.node;
-
 import android.bluetooth.BluetoothSocket;
 import android.util.Log;
-
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
+
 
 /**
  * A thread for outgoing Bluetooth connections.
@@ -86,9 +84,7 @@ class OutgoingSocketThread extends SocketThreadBase {
                     mListeningOnPortNumber = mServerSocket.getLocalPort();
                     mListener.onListeningForIncomingConnections(mListeningOnPortNumber);
                 }
-
                 mLocalhostSocket = mServerSocket.accept(); // Blocking call
-
                 Log.i(mTag, "Incoming data from address: " + getLocalHostAddressAsString()
                     + ", port: " + mServerSocket.getLocalPort());
 
@@ -141,4 +137,5 @@ class OutgoingSocketThread extends SocketThreadBase {
             mServerSocket = null;
         }
     }
+
 }

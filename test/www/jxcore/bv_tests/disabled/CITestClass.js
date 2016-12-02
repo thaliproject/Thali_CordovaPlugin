@@ -9,7 +9,7 @@ var test = tape({
   teardown: function (t) {
         t.end();
       }
-    });
+});
 
 test('The test that always pass', function (t) {
   t.ok(true);

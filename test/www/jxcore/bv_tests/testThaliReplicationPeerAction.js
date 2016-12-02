@@ -23,10 +23,7 @@ var thaliReplicationPeerAction = null;
 
 var httpAgentPool = new ForeverAgent.SSL({
   rejectUnauthorized: false,
-  keepAlive: true,
-  keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-  maxSockets: Infinity,
-  maxFreeSockets: 256,
+  maxSockets: 8,
   ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
   pskIdentity: pskId,
   pskKey: pskKey
@@ -202,7 +199,11 @@ function matchDocsInChanges(pouchDB, docs, thaliPeerReplicationAction) {
         reject('Bad count');
       }
     }).on('complete', function () {
-      // Give sequence updater time to run before killing everything
+      // Give sequence updater enough time to run before killing everything but
+      // it should be less then max idle period. Otherwise action will be
+      // completed with "No activity time out" error.
+      var timeout =
+        ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS * 1000 - 500;
       setTimeout(function () {
         Promise.resolve()
         .then(function () {
@@ -212,7 +213,7 @@ function matchDocsInChanges(pouchDB, docs, thaliPeerReplicationAction) {
           }
         })
         .then(resolve);
-      }, ThaliReplicationPeerAction.PUSH_LAST_SYNC_UPDATE_MILLISECONDS);
+      }, timeout);
     }).on ('error', function (err) {
       reject('got error ' + err);
     });

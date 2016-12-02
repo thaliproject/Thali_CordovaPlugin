@@ -23,26 +23,17 @@ const versions =
   wget: '1.18',
   jxcore: '0.3.1.7',
   androidHome: ' ',
-  androidBuildTools: '25.0.0',
-  androidPlatform: 'android-23',
+  androidBuildTools: thaliConfig.thaliInstall.androidConfig.buildToolsVersion,
+  androidPlatform: thaliConfig.thaliInstall.androidConfig.compileSdkVersion,
   // We don't have an easy way to identify the version of the support libraries
   // we have but if they were installed recently enough then they will have
   // what we need.
   androidSupportLibraries: '40.0.0',
-  cordovaAndroidSetMinSDK: '22',
-  get cordovaAndroidSetBuildToolsVersion() {
-    return this.androidBuildTools;
-  },
-  get cordovaAndroidSetCompileSdkVersion() {
-    return this.androidPlatform;
-  },
   python: '2.7.10',
   cordova: '6.4.0',
   java: '1.8.0_102',
   git: '2.10.0',
   swiftlint: '0.13.0',
-  btconnectorlib2: '0.3.5',
-  jxcoreCordova: '0.1.7',
   sinopiaNode: ' ',
   sinopiaJxCore: ' '
 };
@@ -95,8 +86,8 @@ const commandsAndResults =
     // the pkgutil commands worked properly on my machine.
     versionCheck: () => fs.readdirAsync('/Library/Developer/CommandLineTools'),
     versionValidate:
-      (result, version) => boolToPromise(result && result.length === 2 &&
-      result[0] === 'Library' && result[1] === 'usr')
+      (result) => boolToPromise(result && result.length === 2 &&
+                    result[0] === 'Library' && result[1] === 'usr')
   },
   macOS: {
     platform: ['darwin'],
@@ -142,7 +133,7 @@ const commandsAndResults =
   androidHome: {
     versionCheck: () => process.env.ANDROID_HOME,
     versionValidate:
-      (result, version) => {
+      (result) => {
         if (result) {
           return fs.readdirAsync(result);
         } else {
@@ -180,21 +171,6 @@ const commandsAndResults =
     versionValidate:
       (result, version) => boolToPromise(version === result.trim())
   },
-  cordovaAndroidSetMinSDK: {
-    versionCheck: 'echo $ORG_GRADLE_PROJECT_cdvMinSdkVersion',
-    versionValidate:
-      (result, version) => boolToPromise(version === result.trim())
-  },
-  cordovaAndroidSetBuildToolsVersion: {
-    versionCheck: 'echo $ORG_GRADLE_PROJECT_cdvBuildToolsVersion',
-    versionValidate:
-      (result, version) => boolToPromise(version === result.trim())
-  },
-  cordovaAndroidSetCompileSdkVersion: {
-    versionCheck: 'echo $ORG_GRADLE_PROJECT_cdvCompileSdkVersion',
-    versionValidate:
-      (result, version) => boolToPromise(version === result.trim())
-  },
   python: {
     versionCheck: 'python -V',
     checkStdErr: true, // http://bugs.python.org/issue28160 - fixed in 3.4
@@ -225,22 +201,10 @@ const commandsAndResults =
     versionValidate:
       (result, version) => boolToPromise(version === result.trim())
   },
-  btconnectorlib2: {
-    versionCheck: () =>
-      Promise.resolve(thaliConfig.thaliInstall.btconnectorlib2),
-    versionValidate:
-      (result, version) => boolToPromise(version === result)
-  },
-  jxcoreCordova: {
-    versionCheck: () =>
-      Promise.resolve(thaliConfig.thaliInstall['jxcore-cordova']),
-    versionValidate:
-      (result, version) => boolToPromise(version === result)
-  },
   sinopiaNode: {
     versionCheck: 'npm get registry',
     versionValidate:
-      (result, version) => sinopiaVersionCheck(result.trim())
+      (result) => sinopiaVersionCheck(result.trim())
   },
   sinopiaJxCore: {
     // The first time jx npm is run it can do an install, to simplify things
@@ -248,7 +212,7 @@ const commandsAndResults =
     // url
     versionCheck: 'jx npm get registry > /dev/null && jx npm get registry',
     versionValidate:
-      (result, version) => sinopiaVersionCheck(result.trim())
+      (result) => sinopiaVersionCheck(result.trim())
   }
 
 };

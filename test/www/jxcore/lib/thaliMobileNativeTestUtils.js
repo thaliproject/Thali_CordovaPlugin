@@ -80,9 +80,14 @@ function androidConnectToPeer(peer, retries, successCb, failureCb, quitSignal) {
     if (quitSignal && quitSignal.raised) {
       successCb(null, null, peer);
     }
+
+    if (connection) {
+      connection = JSON.parse(connection);
+    }
+
     if (err == null) {
       // Connected successfully..
-      successCb(err, JSON.parse(connection), peer);
+      successCb(err, connection, peer);
     } else {
       logger.info('Connect returned an error: ' + err);
 

@@ -18,7 +18,6 @@ import org.junit.runner.Description;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -70,9 +69,9 @@ public class StreamCopyingThreadTest {
                     return false;
                 }
 
-                while (!mIsClosed && counter < ThaliTestRunner.counterLimit) {
+                while (!mIsClosed && counter < ThaliTestRunner.COUNTER_LIMIT) {
                     try {
-                        Thread.sleep(ThaliTestRunner.timeoutLimit);
+                        Thread.sleep(ThaliTestRunner.TIMEOUT_LIMIT);
                         counter++;
                         mIsClosed = fIsClosed.getBoolean(mStreamCopyingThread);
                     } catch (InterruptedException | IllegalAccessException e) {
@@ -81,7 +80,7 @@ public class StreamCopyingThreadTest {
                     }
                 }
 
-                if (counter < ThaliTestRunner.counterLimit) {
+                if (counter < ThaliTestRunner.COUNTER_LIMIT) {
                     return true;
                 } else {
                     Log.e(mTag, "StreamCopyingThread didn't close after 5s!");

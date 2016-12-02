@@ -96,7 +96,8 @@ module.exports.instanceOf = function (value, base) {
 module.exports.equals = function (value1, value2) {
   assert(
     value1 === value2,
-    format('equals values expected, received value 1: \'%s\', value 2: \'%s\'', value1, value2)
+    format('equals values expected, received value 1: \'%s\', value 2: \'%s\'',
+      value1, value2)
   );
 };
 

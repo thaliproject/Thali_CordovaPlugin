@@ -20,7 +20,8 @@ test('two required plugins should get installed', function (t) {
   var testAppName = 'TestApp';
   var testAppDirectory = path.join(tmpDirectory, testAppName);
   var cordovaCreateCommand = 'cordova create ' + testAppName;
-  exec(cordovaCreateCommand, { cwd: tmpDirectory }, function (err, stdout, stderr) {
+  exec(cordovaCreateCommand, { cwd: tmpDirectory }, function (err, stdout,
+                                                              stderr) {
     if (err) {
       t.fail('Cordova command should not fail!');
       t.end();
@@ -28,9 +29,13 @@ test('two required plugins should get installed', function (t) {
     }
     install(function () {
       var cordovaPluginsCommand = 'cordova plugins list';
-      exec(cordovaPluginsCommand, { cwd: testAppDirectory }, function (err, stdout, stderr) {
-        t.ok(stdout.indexOf('io.jxcore.node' >= 0), 'jxcore cordova plugin is installed');
-        t.ok(stdout.indexOf('org.thaliproject.p2p' >= 0), 'thali cordova plugin is installed');
+      exec(cordovaPluginsCommand, { cwd: testAppDirectory }, function (err,
+                                                                       stdout,
+                                                                       stderr) {
+        t.ok(stdout.indexOf('io.jxcore.node' >= 0),
+          'jxcore cordova plugin is installed');
+        t.ok(stdout.indexOf('org.thaliproject.p2p' >= 0),
+          'thali cordova plugin is installed');
         t.end();
       });
     }, testAppDirectory);

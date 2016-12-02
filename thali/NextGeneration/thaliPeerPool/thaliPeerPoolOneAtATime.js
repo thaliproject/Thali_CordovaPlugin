@@ -74,10 +74,7 @@ ThaliPeerPoolOneAtATime.ERRORS.ENQUEUE_WHEN_STOPPED = 'We are stopped';
 
 ThaliPeerPoolOneAtATime.prototype._startAction = function (peerAction) {
   var actionAgent = new ForeverAgent.SSL({
-    keepAlive: true,
-    keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-    maxSockets: Infinity,
-    maxFreeSockets: 256,
+    maxSockets: 8,
     ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
     pskIdentity: peerAction.getPskIdentity(),
     pskKey: peerAction.getPskKey()
@@ -267,7 +264,7 @@ ThaliPeerPoolOneAtATime.prototype._bluetoothEnqueue = function (peerAction) {
         peerAction.kill();
         thaliMobileNativeWrapper._getServersManager()
           .terminateOutgoingConnection(peerAction.getPeerIdentifier(),
-            peerAction.getConnectionInformation().getPortNumber());
+            peerAction.getConnectionInformation().portNumber);
         resolve(true);
         return null;
       });
