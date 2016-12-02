@@ -1601,7 +1601,11 @@ test('network changes not emitted in started state',
 
 test('network changes not emitted in stopped state',
   function () {
-    return !platform.isAndroid;
+    // return !platform.isAndroid;
+    // Bug 1530
+    // FIXME: this test disables WiFi and coordinated servers reports ping
+    // timeout error
+    return true;
   },
   function (t) {
     testUtils.ensureWifi(false)
