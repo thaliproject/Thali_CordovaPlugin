@@ -13,7 +13,8 @@ var ForeverAgent = require('forever-agent');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var expressPouchdb = require('express-pouchdb');
 var platform = require('thali/NextGeneration/utils/platform');
-var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
+var makeIntoCloseAllServer =
+  require('thali/NextGeneration/makeIntoCloseAllServer');
 var notificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var express = require('express');
@@ -260,7 +261,7 @@ function createResponseBody(response) {
   return new Promise(function (resolve, reject) {
     var responseBody = '';
     response.on('data', function (data) {
-      logger.debug('Got response data')
+      logger.debug('Got response data');
       responseBody += data;
     });
     response.on('end', function () {
@@ -380,13 +381,16 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
                                                 selectedPeerId) {
   // We don't load thaliMobileNativeWrapper until after the tests have started
   // running so we pick up the right version of mobile
-  var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
+  var thaliMobileNativeWrapper =
+    require('thali/NextGeneration/thaliMobileNativeWrapper');
   return new Promise(function (resolve, reject) {
     var retryCount = 0;
-    var MAX_TIME_TO_WAIT_IN_MILLISECONDS = 1000 * 30 * 2;
+    var MAX_TIME_TO_WAIT_IN_MILLISECONDS = 1000 * 60;
+    var GET_PORT_TIMEOUT = 1000 * 3;
     var exitCalled = false;
     var peerID = selectedPeerId;
     var getRequestPromise = null;
+    var cancelGetPortTimeout = null;
 
     function exitCall(success, failure) {
       if (exitCalled) {
@@ -394,6 +398,7 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
       }
       exitCalled = true;
       clearTimeout(timeoutId);
+      clearTimeout(cancelGetPortTimeout);
       thaliMobileNativeWrapper.emitter
         .removeListener('nonTCPPeerAvailabilityChangedEvent',
           nonTCPAvailableHandler);
@@ -411,8 +416,8 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
     function tryAgain(portNumber) {
       ++retryCount;
       logger.warn('Retry count for getSamePeerWithRetry is ' + retryCount);
-      getRequestPromise =
-        module.exports.get('127.0.0.1', portNumber, path, pskIdentity, pskKey);
+      getRequestPromise = module.exports.get('127.0.0.1',
+                          portNumber, path, pskIdentity, pskKey);
       getRequestPromise
         .then(function (result) {
           exitCall(result);
@@ -423,31 +428,11 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
         });
     }
 
-    function nonTCPAvailableHandler(record) {
-      // Ignore peer unavailable events
-      if (record.portNumber === null) {
-        if (peerID && record.peerIdentifier === peerID) {
-          logger.warn('We got a peer unavailable notification for a ' +
-            'peer we are looking for.');
-        }
-        return;
-      }
-
-      if (peerID && record.peerIdentifier !== peerID) {
-        return;
-      }
-
-      logger.debug('We got a peer ' + JSON.stringify(record));
-
-      if (!peerID) {
-        peerID = record.peerIdentifier;
-        return tryAgain(record.portNumber);
-      }
-
+    function callTryAgain(portNumber) {
 
       // We have a predefined peerID
       if (!getRequestPromise) {
-        return tryAgain(record.portNumber);
+        return tryAgain(portNumber);
       }
 
       getRequestPromise
@@ -458,11 +443,58 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
           // unlikely
         })
         .catch(function (err) {
-          return tryAgain(record.portNumber, err);
+          return tryAgain(portNumber, err);
         });
     }
 
-    thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
+    function getPort(record) {
+      return new Promise(function (resolve) {
+        if (platform.isIOS) {
+          thaliMobileNativeWrapper._multiConnect(record.peerIdentifier)
+          .then(function (port) {
+            resolve(port);
+          })
+          .catch(function () {
+            cancelGetPortTimeout = setTimeout(function () {
+              resolve(getPort(record));
+            }, GET_PORT_TIMEOUT);
+          });
+        } else {
+          resolve(record.portNumber);
+        }
+      });
+
+    };
+
+    function nonTCPAvailableHandler(record) {
+      // Ignore peer unavailable events
+      if (!record.peerAvailable) {
+        return;
+      }
+
+      if (peerID && record.peerIdentifier === peerID) {
+        logger.warn('We got a peer unavailable notification for a ' +
+          'peer we are looking for.');
+      }
+
+      if (peerID && record.peerIdentifier !== peerID) {
+        return;
+      }
+
+      logger.debug('We got a peer ' + JSON.stringify(record));
+
+      if (!peerID) {
+        peerID = record.peerIdentifier;
+      }
+
+      getPort(record)
+      .then(function (port) {
+        callTryAgain(port);
+      });
+    }
+
+    thaliMobileNativeWrapper.emitter.on(
+      'nonTCPPeerAvailabilityChangedEvent',
       nonTCPAvailableHandler);
   });
 };
@@ -742,4 +774,12 @@ module.exports.setUpServer = function (testBody, appConfig) {
     }
   );
   return testCloseAllServer;
+};
+
+module.exports.skipOnIOS = function () {
+  return platform.isIOS;
+};
+
+module.exports.skipOnAndroid = function () {
+  return platform.isAndroid;
 };
