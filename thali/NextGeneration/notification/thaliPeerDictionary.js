@@ -207,8 +207,10 @@ PeerDictionary.prototype.addUpdateEntry = function (peerId, entry) {
     this._dictionary[peerId].entryNumber = this._entryCounter++;
   } else {
     this._removeOldestIfOverflow();
-    this._dictionary[peerId] = {'entry' : entry,
-      'entryNumber' : this._entryCounter++};
+    this._dictionary[peerId] = {
+      'entry' : entry,
+      'entryNumber' : this._entryCounter++
+    };
   }
 };
 

@@ -330,11 +330,14 @@ test('wifi peer is marked unavailable if announcements stop',
       if (peer.peerIdentifier !== testPeerIdentifier) {
         return;
       }
+
+      // TODO Apply changes from #904 to tests
       spy();
       if (spy.calledOnce) {
         t.equal(peer.peerAvailable, true, 'peer should be available');
       } else if (spy.calledTwice) {
         t.equal(peer.peerAvailable, false, 'peer should become unavailable');
+
         ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
           availabilityChangedHandler);
         testServer.stop(function () {
@@ -1244,6 +1247,129 @@ test('newAddressPort after listenerRecreatedAfterFailure event (BLUETOOTH)',
   }
 );
 
+test('#getPeerHostInfo - error when peer has not been discovered yet',
+function (t) {
+  var connectionType = ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE;
+  ThaliMobile.getPeerHostInfo('foo', connectionType)
+    .then(function () {
+      t.fail('should never be called');
+      t.end();
+    })
+    .catch(function (err) {
+      t.equal(err.message, 'peer not available');
+      t.end();
+    });
+});
+
+function checkPeerHostInfoProperties(t, peerHostInfo, peer) {
+  var expectedKeys = ['hostAddress', 'portNumber', 'suggestedTCPTimeout'];
+  var actualKeys = Object.keys(peerHostInfo);
+  expectedKeys.sort();
+  actualKeys.sort();
+  t.deepEqual(actualKeys, expectedKeys, 'contains expected properties');
+}
+
+test('#getPeerHostInfo - returns discovered cached native peer (BLUETOOTH)',
+  function () {
+    return !platform.isAndroid;
+  },
+  function (t) {
+    var peer = {
+      peerIdentifier: 'foo',
+      peerAvailable: true,
+      generation: 0,
+      portNumber: 9999
+    };
+
+    ThaliMobileNativeWrapper.emitter.emit(
+      'nonTCPPeerAvailabilityChangedEvent',
+      peer
+    );
+
+    var connectionType = ThaliMobileNativeWrapper.connectionTypes.BLUETOOTH;
+
+    ThaliMobile.getPeerHostInfo(peer.peerIdentifier, connectionType)
+    .then(function (peerHostInfo) {
+      checkPeerHostInfoProperties(t, peerHostInfo, peer);
+      t.equal(peerHostInfo.hostAddress, '127.0.0.1', 'the same hostAddress');
+      t.equal(peerHostInfo.portNumber, peer.portNumber, 'the same portNumber');
+      t.end();
+    }).catch(t.end);
+  }
+);
+
+test('#getPeerHostInfo - returns discovered cached native peer and calls ' +
+'`_multiConnect` to retrieve the port (MPCF)',
+  function () {
+    return !platform.isIOS;
+  },
+  function (t) {
+    var peer = {
+      peerIdentifier: 'foo',
+      peerAvailable: true,
+      generation: 0,
+      portNumber: null
+    };
+    var resolvedPortNumber = 12345;
+
+    var multiConnectStub = sinon.stub(
+      ThaliMobileNativeWrapper,
+      '_multiConnect',
+      function (peerId) {
+        if (peerId !== peer.peerIdentifier) {
+          return Promise.reject(new Error('Connection could not be established'));
+        }
+        return Promise.resolve(resolvedPortNumber);
+      }
+    );
+
+    ThaliMobileNativeWrapper.emitter.emit(
+      'nonTCPPeerAvailabilityChangedEvent',
+      peer
+    );
+
+    var connectionType =
+      ThaliMobileNativeWrapper.connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK;
+
+    ThaliMobile.getPeerHostInfo(peer.peerIdentifier, connectionType)
+    .then(function (peerHostInfo) {
+      checkPeerHostInfoProperties(t, peerHostInfo, peer);
+      t.equal(peerHostInfo.hostAddress, '127.0.0.1', 'the same hostAddress');
+      t.equal(peerHostInfo.portNumber, resolvedPortNumber, 'the same portNumber');
+    })
+    .catch(t.fail)
+    .then(function () {
+      multiConnectStub.restore();
+      t.end();
+    });
+  }
+);
+
+test('#getPeerHostInfo - returns discovered cached wifi peer',
+  function (t) {
+    var peer = {
+      peerIdentifier: 'foo',
+      generation: 0,
+      hostAddress: 'someaddress',
+      portNumber: 9999
+    };
+
+    var thaliWifiInfrastructure = ThaliMobile._getThaliWifiInfrastructure();
+    thaliWifiInfrastructure.emit('wifiPeerAvailabilityChanged', peer);
+
+    var connectionType = ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE;
+
+    ThaliMobile.getPeerHostInfo(peer.peerIdentifier, connectionType)
+    .then(function (peerHostInfo) {
+      checkPeerHostInfoProperties(t, peerHostInfo, peer);
+      t.equal(peerHostInfo.hostAddress, peer.hostAddress,
+        'the same hostAddress');
+      t.equal(peerHostInfo.portNumber, peer.portNumber, 'the same portNumber');
+      t.end();
+    }).catch(t.end);
+  }
+);
+
 test('network changes emitted correctly',
   function () {
     return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
@@ -1285,6 +1411,7 @@ test('network changes not emitted in stopped state',
 
 test('calls correct starts when network changes',
   function () {
+    // works only in wifi mode because it fires non-tcp network changes
     return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
   },
   function (t) {
@@ -1328,17 +1455,11 @@ test('calls correct starts when network changes',
         networkChangedHandler);
       testUtils.toggleWifi(false);
     });
-  });
-
+  }
+);
 
 test('We properly fire peer unavailable and then available when ' +
-  'connection fails',
-  function () {
-    // FIXME: temporarily disabled (iOS branch is not complete - issue #899)
-    // (requires getPeerHostInfo implementation)
-    return true;
-  },
-  function(t) {
+'connection fails', function(t) {
 
   // Scenario:
   // 1. We got peerAvailabilityChanged event (peerAvailable: true).
@@ -1610,38 +1731,42 @@ var participantState = {
   finished: 'finished'
 };
 
-test('can get data from all participants', function () {
-  // FIXME: temporarily disabled (iOS branch is not complete - issue #899)
-  return true || global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
-}, function (t) {
-  var uuidPath = '/uuid';
-  var router = express.Router();
-  // Register a handler that returns the UUID of this
-  // test instance to an HTTP GET request.
-  router.get(uuidPath, function (req, res) {
-    res.send(tape.uuid);
-  });
+test('can get data from all participants',
+  function () {
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
+  },
+  function (t) {
+    var uuidPath = '/uuid';
+    var router = express.Router();
+    // Register a handler that returns the UUID of this
+    // test instance to an HTTP GET request.
+    router.get(uuidPath, function (req, res) {
+      res.send(tape.uuid);
+    });
 
-  var remainingParticipants = {};
-  t.participants.forEach(function (participant) {
-    if (participant.uuid === tape.uuid) {
-      return;
-    }
-    remainingParticipants[participant.uuid] = participantState.notRunning;
-  });
-  setupDiscoveryAndFindPeers(t, router, function (peer, done) {
-    // Try to get data only from non-TCP peers so that the test
-    // works the same way on desktop on CI where Wifi is blocked
-    // between peers.
-    if (peer.connectionType ===
-      ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE) {
-      return;
-    }
-    testUtils.get(
-      peer.hostAddress, peer.portNumber,
-      uuidPath, pskIdentity, pskKey
-    )
-    .then(function (responseBody) {
+    var remainingParticipants = {};
+    t.participants.forEach(function (participant) {
+      if (participant.uuid === tape.uuid) {
+        return;
+      }
+      remainingParticipants[participant.uuid] = participantState.notRunning;
+    });
+    setupDiscoveryAndFindPeers(t, router, function (peer, done) {
+      // Try to get data only from non-TCP peers so that the test
+      // works the same way on desktop on CI where Wifi is blocked
+      // between peers.
+      if (peer.connectionType ===
+          ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE) {
+        return;
+      }
+      ThaliMobile.getPeerHostInfo(peer.peerIdentifier, peer.connectionType)
+      .then(function (peerHostInfo) {
+        return testUtils.get(
+          peerHostInfo.hostAddress, peerHostInfo.portNumber,
+          uuidPath, pskIdentity, pskKey
+        );
+      })
+      .then(function (responseBody) {
       if (remainingParticipants[responseBody] !== participantState.notRunning) {
         return Promise.resolve(true);
       }
@@ -1653,16 +1778,17 @@ test('can get data from all participants', function () {
               participantState.finished;
           });
       if (areWeDone) {
-        t.ok(true, 'received all uuids');
+          t.ok(true, 'received all uuids');
+          done();
+        }
+      })
+      .catch(function (error) {
+        t.fail(error);
         done();
-      }
-    })
-    .catch(function (error) {
-      t.fail(error);
-      done();
+      });
     });
-  });
-});
+  }
+);
 
 // Taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
 // This is not cryptographically secure and for our purposes it doesn't matter

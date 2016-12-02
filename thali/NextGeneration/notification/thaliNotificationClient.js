@@ -210,42 +210,31 @@ ThaliNotificationClient.prototype.stop = function () {
  */
 ThaliNotificationClient.prototype._peerAvailabilityChanged =
   function (peerStatus) {
+    var self = this;
 
     if (!this.peerDictionary) {
-      return;
-    }
-    if (!peerStatus) {
-      logger.warn('_peerAvailabilityChanged: peerStatus is not set');
-      return;
-    }
-    if (!peerStatus.peerIdentifier) {
-      logger.warn('_peerAvailabilityChanged: peerIdentifier is not set');
+      logger.warn('no dictionary');
       return;
     }
 
-    if (peerStatus.hostAddress &&
-        peerStatus.portNumber &&
-        peerStatus.suggestedTCPTimeout &&
-        peerStatus.connectionType)
-    {
-      assert(!this.peerDictionary.exists(peerStatus.peerIdentifier),
-        'peerAvailabilityChanged event with the same peerId'+
-        ' should not occur. peerIdentifier:' + peerStatus.peerIdentifier);
+    assert(peerStatus, 'peerStatus must not be null or undefined');
+    assert(peerStatus.peerIdentifier, 'peerIdentifier must be set');
+    assert(peerStatus.connectionType, 'connectionType must be set');
+    assert('generation' in peerStatus, 'generation must be set');
+    assert('newAddressPort' in peerStatus, 'newAddressPort must be set');
 
-      var peerConnectionInfo = new PeerDictionary.PeerConnectionInformation(
-        peerStatus.connectionType, peerStatus.hostAddress,
-        peerStatus.portNumber, peerStatus.suggestedTCPTimeout);
-
-      var peerEntry = new PeerDictionary.NotificationPeerDictionaryEntry(
-        PeerDictionary.peerState.CONTROLLED_BY_POOL);
-
-      this._createNewAction(peerEntry, peerStatus.peerIdentifier,
-        peerConnectionInfo);
-    }
-    else if (!peerStatus.hostAddress) {
+    if (!peerStatus.peerAvailable) {
+      logger.warn('peer is not available');
       // Remove the old peer if it exists.
       this.peerDictionary.remove(peerStatus.peerIdentifier);
+      return;
     }
+
+    var peerEntry = new PeerDictionary.NotificationPeerDictionaryEntry(
+      PeerDictionary.peerState.CONTROLLED_BY_POOL);
+
+    self._createNewAction(peerEntry, peerStatus.peerIdentifier,
+      peerStatus.connectionType);
   };
 
 // jscs:disable maximumLineLength
@@ -261,13 +250,13 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
  */
 // jscs:enable maximumLineLength
 ThaliNotificationClient.prototype._createNewAction =
-  function (peerEntry, peerIdentifier, peerConnectionInfo ) {
+  function (peerEntry, peerIdentifier, connectionType) {
 
     var action = new ThaliNotificationAction(
       peerIdentifier,
       this._ecdhForLocalDevice,
       this._addressBookCallback,
-      peerConnectionInfo);
+      connectionType);
 
     action.eventEmitter.on(ThaliNotificationAction.Events.Resolved,
       this._resolved.bind(this));
@@ -347,14 +336,14 @@ ThaliNotificationClient.prototype._resolved =
           peerId
         );
 
-        this.emit(this.Events.PeerAdvertisesDataForUs,
-          peerAdvertises);
+        this.emit(this.Events.PeerAdvertisesDataForUs, peerAdvertises);
 
         break;
       }
 
       case ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_BUT_BAD:
-      case ThaliNotificationAction.ActionResolution.KILLED_SUPERSEDED: {
+      case ThaliNotificationAction.ActionResolution.KILLED_SUPERSEDED:
+      case ThaliNotificationAction.ActionResolution.BAD_PEER: {
         // This indicates a malfunctioning peer. We need to assume they are
         // bad all up and mark their entry as RESOLVED without taking any
         // further action. This means we will ignore this peerIdentifier in
@@ -381,7 +370,7 @@ ThaliNotificationClient.prototype._resolved =
             this._createNewAction(
               entry,
               peerId,
-              entry.notificationAction.getConnectionInformation());
+              entry.notificationAction.getConnectionType());
           } else {
             assert(false, 'unknown state should be WAITING');
           }
