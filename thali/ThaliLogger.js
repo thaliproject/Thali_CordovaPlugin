@@ -1,11 +1,9 @@
 'use strict';
 
 var util     = require('util');
-var inherits = util.inherits;
 var format   = util.format;
 
 var winston      = require('winston');
-var EventEmitter = require('events').EventEmitter;
 
 
 var ThaliLogger = function (tag) {
@@ -62,5 +60,9 @@ module.exports = function (tag) {
   });
   logger._thaliLogger = thaliLogger;
   logger.level = 'debug';
+
+  // Node-SSDP uses Bunyan which supports trace, Winston does not. To work
+  // around this we are hacking in trace support.
+  logger.trace = logger.info;
   return logger;
 };
