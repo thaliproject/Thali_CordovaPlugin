@@ -607,16 +607,6 @@ test('We fire nonTCPPeerAvailabilityChangedEvent event when we get ' +
   }
 );
 
-// This test primarily exists to make sure that we can easily debug the full
-// connection life cycle from the HTTP client through thaliMobileNativeWrapper
-// down through the mux layer down to mobile and back up all the way to the
-// HTTP server we are hosting for the user. Since it is just meant for
-// debugging it is only intended to be run on a desktop. So this test really
-// needs to stay not running when we are on mobile.
-test('can do HTTP requests between peers without coordinator', function (t) {
-  trivialEndToEndTest(t);
-});
-
 test('make sure bad PSK connections fail',
 function () {
   // #1587
@@ -807,6 +797,21 @@ test('we successfully receive and replay discoveryAdvertisingStateUpdate',
 if (!tape.coordinated) {
   return;
 }
+
+// This test primarily exists to make sure that we can easily debug the full
+// connection life cycle from the HTTP client through thaliMobileNativeWrapper
+// down through the mux layer down to mobile and back up all the way to the
+// HTTP server we are hosting for the user. Since it is just meant for
+// debugging it is only intended to be run on a desktop. So this test really
+// needs to stay not running when we are on mobile.
+test('can do HTTP requests between peers without coordinator',
+  function () {
+    return platform._isRealMobile;
+  },
+  function (t) {
+    trivialEndToEndTest(t);
+  }
+);
 
 var endToEndWithStateCheck = function (t) {
   trivialEndToEndTest(t, function () {
