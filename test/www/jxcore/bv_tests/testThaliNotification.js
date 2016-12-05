@@ -304,3 +304,4 @@ test('Client to server request coordinated', testUtils.skipOnIOS,function (t) {
     });
   });
 });
+test('Client to server request coordinated', function (t) {
