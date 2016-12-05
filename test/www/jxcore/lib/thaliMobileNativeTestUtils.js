@@ -4,11 +4,14 @@ var platform = require('thali/NextGeneration/utils/platform');
 var logger = require('../lib/testLogger')('thaliMobileNativeTestUtils');
 var randomString = require('randomstring');
 var Promise = require('lie');
-var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
+var makeIntoCloseAllServer =
+  require('thali/NextGeneration/makeIntoCloseAllServer');
 var net = require('net');
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 
+var ThaliMobileNativeWrapper =
+  require('thali/NextGeneration/thaliMobileNativeWrapper.js');
 
 function startAndListen(t, server, peerAvailabilityChangedHandler) {
   server.listen(0, function () {
@@ -106,12 +109,12 @@ function androidConnectToPeer(peer, retries, successCb, failureCb, quitSignal) {
 
 function MultiConnectEmitter () {
   EventEmitter.call(module.exports.multiConnectEmitter);
-  Mobile('multiConnectResolved').registerToNative(
+  ThaliMobileNativeWrapper.emitter.on('_multiConnectResolved',
     function (syncValue, error, listeningPort) {
       module.exports.multiConnectEmitter
         .emit('multiConnectResolved', syncValue, error, listeningPort);
     });
-  Mobile('multiConnectConnectionFailure').registerToNative(
+  ThaliMobileNativeWrapper.emitter.on('_multiConnectConnectionFailure',
     function (peerIdentifier, error) {
       module.exports.multiConnectEmitter
         .emit('multiConnectConnectionFailure', peerIdentifier, error);

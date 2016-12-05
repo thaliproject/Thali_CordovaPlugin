@@ -283,29 +283,6 @@ function (t) {
   })
 });
 
-test('nonTCPPeerAvailabilityChangedEvent should return null for a portNumber on iOS',
-testUtils.skipOnAndroid,
-function (t) {
-  thaliMobileNativeWrapper.start(express.Router())
-  .then(function () {
-    return thaliMobileNativeWrapper.startListeningForAdvertisements();
-  })
-  .then(function () {
-    return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
-  })
-  .then(function () {
-    thaliMobileNativeWrapper.emitter.once('nonTCPPeerAvailabilityChangedEvent',
-    function(res) {
-      t.equals(res.portNumber, null, 'portNumber equal null');
-      t.end();
-    });
-  })
-  .catch(function (error) {
-    t.fail(error);
-    t.end();
-  })
-});
-
 test('all services are stopped when we call stop', function (t) {
   var stopped = false;
   var serversManagerLocalPort = 0;
@@ -655,7 +632,9 @@ if (!platform._isRealMobile) {
   // HTTP server we are hosting for the user. Since it is just meant for
   // debugging it is only intended to be run on a desktop. So this test really
   // needs to stay not running when we are on mobile.
-  test('can do HTTP requests between peers without coordinator', function (t) {
+  test('can do HTTP requests between peers without coordinator',
+  testUtils.skipOnIOS,
+  function (t) {
     trivialEndToEndTest(t, true);
   });
 
@@ -856,7 +835,31 @@ var endToEndWithStateCheck = function (t) {
   });
 };
 
-test('can do HTTP requests between peers with coordinator', function (t) {
+test('nonTCPPeerAvailabilityChangedEvent should return null' +
+'for a portNumber on iOS',
+testUtils.skipOnAndroid,
+function (t) {
+  thaliMobileNativeWrapper.start(express.Router())
+  .then(function () {
+    return thaliMobileNativeWrapper.startListeningForAdvertisements();
+  })
+  .then(function () {
+    return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
+  })
+  .then(function () {
+    thaliMobileNativeWrapper.emitter.once('nonTCPPeerAvailabilityChangedEvent',
+    function(res) {
+      t.equals(res.portNumber, null, 'portNumber equal null');
+      t.end();
+    });
+  })
+  .catch(function (error) {
+    t.fail(error);
+    t.end();
+  })
+});
+
+test('can do HTTP requests between peers', function (t) {
   endToEndWithStateCheck(t);
 });
 
