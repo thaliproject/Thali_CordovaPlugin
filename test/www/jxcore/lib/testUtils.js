@@ -697,28 +697,6 @@ module.exports.runTestOnAllParticipants = function (
   });
 };
 
-// We doesn't want our test to run infinite time.
-// We will replace t.end with custom exit function.
-module.exports.testTimeout = function (t, timeout, callback) {
-  var timer = setTimeout(function () {
-    t.fail('test timeout');
-    t.end();
-  }, timeout);
-
-  var oldEnd = t.end;
-  t.end = function () {
-    // Restoring original t.end.
-    t.end = oldEnd;
-
-    if (typeof callback === 'function') {
-      callback();
-    }
-
-    clearTimeout(timer);
-    return oldEnd.apply(this, arguments);
-  };
-};
-
 module.exports.checkArgs = function (t, spy, description, args) {
   t.ok(spy.calledOnce, description + ' was called once');
 

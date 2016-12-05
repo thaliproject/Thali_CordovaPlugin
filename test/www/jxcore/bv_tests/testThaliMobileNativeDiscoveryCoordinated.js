@@ -84,22 +84,7 @@ var test = tape({
   }
 });
 
-var TEST_TIMEOUT = 1 * 60 * 1000;
 var STEP_TIMEOUT = 10 * 1000;
-
-// We doesn't want our test to run infinite time.
-// We will replace t.end with custom exit function.
-var testTimeout = function (t) {
-  var timer = setTimeout(function () {
-    t.fail('test timeout');
-    t.end();
-  }, TEST_TIMEOUT);
-  var oldEnd = t.end;
-  t.end = function () {
-    clearTimeout(timer);
-    return oldEnd.apply(this, arguments);
-  }
-}
 
 var server;
 
@@ -107,8 +92,6 @@ var allPeers = {};
 var latestPeers;
 
 test('initial peer discovery', function (t) {
-  testTimeout(t);
-
   server = net.createServer();
   server.on('error', function (err) {
     logger.debug('got error on server ' + err);
@@ -162,8 +145,6 @@ test('initial peer discovery', function (t) {
 [0,1].forEach(function(testIndex) {
 
   test('update peer discovery ' + (testIndex + 1), function (t) {
-    testTimeout(t);
-
     var currentPeers = latestPeers = {};
 
     function newPeersHandler(peers) {
@@ -207,8 +188,6 @@ test('initial peer discovery', function (t) {
 });
 
 test('check latest peer discovery', function (t) {
-  testTimeout(t);
-
   serverToBeClosed = server;
   mobileIsListening = true;
   mobileIsAdvertising = true;
@@ -257,8 +236,6 @@ test('check latest peer discovery', function (t) {
 });
 
 test('no peer discovery', function (t) {
-  testTimeout(t);
-
   mobileIsListening = true;
 
   function newPeersHandler(peers) {

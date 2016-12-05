@@ -34,8 +34,6 @@ var ThaliNotificationServer =
 var ecdhForLocalDevice = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var publicKeyForLocalDevice = ecdhForLocalDevice.generateKeys();
 
-var TEST_TIMEOUT = 5 * 60 * 1000; // 5 minutes
-
 var test = tape({
   setup: function (t) {
     t.data = publicKeyForLocalDevice.toJSON();
@@ -410,8 +408,6 @@ Mocks.prototype.checkSalti = function(dbName) {
 }
 
 test('test thali manager spies', function (t) {
-  testUtils.testTimeout(t, TEST_TIMEOUT);
-
   // This function will return all participant's public keys
   // except local 'publicKeyForLocalDevice' one.
   var partnerKeys;
@@ -452,8 +448,6 @@ test('test thali manager spies', function (t) {
 });
 
 test('test thali manager multiple starts and stops', function (t) {
-  testUtils.testTimeout(t, TEST_TIMEOUT);
-
   // This function will return all participant's public keys
   // except local 'publicKeyForLocalDevice' one.
   var partnerKeys;

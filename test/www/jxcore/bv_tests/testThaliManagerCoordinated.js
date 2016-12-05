@@ -30,8 +30,6 @@ PouchDB = testUtils.getLevelDownPouchDb();
 
 var thaliManager;
 
-var TEST_TIMEOUT = 5 * 60 * 1000; // 5 minutes
-
 var test = tape({
   setup: function (t) {
     t.data = publicKeyForLocalDevice.toJSON();
@@ -143,8 +141,6 @@ function waitForRemoteDocs(
 }
 
 test('test write', function (t) {
-  testUtils.testTimeout(t, TEST_TIMEOUT);
-
   // This function will return all participant's public keys
   // except local 'publicKeyForLocalDevice' one.
   var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
@@ -200,8 +196,6 @@ test('test write', function (t) {
 });
 
 test('test repeat write 1', function (t) {
-  testUtils.testTimeout(t, TEST_TIMEOUT);
-
   var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
     t, publicKeyForLocalDevice
   );
@@ -251,8 +245,6 @@ test('test repeat write 1', function (t) {
 });
 
 test('test repeat write 2', function (t) {
-  testUtils.testTimeout(t, TEST_TIMEOUT);
-
   var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
     t, publicKeyForLocalDevice
   );
