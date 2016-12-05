@@ -223,8 +223,8 @@ var connectionTester = function(port, reversed) {
       connection.destroy();
       reversed ? resolve() : reject(error);
     });
-  })
-}
+  });
+};
 
 test('all services are started when we call start', function (t) {
   var serversManagerLocalPort = 0;
@@ -242,8 +242,9 @@ test('all services are started when we call start', function (t) {
 
     connections.push(connectionTester(routerServerPort));
 
-    if(platform.isAndroid) {
-      serversManagerLocalPort = thaliMobileNativeWrapper._getServersManagerLocalPort();
+    if (platform.isAndroid) {
+      serversManagerLocalPort =
+        thaliMobileNativeWrapper._getServersManagerLocalPort();
       connections.push(connectionTester(serversManagerLocalPort));
     }
 
@@ -256,15 +257,12 @@ test('all services are started when we call start', function (t) {
   .catch(function (error) {
     t.fail(error);
     t.end();
-  })
+  });
 });
 
 test('TCP Servers Manager should be null when we call start on iOS',
 testUtils.skipOnAndroid,
 function (t) {
-  var serversManagerLocalPort = 0;
-  var routerServerPort = 0;
-  var connections = [];
   thaliMobileNativeWrapper.start(express.Router())
   .then(function () {
     return thaliMobileNativeWrapper.startListeningForAdvertisements();
@@ -280,7 +278,7 @@ function (t) {
   .catch(function (error) {
     t.fail(error);
     t.end();
-  })
+  });
 });
 
 test('all services are stopped when we call stop', function (t) {
@@ -320,8 +318,9 @@ test('all services are stopped when we call stop', function (t) {
 
           connections.push(connectionTester(routerServerPort, true));
 
-          if(platform.isAndroid) {
-            serversManagerLocalPort = thaliMobileNativeWrapper._getServersManagerLocalPort();
+          if (platform.isAndroid) {
+            serversManagerLocalPort =
+              thaliMobileNativeWrapper._getServersManagerLocalPort();
             connections.push(connectionTester(serversManagerLocalPort, true));
           }
 
@@ -333,7 +332,7 @@ test('all services are stopped when we call stop', function (t) {
           .catch(function () {
             t.fail('connection should fail after stopping');
             t.end();
-          })
+          });
 
         };
         doConnectTest();
@@ -543,7 +542,8 @@ test('We fire failedNativeConnection event when we get failedConnection from ' +
             'error description matches');
           t.equals(
             failedConnection.connectionType,
-            thaliMobileNativeWrapper.connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK,
+            thaliMobileNativeWrapper.connectionTypes.
+              MULTI_PEER_CONNECTIVITY_FRAMEWORK,
             'connection type is MPCF');
           t.end();
         }
@@ -571,7 +571,7 @@ test('We fire nonTCPPeerAvailabilityChangedEvent event when we get ' +
         peerAvailable: true,
         generation: 5,
         portNumber: null
-      }
+      };
 
       var peerAvailabilityHandler = function (peer) {
         ++callCounter;
@@ -595,7 +595,7 @@ test('We fire nonTCPPeerAvailabilityChangedEvent event when we get ' +
             return cleanUp();
           }
         }
-      }
+      };
 
       var cleanUpCalled = false;
 
@@ -625,37 +625,37 @@ test('We fire nonTCPPeerAvailabilityChangedEvent event when we get ' +
   }
 );
 
-if (!platform._isRealMobile) {
-  // This test primarily exists to make sure that we can easily debug the full
-  // connection life cycle from the HTTP client through thaliMobileNativeWrapper
-  // down through the mux layer down to mobile and back up all the way to the
-  // HTTP server we are hosting for the user. Since it is just meant for
-  // debugging it is only intended to be run on a desktop. So this test really
-  // needs to stay not running when we are on mobile.
-  test('can do HTTP requests between peers without coordinator',
-  testUtils.skipOnIOS,
-  function (t) {
-    trivialEndToEndTest(t, true);
-  });
+// This test primarily exists to make sure that we can easily debug the full
+// connection life cycle from the HTTP client through thaliMobileNativeWrapper
+// down through the mux layer down to mobile and back up all the way to the
+// HTTP server we are hosting for the user. Since it is just meant for
+// debugging it is only intended to be run on a desktop. So this test really
+// needs to stay not running when we are on mobile.
+test('can do HTTP requests between peers without coordinator',
+testUtils.skipOnIOS,
+function (t) {
+  trivialEndToEndTest(t, false);
+});
 
 test('make sure bad PSK connections fail',
-  function () {
-    // #1587
-    // return platform._isRealMobile;
-    return true;
-  },
-  function (t) {
-    // trivialBadEndtoEndTest(t, true);
-    // TODO: Re-enable and fix
-    t.ok(true, 'FIX ME, PLEASE!!!');
-    t.end();
-  });
+function () {
+  // #1587
+  // return platform._isRealMobile;
+  return true;
+},
+function (t) {
+  // trivialBadEndtoEndTest(t, true);
+  // TODO: Re-enable and fix
+  t.ok(true, 'FIX ME, PLEASE!!!');
+  t.end();
+});
 
 test('peer changes handled from a queue',
   function () {
     return platform.isMobile;
-  }, function (t) {
-  thaliMobileNativeWrapper.start(express.Router())
+  },
+  function (t) {
+    thaliMobileNativeWrapper.start(express.Router())
     .then(function () {
       var peerAvailabilityHandler;
       var peerCount = 10;
@@ -694,7 +694,7 @@ test('peer changes handled from a queue',
         peerAvailabilityHandler);
       Mobile.firePeerAvailabilityChanged(getDummyPeers(true));
     });
-});
+  });
 
 test('relaying discoveryAdvertisingStateUpdateNonTCP',
   function() {
@@ -739,7 +739,7 @@ test('thaliMobileNativeWrapper is stopped when ' +
       });
     thaliMobileNativeWrapper.start(express.Router())
       .then(function () {
-        routerPort = (platform.isAndroid) ?
+        routerPort = platform.isAndroid ?
                       thaliMobileNativeWrapper._getServersManagerLocalPort() :
                       thaliMobileNativeWrapper._getRouterServerPort();
 
@@ -856,7 +856,7 @@ function (t) {
   .catch(function (error) {
     t.fail(error);
     t.end();
-  })
+  });
 });
 
 test('can do HTTP requests between peers', function (t) {
@@ -900,24 +900,24 @@ test('can do HTTP requests after connections are cut',
   // (iOS does not require separate call to operate since
   // killConnections is more like a single-shot thing).
 
-  if (platform.isAndroid) {
-    var networkChangeHandler = function(networkChangedValue) {
-      if (networkChangedValue.bluetoothLowEnergy &&
-          networkChangedValue.bluetooth) {
-        thaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
-         networkChangeHandler);
-        endToEndWithStateCheck(t);
-      }
-    };
-    thaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
-      networkChangeHandler);
+    if (platform.isAndroid) {
+      var networkChangeHandler = function(networkChangedValue) {
+        if (networkChangedValue.bluetoothLowEnergy &&
+            networkChangedValue.bluetooth) {
+          thaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
+           networkChangeHandler);
+          endToEndWithStateCheck(t);
+        }
+      };
+      thaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
+        networkChangeHandler);
 
-    t.pass('Turning bluetooth on');
-    testUtils.toggleBluetooth(true);
-  } else {
-    endToEndWithStateCheck(t);
-  }
-});
+      t.pass('Turning bluetooth on');
+      testUtils.toggleBluetooth(true);
+    } else {
+      endToEndWithStateCheck(t);
+    }
+  });
 
 test('will fail bad PSK connection between peers', function (t) {
   // #1587
@@ -957,7 +957,7 @@ test('We provide notification when a listener dies and we recreate it',
         // Re-enable the check below once #719 is fixed.
         // Note that due to other changes we also need to add in a test to
         // make sure we are looking at an event for the right peerID
-        /*if (!recreatedPort ||
+        /* if (!recreatedPort ||
           recreatedPort && record.portNumber !== recreatedPort) {
           logger.debug('No recreated port or port numbers do not match: '
             + record.portNumber + ' !== ' + recreatedPort);
@@ -1044,7 +1044,7 @@ test('We fire nonTCPPeerAvailabilityChangedEvent with the same generation ' +
         }
         isKilled = true;
         try {
-            serversManager._peerServers[peerId].server._mux.destroy();
+          serversManager._peerServers[peerId].server._mux.destroy();
         } catch (err) {
           t.fail('destroy failed with - ' + err);
           finishTest();
