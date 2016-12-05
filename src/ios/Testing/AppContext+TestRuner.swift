@@ -19,7 +19,7 @@ extension AppContext: TestRunnerProtocol {
     let currentTestSuite = XCTestSuite(
       name: "All tests",
       testCases: [
-        ThaliCore.allTestCases,
+        ThaliCoreTests.allTests,
         [testCase(AppContextTests.allTests)]
       ].flatMap { $0 }
     )
