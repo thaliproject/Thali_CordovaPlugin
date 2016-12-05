@@ -299,7 +299,7 @@ function startAdvertisingAndListening(t, applicationPort) {
 
 function startServersManager(t, serversManager) {
   serversManager.start().then(function () {
-    })
+  })
     .catch(function (err) {
       t.fail('server should not get error: ' + err);
     });
@@ -540,7 +540,7 @@ test('createPeerListener - we shouldn\'t create a dead pipe', function (t) {
         t.pass('we created a new pipe with valid sockets');
       }
       return oldPipe.apply(this, arguments);
-    }
+    };
 
     serversManager.terminateOutgoingConnection('peer1', firstConnectionPort)
     .then(function () {

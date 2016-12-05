@@ -1,6 +1,5 @@
 'use strict';
 
-var Promise        = require('bluebird');
 var objectAssign   = require('object-assign');
 var ForeverAgent   = require('forever-agent');
 var express        = require('express');
@@ -30,7 +29,7 @@ test('PouchDB agent works as expected', function (t) {
   agent.addRequest = function (data) {
     requestsData.push(objectAssign({}, data));
     return _addRequest.apply(this, arguments);
-  }
+  };
 
   var app = express();
   app.use('/db', expressPouchDB(PouchDB));
@@ -39,7 +38,7 @@ test('PouchDB agent works as expected', function (t) {
   server.listen(0, function () {
     var port  = server.address().port;
     var url   = 'http://localhost:' + port + '/db';
-    var db    = new PouchDB(url , {
+    var db    = new PouchDB(url, {
       ajax: {
         agent: agent
       }

@@ -19,7 +19,9 @@ import android.os.Build;
  * The base (thread) class for outgoing and incoming socket threads.
  */
 abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Listener {
+
     public interface Listener {
+
         void onListeningForIncomingConnections(int portNumber);
 
         void onDataTransferred(int numberOfBytes);
@@ -33,6 +35,8 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
         void onDone(SocketThreadBase who, boolean threadDoneWasSending);
 
         void onDisconnected(SocketThreadBase who, String errorMessage);
+
+        void onDisconnected(SocketThreadBase who, Exception exception);
 
         void onTransferError(SocketThreadBase who, String errorMessage);
     }

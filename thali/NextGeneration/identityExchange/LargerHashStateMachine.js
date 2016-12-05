@@ -24,7 +24,7 @@ var crypto = require('crypto');
 var express = require('express');
 var bodyParser = require('body-parser');
 
-var logger = require('../ThaliLogger')('largerHash');
+var logger = require('../../ThaliLogger')('largerHash');
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
 var identityExchangeUtils = require('./identityExchangeUtils');
@@ -295,7 +295,7 @@ function LargerHashStateMachine(thaliExpressServer, myPkHashBuffer) {
       name: 'startListening',
       from: ['none', 'NoIdentityExchange'],
       to: 'NoIdentityExchange'
-    },{
+    }, {
       name: 'desiredPeerHasLargerHash',
       from: 'NoIdentityExchange',
       to: 'WrongPeer'

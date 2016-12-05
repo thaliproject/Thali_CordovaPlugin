@@ -1,8 +1,14 @@
 package io.jxcore.node;
 
+import android.util.Log;
+
 import org.json.JSONObject;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 
 import java.lang.reflect.Field;
 
@@ -18,6 +24,14 @@ public class ListenerOrIncomingConnectionTest {
     int listeningPortNumberSample;
     int clientPortNumberSample;
     int serverPortNumberSample;
+    String mTag = ListenerOrIncomingConnectionTest.class.getName();
+
+    @Rule
+    public TestRule watcher = new TestWatcher() {
+        protected void starting(Description description) {
+            Log.i(mTag, "Starting test: " + description.getMethodName());
+        }
+    };
 
     @Before
     public void setUp() throws Exception {

@@ -15,7 +15,7 @@ var test = tape({
         'callNative': function () {
           var cb = arguments[arguments.length - 1];
 
-          if(typeof cb !== 'function') {
+          if (typeof cb !== 'function') {
             throw new Error('The last argument of the Mobile callNative ' +
             'method must be a callback');
           }
@@ -31,7 +31,7 @@ var test = tape({
           }
         },
         'registerToNative': function () {}
-      }
+      };
     };
     t.end();
   },
@@ -61,7 +61,8 @@ test('connector should fail if server not running', function (t) {
 test('connector should be able to send data to a running server', function (t) {
   var retryTimeout = 200;
   var dataAmount = 1000000; // amount in bytes
-  var sendDataConnector = new SendDataConnector(1, dataAmount, retryTimeout, 0, 0);
+  var sendDataConnector = new SendDataConnector(1, dataAmount, retryTimeout, 0,
+    0);
 
   var sendDataTCPServer = new SendDataTCPServer(testPort);
 
