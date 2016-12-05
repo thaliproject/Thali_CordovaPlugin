@@ -71,7 +71,7 @@ if (platform.isIOS) {
   return;
 }
 
-global.NETWORK_TYPE = ThaliMobile.networkTypes.WIFI;
+global.NETWORK_TYPE = ThaliMobile.networkTypes.NATIVE;
 
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {
