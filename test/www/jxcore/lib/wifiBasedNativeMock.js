@@ -823,7 +823,7 @@ MobileCallInstance.prototype.didRegisterToNative = function (method, callback) {
   setImmediate(callback);
 };
 
-MobileCallInstance.prototype.setWifiRadioState = function (setting, callback) {
+MobileCallInstance.prototype.toggleWiFi = function (setting, callback) {
   doToggle(setting, 'wifi', callback);
 };
 
@@ -865,8 +865,8 @@ MobileCallInstance.prototype.callNative = function () {
     case 'didRegisterToNative': {
       return this.didRegisterToNative(arguments[0], arguments[1]);
     }
-    case 'setWifiRadioState': {
-      return this.setWifiRadioState(arguments[0], arguments[1]);
+    case 'toggleWiFi': {
+      return this.toggleWiFi(arguments[0], arguments[1]);
     }
     default: {
       throw new Error('The supplied mobileName does not have a matching ' +

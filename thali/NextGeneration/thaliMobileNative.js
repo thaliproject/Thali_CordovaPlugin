@@ -434,7 +434,7 @@
  * wise for the app to turn it back on without asking the user's permission?
  *
  * @private
- * @function external:"Mobile('setWifiRadioState')".callNative
+ * @function external:"Mobile('toggleWiFi')".callNative
  * @param {boolean} setRadioTo If true then turn the WiFi radio on. If the Wifi
  * radio was already on then that is not an error. If false then turn the Wifi
  * radio off. If the Wifi radio was already off then that is not an error.
