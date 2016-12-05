@@ -499,15 +499,11 @@ test('We fire failedNativeConnection event when we get failedConnection from ' +
   }
 );
 
-// This test primarily exists to make sure that we can easily debug the full
-// connection life cycle from the HTTP client through thaliMobileNativeWrapper
-// down through the mux layer down to mobile and back up all the way to the
-// HTTP server we are hosting for the user. Since it is just meant for
-// debugging it is only intended to be run on a desktop. So this test really
-// needs to stay not running when we are on mobile.
 test('We fire failedNativeConnection event when we get failedConnection from ' +
   'multiConnectConnection',
   function() {
+    // this test uses mock ability to fire events from native layer and it cant
+    // work on real devices
     return platform._isRealMobile;
   },
   function (t) {
