@@ -4,10 +4,10 @@ var platform = require('thali/NextGeneration/utils/platform');
 
 if (platform._isRealMobile) {
 
-    var tape = require('../lib/thaliTape');
-    var thaliMobileNativeWrapper = require('../node_modules/thali/NextGeneration/thaliMobileNativeWrapper');
+  var tape = require('../lib/thaliTape');
+  var thaliMobileNativeWrapper = require('../node_modules/thali/NextGeneration/thaliMobileNativeWrapper');
 
-    var callbackPeer;
+  var callbackPeer;
   var timeout;
 
   var test = tape({
@@ -42,8 +42,9 @@ if (platform._isRealMobile) {
         clearTimeout(timeout);
         console.log(result.Testing_);
         setImmediate(function () {
-          t.equal(callbackPeer.peerIdentifier, '11:22:33:22:11:00-0',
+          t.equal(callbackPeer.peerIdentifier, '11:22:33:22:11:00',
             'check if callback was fired by onPeerLost');
+          t.equal(callbackPeer.generation, null, 'check if generation is null');
           t.notOk(callbackPeer.peerAvailable, 'check if peerAvailable is false');
         });
       });
@@ -71,8 +72,9 @@ if (platform._isRealMobile) {
         clearTimeout(timeout);
         console.log(result.Testing_);
         setImmediate(function () {
-          t.equal(callbackPeer.peerIdentifier, '33:44:55:44:33:22-0',
+          t.equal(callbackPeer.peerIdentifier, '33:44:55:44:33:22',
             'check if callback was fired by onPeerDiscovered');
+          t.equal(callbackPeer.generation, 0, 'check if generation is 0');
           t.ok(callbackPeer.peerAvailable, 'check if peerAvailable is true');
         });
       });

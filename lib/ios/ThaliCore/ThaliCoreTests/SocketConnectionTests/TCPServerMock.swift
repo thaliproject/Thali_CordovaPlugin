@@ -68,7 +68,13 @@ class TCPServerMock: NSObject {
     }
   }
 
-  /***/
+  /**
+   Sends randomly generated method into TCP socket.
+
+   - parameters:
+     - length:
+       Length of random message.
+   */
   func sendRandomMessage(length: Int) {
     guard length > 0 else { return }
 
@@ -80,7 +86,13 @@ class TCPServerMock: NSObject {
     }
   }
 
-  /***/
+  /**
+   Sends given message into TCP socket.
+
+   - parameters:
+     - message:
+       Message which will be sended.
+   */
   func send(_ message: String) {
     guard let messageData = message.data(using: String.Encoding.utf8) else { return }
 

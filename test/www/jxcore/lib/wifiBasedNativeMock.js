@@ -24,11 +24,17 @@ var peerProxySockets = {};
 var peerAvailabilityChangedCallback = null;
 var peerAvailabilities = {};
 
+var BSSID = 'c1:5b:05:5a:41:1e'; // 'c1-5b-05-5a-41-1e' is valid too.
+var SSID  = 'myWifi';
+
 var currentNetworkStatus = {
-  wifi: 'on',
-  bluetooth: 'on',
-  bluetoothLowEnergy: 'doNotCare',
-  cellular: 'doNotCare'
+  wifi:               'on',
+  bluetooth:          'on',
+  bluetoothLowEnergy: 'on',
+  cellular:           'on',
+
+  bssidName: BSSID,
+  ssidName:  SSID
 };
 
 var getCurrentNetworkStatus = function () {
@@ -121,7 +127,7 @@ proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
  *
  * @param {string} mobileMethodName This is the name of the method that was
  * passed in on the mobile object
- * @param {platformChoice} platform
+ * @param {module:platform.names} platform
  * @param {Object} router
  * @param {thaliWifiInfrastructure} thaliWifiInfrastructure
  * @constructor
@@ -209,7 +215,7 @@ function setUpSocketListeners(socket, socketName, pipedSocket, peerIdentifier) {
   socket.on('close', function () {
     debugLogWithId(socketName + ' closed ', peerIdentifier);
     pipedSocket.destroy();
-  })
+  });
 }
 
 function createAndStartProxyRelayServer(portNumber, peerIdentifier) {
@@ -817,6 +823,10 @@ MobileCallInstance.prototype.didRegisterToNative = function (method, callback) {
   setImmediate(callback);
 };
 
+MobileCallInstance.prototype.setWifiRadioState = function (setting, callback) {
+  doToggle(setting, 'wifi', callback);
+};
+
 /**
  * Handles processing callNative requests. The actual params differ based on
  * the particular Mobile method that is being called.
@@ -854,6 +864,9 @@ MobileCallInstance.prototype.callNative = function () {
     }
     case 'didRegisterToNative': {
       return this.didRegisterToNative(arguments[0], arguments[1]);
+    }
+    case 'setWifiRadioState': {
+      return this.setWifiRadioState(arguments[0], arguments[1]);
     }
     default: {
       throw new Error('The supplied mobileName does not have a matching ' +
@@ -908,9 +921,8 @@ var setupListeners = function (thaliWifiInfrastructure) {
  * SSDP:byebye or a response to one of our periodic queries we should use it to
  * create a peerAvailabilityChanged call back. In practice we don't really need
  * to batch these messages so we can just fire them as we get them. The
- * peerIdentifier is the USN from the SSDP message, peerAvailable is true or
- * false based on the SSDP response and pleaseConnect is false except for the
- * situation described above for /ConnectToMeforMock.
+ * peerIdentifier is the USN from the SSDP message, and peerAvailable is true or
+ * false based on the SSDP response.
  *
  * @param {module:thaliMobileNative~peerAvailabilityChangedCallback} callback
  */
@@ -1029,6 +1041,15 @@ var doToggle = function (setting, property, callback) {
     return;
   }
   currentNetworkStatus[property] = newStatus;
+  if (property === 'wifi') {
+    if (setting) {
+      currentNetworkStatus.bssidName = BSSID;
+      currentNetworkStatus.ssidName  = SSID;
+    } else {
+      currentNetworkStatus.bssidName = null;
+      currentNetworkStatus.ssidName  = null;
+    }
+  }
 
   if (networkChangedCallback !== null) {
     // Record the status on this event loop to make sure
@@ -1041,15 +1062,12 @@ var doToggle = function (setting, property, callback) {
       networkChangedCallback(statusSnapshot);
     });
   }
-  setImmediate(callback);
+  return setImmediate(callback);
 };
 
 // jscs:disable jsDoc
 /**
  * This simulates turning Bluetooth on and off.
- *
- * If we are emulating Android then we MUST start with Bluetooth and WiFi
- * turned off.
  *
  * __Open Issue:__ I believe that JXCore will treat this as a NOOP if called
  * on iOS. We need to check and emulate their behavior.
@@ -1061,27 +1079,10 @@ var doToggle = function (setting, property, callback) {
 // jscs:enable jsDoc
 function toggleBluetooth () {
   return function (setting, callback) {
+    if (platform.isIOS) {
+      callback(new Error('toggleBluetooth not supported on iOS'));
+    }
     doToggle(setting, 'bluetooth', callback);
-  };
-}
-
-// jscs:disable jsDoc
-/**
- * If we are on Android then then is a NOOP since we don't care (although to
- * be good little programmers we should still fire a network changed event). We
- * won't be using Wifi for discovery or connectivity in the near future.
- *
- * __Open Issue:__ I believe that JXCore will treat this as a NOOP if called
- * on iOS. We need to check and emulate their behavior.
- *
- * @param {module:platform.names} platform
- * @param {ThaliWifiInfrastructure} thaliWifiInfrastructure
- * @returns {Function}
- */
-// jscs:enable jsDoc
-function toggleWiFi() {
-  return function (setting, callback) {
-    doToggle(setting, 'wifi', callback);
   };
 }
 
@@ -1115,7 +1116,7 @@ function fireMultiConnectResolved() {
 function fireMultiConnectConnectionFailure() {
   return function(peerIdentifier, error) {
     multiConnectConnectionFailureCallbackHandler(peerIdentifier, error);
-  }
+  };
 }
 
 // jscs:disable maximumLineLength
@@ -1179,9 +1180,6 @@ function WifiBasedNativeMock(platformName, router) {
 
   mobileHandler.toggleBluetooth =
     toggleBluetooth(platformName, thaliWifiInfrastructure);
-
-  mobileHandler.toggleWiFi =
-    toggleWiFi(platformName, thaliWifiInfrastructure);
 
   mobileHandler.firePeerAvailabilityChanged =
     firePeerAvailabilityChanged(platformName, thaliWifiInfrastructure);

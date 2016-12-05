@@ -104,25 +104,25 @@ test('Call of onCheckpointReached handler on multiple db changes ' +
 
 test('Call of onCheckpointReached handler on multiple db changes ' +
     'that are out of the checkpoints plugin delay interval', function (t) {
-      var spy = sinon.spy();
+  var spy = sinon.spy();
 
-      var handler = function () {
-        spy();
-        if (spy.callCount === 2) {
-          t.end();
-        }
+  var handler = function () {
+    spy();
+    if (spy.callCount === 2) {
+      t.end();
+    }
 
         // To trigger the handler again
-        db.put(new Doc())
+    db.put(new Doc())
           .catch(function (error) {
             t.end(error);
           });
-      };
+  };
 
-      db.onCheckpointReached(handler);
+  db.onCheckpointReached(handler);
 
-      db.put(new Doc())
+  db.put(new Doc())
         .catch(function (error) {
           t.end(error);
         });
-  });
+});

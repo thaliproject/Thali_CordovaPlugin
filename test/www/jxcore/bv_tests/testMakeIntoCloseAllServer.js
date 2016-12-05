@@ -56,9 +56,9 @@ test('closeAll with promise', function (t) {
         testServer.closeAllPromise()
           .then(function () {
             connection = net.connect(testServerPort, function () {
-                t.fail('connection should not succeed');
-                t.end();
-              });
+              t.fail('connection should not succeed');
+              t.end();
+            });
             connection.on('error', function (error) {
               t.equals(error.code, 'ECONNREFUSED',
                 'not possible to connect to the server anymore');

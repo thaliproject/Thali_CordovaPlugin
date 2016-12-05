@@ -111,6 +111,10 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
   /**
    This method is trying to start new *outputStream* with fresh generated name
    and then waiting for inputStream from remote peer for *streamReceivedBackTimeout*.
+
+   - parameters:
+     - completion:
+       Called when `VirtualSocket` object is ready or error occured.
    */
   func startBuilding(with completion: @escaping (VirtualSocket?, Error?) -> Void) {
     self.completion = completion

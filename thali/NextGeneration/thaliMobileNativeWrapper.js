@@ -3,12 +3,14 @@
 var Promise = require('lie');
 var PromiseQueue = require('./promiseQueue');
 var EventEmitter = require('events').EventEmitter;
+var platform = require('./utils/platform');
 var logger = require('../ThaliLogger')('thaliMobileNativeWrapper');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var express = require('express');
 var TCPServersManager = require('./mux/thaliTcpServersManager');
 var https = require('https');
 var thaliConfig = require('./thaliConfig');
+var platform = require('./utils/platform');
 
 var states = {
   started: false
@@ -648,7 +650,15 @@ module.exports._terminateConnection = function (incomingConnectionId) {
  * a null result.
  */
 module.exports._disconnect = function (peerIdentifier) {
-  return Promise.reject(new Error('Not yet implemented'));
+  return gPromiseQueue.enqueue(function (resolve, reject) {
+    Mobile('disconnect').callNative(peerIdentifier, function (errorMsg) {
+      if (errorMsg) {
+        reject(new Error(errorMsg));
+      } else {
+        resolve();
+      }
+    });
+  });
 };
 
 /**
@@ -664,8 +674,16 @@ module.exports._disconnect = function (peerIdentifier) {
  * reject with an Error will be returned) the response will be a resolve with
  * a null result.
  */
-module.exports.disconnect = function (peerIdentifier) {
-  return Promise.reject(new Error('Not yet implemented'));
+module.exports.disconnect = function(peerIdentifier, portNumber) {
+  if (platform.isAndroid) {
+    return this._terminateListener(peerIdentifier, portNumber);
+  }
+  if (platform.isIOS) {
+    return this._disconnect(peerIdentifier);
+  }
+
+  return Promise.reject(new Error('Disconnect can not be called on ' +
+    platform.name + ' platform'));
 };
 
 /**
@@ -680,11 +698,15 @@ module.exports.disconnect = function (peerIdentifier) {
  * If called on a non-`connect` platform then a 'Not connect platform' error
  * MUST be returned.
  *
+ * @private
  * @param {string} peerIdentifier
  * @param {number} port
  * @returns {Promise<?error>}
  */
-module.exports.terminateListener = function (peerIdentifier, port) {
+module.exports._terminateListener = function (peerIdentifier, port) {
+  if (!platform.isAndroid) {
+    return Promise.reject(new Error('Not connect platform'));
+  }
   return gPromiseQueue.enqueue(function (resolve, reject) {
     gServersManager.terminateOutgoingConnection(peerIdentifier, port)
     .then(function () {
@@ -735,9 +757,31 @@ module.exports.killConnections = function () {
   });
 };
 
-/*
-        EVENTS
+/**
+ * This method is to toggle wifi.
+ *
+ * @property {boolean} value If true then enable wifi, else disable it.
+ * @returns {Promise<?Error>}
  */
+module.exports.setWifiRadioState = function (value) {
+  if (platform.isIOS) {
+    return Promise.reject(new Error(
+      'Mobile(\'setWifiRadioState\') is not implemented on ios'
+    ));
+  }
+
+  return gPromiseQueue.enqueue(function (resolve, reject) {
+    Mobile('setWifiRadioState').callNative(value, function (error) {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+/* EVENTS */
 
 /**
  * Enum to define the types of connections
@@ -865,8 +909,7 @@ var handlePeerAvailabilityChanged = function (peer) {
       resolve();
     };
     if (peer.peerAvailable) {
-      gServersManager.createPeerListener(peer.peerIdentifier,
-                                         peer.pleaseConnect)
+      gServersManager.createPeerListener(peer.peerIdentifier)
       .then(function (portNumber) {
         var peerAvailabilityChangedEvent = {
           peerIdentifier: peer.peerIdentifier,
@@ -1047,7 +1090,7 @@ module.exports._registerToNative = function () {
 
   registerToNative('incomingConnectionToPortNumberFailed',
     function (portNumber) {
-      logger.info('incomingConnectionToPortNumberFailed: %s', portNumber);
+      logger.info('incomingConnectionToPortNumberFailed: %s', JSON.stringify(portNumber));
 
       if (!states.started) {
         logger.info('got incomingConnectionToPortNumberFailed while not in ' +

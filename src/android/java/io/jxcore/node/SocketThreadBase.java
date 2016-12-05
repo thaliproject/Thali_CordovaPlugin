@@ -5,11 +5,15 @@ package io.jxcore.node;
 
 import android.bluetooth.BluetoothSocket;
 import android.util.Log;
+
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.SocketException;
+import android.os.Build;
 
 /**
  * The base (thread) class for outgoing and incoming socket threads.
@@ -25,7 +29,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
         /**
          * Called when either the sending or the receiving thread is done.
          *
-         * @param who The associated SocketThreadBase instance (this).
+         * @param who                  The associated SocketThreadBase instance (this).
          * @param threadDoneWasSending If true, the sending thread is done. If false, the receiving thread is done.
          */
         void onDone(SocketThreadBase who, boolean threadDoneWasSending);
@@ -33,11 +37,13 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
         void onDisconnected(SocketThreadBase who, String errorMessage);
 
         void onDisconnected(SocketThreadBase who, Exception exception);
+
+        void onTransferError(SocketThreadBase who, String errorMessage);
     }
 
     private static final String SENDING_THREAD_NAME = "Sender";
     private static final String RECEIVING_THREAD_NAME = "Receiver";
-    private static final int STREAM_COPYING_THREAD_BUFFER_SIZE = 1024 * 4;
+    protected static final int STREAM_COPYING_THREAD_BUFFER_SIZE = 1024 * 4;
 
     protected final BluetoothSocket mBluetoothSocket;
     protected final Listener mListener;
@@ -168,7 +174,6 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
     }
 
     /**
-     *
      * @param who The StreamCopyingThread that is done.
      */
     @Override
@@ -191,7 +196,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
         }, 1000);*/
 
         if (mReceivingThread != null && mReceivingThread.getIsDone()
-            && mSendingThread != null && mSendingThread.getIsDone()) {
+                && mSendingThread != null && mSendingThread.getIsDone()) {
             Log.i(mTag, "Both threads are done, notifying the listener...");
             mListener.onDone(socketThreadBase, (who == mSendingThread));
         }
@@ -219,7 +224,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
                 Log.e(mTag, "Unidentified stream copying thread failed with error: " + errorMessage);
             }
 
-            mListener.onDisconnected(this, errorMessage);
+            mListener.onTransferError(this, errorMessage);
         }
     }
 
@@ -248,10 +253,10 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
      */
     protected synchronized void startStreamCopyingThreads(ConnectionData connectionData) {
         if (mBluetoothInputStream == null
-            || mLocalInputStream == null
-            || mBluetoothOutputStream == null
-            || mLocalOutputStream == null
-            || mLocalhostSocket == null) {
+                || mLocalInputStream == null
+                || mBluetoothOutputStream == null
+                || mLocalOutputStream == null
+                || mLocalhostSocket == null) {
             Log.e(mTag, "startStreamCopyingThreads: Cannot start since at least one of the streams is null");
             mListener.onDisconnected(this, "Cannot start stream copying threads since at least one of the streams is null");
         } else {
@@ -269,7 +274,6 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
             mSendingThread.setBufferSize(STREAM_COPYING_THREAD_BUFFER_SIZE);
             mSendingThread.setNotifyStreamCopyingProgress(true);
             mSendingThread.start();
-
             mReceivingThread = new StreamCopyingThread(this, mBluetoothInputStream, mLocalOutputStream, shortName + "/" + RECEIVING_THREAD_NAME, connectionData);
             mReceivingThread.setUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
             mReceivingThread.setBufferSize(STREAM_COPYING_THREAD_BUFFER_SIZE);
@@ -278,5 +282,16 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
 
             Log.i(mTag, "startStreamCopyingThreads: OK (thread ID: " + getId() + ")");
         }
+    }
+
+    protected void configureSocket() throws SocketException {
+        if(mLocalhostSocket!=null){
+            mLocalhostSocket.setKeepAlive(true);
+            mLocalhostSocket.setReuseAddress(false);
+            mLocalhostSocket.setOOBInline(false);
+            mLocalhostSocket.setSoTimeout(0);
+            mLocalhostSocket.setTcpNoDelay(true);
+        }
+
     }
 }

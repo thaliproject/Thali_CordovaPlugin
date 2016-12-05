@@ -75,8 +75,8 @@ test('Coordinated seq test',
     return true;
   },
   function (t) {
-   var dbName = 'seqTest';
-   testUtils.runTestOnAllParticipants(t, router, thaliNotificationClient,
+    var dbName = 'seqTest';
+    testUtils.runTestOnAllParticipants(t, router, thaliNotificationClient,
      thaliNotificationServer, ThaliMobile, devicePublicKey,
      function (notificationForUs) {
        var localSeqManager;
@@ -145,4 +145,4 @@ test('Coordinated seq test',
      .then(function () {
        t.end();
      });
-});
+  });

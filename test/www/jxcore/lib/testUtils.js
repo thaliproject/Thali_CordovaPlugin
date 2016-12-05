@@ -14,38 +14,117 @@ var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var expressPouchdb = require('express-pouchdb');
 var platform = require('thali/NextGeneration/utils/platform');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-var notificationBeacons =
-  require('thali/NextGeneration/notification/thaliNotificationBeacons');
+var notificationBeacons = require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var express = require('express');
 var fs = require('fs-extra-promise');
 
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
 
-var doToggle = function (toggleFunction, on) {
+function toggleBluetooth (value) {
   if (typeof Mobile === 'undefined') {
-    return Promise.resolve();
+    return Promise.reject(new Error(
+      'Mobile is not defined'
+    ));
   }
-  if (platform.isIOS) {
-    return Promise.resolve();
+  if (platform._isRealAndroid || platform.isIOS) {
+    return Promise.reject(new Error(
+      '\'toggleBluetooth\' is not implemented on android and ios'
+    ));
   }
   return new Promise(function (resolve, reject) {
-    Mobile[toggleFunction](on, function (err) {
-      if (err) {
-        logger.warn('Mobile.%s returned an error: %s', toggleFunction, err);
-        return reject(new Error(err));
+    Mobile.toggleBluetooth(value, function (error) {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
       }
-      return resolve();
+    });
+  });
+}
+
+module.exports.toggleBluetooth = toggleBluetooth;
+
+function toggleWifi (value) {
+  if (typeof Mobile === 'undefined') {
+    return Promise.reject(new Error(
+      'Mobile is not defined'
+    ));
+  }
+  if (platform.isIOS) {
+    return Promise.reject(new Error(
+      'Mobile(\'setWifiRadioState\') is not implemented on ios'
+    ));
+  }
+  return new Promise(function (resolve, reject) {
+    Mobile('setWifiRadioState').callNative(value, function (error) {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
     });
   });
 };
+module.exports.toggleWifi = toggleWifi;
 
-module.exports.toggleWifi = function (on) {
-  return doToggle('toggleWiFi', on);
+var ThaliMobile;
+var ensureNetwork = function (type, toggle, value) {
+  if (!ThaliMobile) {
+    ThaliMobile = require('thali/NextGeneration/thaliMobile');
+  }
+  var valueString = value? 'on' : 'off';
+
+  return ThaliMobile.getNetworkStatus()
+  .then(function (networkStatus) {
+    if (networkStatus[type] !== valueString) {
+
+      // We will wait until network status will reach required 'value'.
+      // We need to start ThaliMobile to receive 'networkChanged' event.
+      // We can't use Mobile('networkChanged').registerToNative here because it
+      // can replace existing listener.
+      var isStarted = ThaliMobile.isStarted();
+      return (ThaliMobile.isStarted() ? Promise.resolve() :
+          ThaliMobile.start(express.Router()))
+        .then(function () {
+          return new Promise(function (resolve) {
+            function networkChangedHandler (networkStatus) {
+              if (networkStatus[type] === valueString) {
+                ThaliMobile.emitter.removeListener('networkChanged',
+                  networkChangedHandler);
+                resolve();
+              } else {
+                logger.warn(
+                  'we are %s %s network, but it don\'t want to obey',
+                  value? 'enabling' : 'disabling', type
+                );
+              }
+            }
+            ThaliMobile.emitter.on('networkChanged', networkChangedHandler);
+            toggle(value);
+          });
+        })
+
+      .then(function () {
+        if (!isStarted) {
+          // We need to cleanup after our 'ThaliMobile.start'.
+          return ThaliMobile.stop();
+        }
+      });
+    }
+  });
 };
 
-exports.toggleBluetooth = function (on) {
-  return doToggle('toggleBluetooth', on);
+module.exports.ensureWifi = function (value) {
+  return ensureNetwork('wifi', toggleWifi, value);
+};
+module.exports.ensureBluetooth = function (value) {
+  return ensureNetwork('bluetooth', toggleBluetooth, value);
+};
+
+module.exports.validateBSSID = function (value) {
+  // Both 'c1:5b:05:5a:41:1e' and 'c1-5b-05-5a-41-1e' are valid.
+  return /([0-9a-f]{2}[:-]|$){6}/i.test(value);
 };
 
 /**
@@ -54,7 +133,7 @@ exports.toggleBluetooth = function (on) {
  * environment, the network changes will be simulated (i.e., doesn't affect
  * the network status of the host machine).
  * @param {boolean} on Pass true to turn radios on and false to turn them off
- * @returns {Promise<?Error>}
+ * @returns {Promise<?Error>} Result of operation
  */
 module.exports.toggleRadios = function (on) {
   logger.info('Toggling radios to: %s', on);
@@ -76,7 +155,8 @@ var myNameCallback = null;
 /**
  * Set the name given used by this device. The name is
  * retrievable via a function exposed to the Cordova side.
- * @param {string} name
+ * @param {string} name Device name
+ * @returns {null} Returns null
  */
 module.exports.setName = function (name) {
   myName = name;
@@ -85,10 +165,12 @@ module.exports.setName = function (name) {
   } else {
     logger.warn('myNameCallback not set!');
   }
+  return null;
 };
 
 /**
  * Get the name of this device.
+ * @returns {string} Name of device
  */
 module.exports.getName = function () {
   return myName;
@@ -184,7 +266,9 @@ module.exports.returnsValidNetworkStatus = function () {
   // we can require the test utils also from an environment
   // where Mobile isn't defined (which is a requirement when
   // thaliMobile is required).
-  var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+  if (!ThaliMobile) {
+    ThaliMobile = require('thali/NextGeneration/thaliMobile');
+  }
   // Check that network status is as expected and
   // report to CI that this device is ready.
   return ThaliMobile.getNetworkStatus()
@@ -260,7 +344,7 @@ function createResponseBody(response) {
   return new Promise(function (resolve, reject) {
     var responseBody = '';
     response.on('data', function (data) {
-      logger.debug('Got response data')
+      logger.debug('Got response data');
       responseBody += data;
     });
     response.on('end', function () {
@@ -288,10 +372,7 @@ module.exports.put = function (host, port, path, pskIdentity, pskKey,
       method: 'PUT',
       agent: new ForeverAgent.SSL({
         rejectUnauthorized: false,
-        keepAlive: true,
-        keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-        maxSockets: Infinity,
-        maxFreeSockets: 256,
+        maxSockets: 8,
         ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
         pskIdentity: pskIdentity,
         pskKey: pskKey
@@ -334,10 +415,7 @@ module.exports.get = function (host, port, path, pskIdentity, pskKey) {
     port: port,
     path: path,
     agent: new ForeverAgent.SSL({
-      keepAlive: true,
-      keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-      maxSockets: Infinity,
-      maxFreeSockets: 256,
+      maxSockets: 8,
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
       pskIdentity: pskIdentity,
       pskKey: pskKey
@@ -695,10 +773,7 @@ var createPskPouchDBRemote = function (
     serverUrl, {
       ajax: {
         agent: new ForeverAgent.SSL({
-          keepAlive: true,
-          keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-          maxSockets: Infinity,
-          maxFreeSockets: 256,
+          maxSockets: 8,
           ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
           pskIdentity: pskId,
           pskKey: pskKey
@@ -742,4 +817,47 @@ module.exports.setUpServer = function (testBody, appConfig) {
     }
   );
   return testCloseAllServer;
+};
+
+/**
+ * Stubs `dns.lookup` function such a way, that attempt to connect to
+ * `unresolvableDomain` fails immediately.
+ *
+ * TODO: update implementation to allow multiple domains to be unresolvable
+ *
+ * @param {string} unresolvableDomain
+ */
+module.exports.makeDomainUnresolvable = function (unresolvableDomain) {
+  var dns = require('dns');
+  if (dns.__originalLookup) {
+    throw new Error('makeDomainUnresolvable can\'t be called twice without ' +
+      'calling restoreUnresolvableDomains');
+  }
+  dns.__originalLookup = dns.lookup;
+  dns.lookup = function (domain, family_, callback_) {
+    var family = family_,
+      callback = callback_;
+    // parse arguments
+    if (arguments.length === 2) {
+      callback = family;
+    }
+    if (domain === unresolvableDomain) {
+      var syscall = 'getaddrinfo';
+      var errorno = 'ENOTFOUND';
+      var e = new Error(syscall + ' ' + errorno);
+      e.errno = e.code = errorno;
+      e.syscall = syscall;
+      setImmediate(callback, e);
+    } else {
+      return dns.__originalLookup.apply(dns, arguments);
+    }
+  };
+};
+
+module.exports.restoreUnresolvableDomains = function () {
+  var dns = require('dns');
+  if (dns.__originalLookup) {
+    dns.lookup = dns.__originalLookup;
+    delete dns.__originalLookup;
+  }
 };
