@@ -13,12 +13,13 @@ const assert = require('assert');
 
 const versions =
 {
-  xcode: '7.3.1',
+  xcode: '8.1',
   xcodeCommandLineTools: ' ',
   macOS: '10.12.1',
   node: '6.9.1',
   npm: '3.10.8',
   brew: '1.1.',
+  carthage: '0.18.1',
   ruby: '2.3.0p0',
   wget: '1.18',
   jxcore: '0.3.1.7',
@@ -40,7 +41,7 @@ const versions =
   cordova: '6.4.0',
   java: '1.8.0_102',
   git: '2.10.0',
-  swiftlint: '0.13.0',
+  swiftlint: '0.13.2',
   btconnectorlib2: '0.3.5',
   jxcoreCordova: '0.1.7',
   sinopiaNode: ' ',
@@ -120,6 +121,12 @@ const commandsAndResults =
     versionValidate:
       (result, version) =>
         boolToPromise(result.startsWith('Homebrew ' + version))
+  },
+  carthage: {
+    platform: ['darwin'],
+    versionCheck: 'carthage version',
+    versionValidate:
+      (result, version) => boolToPromise(version === result.trim())
   },
   ruby: {
     platform: ['darwin'],

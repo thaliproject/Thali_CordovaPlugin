@@ -62,6 +62,8 @@
         <hook type="after_plugin_install" src="thali/install/cordova-hooks/ios/after_plugin_install.js" />
 
         <config-file target="config.xml" parent="/*">
+          <preference name="deployment-target" value="10.0" />
+
           <feature name="ThaliPlugin">
               <param name="ios-package" value="ThaliPlugin" />
           </feature>
@@ -69,7 +71,8 @@
 
         <source-file src="src/ios/JXcoreExtension.m" compiler-flags="-Werror"/>
         <source-file src="src/ios/AppContext.swift" compiler-flags="-Werror"/>
-        <source-file src="src/ios/AppContextTests.swift" compiler-flags="-Werror"/>
+
+        <source-file src="src/ios/TestRunnerProtocol.swift" compiler-flags="-Werror"/>
 
     </platform>
 </plugin>

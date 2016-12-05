@@ -37,12 +37,11 @@ var Promise = require('lie');
 var xcode = require('xcode');
 
 function addFramework(
-  projectPath, frameworkProjectDir, frameworkOutputDir, buildWithTests) {
+  projectPath, frameworksDir, buildWithTests, testingInfrastructureDir) {
 
   // We need to build ThaliCore.framework before embedding it into the project
-  return buildFramework(
-    frameworkProjectDir, frameworkOutputDir, buildWithTests)
-    .then(function () {
+  return buildFrameworks(frameworksDir, buildWithTests)
+    .then(function (frameworksPaths) {
       var pbxProjectPath = path.join(projectPath, 'project.pbxproj');
       var xcodeProject = xcode.project(pbxProjectPath);
 
@@ -63,19 +62,23 @@ function addFramework(
 
           console.log('Adding Build Properties');
 
+          xcodeProject.addBuildProperty(
+            'ENABLE_TESTABILITY', 'YES', 'Debug');
+
+          xcodeProject.addBuildProperty(
+            'IPHONEOS_DEPLOYMENT_TARGET', '10.0');
+
           // Tell to Xcode project that we use Swift in our framework
           // I believe that this line of code will be removed in the future
-          xcodeProject.removeBuildProperty(
-            'EMBEDDED_CONTENT_CONTAINS_SWIFT');
           xcodeProject.addBuildProperty(
-            'EMBEDDED_CONTENT_CONTAINS_SWIFT', 'YES');
+            'ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES', 'YES');
+          xcodeProject.addBuildProperty(
+            'SWIFT_VERSION', '3.0');
 
-          xcodeProject.removeBuildProperty(
-            'OTHER_SWIFT_FLAGS');
-          xcodeProject.addBuildProperty('OTHER_SWIFT_FLAGS', '\"-DTEST\"');
+          xcodeProject.addBuildProperty(
+            'OTHER_SWIFT_FLAGS', '\"-DTEST\"');
 
-          xcodeProject.removeBuildProperty('GCC_PREPROCESSOR_DEFINITIONS');
-          xcodeProject.updateBuildProperty(
+          xcodeProject.addBuildProperty(
             'GCC_PREPROCESSOR_DEFINITIONS',
             ['\"$(inherited)\"', '\"TEST=1\"']);
 
@@ -107,24 +110,57 @@ function addFramework(
           xcodeProject.addBuildProperty(
             'LD_RUNPATH_SEARCH_PATHS', '\"$(inherited) @executable_path/Frameworks\"', 'Release');
 
-          // Add the frameworks again.
-          // This time they will have the code-sign option set
-          // so they get code signed when being deployed to devices.
-          console.log('Adding ThaliCore.framework');
-          xcodeProject.addFramework(
-            path.join(frameworkOutputDir, 'ThaliCore.framework'),
-            {customFramework: true, embed: true, link: true, sign: true});
+          // Link frameworks
+          frameworksPaths
+            .forEach(function (frameworkPath) {
+              console.log('Adding framework: ' + frameworkPath);
 
-          // Add the frameworks again.
-          // This time they will have the code-sign option set
-          // so they get code signed when being deployed to devices.
+              xcodeProject.addFramework(
+                frameworkPath,
+                {customFramework: true, embed: false, link: true, sign: false});
+            });
+
+          // since we're using Carthage we need to add build phase
+          // that runs carthage copy-frameworks
+          // for all frameworks created by Carthage
+
+          var projectDir = path.dirname(projectPath);
+          var relativeFrameworksPaths = frameworksPaths
+            .map(function (frameworkPath) {
+              var frameworkDir = path.dirname(frameworkPath);
+              var frameworkName = path.basename(frameworkPath);
+              var relativeDir = path.relative(projectDir, frameworkDir);
+
+              return '\"' + '$(SRCROOT)' + path.sep +
+                path.join(relativeDir, frameworkName) + '\"';
+            });
+
+          xcodeProject.addBuildPhase(
+            [],
+            'PBXShellScriptBuildPhase',
+            'Carthage Copy Frameworks',
+            targetUUID,
+            {
+              inputPaths: relativeFrameworksPaths,
+              shellPath: '/bin/sh',
+              shellScript: '/usr/local/bin/carthage copy-frameworks'
+            }
+          );
+
           if (buildWithTests) {
-            console.log('Adding XCTest.framework');
-            var xcTestFrameworkPath = '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework';
-            // var xcTestFrameworkPath = '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest.framework';
-            xcodeProject.addFramework(
-              xcTestFrameworkPath,
-              {customFramework: true, embed: true, link: true, sign: true});
+            var testingFiles =
+              fs.readdirSync(testingInfrastructureDir)
+                .filter(function (file) {
+                  return file.endsWith('.swift');
+                })
+                .map(function (file) {
+                  return path.join(testingInfrastructureDir, file);
+                });
+
+            testingFiles
+              .forEach(function (file) {
+                xcodeProject.addSourceFile(file);
+              });
           }
 
           resolve(xcodeProject);
@@ -136,51 +172,48 @@ function addFramework(
           pbxProjectPath, xcodeProject.writeSync(), 'utf-8');
       });
     });
-};
+}
 
 /**
- * @param {string} projectDir Xcode project directory
+ * @param {string} frameworksDir Xcode project directory
  * @param {string} outputDir Framework output directory
  * @param {boolean} buildWithTests
  */
-function buildFramework(projectDir, outputDir, buildWithTests) {
-  var projectName = 'ThaliCore';
-  var projectScheme = 'ThaliCore';
-  if (buildWithTests) {
-    projectScheme = 'ThaliCoreCITests';
-  }
+function buildFrameworks(frameworksDir, buildWithTests) {
 
-  var projectConfiguration = 'Release';
-  var sdk = 'iphoneos';
-  var projectPath = path.join(projectDir, projectName + '.xcodeproj');
-  var buildDir = path.join(projectDir, 'build');
-
-  var buildCmd = 'set -o pipefail && ' +
-    'xcodebuild -project' +
-    ' \"' + projectPath + '\"' +
-    ' -scheme ' + '\"' + projectScheme + '\"' +
-    ' -configuration ' + projectConfiguration +
-    ' -sdk ' + sdk +
-    ' ONLY_ACTIVE_ARCH=NO ' +
-    ' BUILD_DIR=' + '\"' + buildDir + '\"' +
-    ' clean build';
+  var buildDir = path.join(
+    frameworksDir, 'Carthage', 'Build', 'iOS'
+  );
+  // NOTE: --configuration Debug is important since
+  // we need ENABLE_TESTABILITY flag set to YES
+  var buildCmd = 'carthage update --platform ios --configuration Debug ' +
+    '--project-directory ' + frameworksDir;
 
   console.log('Building ThaliCore.framework');
 
   // todo: fixed buffer size should be fixed with streaming in #1001
   return exec(buildCmd, { maxBuffer: 10*1024*1024 } )
     .then(function () {
-      return fs.ensureDir(outputDir);
-    })
-    .then(function () {
-      var frameworkBuildDir = path.join(
-        buildDir, projectConfiguration + '-' + sdk, projectName + '.framework');
-      var frameworkOutputDir = path.join(
-        outputDir, projectName + '.framework');
+      return fs.readdirAsync(buildDir)
+        .then(function (files) {
+          return files
+            .filter(function (file) {
+              if (!file.endsWith('.framework')) {
+                return false;
+              }
 
-      return fs.copy(frameworkBuildDir, frameworkOutputDir, { clobber: false });
+              if (!buildWithTests && file.indexOf('Test') !== -1) {
+                return false;
+              }
+
+              return true;
+            })
+            .map(function (file) {
+              return path.join(buildDir, file);
+            });
+        });
     });
-};
+}
 
 module.exports = {
   addFramework: addFramework
