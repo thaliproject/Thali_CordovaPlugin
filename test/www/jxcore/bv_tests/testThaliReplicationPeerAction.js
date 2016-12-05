@@ -221,6 +221,7 @@ function matchDocsInChanges(pouchDB, docs, thaliPeerReplicationAction) {
 }
 
 test('Make sure docs replicate',
+  testUtils.skipOnIOS,
   function (t) {
     testCloseAllServer = testUtils.setUpServer(function (serverPort,
                                                          randomDBName,

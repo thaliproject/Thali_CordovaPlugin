@@ -167,7 +167,7 @@ function checkSuccess() {
     allDictionaryItemsNonZero(globals.peerRequestedUs);
 }
 
-test('Client to server request coordinated', function (t) {
+test('Client to server request coordinated', testUtils.skipOnIOS,function (t) {
 
   // For this test we share our own public key with other peers and collect
   // their public keys. Then we wait until we get a peerAvailabilityChanged

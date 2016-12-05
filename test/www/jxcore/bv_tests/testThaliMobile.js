@@ -1722,7 +1722,6 @@ test('We properly fire peer unavailable and then available when ' +
       case 1: {
         t.equal(peer.peerIdentifier, somePeerIdentifier, 'peerIds match');
         t.equal(peer.peerAvailable, true, 'peer is available');
-        t.equal(peer.newAddressPort, false, 'newAddressPort is false');
         ThaliMobile.getPeerHostInfo(peer.peerIdentifier, peer.connectionType)
         .then(function (peerHostInfo) {
           var socket = net.connect({
@@ -1735,7 +1734,11 @@ test('We properly fire peer unavailable and then available when ' +
             // At this point mux layer is going to call Mobile('connect') and
             // fail
           });
-        });
+        })
+        .catch(function(e) {
+          t.equal(e.message, 'Connection could not be established',
+            'error description matches');
+        })
         return;
       }
       case 2: {
@@ -1746,8 +1749,9 @@ test('We properly fire peer unavailable and then available when ' +
       case 3: {
         t.equal(peer.peerIdentifier, somePeerIdentifier, 'peerIds match again');
         t.equal(peer.peerAvailable, true, 'peer is available again');
-        t.equal(peer.newAddressPort, false, 'newAddressPort is false');
-        t.ok(connectionErrorReceived, 'We got the error we expected');
+        if(platform.isAndroid) {
+          t.ok(connectionErrorReceived, 'We got the error we expected');
+        }
         return cleanUp();
       }
     }

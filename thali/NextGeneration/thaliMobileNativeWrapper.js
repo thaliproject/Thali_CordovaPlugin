@@ -672,9 +672,6 @@ module.exports._multiConnect = function (peerIdentifier) {
         }
       );
     });
-  })
-  .catch(function () {
-    handleFailedNativeConnectionMPCF(peerIdentifier);
   });
 };
 
@@ -984,7 +981,8 @@ var handlePeerAvailabilityChanged = function (peer) {
           peerIdentifier: peer.peerIdentifier,
           peerAvailable: true,
           generation: peer.generation,
-          portNumber: portNumber
+          portNumber: portNumber,
+          recreated: peer.recreated
         };
         peerGenerations[peer.peerIdentifier] = peer.generation;
 
@@ -1200,6 +1198,9 @@ module.exports._registerToNative = function () {
 
   registerToNative('multiConnectConnectionFailure',
     function (failedConnection) {
+      module.exports.emitter.emit(
+        '_multiConnectConnectionFailure',
+        failedConnection);
       var event = {
         error: failedConnection.error,
         peerIdentifier: failedConnection.peerIdentifier,
