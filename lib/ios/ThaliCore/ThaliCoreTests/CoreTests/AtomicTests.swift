@@ -79,7 +79,7 @@ class AtomicTests: XCTestCase {
 
     // Wating for async block execution completion
     for _ in 0..<queuesCount {
-      dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER)
+      let _ = dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER)
     }
   }
 }

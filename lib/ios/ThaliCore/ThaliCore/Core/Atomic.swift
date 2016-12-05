@@ -58,9 +58,7 @@ public final class Atomic<Value> {
   private var _value: Value
 
   public var value: Value {
-    get {
-      return withValue { $0 }
-    }
+    return withValue { $0 }
   }
 
   /**
