@@ -141,8 +141,7 @@ test('error returned with bad router', function (t) {
 });
 
 var testPath = '/test';
-function trivialEndToEndTestScaffold(t, needManualNotify,
-                                     pskIdtoSecret, pskIdentity, pskKey,
+function trivialEndToEndTestScaffold(t, pskIdtoSecret, pskIdentity, pskKey,
                                      testData, callback) {
   var router = express.Router();
   router.get(testPath, function (req, res) {
@@ -170,18 +169,13 @@ function trivialEndToEndTestScaffold(t, needManualNotify,
     })
     .then(function () {
       return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
-    })
-    .then(function () {
-      if (needManualNotify) {
-        Mobile.wifiPeerAvailabilityChanged('foo');
-      }
     });
 }
 
 var pskIdentity = 'I am me!';
 var pskKey = new Buffer('I am a reasonable long string');
 var testData = 'foobar';
-function trivialEndToEndTest(t, needManualNotify, callback) {
+function trivialEndToEndTest(t, callback) {
   function pskIdToSecret(id) {
     // There is a race condition where we could still get an incoming
     // request even after we think we are done with the test. This will cause
@@ -196,21 +190,9 @@ function trivialEndToEndTest(t, needManualNotify, callback) {
     return id === pskIdentity ? pskKey : null;
   }
 
-  trivialEndToEndTestScaffold(t, needManualNotify,
-    pskIdToSecret, pskIdentity, pskKey, testData, callback);
-}
-
-function trivialBadEndToEndTest(t, needManualNotify, callback) {
-  var pskIdentity = 'Yo ho ho';
-  var pskKey = new Buffer('It really does not matter');
-  var testData = 'Not important';
-
-  function pskIdToSecret() {
-    return null;
-  }
-
-  trivialEndToEndTestScaffold(t, needManualNotify,
-    pskIdToSecret, pskIdentity, pskKey, testData, callback);
+  trivialEndToEndTestScaffold(
+    t, pskIdToSecret, pskIdentity, pskKey, testData, callback
+  );
 }
 
 var connectionTester = function(port, reversed) {
@@ -631,10 +613,8 @@ test('We fire nonTCPPeerAvailabilityChangedEvent event when we get ' +
 // HTTP server we are hosting for the user. Since it is just meant for
 // debugging it is only intended to be run on a desktop. So this test really
 // needs to stay not running when we are on mobile.
-test('can do HTTP requests between peers without coordinator',
-testUtils.skipOnIOS,
-function (t) {
-  trivialEndToEndTest(t, false);
+test('can do HTTP requests between peers without coordinator', function (t) {
+  trivialEndToEndTest(t);
 });
 
 test('make sure bad PSK connections fail',
@@ -829,7 +809,7 @@ if (!tape.coordinated) {
 }
 
 var endToEndWithStateCheck = function (t) {
-  trivialEndToEndTest(t, false, function () {
+  trivialEndToEndTest(t, function () {
     t.equals(thaliMobileNativeWrapper._isStarted(), true, 'must be started');
     t.end();
   });
@@ -931,7 +911,7 @@ test('We provide notification when a listener dies and we recreate it',
   testUtils.skipOnIOS,
   function (t) {
     var recreatedPort = null;
-    trivialEndToEndTest(t, false, function (peerId) {
+    trivialEndToEndTest(t, function (peerId) {
       function recreatedHandler(record) {
         t.equal(record.peerIdentifier, peerId, 'same ids');
         recreatedPort = record.portNumber;
@@ -995,7 +975,7 @@ test('We fire nonTCPPeerAvailabilityChangedEvent with the same generation ' +
   'and different port when listener is recreated',
   testUtils.skipOnIOS,
   function (t) {
-    trivialEndToEndTest(t, false, function (peerId) {
+    trivialEndToEndTest(t, function (peerId) {
       var beforeRecreatePeer = null;
       var afterRecreatePeer = null;
       var isKilled = false;
