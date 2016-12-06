@@ -11,7 +11,9 @@ import Foundation
 import XCTest
 
 public final class TestRunner: NSObject {
+
   struct RunResult {
+
     let executedCount: Int
     let succeededCount: Int
     let failureCount: Int
