@@ -1,12 +1,14 @@
 'use strict';
 
-var util   = require('util');
-var format = util.format;
+var util     = require('util');
+var format   = util.format;
+var inherits = util.inherits;
 
 var objectAssign = require('object-assign');
 var tape         = require('tape-catch');
 var assert       = require('assert');
 var uuid         = require('node-uuid');
+var EventEmitter = require('events').EventEmitter;
 
 var asserts = require('./utils/asserts');
 var Promise = require('./utils/Promise');
@@ -35,12 +37,16 @@ function SimpleThaliTape (options) {
 
   this._resolveInstance();
 
+  this._unexpectedResult = this.unexpectedResult.bind(this);
+
   // test('name', ...)      -> 'this.addTest('name, ...)'
   // test.only('name', ...) -> 'this.only('name, ...)'
   this._handler      = this.addTest.bind(this);
   this._handler.only = this.only.bind(this);
   return this._handler;
 }
+
+inherits(SimpleThaliTape, EventEmitter);
 
 SimpleThaliTape.prototype.defaults = {
   setup: function (t) {
@@ -97,6 +103,63 @@ SimpleThaliTape.prototype.addTest = function (name, canBeSkipped, fun) {
   return this._handler;
 }
 
+SimpleThaliTape.prototype._processResult = function (tape, test, timeout) {
+  var self = this;
+
+  tape.sync = function () {
+    // noop
+    return Promise.resolve();
+  }
+
+  var resultHandler;
+  var endHandler;
+
+  return new Promise(function (resolve, reject) {
+    // 'end' can be called without 'result', so success is true by default.
+    // We can receive 'result' many times.
+    // For example each 'tape.ok' will provide a 'result'.
+    var success = true;
+    resultHandler = function (result) {
+      if (!result.ok) {
+        success = false;
+      }
+    }
+    tape.on('result', resultHandler);
+    tape.removeListener('result', self._unexpectedResult);
+
+    endHandler = function () {
+      tape.removeListener('result', resultHandler);
+      resultHandler = null;
+      endHandler    = null;
+
+      // This listener will inspect unexpected results forever.
+      tape.on('result', self._unexpectedResult);
+
+      if (success) {
+        // Only for testing purposes.
+        resolve(tape.data);
+      } else {
+        var error = format('test failed, name: \'%s\'', test.name);
+        logger.error(error);
+        reject(new Error(error));
+      }
+    }
+    tape.once('end', endHandler);
+  })
+    .timeout(
+      timeout,
+      format('timeout exceed while processing result, test: \'%s\'', test.name)
+    )
+    .finally(function () {
+      if (resultHandler) {
+        tape.removeListener('result', resultHandler);
+      }
+      if (endHandler) {
+        tape.removeListener('end', endHandler);
+      }
+    });
+}
+
 SimpleThaliTape.prototype._runTest = function (test) {
   var self = this;
 
@@ -104,67 +167,19 @@ SimpleThaliTape.prototype._runTest = function (test) {
   var skipped = false;
 
   return new Promise(function (resolve, reject) {
-    function processResult(tape, timeout) {
-      tape.sync = function () {
-        // noop
-        return Promise.resolve();
-      }
-
-      var resultHandler;
-      var endHandler;
-
-      return new Promise(function (resolve, reject) {
-        // 'end' can be called without 'result', so success is true by default.
-        // We can receive 'result' many times.
-        // For example each 'tape.ok' will provide a 'result'.
-        var success = true;
-        resultHandler = function (result) {
-          if (!result.ok) {
-            success = false;
-          }
-        }
-        tape.on('result', resultHandler);
-
-        endHandler = function () {
-          tape.removeListener('result', resultHandler);
-          resultHandler = null;
-          endHandler    = null;
-
-          if (success) {
-            // Only for testing purposes.
-            resolve(tape.data);
-          } else {
-            var error = format('test failed, name: \'%s\'', test.name);
-            logger.error(error);
-            reject(new Error(error));
-          }
-        }
-        tape.once('end', endHandler);
-      })
-      .timeout(
-        timeout,
-        format('timeout exceed while processing result, test: \'%s\'', test.name)
-      )
-      .finally(function () {
-        if (resultHandler) {
-          tape.removeListener('result', resultHandler);
-        }
-        if (endHandler) {
-          tape.removeListener('end', endHandler);
-        }
-      });
-    }
-
     // TODO This can be implemented using 'tape/lib/test' directly.
     // Example is 'tape.createHarness' https://github.com/substack/tape/blob/master/index.js#L103
 
     tape('setup', function (tape) {
-      processResult(tape, self._options.setupTimeout)
+      self._processResult(tape, test, self._options.setupTimeout)
+        .catch(reject);
+
       self._options.setup(tape);
     });
 
     tape(test.name, function (tape) {
-      processResult(tape, self._options.testTimeout);
+      self._processResult(tape, test, self._options.testTimeout)
+        .catch(reject);
 
       Promise.try(function () {
         if (test.canBeSkipped) {
@@ -173,31 +188,33 @@ SimpleThaliTape.prototype._runTest = function (test) {
           return false;
         }
       })
-      .then(function (canBeSkipped) {
-        if (canBeSkipped) {
-          logger.debug('test was skipped, name: \'%s\'', test.name);
-          tape.end();
-          skipped = true;
-        } else {
-          return test.fun(tape);
-        }
-      })
-      .catch(reject);
+        .then(function (canBeSkipped) {
+          if (canBeSkipped) {
+            logger.debug('test was skipped, name: \'%s\'', test.name);
+            tape.end();
+            skipped = true;
+          } else {
+            return test.fun(tape);
+          }
+        })
+        .catch(reject);
     });
 
     tape('teardown', function (tape) {
-      processResult(tape, self._options.teardownTimeout);
+      self._processResult(tape, test, self._options.teardownTimeout)
+        .catch(reject);
+
       tape.once('end', resolve);
       self._options.teardown(tape);
     });
   })
-  .then(function () {
-    if (skipped) {
-      return Promise.reject(
-        new Error('skipped')
-      );
-    }
-  });
+    .then(function () {
+      if (skipped) {
+        return Promise.reject(
+          new Error('skipped')
+        );
+      }
+    });
 }
 
 SimpleThaliTape.prototype._begin = function () {
@@ -208,22 +225,72 @@ SimpleThaliTape.prototype._begin = function () {
   );
   this._state = SimpleThaliTape.states.started;
 
-  var skippedTests = [];
-  return Promise.all(
+  var results = [];
+
+  var hadUnexpectedError = false;
+  var lastUnexpectedError;
+  function unexpectedError (error) {
+    hadUnexpectedError  = true;
+    lastUnexpectedError = error;
+    results.push({
+      name:  'unknown',
+      text:  'failed',
+      error: error
+    });
+  }
+  this.on('unexpected_error', unexpectedError);
+
+  var promise = Promise.all(
     this._tests.map(function (test) {
       return self._runTest(test)
-      .catch(function (error) {
-        if (error.message === 'skipped') {
-          skippedTests.push(test.name);
-          return;
-        }
-        return Promise.reject(error);
-      });
+        .then(function () {
+          results.push({
+            name: test.name,
+            text: 'passed'
+          });
+        })
+        .catch(function (error) {
+          if (error.message === 'skipped') {
+            results.push({
+              name: test.name,
+              text: 'skipped'
+            });
+          } else {
+            results.push({
+              name:  test.name,
+              text:  'failed',
+              error: error
+            });
+            return Promise.reject(error);
+          }
+        });
     })
   )
   .then(function () {
-    return skippedTests;
+    if (hadUnexpectedError) {
+      return Promise.reject(lastUnexpectedError);
+    }
+    self.removeListener('unexpected_error', unexpectedError);
   });
+
+  return {
+    results: results,
+    promise: promise
+  };
+}
+
+SimpleThaliTape.prototype.unexpectedResult = function (result) {
+  var error;
+  if (result.ok) {
+    error = new Error();
+  } else {
+    error = result.error;
+  }
+  logger.error(
+    'unexpected result, error: \'%s\', stack: \'%s\'',
+    String(error), error ? error.stack : null
+  );
+  this.emit('unexpected_error', error);
 }
 
 // We will run 'begin' on all 'SimpleThaliTape' instances.
@@ -239,32 +306,44 @@ SimpleThaliTape.begin = function (platform, version, hasRequiredHardware, native
   var thaliTapes = SimpleThaliTape.instances;
   SimpleThaliTape.instances = [];
 
+  var results = [];
+  function resolveResults () {
+    var lastFailedResult;
+    results.reduce(function (allResults, results) {
+      return allResults.concat(results);
+    }, [])
+      .forEach(function (result) {
+        if (result.text === 'failed') {
+          var error = result.error;
+          logger.info(
+            '***TEST_LOGGER result: failed - %s, error: \'%s\', stack: \'%s\'',
+            result.name, String(error), error? error.stack: ''
+          );
+          lastFailedResult = result;
+        } else {
+          logger.info('***TEST_LOGGER result: %s - %s', result.text, result.name);
+        }
+      });
+
+    if (lastFailedResult) {
+      logger.error('failed to run unit tests, platformName: \'%s\'', platform);
+      logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
+      return Promise.reject(lastFailedResult.error);
+    } else {
+      logger.debug('all unit tests succeeded, platformName: \'%s\'', platform);
+      logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
+    }
+  }
+
   return Promise.all(
     thaliTapes.map(function (thaliTape) {
-      return thaliTape._begin();
+      var data = thaliTape._begin();
+      results.push(data.results);
+      return data.promise;
     })
   )
-  .then(function (skippedTests) {
-    logger.debug(
-      'all unit tests succeeded, platformName: \'%s\'',
-      platform
-    );
-    skippedTests = skippedTests.reduce(function (allTests, tests) {
-      return allTests.concat(tests);
-    }, []);
-    logger.debug(
-      'skipped tests: \'%s\'', JSON.stringify(skippedTests)
-    );
-    logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
-  })
-  .catch(function (error) {
-    logger.error(
-      'failed to run unit tests, platformName: \'%s\', error: \'%s\', stack: \'%s\'',
-      platform, error.toString(), error.stack
-    );
-    logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
-    return Promise.reject(error);
-  });
+    .then(resolveResults)
+    .catch(resolveResults);
 }
 
 module.exports = SimpleThaliTape;
