@@ -148,27 +148,6 @@ public class IncomingSocketThreadTest {
         };
     }
 
-    @Test
-    public void testSetTcpPortNumber() throws Exception {
-        int tcpPortNumberSample = 1111;
-        mIncomingSocketThread.setTcpPortNumber(tcpPortNumberSample);
-
-        assertThat("tcpPortNumber from get method should be equal to tcpPortNumberSample",
-                mIncomingSocketThread.getTcpPortNumber(), is(equalTo(tcpPortNumberSample)));
-    }
-
-    @Test
-    public void testGetLocalHostPort() throws Exception {
-        Field fLocalhostSocket = mIncomingSocketThread.getClass().getSuperclass()
-                .getSuperclass().getDeclaredField("mLocalhostSocket");
-        fLocalhostSocket.setAccessible(true);
-        Socket mLocalhostSocket = (Socket) fLocalhostSocket.get(mIncomingSocketThread);
-
-        if (mLocalhostSocket == null) {
-            assertThat("getLocalHostPort should return 0 if mLocalhostSocket is not null",
-                    mIncomingSocketThread.getLocalHostPort(), is(0));
-        }
-    }
 
     @Test
     public void testRun() throws Exception {
@@ -219,11 +198,6 @@ public class IncomingSocketThreadTest {
                 assertThat("OutgoingSocketThread should get inputStream from IncomingSocketThread and " +
                                 "copy it to local outgoingOutputStream", outgoingOutputStream.toString(),
                         is(equalTo(textIncoming)));
-
-                assertThat("IncomingSocketThread should get inputStream from OutgoingSocketThread and " +
-                                "copy it to local incomingOutputStream", incomingOutputStream.toString(),
-                        is(equalTo(textOutgoing)));
-
             }
 
 
