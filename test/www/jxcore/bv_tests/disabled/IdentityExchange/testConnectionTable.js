@@ -3,21 +3,19 @@
 var tape = require('../lib/thaliTape');
 var ConnectionTable = require('thali/identityExchange/connectionTable');
 var ThaliReplicationManager = require('thali/thalireplicationmanager');
-var EventEmitter = require('events').EventEmitter;
-var inherits = require('util').inherits;
 
 // test setup & teardown activities
 var test = tape({
-    setup: function(t) {
+    setup: function (t) {
         t.end();
-    },
+      },
     teardown: function(t) {
         t.end();
-    }
+      }
 });
 
 function createAnnounce(peerId, muxPort) {
-    return { peerIdentifier: peerId, muxPort: muxPort }
+  return { peerIdentifier: peerId, muxPort: muxPort };
 }
 
 var peersToAnnounce = [

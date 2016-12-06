@@ -204,6 +204,7 @@ LocalSeqManager.prototype.update = function (seq, immediate) {
 
 /**
  * Terminate any further operations.
+ * @returns {null} null
  */
 LocalSeqManager.prototype.stop = function () {
   this._stopCalled = true;
@@ -211,6 +212,7 @@ LocalSeqManager.prototype.stop = function () {
   if (this._timerReject) {
     this._timerReject(new Error('Timer Cancelled'));
   }
+  return null;
 };
 
 LocalSeqManager.prototype.waitUntilStopped = function () {
@@ -238,6 +240,6 @@ LocalSeqManager.prototype.waitUntilStopped = function () {
   }
 
   return Promise.all(promises);
-}
+};
 
 module.exports = LocalSeqManager;

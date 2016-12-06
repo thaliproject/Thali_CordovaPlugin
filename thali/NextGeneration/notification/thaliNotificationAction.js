@@ -7,49 +7,61 @@ var PeerAction = require('../thaliPeerPool/thaliPeerAction');
 var NotificationBeacons = require('./thaliNotificationBeacons');
 var EventEmitter = require('events').EventEmitter;
 var thaliConfig = require('../thaliConfig');
+var ThaliMobile = require('../thaliMobile');
 
 /** @module thaliNotificationAction */
+
+/**
+ * @typedef {Object} PeerConnectionInformation
+ * @property {string} hostAddress
+ * @property {number} portNumber
+ * @property {number} suggestedTCPTimeout timeout in milliseconds
+ */
 
 /**
  * Creates a sub-type of the {@link module:thaliPeerPoolInterface~PeerAction}
  * class to represent actions for retrieving notifications.
  *
- * @param {string} peerIdentifier
- * @param {module:ThaliMobileNativeWrapper.connectionTypes} connectionType
+ * @param {Object} peer
+ * @param {string} peer.peerIdentifier
+ * @param {number} peer.generation
+ * @param {module:ThaliMobileNativeWrapper.connectionTypes} peer.connectionType
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized
  * with the local device's public and private keys.
  * @param {addressBookCallback} addressBookCallback A callback used to validate
  * which peers we are interested in talking to.
- * @param {module:thaliPeerDictionary~PeerConnectionInformation} peerConnection
- * Connection parameters to connect to peer.
  * @constructor
  * @implements {module:thaliPeerAction~PeerAction}
  * @fires module:thaliNotificationAction.event:Resolved
  */
 /* jshint -W003 */
-function ThaliNotificationAction(peerIdentifier,
+function ThaliNotificationAction(peer,
                                  ecdhForLocalDevice,
-                                 addressBookCallback,
-                                 peerConnection) {
+                                 addressBookCallback) {
 
-  assert(peerIdentifier, 'peerIdentifier must not be null or undefined');
-  assert(ecdhForLocalDevice, 'connectionType must not be null or undefined');
+  assert(peer, 'peer must not be null or undefined');
+  assert(peer.peerIdentifier, 'peer.peerIdentifier must be set');
+  assert(peer.connectionType, 'peer.connectionType must be set');
+  assert(typeof peer.generation === 'number',
+    'peer.generation must be a number');
+  assert(ecdhForLocalDevice,
+    'ecdhForLocalDevice must not be null or undefined');
   assert(addressBookCallback,
     'addressBookCallback must not be null or undefined');
-  assert(peerConnection, 'peerConnection must not be null or undefined');
 
-  ThaliNotificationAction.super_.call(this, peerIdentifier,
-    peerConnection.getConnectionType(),
+  ThaliNotificationAction.super_.call(this, peer.peerIdentifier,
+    peer.connectionType,
     ThaliNotificationAction.ACTION_TYPE,
     thaliConfig.BEACON_PSK_IDENTITY,
     thaliConfig.BEACON_KEY);
 
   this.eventEmitter = new EventEmitter();
 
+  this._peerGeneration = peer.generation;
   this._ecdhForLocalDevice = ecdhForLocalDevice;
   this._addressBookCallback = addressBookCallback;
-  this._peerConnection = peerConnection;
 
+  this._peerConnection = null;
   this._httpRequest = null;
   this._resolution = null;
   this._resolve = null;
@@ -63,6 +75,11 @@ inherits(ThaliNotificationAction, PeerAction);
 ThaliNotificationAction.prototype.getResolution = function () {
   return this._resolution;
 };
+
+ThaliNotificationAction.prototype.getPeerGeneration = function () {
+  return this._peerGeneration;
+};
+
 
 /**
  * NotificationAction's event emitter
@@ -108,44 +125,59 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
   var p = ThaliNotificationAction.super_.prototype.start
     .call(this, httpAgentPool);
 
-  return p.then( function () {
-    return new Promise(function (resolve, reject) {
-
-      // Check if kill is called before entering into this promise
-      if (self.getActionState() === PeerAction.actionState.KILLED) {
-        return resolve(null);
-      }
-
-      self._resolve = resolve;
-      self._reject = reject;
-
-      var options = {
-        method: 'GET',
-        hostname: self._peerConnection.getHostAddress(),
-        port: self._peerConnection.getPortNumber(),
-        path: thaliConfig.NOTIFICATION_BEACON_PATH,
-        agent: httpAgentPool,
-        family: 4
-      };
-
-      self._httpRequest = https.request(options,
-        self._responseCallback.bind(self));
-
-      // Error event handler is fired on DNS resolution, TCP protocol,
-      // or HTTP protocol errors. Or if the httpRequest.abort is called.
-      // The httpRequest is aborted when http request timeout
-      // happens or the kill function is called. However abort coming
-      // from kill is ignored at this point and it is not causing
-      // anything in the _complete function because it is the second call to
-      // _complete.
-      self._httpRequest.on('error', function () {
-        self._complete(
-          ThaliNotificationAction.ActionResolution.NETWORK_PROBLEM,
-          null, 'Could not establish TCP connection');
+  return p
+    .then(function () {
+      return ThaliMobile.getPeerHostInfo(
+        self.getPeerIdentifier(),
+        self.getConnectionType()
+      )
+      .catch(function (error) {
+        self._complete(ThaliNotificationAction.ActionResolution.BAD_PEER);
+        return Promise.reject(error);
       });
-      self._httpRequest.end();
+    })
+    .then(function (peerHostInfo) {
+      self._peerConnection = {
+        hostAddress: peerHostInfo.hostAddress,
+        portNumber: peerHostInfo.portNumber,
+        suggestedTCPTimeout: peerHostInfo.suggestedTCPTimeout
+      };
+      return new Promise(function (resolve, reject) {
+        // Check if kill is called before entering into this promise
+        if (self.getActionState() === PeerAction.actionState.KILLED) {
+          return resolve(null);
+        }
+
+        self._resolve = resolve;
+        self._reject = reject;
+
+        var options = {
+          method: 'GET',
+          hostname: self._peerConnection.hostAddress,
+          port: self._peerConnection.portNumber,
+          path: thaliConfig.NOTIFICATION_BEACON_PATH,
+          agent: httpAgentPool,
+          family: 4
+        };
+
+        self._httpRequest = https.request(options,
+          self._responseCallback.bind(self));
+
+        // Error event handler is fired on DNS resolution, TCP protocol,
+        // or HTTP protocol errors. Or if the httpRequest.abort is called.
+        // The httpRequest is aborted when http request timeout
+        // happens or the kill function is called. However abort coming
+        // from kill is ignored at this point and it is not causing
+        // anything in the _complete function because it is the second call to
+        // _complete.
+        self._httpRequest.on('error', function () {
+          self._complete(
+            ThaliNotificationAction.ActionResolution.NETWORK_PROBLEM,
+            null, 'Could not establish TCP connection');
+        });
+        self._httpRequest.end();
+      });
     });
-  });
 };
 
 /**
@@ -176,7 +208,7 @@ ThaliNotificationAction.prototype.killSuperseded = function () {
  * This synchronous function returns a connection information.
  *
  * @public
- * @returns {module:thaliPeerDictionary~PeerConnectionInformation}
+ * @returns {PeerConnectionInformation}
  * Connection parameters to connect to peer.
  */
 ThaliNotificationAction.prototype.getConnectionInformation = function () {
@@ -262,8 +294,12 @@ ThaliNotificationAction.prototype._complete = function (resolution,
     // Sets our state to KILLED now that we are done
     ThaliNotificationAction.super_.prototype.kill.call(this);
 
-    this.eventEmitter.emit(ThaliNotificationAction.Events.Resolved,
-      this.getPeerIdentifier(), resolution, beaconDetails);
+    this.eventEmitter.emit(
+      ThaliNotificationAction.Events.Resolved,
+      this,
+      resolution,
+      beaconDetails
+    );
 
     if (error && this._reject) {
       this._reject(new Error(error));
@@ -305,6 +341,11 @@ ThaliNotificationAction.ActionResolution = {
    * MAX_CONTENT_SIZE.
    */
   HTTP_BAD_RESPONSE: 'httpBadResponse',
+  /**
+   * Couldn't retrieve peer connection information because peer had become
+   * unavailable or it has unsupported connection type
+   */
+  BAD_PEER: 'badPeer',
   /**
    * We weren't able to successfully create a network connection to the remote
    * peer or we were able to create a connection but we weren't able to complete

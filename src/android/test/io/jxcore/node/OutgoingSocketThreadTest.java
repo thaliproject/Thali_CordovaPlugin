@@ -1,5 +1,8 @@
 package io.jxcore.node;
 
+import android.bluetooth.BluetoothSocket;
+import android.system.ErrnoException;
+import android.system.OsConstants;
 import android.util.Log;
 
 import com.test.thalitest.ThaliTestRunner;
@@ -35,15 +38,27 @@ public class OutgoingSocketThreadTest {
 
     static String mTag = OutgoingSocketThreadTest.class.getName();
     private ByteArrayOutputStream outgoingOutputStream;
+    private ListenerMock mListenerMockOutgoing;
+    private InputStreamMock mInputStreamMockOutgoing;
+    private OutputStreamMockOutgoing mOutputStreamMockOutgoing;
     private OutgoingSocketThreadMock mOutgoingSocketThread;
+    private CountDownLatch copyingFinishedLatch;
     private String textOutgoing = "Nullam in massa. Vivamus elit odio, in neque ut congue quis, " +
-        "venenatis placerat, nulla ornare suscipit, erat urna, pellentesque dapibus vel, " +
-        "lorem. Sed egestas non, dolor. Aliquam hendrerit sollicitudin sed.";
+            "venenatis placerat, nulla ornare suscipit, erat urna, pellentesque dapibus vel, " +
+            "lorem. Sed egestas non, dolor. Aliquam hendrerit sollicitudin sed.";
+
+    final int testPortNumber = 57775;
 
     private ByteArrayOutputStream incomingOutputStream;
+    private ListenerMock mListenerMockIncoming;
+    private InputStreamMock mInputStreamMockIncoming;
+    private OutputStreamMockIncoming mOutputStreamMockIncoming;
     private IncomingSocketThreadMock mIncomingSocketThread;
-    private ExecutorService mExecutor;
-    private CountDownLatch copyingFinishedLatch;
+    private String textIncoming = "Lorem ipsum dolor sit amet elit nibh, imperdiet dignissim, " +
+            "imperdiet wisi. Morbi vel risus. Nunc molestie placerat, nulla mi, id nulla ornare " +
+            "risus. Sed lacinia, urna eros lacus, elementum eu.";
+
+    ExecutorService mExecutor;
 
     @Rule
     public TestRule watcher = new TestWatcher() {
@@ -51,7 +66,6 @@ public class OutgoingSocketThreadTest {
             Log.i(mTag, "Starting test: " + description.getMethodName());
         }
     };
-    public static final int TEST_PORT_NUMBER = 57775;
 
     @Before
     public void setUp() throws Exception {
@@ -66,21 +80,21 @@ public class OutgoingSocketThreadTest {
     }
 
     private void initOutgiongSocketThread() throws IOException {
-        InputStream inputStreamMockOutgoing = new InputStreamMock(textOutgoing);
-        OutputStreamMock outputStreamMockOutgoing = new OutputStreamMock(outgoingOutputStream);
-        ListenerMock mListenerMockOutgoing = new ListenerMock();
+        mInputStreamMockOutgoing = new InputStreamMock(textOutgoing);
+        mOutputStreamMockOutgoing = new OutputStreamMockOutgoing();
+        mListenerMockOutgoing = new ListenerMock();
         mOutgoingSocketThread =
-            new OutgoingSocketThreadMock(null, mListenerMockOutgoing, inputStreamMockOutgoing,
-                outputStreamMockOutgoing);
+                new OutgoingSocketThreadMock(null, mListenerMockOutgoing, mInputStreamMockOutgoing,
+                        mOutputStreamMockOutgoing);
     }
 
     private void initIncomingSocketThread() throws IOException {
-        InputStream inputStreamMockIncoming = new EmptyInputStreamMock();
-        OutputStreamMock outputStreamMockIncoming = new OutputStreamMock(incomingOutputStream);
-        ListenerMock mListenerMockIncoming = new ListenerMock();
+        mInputStreamMockIncoming = new InputStreamMock(textIncoming);
+        mOutputStreamMockIncoming = new OutputStreamMockIncoming();
+        mListenerMockIncoming = new ListenerMock();
         mIncomingSocketThread =
-            new IncomingSocketThreadMock(null, mListenerMockIncoming, inputStreamMockIncoming,
-                outputStreamMockIncoming);
+                new IncomingSocketThreadMock(null, mListenerMockIncoming, mInputStreamMockIncoming,
+                        mOutputStreamMockIncoming);
     }
 
     public Callable<Boolean> createCheckOutgoingSocketThreadStart() {
@@ -100,7 +114,8 @@ public class OutgoingSocketThreadTest {
                 }
                 if (counter < ThaliTestRunner.COUNTER_LIMIT) {
                     return true;
-                } else {
+                }
+                else {
                     Log.e(mTag, "OutgoingSocketThread didn't start after 5s!");
                     return false;
                 }
@@ -155,7 +170,8 @@ public class OutgoingSocketThreadTest {
             assertThat("OutgoingSocketThread started", mFuture.get(), is(true));
 
             Field fServerSocket = mOutgoingSocketThread.getClass().getDeclaredField("mServerSocket");
-            Field fListeningOnPortNumber = mOutgoingSocketThread.getClass().getDeclaredField("mListeningOnPortNumber");
+            Field fListeningOnPortNumber = mOutgoingSocketThread.getClass()
+                    .getDeclaredField("mListeningOnPortNumber");
 
             fServerSocket.setAccessible(true);
             fListeningOnPortNumber.setAccessible(true);
@@ -165,27 +181,28 @@ public class OutgoingSocketThreadTest {
 
             assertThat("mServerSocket should not be null", mServerSocket, is(notNullValue()));
             assertThat("mListeningOnPortNumber should be equal to mServerSocket.getLocalPort()",
-                mListeningOnPortNumber, is(equalTo(mServerSocket.getLocalPort())));
-            assertThat("mServerSocket.isBound should return true", mServerSocket.isBound(), is(true));
+                    mListeningOnPortNumber, is(equalTo(mServerSocket.getLocalPort())));
+            assertThat("mServerSocket.isBound should return true", mServerSocket.isBound(),
+                    is(true));
 
             mFuture = runningIncomingSocketThread();
 
             assertThat("IncomingSocketThread started", mFuture.get(), is(true));
             assertThat("localStreamsCreatedSuccessfully should be true",
-                mOutgoingSocketThread.localStreamsCreatedSuccessfully,
-                is(true));
+                    mOutgoingSocketThread.localStreamsCreatedSuccessfully,
+                    is(true));
 
             assertThat("tempInputStream should be equal to mLocalInputStream",
-                mOutgoingSocketThread.tempInputStream,
-                is(equalTo(mOutgoingSocketThread.mLocalInputStream)));
+                    mOutgoingSocketThread.tempInputStream,
+                    is(equalTo(mOutgoingSocketThread.mLocalInputStream)));
 
             assertThat("tempOutputStream should be equal to mLocalOutputStream",
-                mOutgoingSocketThread.tempOutputStream,
-                is(equalTo(mOutgoingSocketThread.mLocalOutputStream)));
+                    mOutgoingSocketThread.tempOutputStream,
+                    is(equalTo(mOutgoingSocketThread.mLocalOutputStream)));
 
-            assertThat("mLocalhostSocket port should be equal to " + TEST_PORT_NUMBER,
-                mOutgoingSocketThread.mLocalhostSocket.getLocalPort(),
-                is(equalTo(TEST_PORT_NUMBER)));
+            assertThat("mLocalhostSocket port should be equal to " + testPortNumber,
+                    mOutgoingSocketThread.mLocalhostSocket.getLocalPort(),
+                    is(equalTo(testPortNumber)));
 
             copyingFinishedLatch.await(5000L, TimeUnit.MILLISECONDS);
             int attempts = ThaliTestRunner.COUNTER_LIMIT;
@@ -203,11 +220,6 @@ public class OutgoingSocketThreadTest {
                 Log.i(mTag,"textOutgoing= " + textOutgoing);
             }
             if(attempts == 0) {
-                //See the comment in IncomingSocketThread testRun
-//            assertThat("OutgoingSocketThread should get inputStream from IncomingSocketThread and " +
-//                    "copy it to local outgoingOutputStream", outgoingOutputStream.toString(),
-//                is(equalTo(textIncoming)));
-
                 assertThat("IncomingSocketThread should get inputStream from OutgoingSocketThread and " +
                                 "copy it to local incomingOutputStream", incomingOutputStream.toString(),
                         is(equalTo(textOutgoing)));
@@ -218,9 +230,8 @@ public class OutgoingSocketThreadTest {
     }
 
     private Future runningOutgoingSocketThread() throws Exception{
-        System.out.println("Running OutgoingSocketThread");
-        mOutgoingSocketThread.setPort(57775);
-        mIncomingSocketThread.setPort(57775);
+        mOutgoingSocketThread.setPort(testPortNumber);
+        mIncomingSocketThread.setPort(testPortNumber);
         mOutgoingSocketThread.start();
         return mExecutor.submit(createCheckOutgoingSocketThreadStart());
     }
@@ -243,18 +254,12 @@ public class OutgoingSocketThreadTest {
         }
     }
 
-    private class OutputStreamMock extends OutputStream {
+    class OutputStreamMockOutgoing extends OutputStream {
         public boolean isClosed = false;
-
-        private OutputStream outputStream;
-
-        OutputStreamMock(OutputStream outputStream) {
-            this.outputStream = outputStream;
-        }
 
         @Override
         public void write(int oneByte) throws IOException {
-            outputStream.write(oneByte);
+            outgoingOutputStream.write(oneByte);
         }
 
         @Override
@@ -263,7 +268,21 @@ public class OutgoingSocketThreadTest {
         }
     }
 
-    private class InputStreamMock extends InputStream {
+    class OutputStreamMockIncoming extends OutputStream {
+        public boolean isClosed = false;
+
+        @Override
+        public void write(int oneByte) throws IOException {
+            incomingOutputStream.write(oneByte);
+        }
+
+        @Override
+        public void close() throws IOException {
+            isClosed = true;
+        }
+    }
+
+    class InputStreamMock extends InputStream {
         public boolean isClosed = false;
 
         ByteArrayInputStream inputStream;
@@ -276,14 +295,50 @@ public class OutgoingSocketThreadTest {
         public int read() throws IOException {
             return inputStream.read();
         }
-    }
-
-    private class EmptyInputStreamMock extends InputStream {
 
         @Override
-        public int read() throws IOException {
-            return 0;
+        public int read(byte[] buffer) throws IOException {
+            return inputStream.read(buffer);
+        }
+    }
+
+    @Test
+    public void testNoAvailablePorts() throws Exception {
+        OutSocketThreadListener listener = new OutSocketThreadListener();
+        OutgoingSocketThread outgoingSocketThread = new OutSocketThreadMock(null, listener, null, null);
+        outgoingSocketThread.start();
+        Thread.sleep(1000L);
+
+        assertThat("We have to get ErrnoException as a cause", listener.exception.getClass().equals(ErrnoException.class));
+        assertThat("We have to get ErrnoException with exactly EMFILE code",
+                ((ErrnoException) listener.exception).errno,
+                is(OsConstants.EMFILE));
+    }
+
+    private static class OutSocketThreadMock extends OutgoingSocketThread {
+
+        public OutSocketThreadMock(BluetoothSocket bluetoothSocket,
+                                   Listener listener,
+                                   InputStream inputStream,
+                                   OutputStream outputStream)
+                throws IOException {
+            super(bluetoothSocket, listener, inputStream, outputStream);
         }
 
+        @Override
+        public void run() {
+            mListener.onDisconnected(this, new ErrnoException("run", OsConstants.EMFILE));
+        }
     }
+
+    private class OutSocketThreadListener extends ListenerMock {
+
+        Exception exception;
+
+        @Override
+        public void onDisconnected(SocketThreadBase who, Exception exception) {
+            this.exception = exception;
+        }
+    }
+
 }

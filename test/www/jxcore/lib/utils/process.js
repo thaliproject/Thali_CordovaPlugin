@@ -16,7 +16,7 @@ process
   logger.error('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
   process.exit(1);
 })
-.on('unhandledRejection', function (error, p) {
+.on('unhandledRejection', function (error) {
   logger.error(
     'uncaught promise rejection, error: \'%s\', stack: \'%s\'',
     error.toString(), error.stack

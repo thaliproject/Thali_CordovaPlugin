@@ -74,7 +74,7 @@ class IncomingSocketThread extends SocketThreadBase {
 
         try {
             mLocalhostSocket = new Socket();
-            InetSocketAddress inetSocketAddress = new InetSocketAddress("localhost",mTcpPortNumber);
+            InetSocketAddress inetSocketAddress = new InetSocketAddress("localhost", mTcpPortNumber);
             configureSocket();
             mLocalhostSocket.connect(inetSocketAddress);
             Log.i(mTag, "Creating TCP android... " );

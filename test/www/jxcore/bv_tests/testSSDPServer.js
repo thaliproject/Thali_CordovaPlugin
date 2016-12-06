@@ -1,7 +1,6 @@
 'use strict';
 
 var tape      = require('../lib/thaliTape');
-var testUtils = require('../lib/testUtils.js');
 
 var Promise = require('bluebird');
 var sinon   = require('sinon');

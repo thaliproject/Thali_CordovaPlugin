@@ -8,10 +8,12 @@ module.exports = function () {
   }
   switch (argv.platform) {
     case platform.names.IOS:
-    case platform.names.ANDROID:
+    case platform.names.ANDROID: {
       return argv.platform;
-    default:
+    }
+    default: {
       throw new Error('Unrecognized platform: ' + argv.platform + '. ' +
-        'Available platforms: ' + platform.names.join(', '));
+        'Available platforms: ' + JSON.stringify(platform.names));
+    }
   }
 };
