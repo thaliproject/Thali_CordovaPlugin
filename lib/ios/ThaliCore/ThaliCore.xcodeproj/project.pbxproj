@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1952BBA41DF6C9810016B9C8 /* BluetoothHardwareControlObserver.m in Sources */ = {isa = PBXBuildFile; fileRef = 1952BBA31DF6C9810016B9C8 /* BluetoothHardwareControlObserver.m */; };
 		1C148D141DA3B16C00E0E1AC /* TCPServerMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C148D131DA3B16C00E0E1AC /* TCPServerMock.swift */; };
 		1C148D161DA3B17500E0E1AC /* TCPClientMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C148D151DA3B17500E0E1AC /* TCPClientMock.swift */; };
 		1C148DDA1DA55D4900E0E1AC /* Dictionary+KeyForValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C148DD91DA55D4900E0E1AC /* Dictionary+KeyForValue.swift */; };
@@ -21,7 +22,6 @@
 		1C38DDD51D74153900418F15 /* BluetoothHardwareControlManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1C38DDD21D74153900418F15 /* BluetoothHardwareControlManager.m */; };
 		1C38DDD61D74153900418F15 /* BluetoothHardwareControlObserver.h in Headers */ = {isa = PBXBuildFile; fileRef = 1C38DDD31D74153900418F15 /* BluetoothHardwareControlObserver.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1C40E5F81DA24B0A00DA369E /* MCSessionMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD3475D1DA192B3006F1126 /* MCSessionMock.swift */; };
-		1C5E18BE1D780D5400518DB8 /* BluetoothHardwareControlObserver.m in Sources */ = {isa = PBXBuildFile; fileRef = 1C5E18BD1D780D5400518DB8 /* BluetoothHardwareControlObserver.m */; };
 		1C6D713B1DAF9BC800802569 /* RelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEBB4041D9BD4AA00B229C9 /* RelayTests.swift */; };
 		1C6D713C1DAF9BCB00802569 /* AdvertiserRelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C17AE3A1DA79F6400763619 /* AdvertiserRelayTests.swift */; };
 		1C6D713D1DAF9BCD00802569 /* BrowserRelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C17AE381DA79DBE00763619 /* BrowserRelayTests.swift */; };
@@ -115,6 +115,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1952BBA31DF6C9810016B9C8 /* BluetoothHardwareControlObserver.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = BluetoothHardwareControlObserver.m; path = Utils/HardwareControl/Bluetooth/BluetoothHardwareControlObserver.m; sourceTree = "<group>"; };
 		1C148D131DA3B16C00E0E1AC /* TCPServerMock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TCPServerMock.swift; sourceTree = "<group>"; };
 		1C148D151DA3B17500E0E1AC /* TCPClientMock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TCPClientMock.swift; sourceTree = "<group>"; };
 		1C148DD91DA55D4900E0E1AC /* Dictionary+KeyForValue.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "Dictionary+KeyForValue.swift"; sourceTree = "<group>"; };
@@ -125,7 +126,6 @@
 		1C38DDD11D74153900418F15 /* BluetoothHardwareControlManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BluetoothHardwareControlManager.h; path = Utils/HardwareControl/Bluetooth/BluetoothHardwareControlManager.h; sourceTree = "<group>"; };
 		1C38DDD21D74153900418F15 /* BluetoothHardwareControlManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = BluetoothHardwareControlManager.m; path = Utils/HardwareControl/Bluetooth/BluetoothHardwareControlManager.m; sourceTree = "<group>"; };
 		1C38DDD31D74153900418F15 /* BluetoothHardwareControlObserver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BluetoothHardwareControlObserver.h; path = Utils/HardwareControl/Bluetooth/BluetoothHardwareControlObserver.h; sourceTree = "<group>"; };
-		1C5E18BD1D780D5400518DB8 /* BluetoothHardwareControlObserver.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BluetoothHardwareControlObserver.m; sourceTree = "<group>"; };
 		1CB9B4201D7063C700C59CCF /* BluetoothManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BluetoothManager.h; path = Utils/HardwareControl/Bluetooth/PrivateAPI/BluetoothManager.h; sourceTree = "<group>"; };
 		1CD4C0AE1DA68E7B005FFC3B /* AdvertiserRelay.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdvertiserRelay.swift; sourceTree = "<group>"; };
 		1CD4C0B11DA68E86005FFC3B /* BrowserRelay.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BrowserRelay.swift; sourceTree = "<group>"; };
@@ -240,7 +240,7 @@
 				1C38DDD11D74153900418F15 /* BluetoothHardwareControlManager.h */,
 				1C38DDD21D74153900418F15 /* BluetoothHardwareControlManager.m */,
 				1C38DDD31D74153900418F15 /* BluetoothHardwareControlObserver.h */,
-				1C5E18BD1D780D5400518DB8 /* BluetoothHardwareControlObserver.m */,
+				1952BBA31DF6C9810016B9C8 /* BluetoothHardwareControlObserver.m */,
 				1CB9B4131D70637C00C59CCF /* PrivateAPI */,
 			);
 			name = Bluetooth;
@@ -498,7 +498,6 @@
 				CCA571B81D4787A900FBEC41 /* Frameworks */,
 				CCA571B91D4787A900FBEC41 /* Headers */,
 				CCA571BA1D4787A900FBEC41 /* Resources */,
-				D3217E581D5E10610068390B /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -627,19 +626,6 @@
 			shellPath = /bin/sh;
 			shellScript = "if which swiftlint >/dev/null; then\n    swiftlint\nelse\n    echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi";
 		};
-		D3217E581D5E10610068390B /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\nXCTEST_IPHONEOS_PATH=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework\nXCTEST_IPHONESIMULATOR_PATH=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest.framework\n\n# Step 1. Define XCTEST_FRAMEWORK_PATH on current platform\nif [ \"${PLATFORM_NAME}\" == \"iphoneos\" ] ; then\nXCTEST_FRAMEWORK_PATH=$XCTEST_IPHONEOS_PATH\nelif [ \"${PLATFORM_NAME}\" == \"iphonesimulator\" ] ; then\nXCTEST_FRAMEWORK_PATH=$XCTEST_IPHONESIMULATOR_PATH\nfi\n\n# Step 2. Copy the framework structure into the product frameworks folder\nif [ ! -z \"${XCTEST_FRAMEWORK_PATH}\" ] ; then\ncp -R \"${XCTEST_FRAMEWORK_PATH}\" \"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/\"\nfi\n\n";
-		};
 		D3D308141D52128500943EED /* SwiftLint */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -733,7 +719,6 @@
 				1C40E5F81DA24B0A00DA369E /* MCSessionMock.swift in Sources */,
 				1CD4C0B31DA68E86005FFC3B /* BrowserRelay.swift in Sources */,
 				FAADD102266797342438FB50 /* Atomic.swift in Sources */,
-				1C5E18BE1D780D5400518DB8 /* BluetoothHardwareControlObserver.m in Sources */,
 				1C6D713D1DAF9BCD00802569 /* BrowserRelayTests.swift in Sources */,
 				1C148DDB1DA55D4900E0E1AC /* Dictionary+KeyForValue.swift in Sources */,
 				1C6D713E1DAF9BCF00802569 /* VirtualSocketTests.swift in Sources */,
@@ -742,6 +727,7 @@
 				1C3367231D70407E00143BCF /* NetworkReachability.m in Sources */,
 				FAADD14FB68CA0A056A2EFAF /* AtomicTests.swift in Sources */,
 				FAADDB1A4C19C000CBA8C6A5 /* PeerTests.swift in Sources */,
+				1952BBA41DF6C9810016B9C8 /* BluetoothHardwareControlObserver.m in Sources */,
 				FAADD7417CEB0C20CC94F301 /* AppStateNotificationsManagerTests.swift in Sources */,
 				1C6D71431DAFBBDC00802569 /* TCPServerMock.swift in Sources */,
 				1C6D71401DAF9BD400802569 /* TCPListenerTests.swift in Sources */,
