@@ -729,7 +729,7 @@ module.exports.toggleWiFi = function (value) {
   }
 
   return gPromiseQueue.enqueue(function (resolve, reject) {
-    Mobile('toggleWiFi').callNative(value, function (error) {
+    Mobile['toggleWiFi'](value, function (error) {
       if (error) {
         reject(error);
       } else {

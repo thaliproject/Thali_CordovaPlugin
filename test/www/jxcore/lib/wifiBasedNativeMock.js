@@ -716,9 +716,6 @@ MobileCallInstance.prototype.didRegisterToNative = function (method, callback) {
   setImmediate(callback);
 };
 
-MobileCallInstance.prototype.toggleWiFi = function (setting, callback) {
-  doToggle(setting, 'wifi', callback);
-};
 
 /**
  * Handles processing callNative requests. The actual params differ based on
@@ -751,9 +748,6 @@ MobileCallInstance.prototype.callNative = function () {
     }
     case 'didRegisterToNative': {
       return this.didRegisterToNative(arguments[0], arguments[1]);
-    }
-    case 'toggleWiFi': {
-      return this.toggleWiFi(arguments[0], arguments[1]);
     }
     default: {
       throw new Error('The supplied mobileName does not have a matching ' +
@@ -948,6 +942,12 @@ function toggleBluetooth () {
   };
 }
 
+function toggleWiFi () {
+  return function (setting, callback) {
+    doToggle(setting, 'wifi', callback);
+  };
+}
+
 function firePeerAvailabilityChanged() {
   return function (peers) {
     peerAvailabilityChangedCallback(peers);
@@ -1028,6 +1028,9 @@ function WifiBasedNativeMock(platform, router) {
 
   mobileHandler.toggleBluetooth =
     toggleBluetooth(platform, thaliWifiInfrastructure);
+
+    mobileHandler.toggleWiFi =
+    toggleWiFi(platform, thaliWifiInfrastructure);
 
   mobileHandler.firePeerAvailabilityChanged =
     firePeerAvailabilityChanged(platform, thaliWifiInfrastructure);
