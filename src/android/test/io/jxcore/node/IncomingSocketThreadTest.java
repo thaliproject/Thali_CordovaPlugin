@@ -37,10 +37,6 @@ public class IncomingSocketThreadTest {
     static String mTag = IncomingSocketThreadTest.class.getName();
     private ByteArrayOutputStream outgoingOutputStream;
     private OutgoingSocketThreadMockWithLatch mOutgoingSocketThread;
-//    String textOutgoing = "Lorem ipsum dolor sit amet elit nibh, imperdiet dignissim, " +
-//            "imperdiet wisi. Morbi vel risus. Nunc molestie placerat, nulla mi, id nulla ornare " +
-//            "risus. Sed lacinia, urna eros lacus, elementum eu.";
-
     private ByteArrayOutputStream incomingOutputStream;
     private IncomingSocketThreadMockWithLatch mIncomingSocketThread;
     private String textIncoming = "Nullam in massa. Vivamus elit odio, in neque ut congue quis, " +
@@ -139,24 +135,6 @@ public class IncomingSocketThreadTest {
     }
 
     @Test
-    public void testConstructor() throws Exception {
-        assertThat("mIncomingSocketThread should not be null", mIncomingSocketThread,
-                is(notNullValue()));
-    }
-
-    @Test
-    public void testGetTcpPortNumber() throws Exception {
-        Field fTcpPortNumber = mIncomingSocketThread.getClass().getSuperclass().getSuperclass()
-                .getDeclaredField("mTcpPortNumber");
-        fTcpPortNumber.setAccessible(true);
-
-        int mTcpPortNumber = fTcpPortNumber.getInt(mIncomingSocketThread);
-
-        assertThat("mTcpPortNumber should be equal to getTcpPortNumber", mTcpPortNumber,
-                is(equalTo(mIncomingSocketThread.getTcpPortNumber())));
-    }
-
-    @Test
     public void testSetTcpPortNumber() throws Exception {
         int tcpPortNumberSample = 1111;
         mIncomingSocketThread.setTcpPortNumber(tcpPortNumberSample);
@@ -175,9 +153,6 @@ public class IncomingSocketThreadTest {
         if (mLocalhostSocket == null) {
             assertThat("getLocalHostPort should return 0 if mLocalhostSocket is not null",
                     mIncomingSocketThread.getLocalHostPort(), is(0));
-        } else {
-            assertThat("getLocalHostPort should return null if mLocalhostSocket is null",
-                    mIncomingSocketThread.getLocalHostPort(), is(nullValue()));
         }
     }
 

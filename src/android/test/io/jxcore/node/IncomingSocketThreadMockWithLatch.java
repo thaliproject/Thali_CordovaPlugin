@@ -22,7 +22,6 @@ public class IncomingSocketThreadMockWithLatch extends IncomingSocketThreadMock 
 
     @Override
     public void onStreamCopyingThreadDone(StreamCopyingThread who) {
-        Log.e("!!", "countdown!");
         copyingFinishedLatch.countDown();
     }
 }

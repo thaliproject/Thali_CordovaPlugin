@@ -42,10 +42,6 @@ public class OutgoingSocketThreadTest {
 
     private ByteArrayOutputStream incomingOutputStream;
     private IncomingSocketThreadMock mIncomingSocketThread;
-//    private String textIncoming = "Lorem ipsum dolor sit amet elit nibh, imperdiet dignissim, " +
-//        "imperdiet wisi. Morbi vel risus. Nunc molestie placerat, nulla mi, id nulla ornare " +
-//        "risus. Sed lacinia, urna eros lacus, elementum eu.";
-
     private ExecutorService mExecutor;
     private CountDownLatch copyingFinishedLatch;
 
@@ -135,18 +131,6 @@ public class OutgoingSocketThreadTest {
                 }
             }
         };
-    }
-
-    @Test
-    public void testConstructor() throws Exception {
-        assertThat("mIncomingSocketThread should not be null", mOutgoingSocketThread,
-            is(notNullValue()));
-    }
-
-    @Test
-    public void testGetListeningOnPortNumber() throws Exception {
-        assertThat("getListeningOnPortNumber should be 0",
-            mOutgoingSocketThread.getListeningOnPortNumber(), is(equalTo(0)));
     }
 
     @Test
