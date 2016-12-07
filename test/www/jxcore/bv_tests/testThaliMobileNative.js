@@ -14,6 +14,8 @@ var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServe
 var Promise = require('lie');
 var assert = require('assert');
 var thaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils');
+var thaliMobileNativeWrapper =
+  require('thali/NextGeneration/thaliMobileNativeWrapper');
 
 var logger = require('../lib/testLogger')('testThaliMobileNative');
 
@@ -45,6 +47,7 @@ var test = tape({
             err,
             'Should be able to call stopAdvertisingAndListening in teardown'
           );
+          thaliMobileNativeWrapper._registerToNative();
           t.end();
         });
       });
