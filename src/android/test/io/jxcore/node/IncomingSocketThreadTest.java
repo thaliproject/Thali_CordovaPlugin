@@ -66,10 +66,10 @@ public class IncomingSocketThreadTest {
 
     @Before
     public void setUp() throws Exception {
-        init();
+        initDependencies();
     }
 
-    private void init() throws Exception {
+    private void initDependencies() throws Exception {
         outgoingOutputStream = new ByteArrayOutputStream();
         incomingOutputStream = new ByteArrayOutputStream();
         // We need to wait
@@ -190,7 +190,7 @@ public class IncomingSocketThreadTest {
             while (attempts > 0 && !outgoingOutputStream.toString().equals(textIncoming)) {
                 attempts--;
                 closeSockets();
-                init();
+                initDependencies();
                 startOutgoingSocketThread();
                 startIncomingSocketThread();
                 copyingFinishedLatch.await(5000L, TimeUnit.MILLISECONDS);

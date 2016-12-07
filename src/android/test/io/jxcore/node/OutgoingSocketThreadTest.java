@@ -69,10 +69,10 @@ public class OutgoingSocketThreadTest {
 
     @Before
     public void setUp() throws Exception {
-        init();
+        initDependencies();
     }
 
-    private void init() throws Exception {
+    private void initDependencies() throws Exception {
         outgoingOutputStream = new ByteArrayOutputStream();
         incomingOutputStream = new ByteArrayOutputStream();
         // See comment in IncomingSocketThreadTest init
@@ -215,7 +215,7 @@ public class OutgoingSocketThreadTest {
                     .equals(textOutgoing))){
                 attempts--;
                 closeSockets();
-                init();
+                initDependencies();
                 startOutgoingSocketThread();
                 startIncomingSocketThread();
                 copyingFinishedLatch.await(5000L, TimeUnit.MILLISECONDS);
