@@ -59,7 +59,7 @@ extension TCPClient: GCDAsyncSocketDelegate {
     sock.readData(withTimeout: -1, tag: 0)
   }
 
-  func socketDidDisconnect(_ sock: GCDAsyncSocket, withError err: NSError?) {
+  func socketDidDisconnect(_ sock: GCDAsyncSocket, withError err: Error?) {
     sock.delegate = nil
 
     activeConnections.modify {
