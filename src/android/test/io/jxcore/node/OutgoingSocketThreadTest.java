@@ -216,8 +216,8 @@ public class OutgoingSocketThreadTest {
                 attempts--;
                 closeSockets();
                 init();
-                runningOutgoingSocketThread();
-                runningIncomingSocketThread();
+                startOutgoingSocketThread();
+                startIncomingSocketThread();
                 copyingFinishedLatch.await(5000L, TimeUnit.MILLISECONDS);
                 Log.i(mTag,"OutgoingSocketThreadTest failed, attempts left " + attempts);
                 Log.i(mTag,"incomingOutputStream = " + incomingOutputStream.toString());
