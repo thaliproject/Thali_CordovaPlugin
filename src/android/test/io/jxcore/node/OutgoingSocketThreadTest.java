@@ -69,9 +69,13 @@ public class OutgoingSocketThreadTest {
 
     @Before
     public void setUp() throws Exception {
+        init();
+    }
+
+    private void init() throws Exception {
         outgoingOutputStream = new ByteArrayOutputStream();
         incomingOutputStream = new ByteArrayOutputStream();
-        // See comment in IncomingSocketThreadTest setUp
+        // See comment in IncomingSocketThreadTest init
         copyingFinishedLatch = new CountDownLatch(2);
         initOutgiongSocketThread();
         initIncomingSocketThread();
@@ -165,7 +169,7 @@ public class OutgoingSocketThreadTest {
 
         try {
 
-            Future<Boolean> mFuture = runningOutgoingSocketThread();
+            Future<Boolean> mFuture = startOutgoingSocketThread();
 
             assertThat("OutgoingSocketThread started", mFuture.get(), is(true));
 
@@ -185,7 +189,7 @@ public class OutgoingSocketThreadTest {
             assertThat("mServerSocket.isBound should return true", mServerSocket.isBound(),
                     is(true));
 
-            mFuture = runningIncomingSocketThread();
+            mFuture = startIncomingSocketThread();
 
             assertThat("IncomingSocketThread started", mFuture.get(), is(true));
             assertThat("localStreamsCreatedSuccessfully should be true",
@@ -211,7 +215,7 @@ public class OutgoingSocketThreadTest {
                     .equals(textOutgoing))){
                 attempts--;
                 closeSockets();
-                setUp();
+                init();
                 runningOutgoingSocketThread();
                 runningIncomingSocketThread();
                 copyingFinishedLatch.await(5000L, TimeUnit.MILLISECONDS);
@@ -229,14 +233,14 @@ public class OutgoingSocketThreadTest {
         }
     }
 
-    private Future runningOutgoingSocketThread() throws Exception{
+    private Future startOutgoingSocketThread() throws Exception{
         mOutgoingSocketThread.setPort(testPortNumber);
         mIncomingSocketThread.setPort(testPortNumber);
         mOutgoingSocketThread.start();
         return mExecutor.submit(createCheckOutgoingSocketThreadStart());
     }
 
-    private Future runningIncomingSocketThread() throws Exception{
+    private Future startIncomingSocketThread() throws Exception{
         mIncomingSocketThread.start(); //Simulate incoming connection
         return mExecutor.submit(createCheckIncomingSocketThreadStart());
     }
