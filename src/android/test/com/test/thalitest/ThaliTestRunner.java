@@ -20,19 +20,19 @@ import java.util.concurrent.TimeoutException;
 import io.jxcore.node.jxcore;
 
 public class ThaliTestRunner {
-
+    
     private final static String TAG = ThaliTestRunner.class.getName();
     public final static int TIMEOUT_LIMIT = 500;
     public final static int COUNTER_LIMIT = 10;
-
+    
     final static BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
     final static WifiManager wifiManager =
-        (WifiManager) jxcore.activity.getBaseContext().getSystemService(Context.WIFI_SERVICE);
-
+    (WifiManager) jxcore.activity.getBaseContext().getSystemService(Context.WIFI_SERVICE);
+    
     public static Callable<Boolean> createCheckRadiosThread() {
         return new Callable<Boolean>() {
             int counter = 0;
-
+            
             @Override
             public Boolean call() throws Exception {
                 while (!btAdapter.isEnabled() && !wifiManager.isWifiEnabled() && counter < COUNTER_LIMIT) {
@@ -48,14 +48,14 @@ public class ThaliTestRunner {
             }
         };
     }
-
+    
     public static boolean turnOnRadios() {
         btAdapter.enable();
         wifiManager.setWifiEnabled(true);
-
+        
         ExecutorService es = Executors.newSingleThreadExecutor();
         Future<Boolean> future = es.submit(createCheckRadiosThread());
-
+        
         try {
             return future.get(5000, TimeUnit.MILLISECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
@@ -64,10 +64,10 @@ public class ThaliTestRunner {
             return false;
         }
     }
-
+    
     public static Result runTests() {
         boolean isWifiAndBTOn = turnOnRadios();
-
+        
         if (isWifiAndBTOn) {
             try {
                 Thread.sleep(10000);
@@ -80,17 +80,17 @@ public class ThaliTestRunner {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-
+            
             Log.i(TAG, "Running UT");
-
+            
             Result result = JUnitCore.runClasses(ThaliTestSuite.class);
-
+            
             for (Failure failure : result.getFailures()) {
                 Log.e(TAG, failure.getTestHeader());
                 Log.e(TAG, failure.getMessage());
                 Log.e(TAG, failure.getTrace());
             }
-
+            
             return result;
         } else {
             Log.e(TAG, "Error during turning on radios!");
