@@ -58,9 +58,7 @@ public final class Atomic<Value> {
   fileprivate var privateValue: Value
 
   public var value: Value {
-    get {
-      return withValue { $0 }
-    }
+    return withValue { $0 }
   }
 
   /**

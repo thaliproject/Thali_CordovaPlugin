@@ -13,6 +13,7 @@ import XCTest
 public final class TestRunner: NSObject {
 
   struct RunResult {
+
     let executedCount: Int
     let succeededCount: Int
     let failureCount: Int
@@ -89,6 +90,7 @@ public final class TestRunner: NSObject {
 // MARK:
 
 extension TestRunner.RunResult {
+
   var jsonString: String? {
     let jsonDictionary: [String: Any] = [
       "total": executedCount,
@@ -111,9 +113,11 @@ extension TestRunner.RunResult {
 
 // MARK: XCTestObservation
 extension TestRunner: XCTestObservation {
-  public func testCase(_ testCase: XCTestCase,
+
+  public func testCase(testCase: XCTestCase,
                        didFailWithDescription description: String,
-                       inFile filePath: String?, atLine lineNumber: UInt) {
+                       inFile filePath: String?,
+                       atLine lineNumber: UInt) {
     print("\(description) in file: \(filePath), line: \(lineNumber)")
   }
 }

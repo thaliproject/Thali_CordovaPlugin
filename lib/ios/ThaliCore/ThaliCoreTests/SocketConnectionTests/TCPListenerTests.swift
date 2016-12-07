@@ -482,12 +482,3 @@ class TCPListenerTests: XCTestCase {
     }
   }
 }
-
-// MARK: - GCDAsyncSocketDelegate
-extension TCPListenerTests: GCDAsyncSocketDelegate {
-
-  func socket(_ sock: GCDAsyncSocket, didConnectToHost host: String, port: UInt16) {}
-  func socketDidDisconnect(_ sock: GCDAsyncSocket, withError err: NSError?) {}
-  func socket(_ sock: GCDAsyncSocket, didWriteDataWithTag tag: Int) {}
-  func socketDidCloseReadStream(_ sock: GCDAsyncSocket) {}
-}
