@@ -16,7 +16,8 @@ if (typeof Mobile === 'undefined') {
 }
 
 var platform = require('thali/NextGeneration/utils/platform');
-var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
+var thaliMobileNativeWrapper =
+  require('thali/NextGeneration/thaliMobileNativeWrapper');
 var validations = require('thali/validations');
 var tape = require('../lib/thaliTape');
 
@@ -32,6 +33,7 @@ var test = tape({
     .then(function () {
       t.equals(thaliMobileNativeWrapper._isStarted(), false,
         'must be stopped');
+      thaliMobileNativeWrapper._registerToNative();
       t.end();
     })
     .catch(function (err) {
