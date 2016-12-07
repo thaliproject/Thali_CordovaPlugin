@@ -36,7 +36,7 @@ function toggleBluetooth (value) {
     ));
   }
   return new Promise(function (resolve, reject) {
-    Mobile['toggleBluetooth'](value, function (error) {
+    Mobile.toggleBluetooth(value, function (error) {
       if (error) {
         reject(error);
       } else {
@@ -59,7 +59,7 @@ function toggleWifi (value) {
     ));
   }
   return new Promise(function (resolve, reject) {
-    Mobile['toggleWiFi'](value, function (error) {
+    Mobile.toggleWiFi(value, function (error) {
       if (error) {
         reject(error);
       } else {
