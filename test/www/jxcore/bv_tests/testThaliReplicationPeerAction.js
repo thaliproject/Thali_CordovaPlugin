@@ -228,8 +228,11 @@ test('Make sure docs replicate',
       var thaliReplicationPeerAction = null;
       var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
       var localPouchDB = new DifferentDirectoryPouch(randomDBName);
+      var originalTimeout = ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS;
+      ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 5;
+
       createDocs(remotePouchDB, 10)
-     .then(function (docs) {
+      .then(function (docs) {
         var notificationForUs = {
           keyId: new Buffer('abcdefg'),
           portNumber: serverPort,
@@ -249,22 +252,23 @@ test('Make sure docs replicate',
                      thaliReplicationPeerAction));
         return Promise.all(promises);
       })
-     .then(function () {
+      .then(function () {
         return remotePouchDB.info();
       })
-     .then(function (info) {
+      .then(function (info) {
         return httpTester.validateSeqNumber(t, randomDBName, serverPort,
         // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
         info.update_seq, pskId, pskKey, devicePublicKey, null, 10);
         // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
       })
-     .then(function () {
+      .then(function () {
         t.pass('All tests passed!');
       })
       .catch(function (err) {
         t.fail('failed with ' + err);
       })
       .then(function () {
+        ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = originalTimeout;
         t.end();
       });
     });
@@ -287,7 +291,7 @@ test('Do nothing and make sure we time out', function (t) {
     // to this particular test but I'm being paranoid
     var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
     var originalTimeout = ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS;
-    ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 2;
+    ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 5;
     thaliReplicationPeerAction =
       new ThaliReplicationPeerAction(notificationForUs,
         DifferentDirectoryPouch, randomDBName,
@@ -326,7 +330,7 @@ test('Do something and make sure we time out', function (t) {
     var localPouchDB = new DifferentDirectoryPouch(randomDBName);
     var thaliReplicationPeerActionStartOutput = null;
     var originalTimeout = ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS;
-    ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 2;
+    ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 5;
     createDocs(remotePouchDB, 10)
       .then(function (docs) {
         var notificationForUs = {
