@@ -760,15 +760,15 @@ module.exports.killConnections = function () {
  * @property {boolean} value If true then enable wifi, else disable it.
  * @returns {Promise<?Error>}
  */
-module.exports.setWifiRadioState = function (value) {
+module.exports.toggleWiFi = function (value) {
   if (platform.isIOS) {
     return Promise.reject(new Error(
-      'Mobile(\'setWifiRadioState\') is not implemented on ios'
+      'Mobile(\'toggleWiFi\') is not implemented on ios'
     ));
   }
 
   return gPromiseQueue.enqueue(function (resolve, reject) {
-    Mobile('setWifiRadioState').callNative(value, function (error) {
+    Mobile.toggleWiFi(value, function (error) {
       if (error) {
         reject(error);
       } else {

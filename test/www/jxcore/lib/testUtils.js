@@ -53,11 +53,11 @@ function toggleWifi (value) {
   }
   if (platform.isIOS) {
     return Promise.reject(new Error(
-      'Mobile(\'setWifiRadioState\') is not implemented on ios'
+      'Mobile(\'toggleWiFi\') is not implemented on ios'
     ));
   }
   return new Promise(function (resolve, reject) {
-    Mobile('setWifiRadioState').callNative(value, function (error) {
+    Mobile.toggleWiFi(value, function (error) {
       if (error) {
         reject(error);
       } else {
