@@ -30,7 +30,7 @@
       "depotName": "Thali_CordovaPlugin",
       "branchName": "master"
     },
-    "btconnectorlib2": "0.3.6-alpha",
+    "btconnectorlib2": "0.3.7-alpha",
     "jxcore-cordova": "0.1.7",
     "jxcore-cordova-url": "http://jxcore.azureedge.net/jxcore-cordova/0.1.7/release/io.jxcore.node.jx"
   },
