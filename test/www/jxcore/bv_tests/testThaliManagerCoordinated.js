@@ -136,8 +136,8 @@ function waitForRemoteDocs(pouchDB, docsToFind) {
 
 test('test write',
   // function () {
-  //   // #1596
-  //   // FIXME: bad test, fails sometimes
+  //   #1596
+  //   FIXME: bad test, fails sometimes
   //   return true;
   // },
   function (t) {
@@ -189,11 +189,11 @@ test('test write',
   });
 
 test('test repeat write 1',
-  function () {
-    // #1596
-    // FIXME: bad test, fails sometimes
-    return true;
-  },
+  // function () {
+  //   #1596
+  //   FIXME: bad test, fails sometimes
+  //   return true;
+  // },
   function (t) {
     testUtils.testTimeout(t, TEST_TIMEOUT);
 
@@ -238,7 +238,8 @@ test('test repeat write 1',
           test2: true
         };
       });
-      var docs = oldDocs.concat(newDocs).push(localDoc);
+      var docs = oldDocs.concat(newDocs);
+      docs.push(localDoc);
       return waitForRemoteDocs(pouchDB, docs);
     })
     .then(function () {
@@ -247,11 +248,11 @@ test('test repeat write 1',
   });
 
 test('test repeat write 2',
-  function () {
-    // #1596
-    // FIXME: bad test, fails sometimes
-    return true;
-  },
+  // function () {
+  //   #1596
+  //   FIXME: bad test, fails sometimes
+  //   return true;
+  // },
   function (t) {
     testUtils.testTimeout(t, TEST_TIMEOUT);
 
@@ -298,7 +299,8 @@ test('test repeat write 2',
           test3: true
         };
       });
-      var docs = oldDocs.concat(newDocs).push(localDoc);
+      var docs = oldDocs.concat(newDocs)
+      docs.push(localDoc);
       return waitForRemoteDocs(pouchDB, docs);
     })
     .then(function () {
