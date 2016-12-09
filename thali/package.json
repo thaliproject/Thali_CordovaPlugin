@@ -13,7 +13,7 @@
     "lie": "3.1.0",
     "long": "3.0.3",
     "multiplex": "6.7.0",
-    "node-ssdp": "https://github.com/thaliproject/node-ssdp.git#caf1a75aa54fb47a9e51b72bf4c902c366536cbd",
+    "node-ssdp": "https://github.com/thaliproject/node-ssdp.git#8feabedb80d054d354ea1fc6bd55045df65fd18f",
     "request": "2.64.0",
     "salti": "https://github.com/thaliproject/salti.git#master",
     "urlsafe-base64": "1.0.0",

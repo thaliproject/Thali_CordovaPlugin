@@ -471,7 +471,7 @@ test('peer changes handled from a queue',
   function () {
     return platform.isMobile;
   }, function (t) {
-  thaliMobileNativeWrapper.start(express.Router())
+    thaliMobileNativeWrapper.start(express.Router())
     .then(function () {
       var peerAvailabilityHandler;
       var peerCount = 10;
@@ -510,7 +510,7 @@ test('peer changes handled from a queue',
         peerAvailabilityHandler);
       Mobile.firePeerAvailabilityChanged(getDummyPeers(true));
     });
-});
+  });
 
 test('relaying discoveryAdvertisingStateUpdateNonTCP',
   function() {
@@ -689,24 +689,24 @@ test('can do HTTP requests after connections are cut',
   // (iOS does not require separate call to operate since
   // killConnections is more like a single-shot thing).
 
-  if (platform.isAndroid) {
-    var networkChangeHandler = function(networkChangedValue) {
-      if (networkChangedValue.bluetoothLowEnergy &&
+    if (platform.isAndroid) {
+      var networkChangeHandler = function(networkChangedValue) {
+        if (networkChangedValue.bluetoothLowEnergy &&
           networkChangedValue.bluetooth) {
-        thaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
+          thaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
          networkChangeHandler);
-        endToEndWithStateCheck(t);
-      }
-    };
-    thaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
+          endToEndWithStateCheck(t);
+        }
+      };
+      thaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
       networkChangeHandler);
 
-    t.pass('Turning bluetooth on');
-    testUtils.toggleBluetooth(true);
-  } else {
-    endToEndWithStateCheck(t);
-  }
-});
+      t.pass('Turning bluetooth on');
+      testUtils.toggleBluetooth(true);
+    } else {
+      endToEndWithStateCheck(t);
+    }
+  });
 
 test('will fail bad PSK connection between peers', function (t) {
   // #1587
@@ -745,7 +745,7 @@ test('We provide notification when a listener dies and we recreate it',
         // Re-enable the check below once #719 is fixed.
         // Note that due to other changes we also need to add in a test to
         // make sure we are looking at an event for the right peerID
-        /*if (!recreatedPort ||
+        /* if (!recreatedPort ||
           recreatedPort && record.portNumber !== recreatedPort) {
           logger.debug('No recreated port or port numbers do not match: '
             + record.portNumber + ' !== ' + recreatedPort);
@@ -837,7 +837,7 @@ test('We fire nonTCPPeerAvailabilityChangedEvent with the same generation ' +
         }
         isKilled = true;
         try {
-            serversManager._peerServers[peerId].server._mux.destroy();
+          serversManager._peerServers[peerId].server._mux.destroy();
         } catch (err) {
           t.fail('destroy failed with - ' + err);
           finishTest();
