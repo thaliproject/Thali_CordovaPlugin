@@ -15,6 +15,7 @@ var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
 /**
  * for testing purposes
  * @private
+ * @returns {module:ThaliWifiInfrastructure~ThaliWifiInfrastructure}
  */
 module.exports._getThaliWifiInfrastructure = function () {
   return thaliWifiInfrastructure;
@@ -394,6 +395,7 @@ module.exports.getNetworkStatus = function () {
  * put on the TCP connection. For some transports a handshake can take quite a
  * long time.
  */
+
 var PeerHostInfo = function (peer) {
   this.hostAddress = peer.hostAddress;
   this.portNumber = peer.portNumber;
@@ -484,11 +486,11 @@ var getPeerHostInfoStrategies = (function () {
  * set per thaliConfig.
  *
  * @public
- * @property {string} peerIdentifier This is exclusively used to detect if
+ * @param {string} peerIdentifier This is exclusively used to detect if
  * this is a repeat announcement or if a peer has gone to correlate it to the
  * announcement of the peer's presence. But this value is not used to establish
  * a connection to the peer, the hostAddress and portNumber handle that.
- * @property {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
+ * @param {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
  * Defines the kind of connection that the request will eventually go over. This
  * information is needed so that we can better manage how we use the different
  * transport types available to us.
@@ -525,9 +527,9 @@ module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
  * from `getPeerHostInfo` method) to prevent possible race conditions...
  *
  * @public
- * @property {string} peerIdentifier Value from peerAvailabilityChanged event.
- * @property {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
- * @property {number} portNumber
+ * @param {string} peerIdentifier Value from peerAvailabilityChanged event.
+ * @param {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
+ * @param {number} portNumber
  * @returns {Promise<?Error>}
  */
 module.exports.disconnect =
@@ -956,21 +958,21 @@ module.exports._getPeerAvailabilities = function () {
 module.exports._peerAvailabilities = peerAvailabilities;
 
 var peersDiff = function (oldState, newState) {
-  var samePeer = (
+  var samePeer =
     oldState.peerIdentifier === newState.peerIdentifier &&
-    oldState.connectionType === newState.connectionType
-  );
+    oldState.connectionType === newState.connectionType;
+
   if (!samePeer) {
     throw new Error('Cannot compare state of different peers');
   }
   return {
     peerIdentifier: oldState.peerIdentifier,
     connectionType: oldState.connectionType,
-    peerAvailable: (newState.peerAvailable !== oldState.peerAvailable),
-    generation: (newState.generation - oldState.generation),
-    hostAddress: (newState.hostAddress !== oldState.hostAddress),
-    portNumber: (newState.portNumber !== oldState.portNumber),
-    availableSince: (newState.availableSince - oldState.availableSince)
+    peerAvailable: newState.peerAvailable !== oldState.peerAvailable,
+    generation: newState.generation - oldState.generation,
+    hostAddress: newState.hostAddress !== oldState.hostAddress,
+    portNumber: newState.portNumber !== oldState.portNumber,
+    availableSince: newState.availableSince - oldState.availableSince
   };
 };
 
@@ -994,7 +996,7 @@ var handlePeer = function (peer) {
       ignoreChanges = ignoreChanges &&
         (diff.generation === 0 && !isWrapAroundElapsed);
     } else {
-      ignoreChanges = ignoreChanges && (diff.generation <= 0);
+      ignoreChanges = ignoreChanges && diff.generation <= 0;
     }
 
     if (ignoreChanges) {
