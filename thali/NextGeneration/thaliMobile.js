@@ -219,6 +219,12 @@ module.exports.stop = function () {
   return promiseQueue.enqueue(function (resolve) {
     thaliMobileStates = getInitialStates();
     removeAllAvailabilityWatchersFromPeers();
+
+    // clear zombieFilter cache
+    if (typeof handleNonTCPPeer.clearCache === 'function') {
+      handleNonTCPPeer.clearCache();
+    }
+
     Object.getOwnPropertyNames(connectionTypes)
       .forEach(function (connectionKey) {
         var connectionType = connectionTypes[connectionKey];
@@ -1061,8 +1067,7 @@ var handleRecreatedPeer = function (nativePeer) {
   }
 };
 
-ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
-function (nativePeer) {
+var handleNonTCPPeer = function (nativePeer) {
   if (nativePeer.recreated) {
     handleRecreatedPeer(nativePeer);
     return;
@@ -1084,7 +1089,17 @@ function (nativePeer) {
     recreated: Boolean(nativePeer.recreated) // Android only
   };
   handlePeer(peer);
-});
+};
+
+if (platform.isAndroid) {
+  handleNonTCPPeer = require('./utils/zombieFilter')(handleNonTCPPeer, {
+    zombieTime: thaliConfig.ANDROID_ZOMBIE_TIME_IN_SECONDS * 1000,
+    generationUpdateWindow: thaliConfig.UPDATE_WINDOWS_FOREGROUND_MS,
+  });
+}
+
+ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
+  handleNonTCPPeer);
 
 thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeer) {
   var peerAvailable = Boolean(wifiPeer.hostAddress && wifiPeer.portNumber);
