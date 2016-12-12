@@ -163,7 +163,7 @@ class BrowserRelayTests: XCTestCase {
     relay.closeRelay()
 
     let clientMock = TCPClientMock(didReadData: unexpectedReadDataHandler,
-                                   didConnect: unexpectedConnectHandler,
+                                   didConnect: {},
                                    didDisconnect: {
                                      clientCantConnectToListener?.fulfill()
                                    })
