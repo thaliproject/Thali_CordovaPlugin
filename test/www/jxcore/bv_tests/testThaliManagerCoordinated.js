@@ -16,6 +16,7 @@ var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var ThaliManager = require('thali/NextGeneration/thaliManager');
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
+var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 
 // Public key for local device should be passed
 // to the tape 'setup' as 'tape.data'.
@@ -135,11 +136,11 @@ function waitForRemoteDocs(pouchDB, docsToFind) {
 }
 
 test('test write',
-  // function () {
-  //   // #1596
-  //   // FIXME: bad test, fails sometimes
-  //   return true;
-  // },
+  function () {
+    // #1596
+    // FIXME: bad test, fails sometimes
+    return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
+  },
   function (t) {
     var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
       t, publicKeyForLocalDevice
@@ -182,6 +183,9 @@ test('test write',
       docs.push(localDoc);
       return waitForRemoteDocs(pouchDB, docs);
     })
+    .catch(function (err) {
+      t.fail('Test failed with ' + err);
+    })
     .then(function () {
       t.pass('OK');
       t.end();
@@ -192,7 +196,7 @@ test('test repeat write 1',
   function () {
     // #1596
     // FIXME: bad test, fails sometimes
-    return true;
+    return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
   },
   function (t) {
     testUtils.testTimeout(t, TEST_TIMEOUT);
@@ -238,8 +242,12 @@ test('test repeat write 1',
           test2: true
         };
       });
-      var docs = oldDocs.concat(newDocs).push(localDoc);
+      var docs = oldDocs.concat(newDocs);
+      docs.push(localDoc);
       return waitForRemoteDocs(pouchDB, docs);
+    })
+    .catch(function (err) {
+      t.fail('Test failed with ' + err);
     })
     .then(function () {
       t.end();
@@ -250,7 +258,7 @@ test('test repeat write 2',
   function () {
     // #1596
     // FIXME: bad test, fails sometimes
-    return true;
+    return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
   },
   function (t) {
     testUtils.testTimeout(t, TEST_TIMEOUT);
@@ -298,8 +306,12 @@ test('test repeat write 2',
           test3: true
         };
       });
-      var docs = oldDocs.concat(newDocs).push(localDoc);
+      var docs = oldDocs.concat(newDocs);
+      docs.push(localDoc);
       return waitForRemoteDocs(pouchDB, docs);
+    })
+    .catch(function (err) {
+      t.fail('Test failed with ' + err);
     })
     .then(function () {
       t.end();

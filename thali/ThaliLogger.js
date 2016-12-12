@@ -63,6 +63,6 @@ module.exports = function (tag) {
 
   // Node-SSDP uses Bunyan which supports trace, Winston does not. To work
   // around this we are hacking in trace support.
-  logger.trace = logger.info;
+  logger.trace = logger.silly;
   return logger;
 };

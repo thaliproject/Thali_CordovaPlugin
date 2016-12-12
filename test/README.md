@@ -104,7 +104,7 @@ If you are manually running native tests it's typically because you are debuggin
 all tests but those that you actually want to run. The changes below should be made in ThaliTest NOT in Thali_CordovaPlugin. You don't
 want to check in these changes.
 
-We have tests that are written in Java and are run from UnitTest_app.js vi a command to Mobile('executeNativeTests'). If you don't care
+We have tests that are written in Java and are run from app.js via a command to Mobile('executeNativeTests'). If you don't care
 about the Java tests for your debugging then that is the first thing to disable as those take a while to run and so will constantly slow
 down your startup when doing another test run.
 
