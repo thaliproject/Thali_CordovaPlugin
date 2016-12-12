@@ -144,11 +144,6 @@ function waitForRemoteDocs(
 }
 
 test('test write',
-  function () {
-    // #1596
-    // FIXME: bad test, fails sometimes
-    return true;
-  },
   function (t) {
     testUtils.testTimeout(t, TEST_TIMEOUT);
 
@@ -208,11 +203,6 @@ test('test write',
   });
 
 test('test repeat write 1',
-  function () {
-    // #1596
-    // FIXME: bad test, fails sometimes
-    return true;
-  },
   function (t) {
     testUtils.testTimeout(t, TEST_TIMEOUT);
 
@@ -265,11 +255,6 @@ test('test repeat write 1',
   });
 
 test('test repeat write 2',
-  function () {
-    // #1596
-    // FIXME: bad test, fails sometimes
-    return true;
-  },
   function (t) {
     testUtils.testTimeout(t, TEST_TIMEOUT);
 
