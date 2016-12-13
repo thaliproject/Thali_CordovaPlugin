@@ -28,7 +28,7 @@ echo "Node version: $(node -v)"
 echo "JXcore version: $(jx -jxv)"
 echo "JXcore engine: $(jx -jsv)"
 if is_darwin_platform; then
-  echo "xcodebuild version: $(xcodebuild -version)"
+  echo "xcodebuild version: $(xcodebuild -version | head -n1)"
 fi
 echo ""
 
