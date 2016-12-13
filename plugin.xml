@@ -16,6 +16,10 @@
 
     <!-- Android -->
     <platform name="android">
+      <edit-config file="AndroidManifest.xml" target="/manifest/uses-sdk" mode="merge">
+        <uses-sdk android:minSdkVersion="21" />
+      </edit-config>
+
       <hook type="after_plugin_install" src="thali/install/cordova-hooks/android/after_plugin_install.js" />
 
         <config-file target="AndroidManifest.xml" parent="/*">
