@@ -13,7 +13,7 @@ const assert = require('assert');
 
 const versions =
 {
-  xcode: '8.1',
+  xcode: '8.2',
   xcodeCommandLineTools: ' ',
   macOS: '10.12.1',
   node: '6.9.1',
