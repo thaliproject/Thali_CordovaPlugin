@@ -19,7 +19,7 @@ public class ConnectionData {
 
     @Override
     public String toString() {
-        return "Peer properties: " + peerProperties.toString() + ".\n Is incomming connection: " + isIncoming
-                + ".\n id: " + id;
+        return "Peer properties: " + peerProperties.toString() + ".\n Is incomming connection: " +
+            isIncoming + ".\n id: " + id;
     }
 }

@@ -144,9 +144,9 @@ class StreamCopyingThread extends Thread {
                 totalNumberOfBytesWritten += numberOfBytesRead;
 
                 if (mNotifyStreamCopyingProgress) {
-                    Log.v(TAG, mThreadName+ " " + "recieved " + numberOfBytesRead + " bytes from " +
-                            (fromBluetoothToTCP?" Bluetooth and send it to TCP":" TCP and send it to Bluetooth")
-                            + connectionData.toString());
+                    Log.v(TAG, mThreadName + " " + "recieved " + numberOfBytesRead + " bytes from " +
+                        (fromBluetoothToTCP ? " Bluetooth and send it to TCP" : " TCP and send it to Bluetooth")
+                        + "\n" + connectionData.toString());
                     mListener.onStreamCopySucceeded(this, numberOfBytesRead);
                 }
                 numberOfBytesRead = 0;
@@ -163,8 +163,6 @@ class StreamCopyingThread extends Thread {
                     }
                 } else {
                     errorMessage = "Failed to read from input stream, got IO, not -1. Number of bytes read " + numberOfBytesRead;
-                }
-
                 Log.e(TAG, errorMessage + " (thread ID: " + getId() + ", thread name: " + mThreadName + "): " + e.getMessage());
                 errorMessage += ": " + e.getMessage();
                 final String msg = errorMessage;
