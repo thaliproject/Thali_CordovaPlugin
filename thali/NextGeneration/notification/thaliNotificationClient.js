@@ -46,7 +46,7 @@ function PeerAdvertisesDataForUs (keyId, pskIdentifyField,
   this.peerId = peerId;
 }
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * @classdesc Creates a class that can register to receive the {@link
  * module:thaliMobile.event:peerAvailabilityChanged} event. It will listen for
@@ -69,8 +69,8 @@ function PeerAdvertisesDataForUs (keyId, pskIdentifyField,
  * @throws {Error} thaliPeerPoolInterface cannot be null
  * @throws {Error} ecdhForLocalDevice cannot be null
  */
-// jscs:enable maximumLineLength
 function ThaliNotificationClient(thaliPeerPoolInterface, ecdhForLocalDevice) {
+  /* eslint-enable max-len */
   EventEmitter.call(this);
   var self = this;
 
@@ -234,14 +234,13 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
     var peerEntry = new PeerDictionary.NotificationPeerDictionaryEntry(
       PeerDictionary.peerState.CONTROLLED_BY_POOL);
 
-    self._createNewAction(peerEntry, {
+    self._createNotificationAction(peerEntry, {
       peerIdentifier: peerStatus.peerIdentifier,
       generation: peerStatus.generation,
       connectionType: peerStatus.connectionType,
     });
   };
 
-// jscs:disable maximumLineLength
 /**
  * This function creates a new action and sets connection info into it.
  * Then it enqueues the action in the peer pool and adds the entry into
@@ -254,8 +253,7 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
  * @param {number} peer.generation
  * @param {module:ThaliMobileNativeWrapper.connectionTypes} peer.connectionType
  */
-// jscs:enable maximumLineLength
-ThaliNotificationClient.prototype._createNewAction =
+ThaliNotificationClient.prototype._createNotificationAction =
   function (peerEntry, peer) {
 
     var action = new ThaliNotificationAction(
@@ -283,13 +281,9 @@ ThaliNotificationClient.prototype._createNewAction =
  * This function recreates failed action
  *
  * @private
- * @param {module:thaliNotificationAction~NotificationPeerDictionaryEntry} peerEntry
- * @param {Object} peer
- * @param {string} peer.peerIdentifier
- * @param {number} peer.generation
- * @param {module:ThaliMobileNativeWrapper.connectionTypes} peer.connectionType
+ * @param {module:thaliNotificationAction~ThaliNotificationAction} action
  */
-ThaliNotificationClient.prototype._retryAction = function (action) {
+ThaliNotificationClient.prototype._retryNotificationAction = function (action) {
   var peer = {
     peerIdentifier: action.getPeerIdentifier(),
     generation: action.getPeerGeneration(),
@@ -301,7 +295,7 @@ ThaliNotificationClient.prototype._retryAction = function (action) {
     'peer state is WAITING');
 
   peer.connectionType = action.getConnectionType();
-  this._createNewAction(entry, peer);
+  this._createNotificationAction(entry, peer);
 };
 
 /**
@@ -340,43 +334,43 @@ ThaliNotificationClient.prototype._onActionResolved =
     switch (resolution) {
       case ThaliNotificationAction.ActionResolution
         .BEACONS_RETRIEVED_AND_PARSED: {
-        entry.peerState = PeerDictionary.peerState.RESOLVED;
-        this.peerDictionary.addUpdateEntry(peer, entry);
+          entry.peerState = PeerDictionary.peerState.RESOLVED;
+          this.peerDictionary.addUpdateEntry(peer, entry);
 
-        if (!beaconDetails) {
+          if (!beaconDetails) {
           // This peerId has nothing for us, if that changes then the peer
           // will generate a new peerId so we can safely ignore this peerId
           // from now on.
-          break;
-        }
+            break;
+          }
 
-        var connInfo = entry.notificationAction.getConnectionInformation();
+          var connInfo = entry.notificationAction.getConnectionInformation();
 
-        var pubKx = this._addressBookCallback(beaconDetails.unencryptedKeyId);
+          var pubKx = this._addressBookCallback(beaconDetails.unencryptedKeyId);
 
-        var pskIdentifyField =
+          var pskIdentifyField =
           NotificationBeacons.generatePskIdentityField(
             beaconDetails.preAmble, beaconDetails.encryptedBeaconKeyId);
 
-        var pskSecret = NotificationBeacons.generatePskSecret(
+          var pskSecret = NotificationBeacons.generatePskSecret(
           this._ecdhForLocalDevice, pubKx, pskIdentifyField);
 
-        var peerAdvertises = new PeerAdvertisesDataForUs(
-          pubKx,
-          pskIdentifyField,
-          pskSecret,
-          connInfo.hostAddress,
-          connInfo.portNumber,
-          connInfo.suggestedTCPTimeout,
-          entry.notificationAction.getConnectionType(),
-          peer.peerIdentifier
-        );
+          var peerAdvertises =
+            new PeerAdvertisesDataForUs(
+              pubKx,
+              pskIdentifyField,
+              pskSecret,
+              connInfo.hostAddress,
+              connInfo.portNumber,
+              connInfo.suggestedTCPTimeout,
+              entry.notificationAction.getConnectionType(),
+              peer.peerIdentifier
+            );
 
-        this.emit(this.Events.PeerAdvertisesDataForUs, peerAdvertises);
+          this.emit(this.Events.PeerAdvertisesDataForUs, peerAdvertises);
 
-        break;
-      }
-
+          break;
+        }
       case ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_BUT_BAD:
       case ThaliNotificationAction.ActionResolution.KILLED_SUPERSEDED:
       case ThaliNotificationAction.ActionResolution.BAD_PEER: {
@@ -391,7 +385,6 @@ ThaliNotificationClient.prototype._onActionResolved =
         this.peerDictionary.addUpdateEntry(peer, entry);
         break;
       }
-
       case ThaliNotificationAction.ActionResolution.HTTP_BAD_RESPONSE:
       case ThaliNotificationAction.ActionResolution.NETWORK_PROBLEM:
       case ThaliNotificationAction.ActionResolution.KILLED: {
@@ -412,7 +405,7 @@ ThaliNotificationClient.prototype._onActionResolved =
           entry.retryCounter++;
           entry.peerState = PeerDictionary.peerState.WAITING;
           entry.waitingTimeout = setTimeout(
-            this._retryAction.bind(this, action),
+            this._retryNotificationAction.bind(this, action),
             timeOut);
         } else {
           // Gives up after all the timeouts from the RETRY_TIMEOUTS array

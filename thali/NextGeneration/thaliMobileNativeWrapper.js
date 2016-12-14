@@ -21,7 +21,6 @@ var states = {
 var peerGenerations = {};
 
 var gPromiseQueue = new PromiseQueue();
-var gRouterObject = null;
 var gRouterExpress = null;
 var gRouterServer = null;
 var gRouterServerPort = 0;
@@ -281,7 +280,6 @@ module.exports.start = function (router, pskIdToSecret) {
       logger.error('Unable to use the given router: %s', error.toString());
       return reject(new Error('Bad Router'));
     }
-    gRouterObject = router;
     var options = {
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
       pskCallback : function (id) {
@@ -395,8 +393,8 @@ module.exports.stop = function () {
  * @returns {Promise<?Error>}
  * @throws {Error}
  */
-/* eslint-enable max-len */
 module.exports.startListeningForAdvertisements = function () {
+/* eslint-enable max-len */
   return gPromiseQueue.enqueue(function (resolve, reject) {
     if (!states.started) {
       return reject(new Error('Call Start!'));

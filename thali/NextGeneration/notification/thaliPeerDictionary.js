@@ -36,9 +36,6 @@ module.exports.peerState = {
   WAITING: 'waiting'
 };
 
-
-
-// jscs:disable maximumLineLength
 /**
  * @classdesc An entry to be put into the peerDictionary.
  *
@@ -48,7 +45,6 @@ module.exports.peerState = {
  * @param {module:thaliNotificationAction~NotificationAction} notificationAction
  * @constructor
  */
-// jscs:enable maximumLineLength
 function NotificationPeerDictionaryEntry(peerState, notificationAction) {
   this.peerState = peerState;
   this.notificationAction = notificationAction;
