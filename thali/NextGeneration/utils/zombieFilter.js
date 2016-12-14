@@ -1,6 +1,6 @@
 'use strict';
 
-var extend = require('js-extend');
+var extend = require('js-extend').extend;
 
 
 var cache = null;
@@ -54,7 +54,7 @@ function shouldIgnoreAnnouncement (nativePeer) {
 }
 
 function fixPeerGeneration (nativePeer) {
-  var cachedPeer = cache[nativePeer.peerGeneration];
+  var cachedPeer = cache[nativePeer.peerIdentifier];
   var fixedPeer = extend({}, nativePeer);
   if (cachedPeer) {
     fixedPeer.generation = cachedPeer.fakeGeneration;
@@ -89,7 +89,7 @@ function zombieFilter (handleNonTCPPeer, config) {
 
     if (!cachedPeer) {
       cachePeer(peerIdentifier, nativePeer.generation, 0);
-      handleNonTCPPeer(nativePeer);
+      handleNonTCPPeer(fixPeerGeneration(nativePeer));
       return;
     }
 
@@ -97,10 +97,13 @@ function zombieFilter (handleNonTCPPeer, config) {
       return;
     }
 
-    cachedPeer = cachePeer(peerIdentifier, generation, cachedPeer.fakeGeneration + 1);
+    cachedPeer = cachePeer(
+      peerIdentifier,
+      nativePeer.generation,
+      cachedPeer.fakeGeneration + 1
+    );
 
-    var fixedPeer = fixPeerGeneration(nativePeer);
-    handleNonTCPPeer(fixedPeer);
+    handleNonTCPPeer(fixPeerGeneration(nativePeer));
   };
 }
 
