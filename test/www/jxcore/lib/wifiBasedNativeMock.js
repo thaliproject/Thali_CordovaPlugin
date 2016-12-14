@@ -266,7 +266,7 @@ var startListeningForAdvertisementsIsActive = false;
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 MobileCallInstance.prototype.startListeningForAdvertisements =
-  function (callback) {// jscs:ignore disallowUnusedParams
+  function (callback) {// eslint-disable-line no-unused-vars
     return CallOnce.check(this, '_startListeningForAdvertisements', arguments);
   };
 
@@ -291,7 +291,7 @@ MobileCallInstance.prototype._startListeningForAdvertisements =
  * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
  */
 MobileCallInstance.prototype.stopListeningForAdvertisements =
-  function (callBack) {// jscs:ignore disallowUnusedParams
+  function (callBack) {// eslint-disable-line no-unused-vars
     return CallOnce.check(this, '_stopListeningForAdvertisements', arguments);
   };
 
@@ -351,7 +351,7 @@ var startUpdateAdvertisingAndListeningIsActive = false;
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 MobileCallInstance.prototype.startUpdateAdvertisingAndListening =
-  function (portNumber, callback) {// jscs:ignore disallowUnusedParams
+  function (portNumber, callback) {// eslint-disable-line no-unused-vars
     return CallOnce.check(this, '_startUpdateAdvertisingAndListening',
                           arguments);
   };
@@ -410,7 +410,7 @@ function closeAndDeleteOutgoingProxyServer(peerIdentifier) {
  * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
  */
 MobileCallInstance.prototype.stopAdvertisingAndListening =
-  function (callBack) {// jscs:ignore disallowUnusedParams
+  function (callBack) {// eslint-disable-line no-unused-vars
     return CallOnce.check(this, '_stopAdvertisingAndListening', arguments);
   };
 
@@ -479,7 +479,7 @@ MobileCallInstance.prototype._disconnect =
     }
 
     callback(null);
-};
+  };
 
 function returnPort(peerIdentifier, callback) {
   callback(null, JSON.stringify({
@@ -566,17 +566,17 @@ MobileCallInstance.prototype._androidConnectLogic =
       peerConnections[peerIdentifier] = net.connect(peerToConnect.portNumber,
         function () {
           setTimeout(function () {
-              if (!peerProxyServers[peerIdentifier]) {
-                var error = 'Unspecified Error with Radio infrastructure';
-                return callback(error);
-              }
-              peerConnections[peerIdentifier]
+            if (!peerProxyServers[peerIdentifier]) {
+              var error = 'Unspecified Error with Radio infrastructure';
+              return callback(error);
+            }
+            peerConnections[peerIdentifier]
                 .removeListener('error', failedPeerConnectionError);
-              peerConnections[peerIdentifier]
+            peerConnections[peerIdentifier]
                 .on('error', simplePeerConnectionError);
-              returnConnectResponse(peerIdentifier, callback,
+            returnConnectResponse(peerIdentifier, callback,
                 cleanProxyServer);
-            },
+          },
             100);
         });
       peerConnections[peerIdentifier].on('end', function () {
@@ -803,6 +803,28 @@ MobileCallInstance.prototype.killConnections = function (callback) {
   callback('Not Supported');
 };
 
+MobileCallInstance.prototype.lockAndroidWifiMulticast =
+  function (callback) {// eslint-disable-line no-unused-vars
+    return CallOnce.check(this, '_lockAndroidWifiMulticast', arguments);
+  };
+
+
+MobileCallInstance.prototype._lockAndroidWifiMulticast =
+  function (callback) {
+    callback(null);
+  };
+
+MobileCallInstance.prototype.unlockAndroidWifiMulticast =
+  function (callback) {// eslint-disable-line no-unused-vars
+    return CallOnce.check(this, '_unlockAndroidWifiMulticast', arguments);
+  };
+
+MobileCallInstance.prototype._unlockAndroidWifiMulticast =
+  function (callback) {
+    callback(null);
+  };
+
+
 var fakeDeviceName = uuid.v4();
 /**
  * Generates a UUID that will be used as the name of the current device.
@@ -855,6 +877,12 @@ MobileCallInstance.prototype.callNative = function () {
     }
     case 'killConnections': {
       return this.killConnections(arguments[0]);
+    }
+    case 'lockAndroidWifiMulticast': {
+      return this.lockAndroidWifiMulticast(arguments[0]);
+    }
+    case 'unlockAndroidWifiMulticast': {
+      return this.unlockAndroidWifiMulticast(arguments[0]);
     }
     case 'GetDeviceName': {
       return this.getDeviceName(arguments[0]);
@@ -1143,7 +1171,6 @@ function wifiPeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
   };
 }
 
-// jscs:disable jsDoc
 /**
  * To use this mock save the current global object Mobile (if it exists) and
  * replace it with this object. In general this object won't exist on the
@@ -1156,7 +1183,6 @@ function wifiPeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
  * stack. We need it here so we can add a router to simulate the iOS case where
  * we need to let the other peer know we want a connection.
  */
-// jscs:enable jsDoc
 function WifiBasedNativeMock(platformName, router) {
   assert(platformName, 'platformName must be set');
   if (!router) {
@@ -1181,14 +1207,15 @@ function WifiBasedNativeMock(platformName, router) {
   mobileHandler.toggleBluetooth =
     toggleBluetooth(platformName, thaliWifiInfrastructure);
 
-    mobileHandler.toggleWiFi =
+  mobileHandler.toggleWiFi =
     toggleWiFi(platform, thaliWifiInfrastructure);
 
   mobileHandler.firePeerAvailabilityChanged =
     firePeerAvailabilityChanged(platformName, thaliWifiInfrastructure);
 
   mobileHandler.fireIncomingConnectionToPortNumberFailed =
-    fireIncomingConnectionToPortNumberFailed(platformName, thaliWifiInfrastructure);
+    fireIncomingConnectionToPortNumberFailed(platformName,
+                                             thaliWifiInfrastructure);
 
   mobileHandler.fireDiscoveryAdvertisingStateUpdateNonTCP =
     fireDiscoveryAdvertisingStateUpdateNonTCP(platformName,

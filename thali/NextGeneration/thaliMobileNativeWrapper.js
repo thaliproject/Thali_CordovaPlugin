@@ -3,7 +3,6 @@
 var Promise = require('lie');
 var PromiseQueue = require('./promiseQueue');
 var EventEmitter = require('events').EventEmitter;
-var platform = require('./utils/platform');
 var logger = require('../ThaliLogger')('thaliMobileNativeWrapper');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var express = require('express');
@@ -372,7 +371,7 @@ module.exports.stop = function () {
   return gPromiseQueue.enqueue(stop());
 };
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * This method instructs the native layer to discover what other devices are
  * within range using the platform's non-TCP P2P capabilities. When a device is
@@ -396,7 +395,7 @@ module.exports.stop = function () {
  * @returns {Promise<?Error>}
  * @throws {Error}
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 module.exports.startListeningForAdvertisements = function () {
   return gPromiseQueue.enqueue(function (resolve, reject) {
     if (!states.started) {
@@ -441,7 +440,7 @@ module.exports.stopListeningForAdvertisements = function () {
   });
 };
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * This method has two separate but related functions. It's first function is to
  * begin advertising the Thali peer's presence to other peers. The second
@@ -509,7 +508,7 @@ module.exports.stopListeningForAdvertisements = function () {
  * @public
  * @returns {Promise<?Error>}
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 module.exports.startUpdateAdvertisingAndListening = function () {
   return gPromiseQueue.enqueue(function (resolve, reject) {
     if (!states.started) {
@@ -781,6 +780,49 @@ module.exports.toggleWiFi = function (value) {
   });
 };
 
+/**
+ * This method takes out a wifi multicast lock on Android.
+ *
+ * @return {Promise<?Error>}
+ */
+module.exports.lockAndroidWifiMulticast = function () {
+  if (platform.isIOS) {
+    return Promise.reject(new Error(
+      'Mobile(\'lockAndroidWifiMulticast\') is not implemented on ios'));
+  }
+
+  return gPromiseQueue.enqueue(function (resolve, reject) {
+    Mobile('lockAndroidWifiMulticast').callNative(function (error) {
+      if (error) {
+        return reject(new Error(error));
+      }
+      resolve();
+    });
+  });
+};
+
+
+/**
+ * This method removes a wifi multicast lock on Android.
+ *
+ * @return {Promise<?Error>}
+ */
+module.exports.unlockAndroidWifiMulticast = function () {
+  if (platform.isIOS) {
+    return Promise.reject(new Error(
+      'Mobile(\'unlockAndroidWifiMulticast\') is not implemented on ios'));
+  }
+
+  return gPromiseQueue.enqueue(function (resolve, reject) {
+    Mobile('unlockAndroidWifiMulticast').callNative(function (error) {
+      if (error) {
+        return reject(new Error(error));
+      }
+      resolve();
+    });
+  });
+};
+
 /* EVENTS */
 
 /**
@@ -850,7 +892,7 @@ module.exports.connectionTypes = connectionTypes;
  * always be null for `multiConnect`.
  */
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * This event MAY start firing as soon as either of the start methods is called.
  * Start listening for advertisements obviously looks for new peers but in some
@@ -875,7 +917,7 @@ module.exports.connectionTypes = connectionTypes;
  * @type {Object}
  * @property {nonTCPPeerAvailabilityChanged} peer
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 var peerAvailabilityChangedQueue = new PromiseQueue();
 var handlePeerAvailabilityChanged = function (peer) {
   logger.debug('Received peer availability changed event with ' +
@@ -941,7 +983,7 @@ var handlePeerAvailabilityChanged = function (peer) {
 
 module.exports._handlePeerAvailabilityChanged = handlePeerAvailabilityChanged;
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * This is used whenever discovery or advertising starts or stops. Since it's
  * possible for these to be stopped (in particular) due to events outside of
@@ -958,7 +1000,7 @@ module.exports._handlePeerAvailabilityChanged = handlePeerAvailabilityChanged;
  * @type {Object}
  * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 
 /**
  * Provides a notification when the network's state changes as well as when our

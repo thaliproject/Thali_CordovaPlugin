@@ -575,10 +575,10 @@ test('does not get peer changes from self', function (t) {
     knownOwnPeerIdentifiers.push(wifiInfrastructure.peer.peerIdentifier);
     return Promise.delay(thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 2);
   }).then(function () {
-      return wifiInfrastructure.startUpdateAdvertisingAndListening();
+    return wifiInfrastructure.startUpdateAdvertisingAndListening();
   }).then(function () {
-      knownOwnPeerIdentifiers.push(wifiInfrastructure.peer.peerIdentifier);
-      return Promise.delay(thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 2);
+    knownOwnPeerIdentifiers.push(wifiInfrastructure.peer.peerIdentifier);
+    return Promise.delay(thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 2);
   }).then(function () {
     wifiInfrastructure.removeListener(
       'wifiPeerAvailabilityChanged',
@@ -591,9 +591,63 @@ test('does not get peer changes from self', function (t) {
   });
 });
 
+test('Make sure we turn on and off the Android multicast locks',
+  function () {
+    return !platform.isAndroid;
+  },
+  function (t) {
+    var lockSpy = sinon.spy(ThaliMobileNativeWrapper,
+      'lockAndroidWifiMulticast');
+    var unlockSpy = sinon.spy(ThaliMobileNativeWrapper,
+      'unlockAndroidWifiMulticast');
+    wifiInfrastructure.startListeningForAdvertisements()
+      .then(function () {
+        t.equals(lockSpy.callCount, 1, 'We have locked');
+        t.equals(unlockSpy.callCount, 0, 'We have not unlocked');
+        return wifiInfrastructure.stopListeningForAdvertisements();
+      })
+      .then(function () {
+        t.equals(lockSpy.callCount, 1, 'No new locks');
+        t.equals(unlockSpy.callCount, 1, 'We unlocked');
+      })
+      .catch(function (err) {
+        t.fail(err);
+      })
+      .then(function () {
+        t.end();
+      });
+  });
+
+test('Make sure we do not use Android locks when we are not on Android',
+  function () {
+    return platform.isAndroid;
+  },
+  function (t) {
+    var lockSpy = sinon.spy(ThaliMobileNativeWrapper,
+      'lockAndroidWifiMulticast');
+    var unlockSpy = sinon.spy(ThaliMobileNativeWrapper,
+      'unlockAndroidWifiMulticast');
+    wifiInfrastructure.startListeningForAdvertisements()
+      .then(function () {
+        t.equals(lockSpy.callCount, 0, 'We have no lock');
+        t.equals(unlockSpy.callCount, 0, 'We have not unlocked');
+        return wifiInfrastructure.stopListeningForAdvertisements();
+      })
+      .then(function () {
+        t.equals(lockSpy.callCount, 0, 'Still no lock');
+        t.equals(unlockSpy.callCount, 0, 'Still not unlocked');
+      })
+      .catch(function (err) {
+        t.fail(err);
+      })
+      .then(function () {
+        t.end();
+      });
+  });
+
 // From here onwards, tests only work on mocked up desktop
 // environment where network changes can be simulated.
-if (platform.isMobile) {
+if (platform._isRealMobile) {
   return;
 }
 
