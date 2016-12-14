@@ -400,6 +400,50 @@ var PeerHostInfo = function (peer) {
   this.suggestedTCPTimeout = peer.suggestedTCPTimeout;
 };
 
+var getPeerHostInfoStrategies = (function () {
+  var LOCALHOST = '127.0.0.1';
+
+  function getBluetoothAddressPortInfo(peer) {
+    var portInfo = new PeerHostInfo({
+      hostAddress: LOCALHOST,
+      portNumber: peer.portNumber,
+      suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_BLUETOOTH
+    });
+    return Promise.resolve(portInfo);
+  }
+
+  function getMPCFAddressPortInfo(peer) {
+    return ThaliMobileNativeWrapper
+      ._multiConnect(peer.peerIdentifier)
+      .then(function (portNumber) {
+        var portInfo = new PeerHostInfo({
+          hostAddress: LOCALHOST,
+          portNumber: portNumber,
+          suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_MPCF
+        });
+        return portInfo;
+      });
+  }
+
+  function getWifiAddressPortInfo(peer) {
+    var portInfo = new PeerHostInfo({
+      hostAddress: peer.hostAddress,
+      portNumber: peer.portNumber,
+      suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_WIFI
+    });
+    return Promise.resolve(portInfo);
+  }
+
+  var getPeerHostInfoStrategies = {};
+  getPeerHostInfoStrategies[connectionTypes.BLUETOOTH] =
+    getBluetoothAddressPortInfo;
+  getPeerHostInfoStrategies[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] =
+    getMPCFAddressPortInfo;
+  getPeerHostInfoStrategies[connectionTypes.TCP_NATIVE] =
+    getWifiAddressPortInfo;
+  return getPeerHostInfoStrategies;
+})();
+
 /**
  * If the peer identifier and connection type is not in the availability cache
  * (see the peerAvailabilityChanged tome below) then a 'peer not available'
@@ -469,50 +513,6 @@ module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
 
   return getPeerHostInfo(peer);
 };
-
-var getPeerHostInfoStrategies = (function () {
-  var LOCALHOST = '127.0.0.1';
-
-  function getBluetoothAddressPortInfo(peer) {
-    var portInfo = new PeerHostInfo({
-      hostAddress: LOCALHOST,
-      portNumber: peer.portNumber,
-      suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_BLUETOOTH
-    });
-    return Promise.resolve(portInfo);
-  }
-
-  function getMPCFAddressPortInfo(peer) {
-    return ThaliMobileNativeWrapper
-      ._multiConnect(peer.peerIdentifier)
-      .then(function (portNumber) {
-        var portInfo = new PeerHostInfo({
-          hostAddress: LOCALHOST,
-          portNumber: portNumber,
-          suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_MPCF
-        });
-        return portInfo;
-      });
-  }
-
-  function getWifiAddressPortInfo(peer) {
-    var portInfo = new PeerHostInfo({
-      hostAddress: peer.hostAddress,
-      portNumber: peer.portNumber,
-      suggestedTCPTimeout: thaliConfig.TCP_TIMEOUT_WIFI
-    });
-    return Promise.resolve(portInfo);
-  }
-
-  var getPeerHostInfoStrategies = {};
-  getPeerHostInfoStrategies[connectionTypes.BLUETOOTH] =
-    getBluetoothAddressPortInfo;
-  getPeerHostInfoStrategies[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] =
-    getMPCFAddressPortInfo;
-  getPeerHostInfoStrategies[connectionTypes.TCP_NATIVE] =
-    getWifiAddressPortInfo;
-  return getPeerHostInfoStrategies;
-})();
 
 /**
  * Requests that the outgoing session with the identifier peerIdentifier on the
@@ -855,13 +855,13 @@ module.exports.disconnect =
  *
  * If the timer goes off then we MUST remove the associated peer from the
  * availability cache and we MUST issue a peerAvailabilityChanged event with the
- * given peerIdentifier and connectionType but with peerAvailable set to false and
- * generation and newAddressPort set to null.
+ * given peerIdentifier and connectionType but with peerAvailable set to false
+ * and generation and newAddressPort set to null.
  *
  * Note that having the timer go off could theoretically mean we announce a peer
- * who we are in the middle of talking to as being gone but this is highly unlikely.
- * The SSDP announcements go over the same channel as the TCP connections and
- * SSDP is quite chatty.
+ * who we are in the middle of talking to as being gone but this is highly
+ * unlikely. The SSDP announcements go over the same channel as the TCP
+ * connections and SSDP is quite chatty.
  *
  * ### Handling networkChanged events
  *
@@ -896,18 +896,24 @@ module.exports.disconnect =
  * information is needed so that we can better manage how we use the different
  * transport types available to us.
  * @property {boolean} peerAvailable
- * @property {?number} generation This value is only relevant if peerAvailable is
- * set to true. This identifies the current generation for the peer. This
+ * @property {?number} generation This value is only relevant if peerAvailable
+ * is set to true. This identifies the current generation for the peer. This
  * indicates that the state of the associated peer has changed. In general one
  * can use the differences in generation count to tell how many changes have
  * occurred to the peer but note that Android currently rolls over its counter
- * which is only 1 byte long.
+ * which is only 1 byte long. Also note that we have Zombie problems with
+ * Android where it is possible to get notification for the same generation
+ * multiple times (although not in a row, e.g. we can get generation 0, 1 and
+ * then 0 but not generation 0 and then another generation 0) and it is possible
+ * to get generations out of order (e.g. get generation 2 before generation 1).
  * @property {?boolean} newAddressPort This value is only relevant if
  * peerAvailable is set to true. If set to true then this announcement means
  * that the peer has changed either its address or port and any existing
- * sessions SHOULD be terminated and a new call to {@link getPeerHostInfo} SHOULD
- * be made to find the new address/port.
+ * sessions SHOULD be terminated and a new call to {@link getPeerHostInfo}
+ * SHOULD be made to find the new address/port.
  */
+
+
 var PeerAvailabilityStatus = function (peer) {
   this.peerIdentifier = peer.peerIdentifier;
   this.connectionType = peer.connectionType;
@@ -941,31 +947,13 @@ peerAvailabilities[connectionTypes.TCP_NATIVE] = {};
  * for testing purposes
  * TODO: leave only one way to access peer availabilities
  * @private
+ * @return {Object}
  */
 module.exports._getPeerAvailabilities = function () {
   return peerAvailabilities;
 };
+
 module.exports._peerAvailabilities = peerAvailabilities;
-
-var changeCachedPeerUnavailable = function (peer) {
-  removeAvailabilityWatcherFromPeerIfExists(peer);
-  delete peerAvailabilities[peer.connectionType][peer.peerIdentifier];
-};
-
-var changeCachedPeerAvailable = function (peer) {
-  var cachedPeer = JSON.parse(JSON.stringify(peer));
-  peerAvailabilities[peer.connectionType][peer.peerIdentifier] = cachedPeer;
-  addAvailabilityWatcherToPeerIfNotExist(cachedPeer);
-};
-
-var changePeersUnavailable = function (connectionType) {
-  Object.keys(peerAvailabilities[connectionType]).forEach(
-    function (peerIdentifier) {
-      var peer = peerAvailabilities[connectionType][peerIdentifier];
-      changeCachedPeerUnavailable(peer);
-      emitPeerUnavailable(peerIdentifier, connectionType);
-    });
-};
 
 var peersDiff = function (oldState, newState) {
   var samePeer = (
@@ -997,11 +985,8 @@ var handlePeer = function (peer) {
   if (cachedPeer) {
     // check diff and ignore event if necessary
     diff = peersDiff(cachedPeer, peer);
-    var ignoreChanges = (
-      !diff.peerAvailable &&
-      !diff.hostAddress &&
-      !diff.portNumber
-    );
+    var ignoreChanges = !diff.peerAvailable && !diff.hostAddress &&
+                          !diff.portNumber;
 
     if (platform.isAndroid) {
       var isWrapAroundElapsed =
@@ -1123,7 +1108,36 @@ peerAvailabilityWatchers[connectionTypes.TCP_NATIVE] = {};
 
 module.exports._peerAvailabilityWatchers = peerAvailabilityWatchers;
 
-/* jshint latedef:false */
+var isAvailabilityWatcherForPeerExist = function (peer) {
+  var connectionType = peer.connectionType;
+  var peerIdentifier = peer.peerIdentifier;
+  var peerAvailabilityWatchersByConnectionType =
+    peerAvailabilityWatchers[connectionType];
+
+  return !!(peerAvailabilityWatchersByConnectionType &&
+  peerAvailabilityWatchersByConnectionType[peerIdentifier]);
+};
+
+var watchForPeerAvailability = function (peer) {
+  var peerIdentifier = peer.peerIdentifier;
+  var connectionType = peer.connectionType;
+
+  var now = Date.now();
+  var unavailabilityThreshold =
+    connectionType === connectionTypes.TCP_NATIVE ?
+      thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD :
+      thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
+
+  // If the time from the latest availability advertisement doesn't
+  // exceed the threshold, no need to do anything.
+  if (peer.availableSince + unavailabilityThreshold > now) {
+    return;
+  }
+
+  changeCachedPeerUnavailable(peer);
+  emitPeerUnavailable(peerIdentifier, connectionType);
+};
+
 var addAvailabilityWatcherToPeerIfNotExist = function (peer) {
   if (isAvailabilityWatcherForPeerExist(peer)) {
     return;
@@ -1142,19 +1156,18 @@ var addAvailabilityWatcherToPeerIfNotExist = function (peer) {
     setInterval(watchForPeerAvailability, unavailabilityThreshold, peer);
 };
 
-var isAvailabilityWatcherForPeerExist = function (peer) {
+var removeAvailabilityWatcherFromPeerIfExists = function (peer) {
+  if (!isAvailabilityWatcherForPeerExist(peer)) {
+    return;
+  }
+
   var connectionType = peer.connectionType;
   var peerIdentifier = peer.peerIdentifier;
-  var peerAvailabilityWatchersByConnectionType =
-    peerAvailabilityWatchers[connectionType];
 
-  return !!(peerAvailabilityWatchersByConnectionType &&
-            peerAvailabilityWatchersByConnectionType[peerIdentifier]);
-};
+  var interval = peerAvailabilityWatchers[connectionType][peerIdentifier];
 
-var removeAllAvailabilityWatchersFromPeers = function () {
-  Object.keys(peerAvailabilityWatchers)
-    .forEach(removeAllAvailabilityWatchersFromPeersByConnectionType);
+  clearInterval(interval);
+  delete peerAvailabilityWatchers[connectionType][peerIdentifier];
 };
 
 var removeAllAvailabilityWatchersFromPeersByConnectionType =
@@ -1172,40 +1185,30 @@ var removeAllAvailabilityWatchersFromPeersByConnectionType =
       });
   };
 
-var removeAvailabilityWatcherFromPeerIfExists = function (peer) {
-  if (!isAvailabilityWatcherForPeerExist(peer)) {
-    return;
-  }
-
-  var connectionType = peer.connectionType;
-  var peerIdentifier = peer.peerIdentifier;
-
-  var interval = peerAvailabilityWatchers[connectionType][peerIdentifier];
-
-  clearInterval(interval);
-  delete peerAvailabilityWatchers[connectionType][peerIdentifier];
+var removeAllAvailabilityWatchersFromPeers = function () {
+  Object.keys(peerAvailabilityWatchers)
+    .forEach(removeAllAvailabilityWatchersFromPeersByConnectionType);
 };
 
-var watchForPeerAvailability = function (peer) {
-  var peerIdentifier = peer.peerIdentifier;
-  var connectionType = peer.connectionType;
-
-  var now = Date.now();
-  var unavailabilityThreshold =
-    connectionType === connectionTypes.TCP_NATIVE ?
-    thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD :
-    thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
-
-  // If the time from the latest availability advertisement doesn't
-  // exceed the threshold, no need to do anything.
-  if (peer.availableSince + unavailabilityThreshold > now) {
-    return;
-  }
-
-  changeCachedPeerUnavailable(peer);
-  emitPeerUnavailable(peerIdentifier, connectionType);
+var changeCachedPeerUnavailable = function (peer) {
+  removeAvailabilityWatcherFromPeerIfExists(peer);
+  delete peerAvailabilities[peer.connectionType][peer.peerIdentifier];
 };
-/* jshint latedef:true */
+
+var changeCachedPeerAvailable = function (peer) {
+  var cachedPeer = JSON.parse(JSON.stringify(peer));
+  peerAvailabilities[peer.connectionType][peer.peerIdentifier] = cachedPeer;
+  addAvailabilityWatcherToPeerIfNotExist(cachedPeer);
+};
+
+var changePeersUnavailable = function (connectionType) {
+  Object.keys(peerAvailabilities[connectionType]).forEach(
+    function (peerIdentifier) {
+      var peer = peerAvailabilities[connectionType][peerIdentifier];
+      changeCachedPeerUnavailable(peer);
+      emitPeerUnavailable(peerIdentifier, connectionType);
+    });
+};
 
 /**
  * Fired whenever our state changes.
