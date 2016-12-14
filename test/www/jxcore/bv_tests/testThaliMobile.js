@@ -1689,7 +1689,12 @@ test('calls correct starts when network changes',
 );
 
 test('We properly fire peer unavailable and then available when ' +
-'connection fails', function(t) {
+'connection fails',
+function () {
+  // After #897 is complete this test should be enabled back
+  return platform.isIOS;
+},
+function(t) {
 
   // Scenario:
   // 1. We got peerAvailabilityChanged event (peerAvailable: true).
