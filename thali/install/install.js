@@ -306,9 +306,9 @@ function generateGradlePropertiesFile(thaliDepotName, thaliBranchName,
     projectDir, 'src', 'android', 'gradle.properties');
   var fileContents = util.format(
     'btconnectorlib2Version = %s\n' +
-    'ext.cdvMinSdkVersion = %s\n' +
-    'ext.cdvBuildToolsVersion = %s\n' +
-    'ext.cdvCompileSdkVersion = %s\n',
+    'cdvMinSdkVersion = %s\n' +
+    'cdvBuildToolsVersion = %s\n' +
+    'cdvCompileSdkVersion = %s\n',
     releaseConf.btconnectorlib2,
     releaseConf.androidConfig.minSdkVersion,
     releaseConf.androidConfig.buildToolsVersion,
