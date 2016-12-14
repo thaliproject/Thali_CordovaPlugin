@@ -3,7 +3,6 @@
 var Promise = require('lie');
 var PromiseQueue = require('./promiseQueue');
 var EventEmitter = require('events').EventEmitter;
-var platform = require('./utils/platform');
 var logger = require('../ThaliLogger')('thaliMobileNativeWrapper');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var express = require('express');
@@ -22,7 +21,6 @@ var states = {
 var peerGenerations = {};
 
 var gPromiseQueue = new PromiseQueue();
-var gRouterObject = null;
 var gRouterExpress = null;
 var gRouterServer = null;
 var gRouterServerPort = 0;
@@ -282,7 +280,6 @@ module.exports.start = function (router, pskIdToSecret) {
       logger.error('Unable to use the given router: %s', error.toString());
       return reject(new Error('Bad Router'));
     }
-    gRouterObject = router;
     var options = {
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
       pskCallback : function (id) {
@@ -372,7 +369,7 @@ module.exports.stop = function () {
   return gPromiseQueue.enqueue(stop());
 };
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * This method instructs the native layer to discover what other devices are
  * within range using the platform's non-TCP P2P capabilities. When a device is
@@ -396,8 +393,8 @@ module.exports.stop = function () {
  * @returns {Promise<?Error>}
  * @throws {Error}
  */
-// jscs:enable maximumLineLength
 module.exports.startListeningForAdvertisements = function () {
+/* eslint-enable max-len */
   return gPromiseQueue.enqueue(function (resolve, reject) {
     if (!states.started) {
       return reject(new Error('Call Start!'));

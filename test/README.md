@@ -98,6 +98,32 @@ coordination server. Obviously edit the device counts passed on the command line
 environment.
 6. Deploy and run the tests on your two Android or two iPhone devices.
 
+#### Hints on making native testing a bit easier
+
+If you are manually running native tests it's usually because you are debugging something. Typically you are going to want to disable
+all tests but those that you actually want to run. Below we outline ways to quickly disable various tests.
+
+Note that the changes below should be made in ThaliTest NOT in Thali_CordovaPlugin. You don't want to check in these changes.
+
+We have tests that are written in Java and are run from app.js via a command to Mobile('executeNativeTests'). These tests typically
+ take about 60 seconds to run and run every time the app starts. So if you aren't debugging those tests then you really want to
+ disable them. The easiest way to do that is to replace 'platform._isRealMobile' with false.
+
+Next up you have to make sure you are running the kind of test you want to run. In UnitTest_app.js we set global.NETWORK_TYPE. When
+running on desktop this gets overridden in all sorts of ways but not when we are on a device. So make sure the network type is what
+you intend to actually test.
+
+Then head over to ThaliTest/platform/android/assets/www/jxcore/bv_tests and either delete or move to a new folder any tests you don't
+want to run. By default we only run files that start with the name 'test' and are children of the bv_tests folder.
+
+One of the hardest tasks in debugging on Android is dealing with the logs. I've found that LogRabbit, a Mac OS program, is extremely
+useful for this. Since one is typically debugging with multiple devices it is necessary to start up multiple instances of LogRabbit.
+Chris Wilson, the developer of LogRabbit, showed how to do this, just issue the following on the command line:
+
+```
+$ /Applications/LogRabbit.app/Contents/MacOS/LogRabbit > /dev/null 2>&1 &
+```
+
 #### Testing Doze and App Standby on Android
 
 Doze and App Standby are two new power-saving features introduced in Android 6.0 (API level 23).

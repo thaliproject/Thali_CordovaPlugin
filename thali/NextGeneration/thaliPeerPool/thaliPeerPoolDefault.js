@@ -117,7 +117,6 @@ ThaliPeerPoolDefault.prototype.start = function () {
  * to enqueue.
  */
 ThaliPeerPoolDefault.prototype.stop = function () {
-  var self = this;
   this._stopped = true;
 
   return ThaliPeerPoolDefault.super_.prototype.stop.apply(this, arguments);
