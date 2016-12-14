@@ -2,7 +2,6 @@
  * See the license file delivered with this project for further information.
  */
 package io.jxcore.node;
-import com.test.thalitest.RegisterExecuteUT;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
