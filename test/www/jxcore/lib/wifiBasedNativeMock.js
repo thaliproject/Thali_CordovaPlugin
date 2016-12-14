@@ -52,6 +52,12 @@ proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
         networkStatusCalled = true;
         return Promise.resolve(getCurrentNetworkStatus());
       },
+      lockAndroidWifiMulticast: function () {
+        return Promise.resolve();
+      },
+      unlockAndroidWifiMulticast: function () {
+        return Promise.resolve();
+      },
       '@noCallThru': true
     },
     './thaliConfig': {
