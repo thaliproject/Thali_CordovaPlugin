@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-### START - JXcore Test Server --------......................
+### START - JXcore Test Server --------.......................
 ### Testing environment prepares separate packages for each node.
 ### Package builder calls this script with each node's IP address
 ### Make sure multiple calls to this script file compiles the application file
@@ -28,7 +28,7 @@ echo "Node version: $(node -v)"
 echo "JXcore version: $(jx -jxv)"
 echo "JXcore engine: $(jx -jsv)"
 if is_darwin_platform; then
-  echo "xcodebuild version: $(xcodebuild -version)"
+  echo "xcodebuild version: $(xcodebuild -version | head -n1)"
 fi
 echo ""
 
