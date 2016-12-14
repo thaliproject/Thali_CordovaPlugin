@@ -144,9 +144,9 @@ class StreamCopyingThread extends Thread {
                 totalNumberOfBytesWritten += numberOfBytesRead;
 
                 if (mNotifyStreamCopyingProgress) {
-                    Log.v(TAG, mThreadName + " " + "recieved " + numberOfBytesRead + " bytes from " +
-                        (fromBluetoothToTCP ? " Bluetooth and send it to TCP" : " TCP and send it to Bluetooth")
-                        + "\n" + connectionData.toString());
+//                    Log.v(TAG, mThreadName + " " + "recieved " + numberOfBytesRead + " bytes from " +
+//                        (fromBluetoothToTCP ? " Bluetooth and send it to TCP" : " TCP and send it to Bluetooth")
+//                        + "\n" + connectionData.toString());
                     mListener.onStreamCopySucceeded(this, numberOfBytesRead);
                 }
                 numberOfBytesRead = 0;
