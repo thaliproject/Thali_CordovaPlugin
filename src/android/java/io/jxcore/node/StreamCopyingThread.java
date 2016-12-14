@@ -163,6 +163,7 @@ class StreamCopyingThread extends Thread {
                     }
                 } else {
                     errorMessage = "Failed to read from input stream, got IO, not -1. Number of bytes read " + numberOfBytesRead;
+                }
                 Log.e(TAG, errorMessage + " (thread ID: " + getId() + ", thread name: " + mThreadName + "): " + e.getMessage());
                 errorMessage += ": " + e.getMessage();
                 final String msg = errorMessage;

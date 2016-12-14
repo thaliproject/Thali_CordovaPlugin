@@ -4,6 +4,7 @@ import android.content.Context;
 import android.util.Log;
 
 import org.junit.Assert;
+
 import com.test.thalitest.ThaliTestRunner;
 
 import org.junit.Before;
@@ -113,14 +114,8 @@ public class StreamCopyingThreadTest {
         mOutputStream = new StreamCopyingThreadOutputStream(bOutputStream);
 
         mStreamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream,
-<<<<<<< f67220e6fe2c43eb715b189e362bbfa2a1647bcc
-            mThreadName, new ConnectionData(new PeerProperties(), false));
+            mThreadName, new ConnectionData(new PeerProperties(), false), true);
         mExecutor = Executors.newSingleThreadExecutor();
-||||||| merged common ancestors
-            mThreadName, new ConnectionData(new PeerProperties(), false));
-=======
-                mThreadName, new ConnectionData(new PeerProperties(), false), true);
->>>>>>> added logs
     }
 
     @Test
@@ -148,16 +143,8 @@ public class StreamCopyingThreadTest {
         bOutputStream = new ByteArrayOutputStream();
         mInputStream = new StreamCopyingThreadInputStreamInfinite(mText);
         mOutputStream = new StreamCopyingThreadOutputStreamInfinite();
-<<<<<<< f67220e6fe2c43eb715b189e362bbfa2a1647bcc
-        mStreamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream,
-            mThreadName, new ConnectionData(new PeerProperties(), false));
-||||||| merged common ancestors
         mStreamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream, mThreadName,
-            new ConnectionData(new PeerProperties(), false));
-=======
-        mStreamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream, mThreadName,
-                new ConnectionData(new PeerProperties(), false), true);
->>>>>>> added logs
+            new ConnectionData(new PeerProperties(), false), true);
 
 
         mStreamCopyingThread.start();
@@ -174,13 +161,7 @@ public class StreamCopyingThreadTest {
     public void testRunWithException() throws Exception {
         doThrowException = true;
         StreamCopyingThread streamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream,
-<<<<<<< f67220e6fe2c43eb715b189e362bbfa2a1647bcc
-            mThreadName, new ConnectionData(new PeerProperties(), false));
-||||||| merged common ancestors
-                mThreadName, new ConnectionData(new PeerProperties(), false));
-=======
-                mThreadName, new ConnectionData(new PeerProperties(), false), true);
->>>>>>> added logs
+            mThreadName, new ConnectionData(new PeerProperties(), false), true);
         Thread runner = new Thread(streamCopyingThread);
         runner.setName("thread test");
         runner.start();
@@ -205,20 +186,8 @@ public class StreamCopyingThreadTest {
             is(mResult));
 
         assertThat("The stream copying progress notifications is properly updated",
-<<<<<<< f67220e6fe2c43eb715b189e362bbfa2a1647bcc
             notifications.size() > 0,
             is(true));
-||||||| merged common ancestors
-            notifications.size() > 0,
-            is(true));
-
-        notifications.size();
-=======
-                notifications.size() > 0,
-                is(true));
-
-        notifications.size();
->>>>>>> added logs
     }
 
     @Test
@@ -233,15 +202,15 @@ public class StreamCopyingThreadTest {
         OutputStream outputStream = new StreamCopyingThreadOutputStream(bOutputStream);
 
         StreamCopyingThread streamCopyingThread = new StreamCopyingThread(mListener, inputStream, outputStream,
-                threadName, new ConnectionData(new PeerProperties(), false), true);
+            threadName, new ConnectionData(new PeerProperties(), false), true);
 
         Thread runner = new Thread(streamCopyingThread);
         runner.start();
         runner.join();
 
         assertThat("The content of the input stream is equal to the output stream",
-                bOutputStream.toByteArray(),
-                is(data));
+            bOutputStream.toByteArray(),
+            is(data));
     }
 
 
@@ -267,19 +236,19 @@ public class StreamCopyingThreadTest {
             }
         }, dataSize / 2);
         StreamCopyingThread streamCopyingThread = new StreamCopyingThread(listenerMock, inputStream, outputStream,
-                threadName, new ConnectionData(new PeerProperties(), false), true);
+            threadName, new ConnectionData(new PeerProperties(), false), true);
         streamCopyingThread.setNotifyStreamCopyingProgress(true);
         Thread runner = new Thread(streamCopyingThread);
         runner.start();
         runner.join();
 
         assertThat("The content of the input stream is equal to the output stream",
-                bOutputStream.toByteArray(),
-                is(data));
+            bOutputStream.toByteArray(),
+            is(data));
         //We can't write to stream and get the IOException because ByteArrayOutputStream does nothing in close
         assertThat("Closing input stream closes output stream",
-                ((StreamCopyingThreadOutputStream) outputStream).isCloseCalled,
-                is(true));
+            ((StreamCopyingThreadOutputStream) outputStream).isCloseCalled,
+            is(true));
 
     }
 
