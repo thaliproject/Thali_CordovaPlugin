@@ -646,7 +646,8 @@ var multiConnectCounter = 0;
 
 module.exports._multiConnect = function (peerIdentifier) {
   return gPromiseQueue.enqueue(function (resolve, reject) {
-    var originalSyncValue = multiConnectCounter++;
+    var originalSyncValue = String(multiConnectCounter);
+    multiConnectCounter++;
 
     Mobile('multiConnect')
     .callNative(peerIdentifier, originalSyncValue, function (error) {
