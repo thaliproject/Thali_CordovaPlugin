@@ -224,7 +224,8 @@ ThaliPullReplicationFromNotification.prototype.start =
   };
 
 /**
- * Stops listening for new peer discovery and shuts down all replication actions.
+ * Stops listening for new peer discovery and shuts down all replication
+ * actions.
  *
  * This method is idempotent.
  * @public
@@ -256,15 +257,17 @@ ThaliPullReplicationFromNotification.prototype.stop = function () {
     // in the thaliPeerPoolInterface but having kill happen here also prevents
     // race conditions between this and thaliPeerPoolInterface and it isn't
     // harmful since it's always legal to kill an action multiple times.
-    self._peerDictionary[actionName].kill();
-  });
+      self._peerDictionary[actionName].kill();
+    });
 
   self._peerDictionary = {};
 };
 
 /**
- * This method will provide the actual state of ThaliPullReplicationFromNotification
+ * This method will provide the actual state of
+ * ThaliPullReplicationFromNotification
  * @public
+ * @returns {ThaliPullReplicationFromNotification.STATES}
  */
 ThaliPullReplicationFromNotification.prototype.getState = function () {
   return this.state;
