@@ -90,12 +90,17 @@ inherits(ThaliWifiInfrastructure, EventEmitter);
 ThaliWifiInfrastructure.prototype._init = function () {
   var serverOptions = {
     adInterval: thaliConfig.SSDP_ADVERTISEMENT_INTERVAL,
-    udn: thaliConfig.SSDP_NT
+    udn: thaliConfig.SSDP_NT,
+    thaliLogger: require('../ThaliLogger')('nodeSSDPServerLogger')
   };
   this._server = new nodessdp.Server(serverOptions);
   this._setLocation();
 
-  this._client = new nodessdp.Client();
+  var clientOptions = {
+    thaliLogger: require('../ThaliLogger')('nodeSSDPClientLogger')
+  }
+
+  this._client = new nodessdp.Client(clientOptions);
 
   this._client.on('advertise-alive', function (data) {
     this._handleMessage(data, true);
@@ -444,11 +449,11 @@ function (skipPromiseQueue, changeTarget) {
  * It should be fine. But it's important to find out so that other apps can't
  * block us.
  *
- * Also note that the implementation of
- * SSDP MUST recognize advertisements from its own instance and ignore them.
- * However it is possible to have multiple independent instances of
- * ThaliWiFiInfrastructure on the same device and we MUST process advertisements
- * from other instances of ThaliWifiInfrastructure on the same device.
+ * Also note that the implementation of SSDP MUST recognize advertisements from
+ * its own instance and ignore them. However it is possible to have multiple
+ * independent instances of ThaliWiFiInfrastructure on the same device and we
+ * MUST process advertisements from other instances of ThaliWifiInfrastructure
+ * on the same device.
  *
  * This method will also cause the Express app passed in to be hosted in a
  * HTTP server configured with the device's local IP. In other words, the
