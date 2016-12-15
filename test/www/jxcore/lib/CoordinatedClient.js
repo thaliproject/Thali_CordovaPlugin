@@ -4,11 +4,13 @@ var util     = require('util');
 var format   = util.format;
 var inherits = util.inherits;
 
+var path           = require('path');
 var objectAssign   = require('object-assign');
 var uuidValidate   = require('uuid-validate');
 var assert         = require('assert');
 var tape           = require('tape-catch');
 var SocketIOClient = require('socket.io-client');
+var stacky         = require('stacky');
 var EventEmitter   = require('events').EventEmitter;
 
 var asserts = require('./utils/asserts');
@@ -20,6 +22,7 @@ var serverAddress = require('../server-address');
 var logger = require('./testLogger')('CoordinatedClient');
 
 var DEFAULT_SERVER_PORT = Number(process.env.COORDINATED_PORT) || 3000;
+var CURRENT_PATH        = __dirname;
 
 function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware,
                            nativeUTFailed) {
@@ -476,14 +479,16 @@ CoordinatedClient.prototype._sync = function (tape, test, timeout) {
 
   // returns something like 'at file:lineNumber'.
   function getCaller (level) {
-    var traces = (new Error()).stack.split('\n');
+    var traces = stacky.parse(new Error().stack);
     assert(
       traces.length > level,
       format('stack should have a least %d lines', level + 1)
     );
-    return traces[level].trim();
+    var trace    = traces[level];
+    var location = path.relative(CURRENT_PATH, trace.location);
+    return location + ":" + trace.line + ":" + trace.column;
   }
-  var callerId = getCaller(3);
+  var callerId = getCaller(2);
 
   return self._emit('sync', callerId, test.options)
     .then(function () {
