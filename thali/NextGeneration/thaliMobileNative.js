@@ -426,14 +426,14 @@
  * to understand some of the challenges with using this method.
  *
  * When this method is called the Android native code MUST check to see if it
- * has already gotten a MulticastLock object from WifiManager.
- *
- * If not then the Android code MUST call WifiManager.createMulticastLock with
- * an appropriate tag to identify the caller as Thali. The resulting
- * MulticastLock object MUST have setReferenceCounted(false) called on it to not
- * use reference counting. If there are any problems creating the MulticastLock
- * object or calling setReferenceCounted(false) then an error MUST be returned
- * in the multiConnectConn
+ * has already gotten a MulticastLock object from WifiManager. If the
+ * MulticastLock object does not exist then the Android code MUST call
+ * WifiManager.createMulticastLock with an appropriate tag to identify the
+ * caller as Thali. The resulting MulticastLock object MUST have
+ * setReferenceCounted(false) called on it to not use reference counting. If
+ * there are any problems creating the MulticastLock object or calling
+ * setReferenceCounted(false) then an error MUST be returned in the
+ * lockAndroidWifiMulticast's ThaliMobileCallback err parameter.
  *
  * Once the MulticastLock object exists and has been configured correctly then
  * this method MUST cause the acquire() method on the object to be called and

@@ -5,6 +5,7 @@ var net = require('net');
 var crypto = require('crypto');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var Promise = require('bluebird');
+var platform = require('thali/NextGeneration/utils/platform');
 var testUtils = require('../lib/testUtils');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var https = require('https');
@@ -221,6 +222,10 @@ function matchDocsInChanges(pouchDB, docs, thaliPeerReplicationAction) {
 }
 
 test('Make sure docs replicate',
+  function () {
+    // FIXME: iOS is too slow for this test (#1618)
+    return platform._isRealIOS;
+  },
   function (t) {
     testCloseAllServer = testUtils.setUpServer(function (serverPort,
                                                          randomDBName,
@@ -229,7 +234,7 @@ test('Make sure docs replicate',
       var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
       var localPouchDB = new DifferentDirectoryPouch(randomDBName);
       createDocs(remotePouchDB, 10)
-     .then(function (docs) {
+      .then(function (docs) {
         var notificationForUs = {
           keyId: new Buffer('abcdefg'),
           portNumber: serverPort,
@@ -249,16 +254,16 @@ test('Make sure docs replicate',
                      thaliReplicationPeerAction));
         return Promise.all(promises);
       })
-     .then(function () {
+      .then(function () {
         return remotePouchDB.info();
       })
-     .then(function (info) {
+      .then(function (info) {
         return httpTester.validateSeqNumber(t, randomDBName, serverPort,
         // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
         info.update_seq, pskId, pskKey, devicePublicKey, null, 10);
         // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
       })
-     .then(function () {
+      .then(function () {
         t.pass('All tests passed!');
       })
       .catch(function (err) {
@@ -270,29 +275,33 @@ test('Make sure docs replicate',
     });
   });
 
-test('Do nothing and make sure we time out', function (t) {
-  testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName)
-  {
-    var thaliReplicationPeerAction = null;
-    var notificationForUs = {
-      keyId: new Buffer('abcdefg'),
-      portNumber: serverPort,
-      hostAddress: '127.0.0.1',
-      pskIdentifyField: pskId,
-      psk: pskKey,
-      suggestedTCPTimeout: 10000,
-      connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
-    };
-    // Using a different directory really shouldn't make any difference
-    // to this particular test but I'm being paranoid
-    var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
-    var originalTimeout = ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS;
-    ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 2;
-    thaliReplicationPeerAction =
-      new ThaliReplicationPeerAction(notificationForUs,
-        DifferentDirectoryPouch, randomDBName,
-        devicePublicKey);
-    thaliReplicationPeerAction.start(httpAgentPool)
+test('Do nothing and make sure we time out',
+  function () {
+    // FIXME: iOS is too slow for this test (#1618)
+    return platform._isRealIOS;
+  },
+  function (t) {
+    function onServerSetUp (serverPort, randomDBName) {
+      var thaliReplicationPeerAction = null;
+      var notificationForUs = {
+        keyId: new Buffer('abcdefg'),
+        portNumber: serverPort,
+        hostAddress: '127.0.0.1',
+        pskIdentifyField: pskId,
+        psk: pskKey,
+        suggestedTCPTimeout: 10000,
+        connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
+      };
+      // Using a different directory really shouldn't make any difference
+      // to this particular test but I'm being paranoid
+      var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
+      var originalTimeout = ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS;
+      ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 2;
+      thaliReplicationPeerAction =
+        new ThaliReplicationPeerAction(notificationForUs,
+          DifferentDirectoryPouch, randomDBName,
+          devicePublicKey);
+      thaliReplicationPeerAction.start(httpAgentPool)
       .then(function () {
         t.fail('We should have failed with time out.');
       })
@@ -315,19 +324,26 @@ test('Do nothing and make sure we time out', function (t) {
         ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = originalTimeout;
         t.end();
       });
-  });
-});
+    }
+    testCloseAllServer = testUtils.setUpServer(onServerSetUp);
+  }
+);
 
-test('Do something and make sure we time out', function (t) {
-  testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName,
-                                                       remotePouchDB) {
-    var thaliReplicationPeerAction = null;
-    var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
-    var localPouchDB = new DifferentDirectoryPouch(randomDBName);
-    var thaliReplicationPeerActionStartOutput = null;
-    var originalTimeout = ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS;
-    ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 2;
-    createDocs(remotePouchDB, 10)
+test('Do something and make sure we time out',
+  function () {
+    // FIXME: iOS is too slow for this test (#1618)
+    return platform._isRealIOS;
+  },
+  function (t) {
+    function onServerSetUp (serverPort, randomDBName, remotePouchDB) {
+      var thaliReplicationPeerAction = null;
+      var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
+      var localPouchDB = new DifferentDirectoryPouch(randomDBName);
+      var thaliReplicationPeerActionStartOutput = null;
+      var originalTimeout = ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS;
+      ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 2;
+
+      createDocs(remotePouchDB, 10)
       .then(function (docs) {
         var notificationForUs = {
           keyId: new Buffer('abcdefg'),
@@ -380,8 +396,10 @@ test('Do something and make sure we time out', function (t) {
         ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = originalTimeout;
         t.end();
       });
-  });
-});
+    }
+    testCloseAllServer = testUtils.setUpServer(onServerSetUp);
+  }
+);
 
 test('Start replicating and then catch error when server goes', function (t) {
   var requestCount = 0;

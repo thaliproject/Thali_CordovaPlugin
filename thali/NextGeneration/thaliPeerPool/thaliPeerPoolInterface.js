@@ -69,6 +69,7 @@ ThaliPeerPoolInterface.prototype._inQueue = null;
  *
  * @public
  * @param {module:thaliPeerAction~PeerAction} peerAction
+ * @returns {null}
  * @throws {Error}
  */
 ThaliPeerPoolInterface.prototype.enqueue = function (peerAction) {
@@ -97,6 +98,7 @@ ThaliPeerPoolInterface.prototype.enqueue = function (peerAction) {
     peerAction.kill = originalKill;
     return originalKill.apply(this, arguments);
   };
+
   return null;
 };
 
@@ -137,6 +139,8 @@ ThaliPeerPoolInterface.prototype.start = function () {
 /**
  * Kills all peer actions in the queue.
  * @public
+ * @returns {Promise} Returns a promise that indicates via resolve or reject
+ * if stop worked properly.
  */
 ThaliPeerPoolInterface.prototype.stop = function () {
   var self = this;
