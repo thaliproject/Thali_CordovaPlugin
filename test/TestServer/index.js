@@ -13,7 +13,6 @@ var HttpServer        = require('./HttpServer');
 var UnitTestFramework = require('./UnitTestFramework');
 
 var DEFAULT_SERVER_PORT = Number(process.env.COORDINATED_PORT) || 3000;
-var WAITING_FOR_DEVICES_TIMEOUT = 5 * 60 * 1000;
 
 var httpServer = new HttpServer({
   port: DEFAULT_SERVER_PORT,
@@ -41,14 +40,8 @@ httpServer
   }
 });
 
-var timer = setTimeout(function () {
-  throw new Error('timeout exceed');
-}, WAITING_FOR_DEVICES_TIMEOUT);
 
 unitTestManager
-.once('started', function () {
-  clearTimeout(timer);
-})
 .once('completed', function (results) {
   logger.debug('completed');
 

@@ -7,6 +7,8 @@ var fs           = require('fs-extra-promise');
 var path         = require('path');
 var randomString = require('randomstring');
 
+console.log(format('\nprocess.jxversion = %s\n', process.jxversion));
+
 
 // Before including anything serious from thali we want to ensure
 // that we have SSDP_NT env defined.
@@ -86,7 +88,7 @@ var loadFile = function (filePath) {
   }
 };
 
-var testsToRun = argv._[0] || 'bv_tests';
+var testsToRun = argv._[0] || 'bv_tests/testThaliManagerCoordinated.js';
 
 var currentPlatform = platform.name;
 // Our current platform can be 'darwin', 'linux', 'windows', etc.

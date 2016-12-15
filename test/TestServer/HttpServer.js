@@ -72,7 +72,7 @@ Server.prototype._disconnect = function (socket, reason) {
 
 Server.prototype._error = function (socket, error) {
   logger.error(
-    'unexpected server error: \'%s\'',
+    'unexpected server error: ' + error.message + '\n' + error.stack + '\n' +
     error.content
   );
   throw new Error(error.content);

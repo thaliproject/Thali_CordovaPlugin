@@ -171,12 +171,19 @@ UnitTestFramework.prototype.runTest = function (devices, test) {
   });
 };
 
+var uuidRe =
+  /^[A-F0-9]{8}-[A-F0-9]{4}-4[A-F0-9]{3}-[89AB][A-F0-9]{3}-[A-F0-9]{10}$/gi;
+
+function equalContent(a, b) {
+  return a.split(uuidRe)[1] === b.split(uuidRe)[1];
+}
+
 UnitTestFramework.prototype._sync = function (deviceData, content) {
   logger.debug('#sync');
 
   var isContentTheSame = this._syncDevicesData.every(function (data) {
     if (data.content) {
-      return data.content === content;
+      return equalContent(data.content, content);
     } else {
       return true;
     }

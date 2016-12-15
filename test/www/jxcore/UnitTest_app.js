@@ -24,7 +24,7 @@ var Promise = require('bluebird');
 
 var utResult = false;
 
-if (platform._isRealMobile) {
+if (false) {
   Mobile('executeNativeTests').callNative(function (result) {
     logger.debug('Running unit tests');
     if (result) {
@@ -65,13 +65,13 @@ if (!utResult) {
   global.nativeUTFailed = true;
 }
 
-if (platform.isIOS) {
+if (false) {
   // Disable node tests for iOS due to issue #1343
   console.log('****TEST_LOGGER:[PROCESS_ON_EXIT_SUCCESS]****');
   return;
 }
 
-global.NETWORK_TYPE = ThaliMobile.networkTypes.NATIVE;
+global.NETWORK_TYPE = ThaliMobile.networkTypes.WIFI;
 
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {
