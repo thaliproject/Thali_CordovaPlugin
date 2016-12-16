@@ -305,6 +305,14 @@ var USN = require('../utils/usn');
  *
  * So again, it's up to the implementer.
  *
+ * # The Wifi preferences
+ *
+ * We need logic that says that if we get a replication action for a peer
+ * with a specific public key on both native and Wifi then we should prefer
+ * Wifi. We should even take this to the point where if we have started a
+ * replication on native and find the same peer on Wifi then we should kill
+ * the native replication.
+ *
  * @public
  * @constructor
  */
