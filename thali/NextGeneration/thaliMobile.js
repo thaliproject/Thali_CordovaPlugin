@@ -869,6 +869,15 @@ module.exports.disconnect =
  * available then all peers discovered via Wifi MUST be marked as not present
  * and this fact advertised via peerAvailabilityChanged as previously specified.
  *
+ * If we have been notified via a networkChanged event that Wifi is still
+ * available but the SSID has changed then all peers discovered via Wifi MUST be
+ * marked as not present and this fact advertised via peerAvailabilityChanged
+ * as previous specified. Note that we do not necessarily care if the BSSID
+ * changes but the SSID stays the same. This usually indicates we have just
+ * hoped to another Wifi Access Point in the same connected network. In the
+ * worst case if the APs don't allow routing or multicast across each other
+ * then we will time out the peers who are no longer available.
+ *
  * ### Handling discoveryAdvertisingStatus events
  *
  * If we have been notified via a discoveryAdvertisingStatus event that

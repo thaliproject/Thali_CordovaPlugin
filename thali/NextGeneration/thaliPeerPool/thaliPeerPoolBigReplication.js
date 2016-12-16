@@ -29,6 +29,10 @@ var USN = require('../utils/usn');
  *
  * # Universal Logic for notification actions added to the queue
  *
+ * The heart of the peer pool is a queue in which we put all actions. Actions
+ * will live in that queue until we kill them. The logic below determines
+ * what actions end up in the queue and where in the queue they end up.
+ *
  * All notification actions for the same peerID are effectively identical
  * regardless of generation. In no case when we make a request to get beacons
  * (which is what a notification action does) will the generation play a direct
@@ -37,13 +41,18 @@ var USN = require('../utils/usn');
  *
  * So when a new notification action is submitted to the pool we have to run
  * a query to see if we have any existing notification actions for that peerID
- * and connection type in the queue. We can get up to two results.
+ * and connection type in the queue. We can get up to two results (the reason we
+ * get only two results is because of logic below that makes sure we get only
+ * two results).
  *
  * If there are two results then one MUST be in 'started' state and the other
  * MUST NOT. In that case we should call killSuperseded on the existing action
  * and put the new action at the head of the queue. We need to use
  * killSuperseded so that the thaliNotificationClient doesn't think we are just
- * resource constrained and tries to enqueue the action again later.
+ * resource constrained and tries to enqueue the action again later. Note
+ * however that when Issue #1622 is done that will change the notificationAction
+ * logic so that killSuperseded will no longer be necessary and we can just call
+ * kill.
  *
  * If there is one result and it is in 'started' state then the new action MUST
  * be added to the top of the queue. This guarantees we will make at least
@@ -51,8 +60,10 @@ var USN = require('../utils/usn');
  *
  * If there is one result and it is not yet in started state then we MUST call
  * killSuperseded on the enqueued action and then put the new action at the top
- * of the queue under the general theory that it is 'freshest' and the
- * associated remote peer is still around.
+ * of the queue. We want to take the newest action because otherwise the
+ * changes in Issue #1622 will make retry logic harder as we only retry on the
+ * latest generation and if we kill the latest generation before an earlier
+ * generation we won't get any retry logic from the thaliNotificationClient.js.
  *
  * If there is no result then we should put the action at the top of the queue
  * since the data is 'fresh' and thus likely to result in a successful
@@ -61,10 +72,7 @@ var USN = require('../utils/usn');
  * # Universal logic for replication actions added to the queue
  *
  * thaliSendNotificationBasedOnReplication will only allow one replication
- * action for any combination of connection type and peerID. But the current
- * system encodes both the real peerID and the generation into the value we
- * currently call peerID. When we talk about peerID below we are only talking
- * about the 'real' peerID. We treat the generation separately.
+ * action for any combination of connection type and peerID.
  *
  * Our flow is that we get a notification action, we start it, if it finds a
  * beacon then it will create a replication action which we want to run
@@ -129,7 +137,60 @@ var USN = require('../utils/usn');
  * to enqueue at most two replications (one of which must be running) for any
  * particular peerID.
  *
- * # Managing how many actions are started
+ * # Thinking hard about replication actions
+ *
+ * Today by default a replication action is 'live' and if no data flows for 3
+ * seconds then it will end. What to do next is a non-trivial question. How
+ * correctly this choice is depends on context. In the case of Wifi it doesn't
+ * matter because the cost of starting and stopping replications is very low.
+ * In the case of iOS native (MPCF) it may also not matter since the cost there
+ * of starting and stopping sessions/replication doesn't seem terribly high
+ * so far in our testing (we'll see if that stays true). But in Android native
+ * land things are very different. It takes a lot of time to set up a Bluetooth
+ * connection and the connections slow down at a faster than linear rate if
+ * there is more than one. So one really doesn't want multiple Bluetooth
+ * connections if one can possibly avoid it. We currently don't have the right
+ * tools to manage incoming connections. But we do have tools for outgoing.
+ *
+ * Right now the bias with the 3 second time out is to stop a replication once
+ * it has data and try to give someone else a shot at replicating with the
+ * device. If we are running in the background this is probably reasonable. But
+ * if we are running in the foreground it can create a situation where two
+ * people are chatting, stop for 3 seconds (easy enough) and then one person
+ * starts up again but the second person (who can see the first person, they
+ * might be on the floor below a gantry or in a very noisy room) doesn't get
+ * the updates for up to 30 seconds while Bluetooth figures itself out.
+ *
+ * So this argues that in the case that we have a live connection with a user
+ * sitting there we will want to use different replication logic. Not just a
+ * 3 second time out.
+ *
+ * Matters get even harder when we are dealing with multiple chats. Normally we
+ * restrict ourselves to just one outgoing Bluetooth connection at a time. This
+ * can create pool splits. For example, users A, B, C & D are all in a really
+ * noisy room and are using Thali to chat, there is no Wifi and they are using
+ * Android devices. In that case A could connect to B, B could connect to A,
+ * B to C and C to B. Now we have two completely seperate meshes or pools. A
+ * can see B's changes and vice versa. But neither A nor B can see any messages
+ * from C or D.
+ *
+ * So in the case when a user has the device out and is using a reasonably
+ * low bandwidth channel like chat we may want to dynamically increase the
+ * number of outgoing Bluetooth connections we create but introduce a filter
+ * into the replication action to only replicate chat records. But (you didn't
+ * really think this would be easy did you?!?!?!) this will actually break out
+ * sequence logic (in localSeqManager) which will not realize there is a filter
+ * and will update the sequence to skip all documents of all types. Ooops.
+ * So if we are going to introduce a filter then we also need to change
+ * localSeqManager to know how to deal with it.
+ *
+ * I don't suggest we deal with any of the issues in this section immediately
+ * but we will have to if we are going to create a good user experience
+ * (unless Wifi Direct works out in which case none of this is likely to
+ * matter).
+ *
+ * # Managing how many actions are started and when to call
+ * thaliMobile.disconnect.
  *
  * Our current design is based on actions being separately sent to the pool.
  * Perhaps we'll change that at some point. It would be nice, for example,
@@ -140,7 +201,7 @@ var USN = require('../utils/usn');
  * certain number of actions it is willing to run in parallel. When an action is
  * enqueued (after we run the checks previously described for notification and
  * replication actions) we check to see if we are at our limit and if not then
- * we start the action. Otherwise we add the action to the queue.
+ * we start the action.
  *
  * Now the first problem is that the thaliPeerPoolInterface, which we inherit
  * from, has its own queue, but it's not a queue. That is actually the wrong
@@ -169,6 +230,20 @@ var USN = require('../utils/usn');
  * When an action's start method returns we will call kill on the action, remove
  * it from our queue and then run a check to see if there is a free start slot.
  *
+ * There are times however when we have a free slot and may want to run an
+ * action other than the one at the top of the queue. For example, if we are
+ * running in the foreground and actively communicating with some number of
+ * peers then we may want to preferentially choose actions from those peers
+ * ahead of the queue order.
+ *
+ * On the other hand if we are running in the background and trying to collect
+ * as much data as possible we may want the opposite behavior, that is, we may
+ * want to intentionally not pick actions at the top of the queue that are from
+ * peers we have recently replicated with and instead choose actions farther
+ * down from peers we haven't talked to recently.
+ *
+ * The right choice depends on what the application is up to.
+ *
  * # Connection pooling
  *
  * We owe each action an Agent to manage their connection count. The tricky
@@ -179,6 +254,57 @@ var USN = require('../utils/usn');
  * different actions and have them share the same pool. We aren't going to
  * bother being that smart for right now.
  *
+ * # When to call thaliMobile.disconnect
+ *
+ * It is up to the peer pool manager to decide when to kill a native connection
+ * by calling thaliMobile.disconnect. In many cases it really doesn't matter.
+ * If we have say 2-3 Bluetooth connections then we don't necessarily need to
+ * be aggressive in killing existing sessions because we only seem to pay a
+ * price of having multiple connections if we are actively using them. In
+ * other words it's o.k. to have 3-4 open Bluetooth sessions so long as we are
+ * only actively running an expensive action on one of them. The same logic
+ * seems to apply to iOS's MPCF. And of course none of this applies to Wifi.
+ *
+ * But there are limits. In Bluetooth we typically can only have 7-8 connections
+ * (or so). We haven't done testing but the general word on the street is that
+ * it limits to 8 connections. This makes sense as MPCF tries to hide
+ * differences between running purely on Wifi and purely on Bluetooth and the
+ * connection limits are a Bluetooth artifact. In the past I'm lead to
+ * understand that MPCF has put in place limits from Bluetooth even when
+ * running on Wifi so devs didn't have to worry about which one they were
+ * running on.
+ *
+ * So it's probably safe to assume that our maximum connection limit is around
+ * 8. Of course the real number is more complicated because at least in the
+ * case of Bluetooth the 8 limit applies in weird ways depending on who
+ * initiated the session and if the devices hardware supports both being
+ * a channel master and joining other channel's simultaneously.
+ *
+ * If your head isn't hurting, you aren't paying attention. :) This stuff really
+ * is a complex mess.
+ *
+ * But what it means is that at some point if we aren't going to starve
+ * ourselves out we need to kill sessions. It's probably o.k. to be reasonably
+ * aggressive in killing MPCF sessions as they seem to form pretty quickly
+ * (keep in mind that we require the Wifi radio to be on when using iOS). But
+ * on Android they are slow. So we have to manage sessions more carefully.
+ *
+ * Also remember that with Bluetooth depending on a bunch of factors we can't
+ * predict if we keep too many sessions open we can potentially prevent new
+ * devices from connecting to us.
+ *
+ * The right approach to deciding to call thaliMobile.disconnect depends on
+ * the scenario. If we are in the background then we probably want to be
+ * aggressive about killing sessions to make sure others can get data from
+ * us and that we keep battery usage down (open sessions eat battery, although
+ * we have never measured how much battery an unused session eats).
+ *
+ * On the other hand if we are in the foreground then we may want to guarantee
+ * that certain sessions with key people we are actively communicating with
+ * stay open pretty much no matter what.
+ *
+ * So again, it's up to the implementer.
+ *
  * @public
  * @constructor
  */
@@ -188,6 +314,7 @@ function ThaliPeerPoolBigReplication() {
 }
 
 util.inherits(ThaliPeerPoolBigReplication, ThaliPeerPoolInterface);
+
 ThaliPeerPoolBigReplication.ERRORS = ThaliPeerPoolInterface.ERRORS;
 
 ThaliPeerPoolBigReplication.ERRORS.ENQUEUE_WHEN_STOPPED = 'We are stopped';
@@ -198,37 +325,7 @@ ThaliPeerPoolBigReplication.BLUETOOTH_MAX_START = 1;
 
 ThaliPeerPoolBigReplication.MPCF_MAX_START = 3;
 
-ThaliPeerPoolBigReplication.prototype._queue = [];
-
-/**
- * Currently we encode both the real peerID and the generation into a single
- * value we call peerID. That will change eventually.
- * @param {string} peerID
- * @param {module:thaliMobileNativeWrapper.connectionTypes} connectionType
- * @returns {string}
- * @private
- */
-ThaliPeerPoolBigReplication.prototype._getPeerIdFromPeerId =
-  function (peerID, connectionType) {
-    switch(connectionType) {
-      case ThaliMobileNativeWrapper.connectionTypes
-        .MULTI_PEER_CONNECTIVITY_FRAMEWORK:
-      case ThaliMobileNativeWrapper.connectionTypes.BLUETOOTH: {
-        var split = peerID.split(':');
-        assert(split.length >= 2,
-          'We got a peerID with a format we do not recognize!');
-        return split[0];
-      }
-      case ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE: {
-        var peerObject = USN.parse(peerID);
-        return peerObject.realPeerIdentifier;
-      }
-      default: {
-        throw new Error('Unsupported connection type in ' +
-          'ThaliPeerPoolBigReplication');
-      }
-    }
-};
+ThaliPeerPoolBigReplication.prototype._queue = null;
 
 ThaliPeerPoolBigReplication.prototype._searchQueue =
   function (connectionType, actionType, peerID, doNotIncludeKilled) {
@@ -237,9 +334,7 @@ ThaliPeerPoolBigReplication.prototype._searchQueue =
         peerAction.getConnectionType() === connectionType;
       var actionTypeMatch = !actionType ||
           peerAction.getActionType() === actionType;
-      var peerIDMatch = !peerID ||
-          this._getPeerIdFromPeerId(peerAction.getPeerIdentifier()) ===
-            peerID;
+      var peerIDMatch = !peerID || peerAction.getPeerIdentifier() === peerID;
       var doNotIncludeKilledMatch = !doNotIncludeKilled ||
           this.getActionState() !== ThaliPeerAction.actionState.KILLED;
       return connectionTypeMatch && actionTypeMatch && peerIDMatch &&
@@ -387,9 +482,9 @@ ThaliPeerPoolBigReplication.prototype._checkToRun = function (connectionType) {
   switch (connectionType) {
     case ThaliMobileNativeWrapper.connectionTypes
       .MULTI_PEER_CONNECTIVITY_FRAMEWORK: {
-      maxActions = ThaliPeerPoolBigReplication.MPCF_MAX_START;
-      break;
-    }
+        maxActions = ThaliPeerPoolBigReplication.MPCF_MAX_START;
+        break;
+      }
     case ThaliMobileNativeWrapper.connectionTypes.BLUETOOTH: {
       maxActions = ThaliPeerPoolBigReplication.BLUETOOTH_MAX_START;
       break;
@@ -476,19 +571,21 @@ ThaliPeerPoolBigReplication.prototype.enqueue = function (peerAction) {
 ThaliPeerPoolBigReplication.prototype.start = function () {
   this._stopped = false;
 
-  return ThaliPeerPoolBigReplication.super_.prototype.start.apply(this, arguments);
+  this._queue = [];
+
+  return ThaliPeerPoolBigReplication.super_.prototype.start.apply(this,
+                                                                  arguments);
 };
 
-/**
- * This function is used primarily for cleaning up after tests and will
- * kill any actions that this pool has started that haven't already been
- * killed. It will also return errors if any further attempts are made
- * to enqueue.
- */
 ThaliPeerPoolBigReplication.prototype.stop = function () {
   this._stopped = true;
 
-  return ThaliPeerPoolBigReplication.super_.prototype.stop.apply(this, arguments);
+  var result =
+    ThaliPeerPoolBigReplication.super_.prototype.stop.apply(this, arguments);
+
+  assert(this._queue.length, 0, 'Queue should be emptied out by stop.');
+
+  return result;
 };
 
 module.exports = ThaliPeerPoolBigReplication;
