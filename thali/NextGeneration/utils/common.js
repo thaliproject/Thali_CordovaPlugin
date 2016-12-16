@@ -7,3 +7,10 @@ module.exports.serializePouchError = function (err) {
     return '';
   }
 };
+
+module.exports.makeAsync = function (fn) {
+  var apply = Function.prototype.apply.bind(fn);
+  return function () {
+    setImmediate(apply, this, arguments);
+  };
+};

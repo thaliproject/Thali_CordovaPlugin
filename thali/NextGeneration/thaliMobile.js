@@ -4,7 +4,7 @@ var EventEmitter = require('events').EventEmitter;
 var logger = require('../ThaliLogger')('thaliMobile');
 var platform = require('./utils/platform');
 var format = require('util').format;
-
+var makeAsync = require('./utils/common').makeAsync;
 var thaliConfig = require('./thaliConfig');
 
 var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
@@ -1091,17 +1091,7 @@ var handleNonTCPPeer = function (nativePeer) {
   handlePeer(peer);
 };
 
-if (platform.isAndroid) {
-  handleNonTCPPeer = require('./utils/zombieFilter')(handleNonTCPPeer, {
-    zombieTime: thaliConfig.ANDROID_ZOMBIE_TIME_IN_SECONDS * 1000,
-    generationUpdateWindow: thaliConfig.UPDATE_WINDOWS_FOREGROUND_MS,
-  });
-}
-
-ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
-  handleNonTCPPeer);
-
-thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeer) {
+var handleWifiPeer = makeAsync(function (wifiPeer) {
   var peerAvailable = Boolean(wifiPeer.hostAddress && wifiPeer.portNumber);
   var peer = {
     peerIdentifier: wifiPeer.peerIdentifier,
@@ -1115,6 +1105,25 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeer) {
   };
   handlePeer(peer);
 });
+
+if (platform.isAndroid) {
+  handleNonTCPPeer = require('./utils/zombieFilter')(handleNonTCPPeer, {
+    zombieThreshold: 500,
+    maxDelay: 1000,
+  });
+} else {
+  // make it async for consistency with android
+  handleNonTCPPeer = makeAsync(handleNonTCPPeer);
+}
+
+ThaliMobileNativeWrapper.emitter.on(
+  'nonTCPPeerAvailabilityChangedEvent',
+  handleNonTCPPeer
+);
+thaliWifiInfrastructure.on(
+  'wifiPeerAvailabilityChanged',
+  handleWifiPeer
+);
 
 // TODO: move watchers to the separate module
 var peerAvailabilityWatchers = {};

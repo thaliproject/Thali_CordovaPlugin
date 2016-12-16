@@ -1,59 +1,90 @@
 'use strict';
 
+var assert = require('assert');
+var format = require('util').format;
 var extend = require('js-extend').extend;
 
+function throttle(fn, options) {
+  var minDelay = options.minDelay;
+  var maxDelay = options.maxDelay;
+  assert(minDelay <= maxDelay, format(
+    'minDelay(%d) can\'t be greater than maxDelay(%d)', minDelay, maxDelay
+  ));
 
-var cache = null;
+  var args, context;
+  var timeout = null;
+  var lastCalledAt = null;
 
-// max possible age of the zombie (in ms);
-var zombieTime = null;
+  function invoke() {
+    timeout = null;
+    lastCalledAt = null;
+    fn.apply(context, args);
 
-// how much time it takes for native layer to update generation (in ms)
-var generationUpdateWindow = null;
+    if (!timeout) {
+      context = args = null;
+    }
+  }
 
-// how much time it takes to make complete cycle over 256 available generations
-// (generation is 8-bit integer on Android)
-var wrapAroundTime = null;
+  function throttled () {
+    args = arguments;
+    context = this; // eslint-disable-line consistent-this
 
-function cachePeer (peerIdentifier, realGeneration, fakeGeneration) {
-  var cachedPeer = {
-    realGeneration: realGeneration,
-    fakeGeneration: fakeGeneration,
-    time: Date.now(),
+    var now = Date.now();
+
+    if (lastCalledAt === null) {
+      lastCalledAt = now;
+    }
+
+    if (!timeout) {
+      console.log('first call fn %s with args: %j', fn.name, args);
+      timeout = setTimeout(invoke, minDelay);
+    } else {
+      console.log('throttled fn %s with args: %j', fn.name, args);
+      var elapsed = now - lastCalledAt;
+      var remaining = Math.min(minDelay, maxDelay - elapsed);
+      clearTimeout(timeout);
+      timeout = setTimeout(invoke, remaining);
+    }
+  }
+
+  throttled.clearTimeout = function () {
+    if (timeout) {
+      clearTimeout(timeout);
+      lastCalledAt = args = context = null;
+    }
   };
-  cache[peerIdentifier] = cachedPeer;
-  return cachedPeer;
+
+  return throttled;
 }
 
-function shouldIgnoreAnnouncement (nativePeer) {
-  var peerIdentifier = nativePeer.peerIdentifier;
+function cachePeer (cache, peerIdentifier, nativeGeneration, handler) {
+  var oldCachedPeer = cache[peerIdentifier];
+  var newCachedPeer = {
+    nativeGeneration: nativeGeneration,
+    fakeGeneration: oldCachedPeer ? oldCachedPeer.fakeGeneration : 0,
+    handler: handler,
+  };
+  cache[peerIdentifier] = newCachedPeer;
+  return newCachedPeer;
+}
+
+function uncachePeer (cache, peerIdentifier) {
   var cachedPeer = cache[peerIdentifier];
-
-  if (!cachedPeer || !nativePeer.peerAvailable) {
-    return false;
+  if (cachedPeer) {
+    cachedPeer.handler.clearTimeout();
   }
-
-  var lastGeneration = cachedPeer.realGeneration;
-  var newGeneration = nativePeer.generation;
-  var elapsedTime = Date.now() - cachedPeer.time;
-
-  // So much time has passed that any generation is possibly real
-  if (elapsedTime + zombieTime >= wrapAroundTime) {
-    return false;
-  }
-
-  var maxGenerations = (elapsedTime + zombieTime) / generationUpdateWindow;
-  var leftBorder = (lastGeneration + 1) % 256;
-  var rightBorder = (lastGeneration + maxGenerations) % 256;
-
-  var isValidGeneration = leftBorder < rightBorder ?
-    newGeneration >= leftBorder && newGeneration <= rightBorder :
-    newGeneration <= rightBorder || newGeneration >= leftBorder;
-
-  return !isValidGeneration;
+  delete cache[peerIdentifier];
 }
 
-function fixPeerGeneration (nativePeer) {
+function clearCache (cache) {
+  Object.keys(cache).forEach(function (peerIdentifier) {
+    var cachedPeer = cache[peerIdentifier];
+    cachedPeer.handler.clearTimeout();
+    delete cache[peerIdentifier];
+  });
+}
+
+function fixPeerGeneration (cache, nativePeer) {
   var cachedPeer = cache[nativePeer.peerIdentifier];
   var fixedPeer = extend({}, nativePeer);
   if (cachedPeer) {
@@ -62,53 +93,61 @@ function fixPeerGeneration (nativePeer) {
   return fixedPeer;
 }
 
-function zombieFilter (handleNonTCPPeer, config) {
-  cache = {};
-  zombieTime = config.zombieTime;
-  generationUpdateWindow = config.generationUpdateWindow;
-  wrapAroundTime = generationUpdateWindow * 255;
-
+function fixPeerHandler(cache, nonTCPPeerHandler) {
   return function (nativePeer) {
+    var cachedPeer = cache[nativePeer.peerIdentifier];
+    cachedPeer.fakeGeneration++;
+    cachePeer(cachedPeer);
+    nonTCPPeerHandler(fixPeerGeneration(cache, nativePeer));
+  };
+}
+
+function zombieFilter (nonTCPPeerHandler, config) {
+  var cache = {};
+  var throttleOptions = {
+    minDelay: config.zombieThreshold,
+    maxDelay: config.maxDelay,
+  };
+  var fixedHandler = fixPeerHandler(cache, nonTCPPeerHandler);
+
+  function filteredNonTCPPeerHandler (nativePeer) {
     var peerIdentifier = nativePeer.peerIdentifier;
     var peerAvailable = nativePeer.peerAvailable;
-    var generation = nativePeer.generation;
+    var cachedPeer = cache[peerIdentifier];
 
     // just pass through recreated events
     if (nativePeer.recreated) {
-      handleNonTCPPeer(nativePeer);
+      // We don't need to update cache.
+      nonTCPPeerHandler(nativePeer);
       return;
     }
 
     if (!peerAvailable) {
-      delete cache[peerIdentifier];
-      handleNonTCPPeer(nativePeer);
+      uncachePeer(cache, peerIdentifier);
+      nonTCPPeerHandler(nativePeer);
       return;
     }
 
-    var cachedPeer = cache[peerIdentifier];
+    var handler = cachedPeer ?
+      cachedPeer.handler :
+      throttle(fixedHandler, throttleOptions);
 
-    if (!cachedPeer) {
-      cachePeer(peerIdentifier, nativePeer.generation, 0);
-      handleNonTCPPeer(fixPeerGeneration(nativePeer));
-      return;
-    }
+    // update cached peer with new generation and possibly new handler
+    cachePeer(cache, peerIdentifier, nativePeer.generation, handler);
 
-    if (shouldIgnoreAnnouncement(nativePeer)) {
-      return;
-    }
-
-    cachedPeer = cachePeer(
-      peerIdentifier,
-      nativePeer.generation,
-      cachedPeer.fakeGeneration + 1
-    );
-
-    handleNonTCPPeer(fixPeerGeneration(nativePeer));
+    handler(nativePeer);
   };
+
+  filteredNonTCPPeerHandler.clearCache = clearCache.bind(null, cache);
+
+  return filteredNonTCPPeerHandler;
 }
 
-zombieFilter.clearCache = function () {
-  cache = {};
-};
+zombieFilter._throttle = throttle;
+zombieFilter._cachePeer = cachePeer;
+zombieFilter._uncachePeer = uncachePeer;
+zombieFilter._clearCache = clearCache;
+zombieFilter._fixPeerGeneration = fixPeerGeneration;
+zombieFilter._fixPeerHandler = fixPeerHandler;
 
 module.exports = zombieFilter;
