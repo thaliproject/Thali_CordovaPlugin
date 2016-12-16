@@ -2433,3 +2433,13 @@ test('Discovered peer should be removed if no availability updates ' +
       finalizeTest(error);
     });
 });
+
+test('zombieFilter works',
+  function () {
+    return !platform.isAndroid;
+  },
+  function (t) {
+    t.skip('Not implemented');
+    t.end();
+  }
+);

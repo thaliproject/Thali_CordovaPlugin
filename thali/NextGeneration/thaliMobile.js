@@ -1067,7 +1067,7 @@ var handleRecreatedPeer = function (nativePeer) {
   }
 };
 
-var handleNonTCPPeer = function (nativePeer) {
+var handleNonTCPPeer = makeAsync(function (nativePeer) {
   if (nativePeer.recreated) {
     handleRecreatedPeer(nativePeer);
     return;
@@ -1089,7 +1089,7 @@ var handleNonTCPPeer = function (nativePeer) {
     recreated: Boolean(nativePeer.recreated) // Android only
   };
   handlePeer(peer);
-};
+});
 
 var handleWifiPeer = makeAsync(function (wifiPeer) {
   var peerAvailable = Boolean(wifiPeer.hostAddress && wifiPeer.portNumber);
@@ -1111,9 +1111,6 @@ if (platform.isAndroid) {
     zombieThreshold: 500,
     maxDelay: 1000,
   });
-} else {
-  // make it async for consistency with android
-  handleNonTCPPeer = makeAsync(handleNonTCPPeer);
 }
 
 ThaliMobileNativeWrapper.emitter.on(
