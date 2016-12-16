@@ -1,12 +1,15 @@
 'use strict';
 
-var config       = require('./config.json')
+var config       = require('./config.json');
 var spawn        = require('child_process').spawn;
 var randomString = require('randomstring');
 var objectAssign = require('object-assign');
 
+var platform     = require('thali/NextGeneration/utils/platform');
 
 var DEFAULT_INSTANCE_COUNT = 3;
+var DEFAULT_PLATFORM = platform.names.ANDROID;
+var DEFAULT_NETWORK_TYPE = 'WIFI';
 
 var parseargv = require('minimist');
 var argv = parseargv(process.argv.slice(2), {
@@ -14,6 +17,8 @@ var argv = parseargv(process.argv.slice(2), {
     test: 'UnitTest_app.js',
     filter: null,
     instanceCount: DEFAULT_INSTANCE_COUNT,
+    platform: DEFAULT_PLATFORM,
+    networkType: DEFAULT_NETWORK_TYPE,
     serverLogs: true,
     instanceLogs: true,
     waitForInstance: false,
@@ -100,15 +105,16 @@ var setListeners = function (instance, instanceId) {
   });
 };
 
+var instanceCount = argv.instanceCount;
 var testServerConfiguration = {
   devices: {
-    android: 0,
-    ios: 0,
-    desktop: argv.instanceCount
+    android: argv.platform === platform.names.ANDROID ? instanceCount : 0,
+    ios: argv.platform === platform.names.IOS ? instanceCount : 0,
+    desktop: 0
   },
   minDevices: {
-    android: 0,
-    ios: 0,
+    android: 2,
+    ios: 2,
     desktop: 2
   },
   waiting_for_devices_timeout: 5 * 1000
@@ -127,13 +133,20 @@ var instanceEnv = objectAssign({}, testEnv, {
     length: 'http://www.thaliproject.org/ssdp'.length
   })
 });
+
 var instanceOpts = objectAssign({}, { env: instanceEnv });
 
 var testInstances = {};
 var spawnTestInstance = function (instanceId) {
   var instanceArgs = [argv.test];
+  if (argv.platform) {
+    instanceArgs.push('--platform=' + argv.platform);
+  }
+  if (argv.networkType) {
+    instanceArgs.push('--networkType=' + argv.networkType);
+  }
   if (argv.filter) {
-    instanceArgs.push(argv.filter);
+    instanceArgs.push('--', argv.filter);
   }
   var testInstance = spawn('jx', instanceArgs, instanceOpts);
   setListeners(testInstance, instanceId);
@@ -144,7 +157,10 @@ for (var i = 1; i <= spawnedInstanceCount; i++) {
   spawnTestInstance(i);
 }
 
+// jshint latedef:false
 var shutdown = function (code) {
+  // jshint latedef:true
+
   // A small delay so that instances have time to print
   // the test results.
   setTimeout(function () {

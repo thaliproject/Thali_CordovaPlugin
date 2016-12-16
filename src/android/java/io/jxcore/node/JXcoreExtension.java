@@ -4,6 +4,7 @@
 package io.jxcore.node;
 
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.util.Log;
@@ -42,7 +43,8 @@ public class JXcoreExtension {
     private static final String METHOD_NAME_CONNECT = "connect";
     private static final String METHOD_NAME_KILL_CONNECTIONS = "killConnections";
     private static final String METHOD_NAME_DID_REGISTER_TO_NATIVE = "didRegisterToNative";
-
+    private static final String METHOD_NAME_MULTICONNECT = "multiConnect";
+    private static final String METHOD_NAME_DISCONNECT = "disconnect";
     private static final String EVENT_NAME_PEER_AVAILABILITY_CHANGED = "peerAvailabilityChanged";
     private static final String EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE = "discoveryAdvertisingStateUpdateNonTCP";
     private static final String EVENT_NAME_NETWORK_CHANGED = "networkChanged";
@@ -51,8 +53,8 @@ public class JXcoreExtension {
     private static final String METHOD_ARGUMENT_NETWORK_CHANGED = EVENT_NAME_NETWORK_CHANGED;
 
     private static final String EVENT_VALUE_PEER_ID = "peerIdentifier";
+    private static final String EVENT_VALUE_PEER_GENERATION = "generation";
     private static final String EVENT_VALUE_PEER_AVAILABLE = "peerAvailable";
-    private static final String EVENT_VALUE_PLEASE_CONNECT = "pleaseConnect";
     private static final String EVENT_VALUE_DISCOVERY_ACTIVE = "discoveryActive";
     private static final String EVENT_VALUE_ADVERTISING_ACTIVE = "advertisingActive";
     private static final String EVENT_VALUE_BLUETOOTH_LOW_ENERGY = "bluetoothLowEnergy";
@@ -60,6 +62,7 @@ public class JXcoreExtension {
     private static final String EVENT_VALUE_WIFI = "wifi";
     private static final String EVENT_VALUE_CELLULAR = "cellular";
     private static final String EVENT_VALUE_BSSID_NAME = "bssidName";
+    private static final String EVENT_VALUE_SSID_NAME = "ssidName";
     private static final String EVENT_VALUE_PORT_NUMBER = "portNumber";
     // Android specific methods and events
     private static final String METHOD_NAME_IS_BLE_MULTIPLE_ADVERTISEMENT_SUPPORTED = "isBleMultipleAdvertisementSupported";
@@ -77,6 +80,11 @@ public class JXcoreExtension {
     private static ConnectionHelper mConnectionHelper = null;
     private static long mLastTimeIncomingConnectionFailedNotificationWasFired = 0;
     private static boolean mNetworkChangedRegistered = false;
+
+
+    private static String ERROR_PLATFORM_DOES_NOT_SUPPORT_MULTICONNECT = "Platform does not support multiConnect";
+    private static String ERROR_NOT_MULTICONNECT_PLATFORM = "Not multiConnect platform";
+
 
     public static void LoadExtensions() {
         if (mConnectionHelper != null) {
@@ -102,10 +110,10 @@ public class JXcoreExtension {
         });
 
         lifeCycleMonitor.start();
-		/*
-			This is the line where we are dynamically sticking execution of UT during build, so if you are
-			editing this line, please check updateJXCoreExtensionWithUTMethod in androidBeforeCompile.js.
-		*/
+        /*
+            This is the line where we are dynamically sticking execution of UT during build, so if you are
+            editing this line, please check updateJXCoreExtensionWithUTMethod in androidBeforeCompile.js.
+        */
 
         jxcore.RegisterMethod(METHOD_NAME_START_LISTENING_FOR_ADVERTISEMENTS, new JXcoreCallback() {
             @Override
@@ -218,11 +226,7 @@ public class JXcoreExtension {
                 String bluetoothMacAddress = null;
 
                 if (peerId != null) {
-                    try {
-                        bluetoothMacAddress = peerId.split(BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR)[0];
-                    } catch (IndexOutOfBoundsException e) {
-                        Log.e(TAG, METHOD_NAME_CONNECT + ": Failed to extract the Bluetooth MAC address: " + e.getMessage(), e);
-                    }
+                    bluetoothMacAddress = peerId;
                 }
 
                 if (!BluetoothUtils.isValidBluetoothMacAddress(bluetoothMacAddress)) {
@@ -333,10 +337,28 @@ public class JXcoreExtension {
             }
         });
 
+        jxcore.RegisterMethod(METHOD_NAME_MULTICONNECT, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+                ArrayList<Object> args = new ArrayList<Object>();
 
-        /*
-         * Android specific methods start here
-         */
+                args.add(ERROR_PLATFORM_DOES_NOT_SUPPORT_MULTICONNECT);
+                args.add(null);
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
+
+        jxcore.RegisterMethod(METHOD_NAME_DISCONNECT, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+                ArrayList<Object> args = new ArrayList<Object>();
+
+                args.add(ERROR_NOT_MULTICONNECT_PLATFORM);
+                args.add(null);
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
+
 
         /**
          * Method for checking whether or not the device supports Bluetooth LE multi advertisement.
@@ -485,16 +507,13 @@ public class JXcoreExtension {
     }
 
     public static void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
-        String peerId = peerProperties.getId()
-                + BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR
-                + peerProperties.getExtraInformation();
         JSONObject jsonObject = new JSONObject();
         boolean jsonObjectCreated = false;
 
         try {
-            jsonObject.put(EVENT_VALUE_PEER_ID, peerId);
+            jsonObject.put(EVENT_VALUE_PEER_ID, peerProperties.getId());
+            jsonObject.put(EVENT_VALUE_PEER_GENERATION, peerProperties.getExtraInformation());
             jsonObject.put(EVENT_VALUE_PEER_AVAILABLE, isAvailable);
-            jsonObject.put(EVENT_VALUE_PLEASE_CONNECT, false);
             jsonObjectCreated = true;
         } catch (JSONException e) {
             Log.e(TAG, "notifyPeerAvailabilityChanged: Failed to populate the JSON object: " + e.getMessage(), e);
@@ -552,7 +571,7 @@ public class JXcoreExtension {
      *                           is connected to.
      */
     public static synchronized void notifyNetworkChanged(
-            boolean isBluetoothEnabled, boolean isWifiEnabled, String bssidName) {
+            boolean isBluetoothEnabled, boolean isWifiEnabled, String bssidName, String ssidName) {
         if (!mNetworkChangedRegistered) {
             Log.d(TAG, "notifyNetworkChanged: Not registered for event \""
                     + EVENT_NAME_NETWORK_CHANGED + "\" and will not notify, in JS call method \""
@@ -603,7 +622,8 @@ public class JXcoreExtension {
                 + ", Bluetooth: " + bluetoothRadioState
                 + ", Wi-Fi: " + wifiRadioState
                 + ", cellular: " + cellularRadioState
-                + ", BSSID name: " + bssidName);
+                + ", BSSID name: " + bssidName
+                + ", SSID name: " + ssidName);
 
         JSONObject jsonObject = new JSONObject();
         boolean jsonObjectCreated = false;
@@ -614,6 +634,7 @@ public class JXcoreExtension {
             jsonObject.put(EVENT_VALUE_WIFI, radioStateEnumValueToString(wifiRadioState));
             jsonObject.put(EVENT_VALUE_CELLULAR, radioStateEnumValueToString(cellularRadioState));
             jsonObject.put(EVENT_VALUE_BSSID_NAME, bssidName);
+            jsonObject.put(EVENT_VALUE_SSID_NAME, ssidName);
             jsonObjectCreated = true;
         } catch (JSONException e) {
             Log.e(TAG, "notifyNetworkChanged: Failed to populate the JSON object: " + e.getMessage(), e);

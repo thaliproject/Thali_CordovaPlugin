@@ -6,7 +6,6 @@ var http = require('http');
 var fs = require('fs'); // Will be overwritten by fs-extra-promise
 var Promise = null; // Wil be set below
 
-var pouchDBNodePackageName = 'pouchdb-node';
 var expressPouchDBPackageName = 'express-pouchdb';
 
 function getPackageJsonVersion(packageName) {
@@ -58,9 +57,11 @@ function childProcessExecPromise(commandString, currentWorkingDirectory) {
 
 /**
  * Runs an array of commands on the command line one by one.
+ *
  * @param {string[][]} arrayOfCommandDirs An array of arrays. The child arrays
  * each must contain exactly two values, the first is the command to execute
  * and the second is the directory to run the command in.
+ *
  * @returns {Promise<null|Error>} If all goes well then returns Promise resolve
  * with null otherwise returns a reject with an error
  */
@@ -81,12 +82,13 @@ function childProcessExecCommandLine(arrayOfCommandDirs) {
  * monorepo and publishes to the NPM repository (we assume that Sinopia or
  * equivalent has been set up locally but that is handled manually)
  *
- * @param  {string} gitUrl
- * @param  {string} branchName
- * @param  {string} commitId
+ * @param  {string} gitUrl Git URL
+ * @param  {string} branchName branch name
+ * @param  {string} commitId commit ID
  * @param  {string} packageName If specified only this package will be
  * published. Otherwise all the packages in the repo will be published.
- * @param  {string} targetDirName
+ * @param  {string} targetDirName target dir name
+ * @returns {promise} Did the install work?
  */
 function installCustomMonoRepoPackage(gitUrl, branchName, commitId, packageName,
                                       targetDirName) {
@@ -150,6 +152,7 @@ function installCustomMonoRepoPackage(gitUrl, branchName, commitId, packageName,
  * There is a bug in Node-PouchDB that causes failures in Express-PouchDB. We
  * need to fix it but don't have time right now so we are using this as a
  * stop gap.
+ * @returns {promise} Did the install work?
  */
 function installNodePouchDB () {
   var gitUrl = 'https://github.com/pouchdb/pouchdb.git';
@@ -170,11 +173,13 @@ function installNodePouchDB () {
  * than the one change we made to the express-pouchdb package, the contents of
  * the other packages are in NPM. So we just need to publish the one package we
  * are using and can ignore the rest for now.
+ *
+ * @returns {promise} Did the install work?
  */
 function installExpressPouchDB () {
   var gitUrl = 'https://github.com/yaronyg/pouchdb-server.git';
   var branch = 'thali-release';
-  var commitId = '6f40454';
+  var commitId = 'a4c87d3f48b0573a5533d2b863836d2fe5611e3b';
   var packageName = 'express-pouchdb';
   var targetDir = 'customPouchServerDir';
 
@@ -199,9 +204,10 @@ function getNpmRegistryUrl() {
 /**
  * Detects if the NPM registry configured on the system has a copy of the
  * version of a package we are looking for.
- * @param {string} packageName
- * @param {string} versionNumber
- * @param {string} registryUrl
+ * @param {string} packageName Package Name
+ * @param {string} versionNumber Version Number
+ * @param {string} registryUrl Registry Url
+ * @returns {promise} Does the version exist?
  */
 function versionExists(packageName, versionNumber, registryUrl) {
   return new Promise(function (resolve, reject) {
@@ -243,6 +249,7 @@ function versionExists(packageName, versionNumber, registryUrl) {
  * we will do nothing. But if they aren't there then we will build and publish
  * them. This code assumes that 'npm adduser' has already been used to enable
  * this machine to publish to its local NPM registry.
+ * @returns {promise} Did it work?
  */
 function installAll() {
   var promises = [];

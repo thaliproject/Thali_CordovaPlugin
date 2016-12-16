@@ -67,11 +67,9 @@ var Mobile = function (key) {
 };
 
 Mobile.createListenerOrIncomingConnection =
-  function (listeningPort, clientPort, serverPort) {
+  function (listeningPort) {
     return JSON.stringify({
-      listeningPort: listeningPort,
-      clientPort: clientPort,
-      serverPort: serverPort
+      listeningPort: listeningPort
     });
   };
 

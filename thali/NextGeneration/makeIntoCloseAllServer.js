@@ -2,6 +2,7 @@
 
 var assert = require('assert');
 var Promise = require('lie');
+var logger = require('../ThaliLogger')('makeIntoCloseAllServer');
 
 /** @module makeIntoCloseAllServer */
 
@@ -18,10 +19,10 @@ var Promise = require('lie');
  * as close the server itself.
  *
  * @public
- * @param {net.Server} server
+ * @param {net.Server} server Server object
  * @param {boolean} [eatNotRunning] Will consume a not running error when
  * calling one of our close methods rather than throwing it.
- * @returns {net.Server}
+ * @returns {net.Server} Wrapper making the server support close all
  */
 function makeIntoCloseAllServer(server, eatNotRunning) {
   var connections = [];
@@ -45,9 +46,10 @@ function makeIntoCloseAllServer(server, eatNotRunning) {
   /**
    * Closes the server and then closes all incoming connections to the server.
    *
-   * @param {thunk} [callback]
+   * @param {thunk} [callback] Callback
    */
   server.closeAll = function (callback) {
+    logger.debug('closeAll called on server');
     var forceCallback = false;
     // By closing the server first we prevent any new incoming connections
     // to the server.
@@ -55,7 +57,7 @@ function makeIntoCloseAllServer(server, eatNotRunning) {
     // are destroyed because the destroy calls are synchronous.
     try {
       server.close(callback);
-    } catch(err){
+    } catch (err){
       if (!eatNotRunning || !(err instanceof Error) ||
         (err && err.message !== 'Not running')) {
         throw err;

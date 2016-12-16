@@ -7,7 +7,6 @@ import org.json.JSONObject;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
-
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -26,41 +25,33 @@ public final class RegisterExecuteUT {
 
     private static void FireTestedMethod(String methodName) {
         ConnectionHelperTest.mConnectionHelper = new ConnectionHelper();
-        try {
-                if(methodName.equals("onPeerLost")){
-                    Method onPeerLostMethod = ConnectionHelperTest.mConnectionHelper.getClass().getMethod(methodName, PeerProperties.class);
-                    onPeerLostMethod.invoke(ConnectionHelperTest.mConnectionHelper, new PeerProperties("11:22:33:22:11:00"));
-                }
-                if(methodName.equals("onPeerDiscovered")){
-                    Method onPeerDiscoveredMethod = ConnectionHelperTest.mConnectionHelper.getClass().getMethod(methodName, PeerProperties.class);
-                    onPeerDiscoveredMethod.invoke(ConnectionHelperTest.mConnectionHelper, new PeerProperties("33:44:55:44:33:22"));
-                }
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (NoSuchMethodException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
-            }
+
+        switch (methodName) {
+            case "onPeerLost":
+                ConnectionHelperTest.mConnectionHelper
+                    .onPeerLost(new PeerProperties("11:22:33:22:11:00"));
+                break;
+            case "onPeerDiscovered":
+                ConnectionHelperTest.mConnectionHelper
+                    .onPeerDiscovered(new PeerProperties("33:44:55:44:33:22"));
+                break;
+            default:
+                Log.e(TAG, "Method called in FireTestedMethod doesn't exists!");
+                break;
         }
+    }
 
     public static void Register() {
-        jxcore.RegisterMethod("TestNativeMethod", new jxcore.JXcoreCallback() {
+        jxcore.RegisterMethod("testNativeMethod", new jxcore.JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, final String callbackId) {
                 String methodToTest = "";
 
                 if (params.size() == 0) {
-                    Log.e(TAG, "Required parameter (toast message) missing");
+                    Log.e(TAG, "Required parameter is missing");
                 } else {
                     methodToTest = params.get(0).toString();
                     FireTestedMethod(methodToTest);
-                }
-
-                try {
-                    Thread.sleep(2000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
                 }
 
                 JSONObject jsonObject = new JSONObject();
@@ -79,7 +70,7 @@ public final class RegisterExecuteUT {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
                 ConnectionHelperTest.mConnectionHelper = new ConnectionHelper();
-                String logtag = "executeNativeTests";
+                String logtag = "ExecuteNativeTests";
                 Log.d(logtag, "Running unit tests");
                 Result resultTest = ThaliTestRunner.runTests();
 

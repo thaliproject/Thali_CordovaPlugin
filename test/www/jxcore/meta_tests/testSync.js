@@ -46,7 +46,7 @@ function checkAllFiles(participants) {
           resolve();
         }
       });
-    })
+    });
   });
   return Promise.all(promises);
 }
@@ -102,4 +102,4 @@ test('test multiple syncs works', function (t) {
   .then(function () {
     t.end();
   });
-})
+});

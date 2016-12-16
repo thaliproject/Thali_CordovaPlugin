@@ -1,6 +1,5 @@
 'use strict';
 var request = require('request');
-var express = require('express');
 var https = require('https');
 var ForeverAgent = require('forever-agent');
 var Promise = require('bluebird');
@@ -8,7 +7,6 @@ var thaliConfig =
   require('thali/NextGeneration/thaliConfig');
 var makeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
-var thaliNotificationBeacons = require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var urlSafeBase64 = require('urlsafe-base64');
 
 var gPskIdentity = 'I am me!';
@@ -23,6 +21,7 @@ var pskIdToSecret = function (id) {
  * provided callback when the request is finished.
  * @param {string} url The request URL.
  * @param {callback} handler The callback function that handles the response
+ * @returns {null} null
 */
 module.exports.runTest = function (url, handler) {
   var requestSettings = {
@@ -37,6 +36,8 @@ module.exports.runTest = function (url, handler) {
       handler(error, response, body);
     }
   });
+
+  return null;
 };
 
 /**
@@ -51,6 +52,7 @@ module.exports.runTest = function (url, handler) {
  * @param {number} times Tells how many times the body is written to the
  * response.
  * @param {?number} delay A delay before sending a response
+ * @returns {null} null
  */
 module.exports.runServer = function (router, path, responseCode, body, times,
                                      delay) {
@@ -69,6 +71,8 @@ module.exports.runServer = function (router, path, responseCode, body, times,
 
   var delayCallback = function (req, res, next){ setTimeout(next, delay);};
   router.get(path, delayCallback, requestHandler);
+
+  return null;
 };
 
 module.exports.getTestAgent = function (pskIdentity, pskKey) {
@@ -77,10 +81,7 @@ module.exports.getTestAgent = function (pskIdentity, pskKey) {
   pskKey = pskKey || gPskKey;
 
   return new ForeverAgent.SSL({
-    keepAlive: true,
-    keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-    maxSockets: Infinity,
-    maxFreeSockets: 256,
+    maxSockets: 8,
     ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
     pskIdentity: pskIdentity,
     pskKey: pskKey
@@ -116,7 +117,7 @@ module.exports.getTestHttpsServer = function (expressApp,
   });
 };
 
-module.exports.pskGet = function(serverPort, path, pskId, pskKey, host) {
+module.exports.pskGet = function (serverPort, path, pskId, pskKey, host) {
   return new Promise(function (resolve, reject) {
     https.get({
       hostname: host ? host : '127.0.0.1',
@@ -152,7 +153,7 @@ module.exports.generateSeqDocPath = function (devicePublicKey) {
     urlSafeBase64.encode(devicePublicKey);
 };
 
-module.exports.getSeqDoc = function(dbName, serverPort, pskId, pskKey,
+module.exports.getSeqDoc = function (dbName, serverPort, pskId, pskKey,
                                     devicePublicKey, host) {
   var path = thaliConfig.BASE_DB_PATH + '/' + dbName + '/' +
     module.exports.generateSeqDocPath(devicePublicKey);

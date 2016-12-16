@@ -1,8 +1,5 @@
 'use strict';
 
-var util = require('util');
-var format = util.format;
-
 var os = require('os');
 var tmp = require('tmp');
 var PouchDB = require('pouchdb');
@@ -17,40 +14,117 @@ var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var expressPouchdb = require('express-pouchdb');
 var platform = require('thali/NextGeneration/utils/platform');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-var notificationBeacons =
-  require('thali/NextGeneration/notification/thaliNotificationBeacons');
+var notificationBeacons = require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var express = require('express');
 var fs = require('fs-extra-promise');
-var extend = require('js-extend').extend;
-var inherits = require('inherits');
 
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
 
-var doToggle = function (toggleFunction, on) {
+function toggleBluetooth (value) {
   if (typeof Mobile === 'undefined') {
-    return Promise.resolve();
+    return Promise.reject(new Error(
+      'Mobile is not defined'
+    ));
   }
-  if (platform.isIOS) {
-    return Promise.resolve();
+  if (platform._isRealAndroid || platform.isIOS) {
+    return Promise.reject(new Error(
+      '\'toggleBluetooth\' is not implemented on android and ios'
+    ));
   }
   return new Promise(function (resolve, reject) {
-    Mobile[toggleFunction](on, function (err) {
-      if (err) {
-        logger.warn('Mobile.%s returned an error: %s', toggleFunction, err);
-        return reject(new Error(err));
+    Mobile.toggleBluetooth(value, function (error) {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
       }
-      return resolve();
+    });
+  });
+}
+
+module.exports.toggleBluetooth = toggleBluetooth;
+
+function toggleWifi (value) {
+  if (typeof Mobile === 'undefined') {
+    return Promise.reject(new Error(
+      'Mobile is not defined'
+    ));
+  }
+  if (platform.isIOS) {
+    return Promise.reject(new Error(
+      'Mobile(\'toggleWiFi\') is not implemented on ios'
+    ));
+  }
+  return new Promise(function (resolve, reject) {
+    Mobile.toggleWiFi(value, function (error) {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
     });
   });
 };
+module.exports.toggleWifi = toggleWifi;
 
-module.exports.toggleWifi = function (on) {
-  return doToggle('toggleWiFi', on);
+var ThaliMobile;
+var ensureNetwork = function (type, toggle, value) {
+  if (!ThaliMobile) {
+    ThaliMobile = require('thali/NextGeneration/thaliMobile');
+  }
+  var valueString = value? 'on' : 'off';
+
+  return ThaliMobile.getNetworkStatus()
+  .then(function (networkStatus) {
+    if (networkStatus[type] !== valueString) {
+
+      // We will wait until network status will reach required 'value'.
+      // We need to start ThaliMobile to receive 'networkChanged' event.
+      // We can't use Mobile('networkChanged').registerToNative here because it
+      // can replace existing listener.
+      var isStarted = ThaliMobile.isStarted();
+      return (ThaliMobile.isStarted() ? Promise.resolve() :
+          ThaliMobile.start(express.Router()))
+        .then(function () {
+          return new Promise(function (resolve) {
+            function networkChangedHandler (networkStatus) {
+              if (networkStatus[type] === valueString) {
+                ThaliMobile.emitter.removeListener('networkChanged',
+                  networkChangedHandler);
+                resolve();
+              } else {
+                logger.warn(
+                  'we are %s %s network, but it don\'t want to obey',
+                  value? 'enabling' : 'disabling', type
+                );
+              }
+            }
+            ThaliMobile.emitter.on('networkChanged', networkChangedHandler);
+            toggle(value);
+          });
+        })
+
+      .then(function () {
+        if (!isStarted) {
+          // We need to cleanup after our 'ThaliMobile.start'.
+          return ThaliMobile.stop();
+        }
+      });
+    }
+  });
 };
 
-exports.toggleBluetooth = function (on) {
-  return doToggle('toggleBluetooth', on);
+module.exports.ensureWifi = function (value) {
+  return ensureNetwork('wifi', toggleWifi, value);
+};
+module.exports.ensureBluetooth = function (value) {
+  return ensureNetwork('bluetooth', toggleBluetooth, value);
+};
+
+module.exports.validateBSSID = function (value) {
+  // Both 'c1:5b:05:5a:41:1e' and 'c1-5b-05-5a-41-1e' are valid.
+  return /([0-9a-f]{2}[:-]|$){6}/i.test(value);
 };
 
 /**
@@ -59,7 +133,7 @@ exports.toggleBluetooth = function (on) {
  * environment, the network changes will be simulated (i.e., doesn't affect
  * the network status of the host machine).
  * @param {boolean} on Pass true to turn radios on and false to turn them off
- * @returns {Promise<?Error>}
+ * @returns {Promise<?Error>} Result of operation
  */
 module.exports.toggleRadios = function (on) {
   logger.info('Toggling radios to: %s', on);
@@ -81,7 +155,8 @@ var myNameCallback = null;
 /**
  * Set the name given used by this device. The name is
  * retrievable via a function exposed to the Cordova side.
- * @param {string} name
+ * @param {string} name Device name
+ * @returns {null} Returns null
  */
 module.exports.setName = function (name) {
   myName = name;
@@ -90,16 +165,18 @@ module.exports.setName = function (name) {
   } else {
     logger.warn('myNameCallback not set!');
   }
+  return null;
 };
 
 /**
  * Get the name of this device.
+ * @returns {string} Name of device
  */
 module.exports.getName = function () {
   return myName;
 };
 
-if (platform.isMobile) {
+if (platform._isRealMobile) {
   Mobile('setMyNameCallback').registerAsync(function (callback) {
     myNameCallback = callback;
     // If the name is already set, pass it to the callback
@@ -119,7 +196,7 @@ if (platform.isMobile) {
  */
 var tmpObject = null;
 function tmpDirectory () {
-  if (platform.isMobile) {
+  if (platform._isRealMobile) {
     return os.tmpdir();
   }
 
@@ -130,7 +207,7 @@ function tmpDirectory () {
     });
   }
   return tmpObject.name;
-};
+}
 module.exports.tmpDirectory = tmpDirectory;
 
 /**
@@ -141,7 +218,7 @@ module.exports.tmpDirectory = tmpDirectory;
  */
 module.exports.hasRequiredHardware = function () {
   return new Promise(function (resolve) {
-    if (platform.isAndroid) {
+    if (platform._isRealAndroid) {
       var checkBleMultipleAdvertisementSupport = function () {
         Mobile('isBleMultipleAdvertisementSupported').callNative(
           function (error, result) {
@@ -165,6 +242,7 @@ module.exports.hasRequiredHardware = function () {
               }
               case 'Not supported': {
                 logger.info('BLE multiple advertisement not supported');
+
                 resolve(false);
                 break;
               }
@@ -188,7 +266,9 @@ module.exports.returnsValidNetworkStatus = function () {
   // we can require the test utils also from an environment
   // where Mobile isn't defined (which is a requirement when
   // thaliMobile is required).
-  var ThaliMobile = require('thali/NextGeneration/thaliMobile');
+  if (!ThaliMobile) {
+    ThaliMobile = require('thali/NextGeneration/thaliMobile');
+  }
   // Check that network status is as expected and
   // report to CI that this device is ready.
   return ThaliMobile.getNetworkStatus()
@@ -209,7 +289,7 @@ module.exports.returnsValidNetworkStatus = function () {
 
 module.exports.getOSVersion = function () {
   return new Promise(function (resolve) {
-    if (!platform.isMobile) {
+    if (!platform._isRealMobile) {
       return resolve('dummy');
     }
     Mobile('getOSVersion').callNative(function (version) {
@@ -227,13 +307,13 @@ module.exports.verifyCombinedResultSuccess =
       message || 'error should be null');
   };
 
-// Short, random and globally unique name can be obtained from current timestamp.
-// For example '1w8ueaswm1'
+// Short, random and globally unique name can be obtained from current
+// timestamp. For example '1w8ueaswm1'
 var getUniqueRandomName = function () {
   var time = process.hrtime();
   time = time[0] * Math.pow(10, 9) + time[1];
   return time.toString(36);
-}
+};
 module.exports.getUniqueRandomName = getUniqueRandomName;
 
 var preAmbleSizeInBytes = notificationBeacons.PUBLIC_KEY_SIZE +
@@ -259,31 +339,68 @@ module.exports.extractBeacon = function (beaconStreamWithPreAmble,
   return null;
 };
 
-module.exports._get = function (host, port, path, options) {
-  var complete = false;
+function createResponseBody(response) {
+  var completed = false;
   return new Promise(function (resolve, reject) {
-    var request = https.request(options, function (response) {
-      var responseBody = '';
-      response.on('data', function (data) {
-        responseBody += data;
-      });
-      response.on('end', function () {
-        complete = true;
-        resolve(responseBody);
-      });
-      response.on('error', function (error) {
-        if (!complete) {
-          logger.error('%j', error);
-          reject(error);
-        }
-      });
-      response.resume();
+    var responseBody = '';
+    response.on('data', function (data) {
+      logger.debug('Got response data');
+      responseBody += data;
     });
-    request.on('error', function (error) {
-      if (!complete) {
-        logger.error('%j', error);
+    response.on('end', function () {
+      logger.debug('Got end');
+      completed = true;
+      resolve(responseBody);
+    });
+    response.on('error', function (error) {
+      if (!completed) {
+        logger.error('response body error %j', error);
         reject(error);
       }
+    });
+    response.resume();
+  });
+}
+
+module.exports.put = function (host, port, path, pskIdentity, pskKey,
+                               requestBody) {
+  return new Promise(function (resolve, reject) {
+    var request = https.request({
+      hostname: host,
+      port: port,
+      path: path,
+      method: 'PUT',
+      agent: new ForeverAgent.SSL({
+        rejectUnauthorized: false,
+        maxSockets: 8,
+        ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+        pskIdentity: pskIdentity,
+        pskKey: pskKey
+      })
+    }, function (response) {
+      createResponseBody(response)
+        .then(resolve)
+        .catch(reject);
+    });
+    request.on('error', function (error) {
+      logger.error('%j', error);
+      reject(error);
+    });
+    request.write(requestBody);
+    request.end();
+  });
+};
+
+module.exports._get = function (host, port, path, options) {
+  return new Promise(function (resolve, reject) {
+    var request = https.request(options, function (response) {
+      createResponseBody(response)
+        .then(resolve)
+        .catch(reject);
+    });
+    request.on('error', function (error) {
+      logger.error('_get got error %j', error);
+      reject(error);
     });
     // Wait for 15 seconds since the request can take a while
     // in mobile environment over a non-TCP transport.
@@ -298,6 +415,7 @@ module.exports.get = function (host, port, path, pskIdentity, pskKey) {
     port: port,
     path: path,
     agent: new ForeverAgent.SSL({
+      maxSockets: 8,
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
       pskIdentity: pskIdentity,
       pskKey: pskKey
@@ -368,7 +486,7 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
       exitCall(null, new Error('Timer expired'));
     }, MAX_TIME_TO_WAIT_IN_MILLISECONDS);
 
-    function tryAgain(portNumber, err) {
+    function tryAgain(portNumber) {
       ++retryCount;
       logger.warn('Retry count for getSamePeerWithRetry is ' + retryCount);
       getRequestPromise =
@@ -447,8 +565,10 @@ function turnParticipantsIntoBufferArray (t, devicePublicKey) {
     }
   });
   return publicKeys;
-};
-module.exports.turnParticipantsIntoBufferArray = turnParticipantsIntoBufferArray;
+}
+
+module.exports.turnParticipantsIntoBufferArray =
+  turnParticipantsIntoBufferArray;
 
 module.exports.startServerInfrastructure =
   function (thaliNotificationServer, publicKeys, ThaliMobile, router) {
@@ -489,14 +609,17 @@ module.exports.runTestOnAllParticipants = function (
     // Each participant is recorded via their public key
     // If the value is -1 then they are done
     // If the value is 0 then no test has completed
-    // If the value is greater than 0 then that is how many failures there have been.
+    // If the value is greater than 0 then that is how many failures there have
+    // been.
 
-    var participantCount = publicKeys.reduce(function (participantCount, participantPublicKey) {
+    var participantCount = publicKeys.reduce(function (participantCount,
+                                                       participantPublicKey) {
       participantCount[participantPublicKey] = 0;
       return participantCount;
     }, {});
 
-    var participantTask = publicKeys.reduce(function (participantTask, participantPublicKey) {
+    var participantTask = publicKeys.reduce(function (participantTask,
+                                                      participantPublicKey) {
       participantTask[participantPublicKey] = Promise.resolve();
       return participantTask;
     }, {});
@@ -532,7 +655,7 @@ module.exports.runTestOnAllParticipants = function (
       if (count >= MAX_FAILURE) {
         completed = true;
         clearTimeout(timerCancel);
-        reject(err);
+        reject(error);
       }
     }
 
@@ -592,8 +715,8 @@ module.exports.testTimeout = function (t, timeout, callback) {
 
     clearTimeout(timer);
     return oldEnd.apply(this, arguments);
-  }
-}
+  };
+};
 
 module.exports.checkArgs = function (t, spy, description, args) {
   t.ok(spy.calledOnce, description + ' was called once');
@@ -609,7 +732,7 @@ module.exports.checkArgs = function (t, spy, description, args) {
       arg.description + '\' as ' + (index + 1) + '-st argument';
     t.ok(arg.compare(currentArgs[index]), argDescription);
   });
-}
+};
 
 
 // -- pouchdb --
@@ -627,7 +750,8 @@ function getLevelDownPouchDb() {
   return PouchDBGenerator(PouchDB, defaultDirectory, {
     defaultAdapter: LeveldownMobile
   });
-};
+}
+
 module.exports.getLevelDownPouchDb = getLevelDownPouchDb;
 
 module.exports.getRandomlyNamedTestPouchDBInstance = function () {
@@ -648,17 +772,12 @@ var createPskPouchDBRemote = function (
   return new getLevelDownPouchDb()(
     serverUrl, {
       ajax: {
-        agentClass: ForeverAgent.SSL,
-        agentOptions: {
-          keepAlive: true,
-          keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-          maxSockets: Infinity,
-          maxFreeSockets: 256,
+        agent: new ForeverAgent.SSL({
+          maxSockets: 8,
           ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
           pskIdentity: pskId,
-          pskKey: pskKey,
-          secureOptions: pskId + serverUrl
-        }
+          pskKey: pskKey
+        })
       }
     }
   );
@@ -698,4 +817,47 @@ module.exports.setUpServer = function (testBody, appConfig) {
     }
   );
   return testCloseAllServer;
+};
+
+/**
+ * Stubs `dns.lookup` function such a way, that attempt to connect to
+ * `unresolvableDomain` fails immediately.
+ *
+ * TODO: update implementation to allow multiple domains to be unresolvable
+ *
+ * @param {string} unresolvableDomain
+ */
+module.exports.makeDomainUnresolvable = function (unresolvableDomain) {
+  var dns = require('dns');
+  if (dns.__originalLookup) {
+    throw new Error('makeDomainUnresolvable can\'t be called twice without ' +
+      'calling restoreUnresolvableDomains');
+  }
+  dns.__originalLookup = dns.lookup;
+  dns.lookup = function (domain, family_, callback_) {
+    var family = family_,
+      callback = callback_;
+    // parse arguments
+    if (arguments.length === 2) {
+      callback = family;
+    }
+    if (domain === unresolvableDomain) {
+      var syscall = 'getaddrinfo';
+      var errorno = 'ENOTFOUND';
+      var e = new Error(syscall + ' ' + errorno);
+      e.errno = e.code = errorno;
+      e.syscall = syscall;
+      setImmediate(callback, e);
+    } else {
+      return dns.__originalLookup.apply(dns, arguments);
+    }
+  };
+};
+
+module.exports.restoreUnresolvableDomains = function () {
+  var dns = require('dns');
+  if (dns.__originalLookup) {
+    dns.lookup = dns.__originalLookup;
+    delete dns.__originalLookup;
+  }
 };

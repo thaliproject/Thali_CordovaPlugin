@@ -71,7 +71,7 @@ var createTestServer = function (peerIdentifier) {
     adInterval: thaliConfig.SSDP_ADVERTISEMENT_INTERVAL
   });
   var usn = USN.stringify({
-    realPeerIdentifier: peerIdentifier,
+    peerIdentifier: peerIdentifier,
     generation: 0
   });
   testServer.setUSN(usn);
@@ -84,11 +84,9 @@ test('After #startListeningForAdvertisements call ' +
   var testServer = createTestServer(peerIdentifier);
 
   var peerUnavailableListener = function (peer) {
-    if (peer.realPeerIdentifier !== peerIdentifier) {
+    if (peer.peerIdentifier !== peerIdentifier) {
       return;
     }
-    t.equal(peer.peerIdentifier, USN._prefix + peerIdentifier + ':' + 0,
-      'unavailable peerIdentifier should match');
     t.equal(peer.generation, 0, 'generation should be 0');
     t.equal(peer.hostAddress, null, 'host address should be null');
     t.equal(peer.portNumber, null, 'port should should be null');
@@ -101,7 +99,7 @@ test('After #startListeningForAdvertisements call ' +
     if (peer.hostAddress !== testSeverHostAddress) {
       return;
     }
-    t.equal(peer.realPeerIdentifier, peerIdentifier,
+    t.equal(peer.peerIdentifier, peerIdentifier,
       'peer identifier should match');
     t.equal(peer.generation, 0, 'generation should be 0');
     t.equal(peer.hostAddress, testSeverHostAddress,
@@ -117,7 +115,9 @@ test('After #startListeningForAdvertisements call ' +
       // that emit the wifiPeerAvailabilityChanged that we listen above.
     });
   };
+
   wifiInfrastructure.on('wifiPeerAvailabilityChanged', peerAvailableListener);
+
   testServer.start(function () {
     wifiInfrastructure.startListeningForAdvertisements()
     .catch(function (error) {
@@ -135,10 +135,9 @@ function(t) {
   wifiInfrastructure.startUpdateAdvertisingAndListening().then(function () {
     // first invocation - generate new UUID and set 0 generation
     var peer = wifiInfrastructure.peer;
-    firstUuid = peer.realPeerIdentifier;
+    firstUuid = peer.peerIdentifier;
     t.deepEqual(peer, {
-      peerIdentifier: USN._prefix + firstUuid + ':' + 0,
-      realPeerIdentifier: firstUuid,
+      peerIdentifier: firstUuid,
       generation: 0
     }, 'first invocation sets 0 generation');
     return wifiInfrastructure.startUpdateAdvertisingAndListening();
@@ -146,8 +145,7 @@ function(t) {
     // second invocation - use the same UUID and increment generation
     var peer = wifiInfrastructure.peer;
     t.deepEqual(peer, {
-      peerIdentifier: USN._prefix + firstUuid + ':' + 1,
-      realPeerIdentifier: firstUuid,
+      peerIdentifier: firstUuid,
       generation: 1
     }, 'second invocation doesn’t change UUID but increments generation');
     return wifiInfrastructure.startUpdateAdvertisingAndListening();
@@ -155,8 +153,7 @@ function(t) {
     // third invocation - the same as the second one
     var peer = wifiInfrastructure.peer;
     t.deepEqual(peer, {
-      peerIdentifier: USN._prefix + firstUuid + ':' + 2,
-      realPeerIdentifier: firstUuid,
+      peerIdentifier: firstUuid,
       generation: 2
     }, 'third invocation doesn’t change UUID but increments generation');
     t.end();
@@ -199,8 +196,9 @@ test('#startUpdateAdvertisingAndListening sends correct requests', function (t) 
       return;
     }
     aliveCalled = true;
-      wifiInfrastructure.stopAdvertisingAndListening();
+    wifiInfrastructure.stopAdvertisingAndListening();
   });
+
   testClient.on('advertise-bye', function (data) {
     // Check for the Thali NT in case there is some other
     // SSDP traffic in the network.
@@ -220,9 +218,8 @@ test('#startUpdateAdvertisingAndListening sends correct requests', function (t) 
 });
 
 test('messages with invalid location or USN should be ignored', function (t) {
-  var realPeerIdentifier = uuid.v4();
   var usn = USN.stringify({
-    realPeerIdentifier: realPeerIdentifier,
+    peerIdentifier: uuid.v4(),
     generation: 0
   });
   var testMessage = {
@@ -296,7 +293,7 @@ test('Delayed own message are still ignored after advertisement has been ' +
 test('verify that Thali-specific messages are filtered correctly',
 function (t) {
   var usn = USN.stringify({
-    realPeerIdentifier: uuid.v4(),
+    peerIdentifier: uuid.v4(),
     generation: 4
   });
 
@@ -337,14 +334,14 @@ var testFunctionBeforeStart = function (t, functionName) {
 };
 
 test('#startListeningForAdvertisements should fail if start not called',
-  function (t) {
-    testFunctionBeforeStart(t, 'startListeningForAdvertisements');
-  });
+function (t) {
+  testFunctionBeforeStart(t, 'startListeningForAdvertisements');
+});
 
 test('#startUpdateAdvertisingAndListening should fail if start not called',
-  function (t) {
-    testFunctionBeforeStart(t, 'startUpdateAdvertisingAndListening');
-  });
+function (t) {
+  testFunctionBeforeStart(t, 'startUpdateAdvertisingAndListening');
+});
 
 test('#start should fail if called twice in a row', function (t) {
   // The start here is already the second since it is being
@@ -376,7 +373,7 @@ test('should not be started after stop is called', function (t) {
 });
 
 test('#startUpdateAdvertisingAndListening should fail invalid router has ' +
-  'been passed', function (t) {
+'been passed', function (t) {
   wifiInfrastructure.stop()
   .then(function () {
     return wifiInfrastructure.start('invalid router object');
@@ -391,7 +388,7 @@ test('#startUpdateAdvertisingAndListening should fail invalid router has ' +
 });
 
 test('#startUpdateAdvertisingAndListening should fail if router server ' +
-  'starting fails', function (t) {
+'starting fails', function (t) {
   // Save the old port so that it can be reassigned after the test.
   var oldPort = wifiInfrastructure.routerServerPort;
   // Create a test server that is used to block the port
@@ -419,7 +416,7 @@ test('#startUpdateAdvertisingAndListening should fail if router server ' +
 });
 
 test('#startUpdateAdvertisingAndListening should start hosting given router ' +
-  'object', function (t) {
+'object', function (t) {
   var router = express.Router();
   var testPath = '/test';
   router.get(testPath, function (req, res) {
@@ -447,7 +444,7 @@ test('#startUpdateAdvertisingAndListening should start hosting given router ' +
 });
 
 test('#startUpdateAdvertisingAndListening bad psk should be rejected ' +
-  'object', function (t) {
+'object', function (t) {
   var router = express.Router();
   var testPath = '/test';
   router.get(testPath, function (req, res) {
@@ -493,49 +490,49 @@ test('#stop can be called multiple times in a row', function (t) {
 });
 
 test('#startListeningForAdvertisements can be called multiple times in a row',
-  function (t) {
-    wifiInfrastructure.startListeningForAdvertisements()
-    .then(function () {
-      t.equal(wifiInfrastructure.states.listening.current, true,
-        'should be in listening state');
-      return wifiInfrastructure.startListeningForAdvertisements();
-    })
-    .then(function () {
-      t.equal(wifiInfrastructure.states.listening.current, true,
-        'should still be in listening state');
-      t.end();
-    });
+function (t) {
+  wifiInfrastructure.startListeningForAdvertisements()
+  .then(function () {
+    t.equal(wifiInfrastructure.states.listening.current, true,
+      'should be in listening state');
+    return wifiInfrastructure.startListeningForAdvertisements();
+  })
+  .then(function () {
+    t.equal(wifiInfrastructure.states.listening.current, true,
+      'should still be in listening state');
+    t.end();
   });
+});
 
 test('#stopListeningForAdvertisements can be called multiple times in a row',
-  function (t) {
-    wifiInfrastructure.stopListeningForAdvertisements()
-    .then(function () {
-      t.equal(wifiInfrastructure.states.listening.current, false,
-        'should not be in listening state');
-      return wifiInfrastructure.stopListeningForAdvertisements();
-    })
-    .then(function () {
-      t.equal(wifiInfrastructure.states.listening.current, false,
-        'should still not be in listening state');
-      t.end();
-    });
+function (t) {
+  wifiInfrastructure.stopListeningForAdvertisements()
+  .then(function () {
+    t.equal(wifiInfrastructure.states.listening.current, false,
+      'should not be in listening state');
+    return wifiInfrastructure.stopListeningForAdvertisements();
+  })
+  .then(function () {
+    t.equal(wifiInfrastructure.states.listening.current, false,
+      'should still not be in listening state');
+    t.end();
   });
+});
 
 test('#stopAdvertisingAndListening can be called multiple times in a row',
-  function (t) {
-    wifiInfrastructure.stopAdvertisingAndListening()
-    .then(function () {
-      t.equal(wifiInfrastructure.states.advertising.current, false,
-        'should not be in advertising state');
-      return wifiInfrastructure.stopAdvertisingAndListening();
-    })
-    .then(function () {
-      t.equal(wifiInfrastructure.states.advertising.current, false,
-        'should still not be in advertising state');
-      t.end();
-    });
+function (t) {
+  wifiInfrastructure.stopAdvertisingAndListening()
+  .then(function () {
+    t.equal(wifiInfrastructure.states.advertising.current, false,
+      'should not be in advertising state');
+    return wifiInfrastructure.stopAdvertisingAndListening();
+  })
+  .then(function () {
+    t.equal(wifiInfrastructure.states.advertising.current, false,
+      'should still not be in advertising state');
+    t.end();
   });
+});
 
 test('functions are run from a queue in the right order', function (t) {
   var firstSpy = sinon.spy();
@@ -564,29 +561,30 @@ test('does not get peer changes from self', function (t) {
 
   var peerChangedListener = function (peer) {
     t.equal(
-      knownOwnPeerIdentifiers.indexOf(peer.realPeerIdentifier),
+      knownOwnPeerIdentifiers.indexOf(peer.peerIdentifier),
       -1,
-      'we should not get notified about any USN that we have used');
+      'we should not get notified about any USN that we have used'
+    );
   };
 
   wifiInfrastructure.on('wifiPeerAvailabilityChanged', peerChangedListener);
-  wifiInfrastructure.startListeningForAdvertisements()
-  .then(function () {
+
+  wifiInfrastructure.startListeningForAdvertisements().then(function () {
     return wifiInfrastructure.startUpdateAdvertisingAndListening();
-  })
-  .then(function () {
-    knownOwnPeerIdentifiers.push(wifiInfrastructure.peer.realPeerIdentifier);
+  }).then(function () {
+    knownOwnPeerIdentifiers.push(wifiInfrastructure.peer.peerIdentifier);
     return Promise.delay(thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 2);
   }).then(function () {
       return wifiInfrastructure.startUpdateAdvertisingAndListening();
   }).then(function () {
+      knownOwnPeerIdentifiers.push(wifiInfrastructure.peer.peerIdentifier);
       return Promise.delay(thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 2);
   }).then(function () {
-        wifiInfrastructure.removeListener(
-          'wifiPeerAvailabilityChanged',
-          peerChangedListener
-        );
-        t.end();
+    wifiInfrastructure.removeListener(
+      'wifiPeerAvailabilityChanged',
+      peerChangedListener
+    );
+    t.end();
   }).catch(function (err) {
     t.fail('test failed');
     t.end(err);
@@ -595,7 +593,7 @@ test('does not get peer changes from self', function (t) {
 
 // From here onwards, tests only work on mocked up desktop
 // environment where network changes can be simulated.
-if (platform._isRealMobile) {
+if (platform.isMobile) {
   return;
 }
 
@@ -646,46 +644,53 @@ var tryStartingFunctionWhileWifiOff = function (t, functionName, keyName) {
 };
 
 test('#startListeningForAdvertisements returns error if wifi is off and ' +
-  'fires event when on', function (t) {
+'fires event when on', function (t) {
   tryStartingFunctionWhileWifiOff(t, 'startListeningForAdvertisements',
     'discoveryActive');
 });
 
 test('#startUpdateAdvertisingAndListening returns error if wifi is off and ' +
-  'fires event when on', function (t) {
+'fires event when on', function (t) {
   tryStartingFunctionWhileWifiOff(t, 'startUpdateAdvertisingAndListening',
     'advertisingActive');
 });
 
-test.only('when wifi is enabled discovery is activated and peers become available',
-  function () {
-    return !tape.coordinated || platform._isRealMobile;
-  },
-  function (t) {
-    ThaliMobileNativeWrapper.emitter.once('networkChangedNonTCP',
-    function (networkChangedValue) {
-      t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
-      var peerIdentifier = uuid.v4();
-      var testServer = createTestServer(peerIdentifier);
-      testServer.start(function () {
-        wifiInfrastructure.startListeningForAdvertisements()
-        .catch(function (error) {
-          t.equals(error.message, 'Radio Turned Off',
-            'specific error expected');
+test('when wifi is enabled discovery is activated and peers become available',
+function (t) {
+  ThaliMobileNativeWrapper.emitter.once('networkChangedNonTCP',
+  function (networkChangedValue) {
+    t.equals(networkChangedValue.wifi, 'off', 'wifi should be off');
+    var peerIdentifier = uuid.v4();
+    var testServer = createTestServer(peerIdentifier);
+    testServer.start(function () {
+      wifiInfrastructure.startListeningForAdvertisements()
+      .catch(function (error) {
+        t.equals(error.message, 'Radio Turned Off', 'specific error expected');
 
-          var peerAvailableListener = function (peer) {
-            wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged',
-                                              peerAvailableListener);
-            testServer.stop(function () {
-              t.end();
-            });
-          };
+        var peerAvailableListener = function (peer) {
+          if (peer.peerIdentifier !== peerIdentifier) {
+            return;
+          }
 
-          wifiInfrastructure.on('wifiPeerAvailabilityChanged',
-                                peerAvailableListener);
-          testUtils.toggleWifi(true);
-        });
+          t.equal(peer.peerIdentifier, peerIdentifier,
+                  'peer identifier should match');
+          t.equal(peer.hostAddress, testSeverHostAddress,
+                  'host address should match');
+          t.equal(peer.portNumber, testServerPort,
+                  'port should match');
+
+          wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged',
+                                            peerAvailableListener);
+          testServer.stop(function () {
+            t.end();
+          });
+        };
+
+        wifiInfrastructure.on('wifiPeerAvailabilityChanged',
+                              peerAvailableListener);
+        testUtils.toggleWifi(true);
       });
     });
-    testUtils.toggleWifi(false);
   });
+  testUtils.toggleWifi(false);
+});

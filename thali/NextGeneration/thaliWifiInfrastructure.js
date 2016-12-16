@@ -48,6 +48,7 @@ var promiseResultSuccessOrFailure = function (promise) {
  * times in a row without causing a state change.
  */
 
+
 /**
  * This creates an object to manage a WiFi instance. During production we will
  * have exactly one instance running but for testing purposes it's very useful
@@ -89,12 +90,17 @@ inherits(ThaliWifiInfrastructure, EventEmitter);
 ThaliWifiInfrastructure.prototype._init = function () {
   var serverOptions = {
     adInterval: thaliConfig.SSDP_ADVERTISEMENT_INTERVAL,
-    udn: thaliConfig.SSDP_NT
+    udn: thaliConfig.SSDP_NT,
+    thaliLogger: require('../ThaliLogger')('nodeSSDPServerLogger')
   };
   this._server = new nodessdp.Server(serverOptions);
   this._setLocation();
 
-  this._client = new nodessdp.Client();
+  var clientOptions = {
+    thaliLogger: require('../ThaliLogger')('nodeSSDPClientLogger')
+  }
+
+  this._client = new nodessdp.Client(clientOptions);
 
   this._client.on('advertise-alive', function (data) {
     this._handleMessage(data, true);
@@ -208,6 +214,7 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
     peer.hostAddress = peer.portNumber = null;
   }
 
+  logger.debug('Emitting wifiPeerAvailabilityChanged ' + JSON.stringify(peer));
   this.emit('wifiPeerAvailabilityChanged', peer);
   return true;
 };
@@ -221,7 +228,7 @@ ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
 
 ThaliWifiInfrastructure.prototype._isOwnMessage = function (data) {
   try {
-    var peerIdentifier = USN.parse(data.USN).realPeerIdentifier;
+    var peerIdentifier = USN.parse(data.USN).peerIdentifier;
     return (this._ownPeerIdentifiersHistory.indexOf(peerIdentifier) !== -1);
   } catch (err) {
     return false;
@@ -442,11 +449,11 @@ function (skipPromiseQueue, changeTarget) {
  * It should be fine. But it's important to find out so that other apps can't
  * block us.
  *
- * Also note that the implementation of
- * SSDP MUST recognize advertisements from its own instance and ignore them.
- * However it is possible to have multiple independent instances of
- * ThaliWiFiInfrastructure on the same device and we MUST process advertisements
- * from other instances of ThaliWifiInfrastructure on the same device.
+ * Also note that the implementation of SSDP MUST recognize advertisements from
+ * its own instance and ignore them. However it is possible to have multiple
+ * independent instances of ThaliWiFiInfrastructure on the same device and we
+ * MUST process advertisements from other instances of ThaliWifiInfrastructure
+ * on the same device.
  *
  * This method will also cause the Express app passed in to be hosted in a
  * HTTP server configured with the device's local IP. In other words, the
@@ -505,6 +512,7 @@ function () {
     }
 
     self.states.advertising.target = true;
+
 
     self._updateOwnPeer();
 
@@ -583,24 +591,20 @@ function () {
 
 ThaliWifiInfrastructure.prototype._updateOwnPeer = function () {
   if (!this.peer) {
-    var realPeerIdentifier = uuid.v4();
     this.peer = {
-      realPeerIdentifier: realPeerIdentifier,
+      peerIdentifier: uuid.v4(),
       generation: 0
     };
 
-    this.peer.peerIdentifier = USN.stringify(this.peer);
-
     // Update own peers history
     var history = this._ownPeerIdentifiersHistory;
-    history.push(this.peer.realPeerIdentifier);
+    history.push(this.peer.peerIdentifier);
     if (history.length > thaliConfig.SSDP_OWN_PEERS_HISTORY_SIZE) {
       var overflow = history.length - thaliConfig.SSDP_OWN_PEERS_HISTORY_SIZE;
       history.splice(0, overflow);
     }
   } else {
     this.peer.generation++;
-    this.peer.peerIdentifier = USN.stringify(this.peer);
   }
 };
 
@@ -736,5 +740,9 @@ function (skipPromiseQueue, changeTarget) {
  * @property {module:thaliMobileNative~networkChanged} networkChangedValue
  *
  */
+
+ThaliWifiInfrastructure.prototype.getNetworkStatus = function () {
+  return ThaliMobileNativeWrapper.getNonTCPNetworkStatus();
+};
 
 module.exports = ThaliWifiInfrastructure;

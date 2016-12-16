@@ -8,21 +8,21 @@ var actionState = ThaliPeerAction.actionState;
 var assert = require('assert');
 var thaliConfig = require('../thaliConfig');
 var logger = require('../../ThaliLogger')('thaliReplicationPeerAction');
-var ForeverAgent = require('forever-agent');
 var LocalSeqManager = require('./localSeqManager');
 var RefreshTimerManager = require('./utilities').RefreshTimerManager;
 var Utils = require('../utils/common.js');
 
 /** @module thaliReplicationPeerAction */
 
+/* eslint-disable max-len */
 /**
  * @classdesc Manages replicating information with a peer we have discovered
  * via notifications.
  *
  * @param {module:thaliNotificationClient.event:peerAdvertisesDataForUs} peerAdvertisesDataForUs
  * The notification that triggered this replication. This gives us the
- * information we need to create a connection as well the connection type
- * we need for the base class's constructor.
+ * information we need to create a connection as well the connection type we
+ * need for the base class's constructor.
  * @param {PouchDB} PouchDB The PouchDB class constructor we are supposed to
  * use.
  * @param {string} dbName The name of the DB we will use both for local use as
@@ -37,6 +37,7 @@ function ThaliReplicationPeerAction(peerAdvertisesDataForUs,
                                     PouchDB,
                                     dbName,
                                     ourPublicKey) {
+/* eslint-enable max-len */
   assert(ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS * 1000 -
     ThaliReplicationPeerAction.PUSH_LAST_SYNC_UPDATE_MILLISECONDS >
     1000, 'Need at least a seconds worth of clearance to make sure ' +
@@ -101,6 +102,17 @@ ThaliReplicationPeerAction.prototype.getPeerAdvertisesDataForUs = function () {
 };
 
 /**
+ * Creates a new replication action with the same constructor arguments as
+ * this replication action.
+ * @public
+ * @returns {ThaliReplicationPeerAction}
+ */
+ThaliReplicationPeerAction.prototype.clone = function () {
+  return new ThaliReplicationPeerAction(this._peerAdvertisesDataForUs,
+    this._PouchDB, this._dbName, this._ourPublicKey);
+};
+
+/**
  * The replication timer is needed because by default we do live replications
  * which will keep a connection open to the remote server and send heartbeats
  * to keep things going. This means that our timers at lower levels in our
@@ -123,6 +135,7 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
   self._refreshTimerManager.start();
 };
 
+/* eslint-disable max-len */
 /**
  * When start is called we will start a replication with the remote peer using
  * the settings specified below. We will need to create the URL using the
@@ -171,8 +184,8 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
  * seconds then we will end the replication. The output from this event also
  * provides us with the current last_seq we have synch'd from the remote peer.
  * Per http://thaliproject.org/ReplicationAcrossDiscoveryProtocol/ we need to
- * update the remote `_Local/<peer ID>` document every
- * {@link module:thaliReplicationPeerAction~ThaliReplicationPeerAction.PUSH_LAST_SYNC_UPDATE_MILLISECONDS}
+ * update the remote `_Local/<peer ID>` document every {@link
+ * module:thaliReplicationPeerAction~ThaliReplicationPeerAction.PUSH_LAST_SYNC_UPDATE_MILLISECONDS}
  *
  * Make sure to keep the cancel object returned by the replicate call. Well
  * need it for kill.
@@ -183,59 +196,19 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
  * @returns {Promise<?Error>}
  */
 ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
+/* eslint-enable max-len */
   var self = this;
   this._completed = false;
 
   return ThaliReplicationPeerAction.super_.prototype.start
     .call(this, httpAgentPool)
     .then(function () {
-      /*
-      TODO: The code below deals with several issues in a non-obvious way.
-      First, there is https://github.com/thaliproject/thali/issues/267 which
-      deals with a bug in PouchDB that prevents us from using the agent
-      option which we need to use httpAgentPool. The current work around is
-      that we instead specify an agent class and agentOptions.
-
-      This leads to another related issue. Because we can't use agent we
-      create a situation where request (which is hiding under PouchDB on
-      Node.js) will use a pool to pick an agent to use. In other words request
-      will look at PouchDB's HTTP request and create a key for it and check
-      the pool of agents it has and see if any match. Normally this is good
-      except that request doesn't know anything about PSK so it doesn't use
-      the PSK values in its pool ID calculations and thus you get fun
-      events like using the same agent (with the same psk ID and key) for
-      two different peers! To prevent this we put in the secureOptions
-      argument which currently Node.js ignores when we use PSK. We stick
-      in there both the pskId as well as the URL. The reason we need both
-      is that the same PSK ID can legitimately be used with two different
-      URLS (For example, if the same peer is available over both bluetooth
-      and wifi). In addition the same URL can legitimately use two different
-      PSK IDs (for example, beacon requests use one ID while all other
-      requests use a secure ID). So we need both values to guarantee the
-      right kind of uniqueness.
-
-      We picked secureOptions because if we used cert (which is ignored when
-      we use PSK) we would also have to use key. We couldn't use PFX because
-      then request tries to load it! So secureOptions was our last choice and
-      it seems to work.
-       */
       var remoteUrl = 'https://' + self._peerAdvertisesDataForUs.hostAddress +
         ':' + self._peerAdvertisesDataForUs.portNumber +
         path.join(thaliConfig.BASE_DB_PATH, self._dbName);
       var ajaxOptions = {
         ajax : {
-          agentClass: ForeverAgent.SSL,
-          agentOptions : {
-            rejectUnauthorized: false,
-            keepAlive: true,
-            keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-            maxSockets: Infinity,
-            maxFreeSockets: 256,
-            ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-            pskIdentity: self.getPskIdentity(),
-            pskKey: self.getPskKey(),
-            secureOptions: self.getPskIdentity() + remoteUrl
-          }
+          agent: httpAgentPool
         },
         skip_setup: true// jscs:ignore requireCamelCaseOrUpperCaseIdentifiers
       };
@@ -299,11 +272,11 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
 /**
  * Check the base class for the core functionality but in our case the key thing
  * is that we call the cancel object we got on the replication.
- *
+ * @returns {null}
  */
 ThaliReplicationPeerAction.prototype.kill = function () {
   if (this.getActionState() === actionState.KILLED) {
-    return;
+    return null;
   }
   ThaliReplicationPeerAction.super_.prototype.kill.call(this);
 
@@ -317,52 +290,72 @@ ThaliReplicationPeerAction.prototype.kill = function () {
   if (this._localSeqManager) {
     this._localSeqManager.stop();
   }
+
+  return null;
 };
+
+function printErrorArray(errors) {
+  var result = '';
+  errors.forEach(function (error) {
+    result += 'error: ' + error.message + ' ';
+  });
+  return result;
+}
 
 /**
  * @param {Array.<Error>} errors
+ * @returns {null}
  * @private
  */
 ThaliReplicationPeerAction.prototype._complete =
   function (errors) {
     var self = this;
-    if (this._completed) {
-      return;
+    if (self._completed) {
+      logger.debug('We called _complete with ' + printErrorArray(errors) +
+      ' but this is a second call and so we ignored it');
+      return null;
     }
-    this._completed = true;
+    self._completed = true;
+    logger.debug('We called _complete with ' + printErrorArray(errors) +
+    ' and it caused us to complete');
 
-    this.kill();
+    self.kill();
 
-    assert(this._resolve, 'resolve should exist');
-    assert(this._reject, 'reject should exist');
+    assert(self._resolve, 'resolve should exist');
+    assert(self._reject, 'reject should exist');
+    var returnError = null;
 
     if (!errors || errors.length === 0) {
-      this._resolve();
+      self._resolve();
     } else {
       var isErrorResolved = errors.some(function (error) {
         switch (error.code) {
           case 'ECONNREFUSED': {
-            self._reject(
-              new Error('Could not establish TCP connection')
-            );
+            returnError = new Error('Could not establish TCP connection');
+            returnError.status = error.status;
+            returnError.code = error.code;
+            self._reject(returnError);
             return true;
           }
           case 'ECONNRESET': {
-            self._reject(
-              new Error('Could establish TCP connection but couldn\'t keep it running')
-            );
+            returnError = new Error('Could establish TCP connection but ' +
+              'couldn\'t keep it running');
+            returnError.status = error.status;
+            returnError.code = error.code;
+            self._reject(returnError);
             return true;
           }
         }
         return false;
       });
       if (!isErrorResolved) {
-        return this._reject(errors[0]);
+        self._reject(errors[0]);
       }
     }
 
-    this._resolve = null;
-    this._reject  = null;
+    self._resolve = null;
+    self._reject  = null;
+    return null;
   };
 
 ThaliReplicationPeerAction.prototype.waitUntilKilled = function () {
@@ -379,6 +372,6 @@ ThaliReplicationPeerAction.prototype.waitUntilKilled = function () {
     promises.push(this._localSeqManager.waitUntilStopped());
   }
   return Promise.all(promises);
-}
+};
 
 module.exports = ThaliReplicationPeerAction;

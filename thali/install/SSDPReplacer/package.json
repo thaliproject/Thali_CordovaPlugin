@@ -1,0 +1,16 @@
+{
+  "name": "SSDPReplacer",
+  "version": "0.0.1",
+  "description": "Used to replace hardcoded SSDP values",
+  "main": "hook.js",
+  "dependencies": {
+    "bluebird": "3.4.6",
+    "end-with": "1.0.2",
+    "findit": "2.0.0",
+    "randomstring": "1.1.5",
+    "node-uuid": "1.4.7",
+    "fs-extra-promise": "0.2.0"
+  },
+  "author": "Microsoft",
+  "license": "MIT"
+}

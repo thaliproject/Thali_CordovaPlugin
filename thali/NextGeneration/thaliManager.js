@@ -156,39 +156,19 @@ ThaliManager.prototype.start = function (arrayOfRemoteKeys) {
     this._getPskIdToSecret,
     this._networkType
   )
-
   .then(function () {
-    /*
-    Ideally we could call startListening and startUpdateAdvertising separately
-    but this causes problems in iOS. The issue is that we deal with the
-    restriction that there can only be one MCSession between two devices by
-    having a leader election where one device will always form the session.
-    Imagine that there is device A and B. B is advertising. A hears the
-    advertisement and wants to connect but it can't start the session. So what
-    it has to do is send an invite to B, who will reject the invite but then
-    respond with its own invite to A. For this to work however B has to be
-    listening for advertisements (not just making them) because otherwise
-    there is no way in iOS for A to ask B for a session (that will be
-    refused). Simultaneously A must be listening for advertisements (or it
-    wouldn't have heard B) and it must be advertising itself or B couldn't
-    establish the MCSession with it. So in practice this means that in iOS
-    everyone has to be both listening and advertising at the same time.
-    */
     logger.debug('start listening for advertisements');
     return ThaliMobile.startListeningForAdvertisements();
   })
-
   .then(function () {
     logger.debug('start update advertising and listening');
     return ThaliMobile.startUpdateAdvertisingAndListening();
   })
-
   .then(function () {
     logger.debug('starting thaliSendNotificationBasedOnReplication');
     return self._thaliSendNotificationBasedOnReplication
               .start(arrayOfRemoteKeys);
   })
-
   .then(function () {
     self.state = ThaliManager.STATES.STARTED;
     self._startingPromise = undefined;
@@ -207,59 +187,55 @@ ThaliManager.prototype.stop = function () {
 
   // Can we stop now?
   var args = arguments;
-  switch (this.state) {
+  switch (self.state) {
     case ThaliManager.STATES.CREATED:
     case ThaliManager.STATES.STOPPED: {
       return Promise.resolve();
     }
     case ThaliManager.STATES.STOPPING: {
-      return this._stoppingPromise;
+      return self._stoppingPromise;
     }
     case ThaliManager.STATES.STARTING: {
-      return this._startingPromise
+      return self._startingPromise
         .then(function () {
           return self.stop.apply(self, args);
         });
     }
   }
   assert(
-    this.state === ThaliManager.STATES.STARTED,
+    self.state === ThaliManager.STATES.STARTED,
     'ThaliManager state should be \'STARTED\' for stop'
   );
-  this.state = ThaliManager.STATES.STOPPING;
+  self.state = ThaliManager.STATES.STOPPING;
 
   logger.debug('stopping thaliPullReplicationFromNotification');
-  this._thaliPullReplicationFromNotification.stop();
+  self._thaliPullReplicationFromNotification.stop();
 
   logger.debug('stopping thaliSendNotificationBasedOnReplication');
-  this._stoppingPromise = this._thaliSendNotificationBasedOnReplication.stop()
+  self._stoppingPromise = self._thaliSendNotificationBasedOnReplication.stop()
+    .then(function () {
+      logger.debug('stopping thaliPeerPoolInterface');
+      return self._thaliPeerPoolInterface.stop();
+    })
+    .then(function () {
+      logger.debug('stopping advertising and listening');
+      return ThaliMobile.stopAdvertisingAndListening();
+    })
+    .then(function () {
+      logger.debug('stopping listening for advertisements');
+      return ThaliMobile.stopListeningForAdvertisements();
+    })
+    .then(function () {
+      logger.debug('stopping ThaliMobile');
+      return ThaliMobile.stop();
+    })
+    .then(function () {
+      self.state = ThaliManager.STATES.STOPPED;
+      self._stoppingPromise = undefined;
+      return true;
+    });
 
-  .then(function () {
-    logger.debug('stopping thaliPeerPoolInterface');
-    return self._thaliPeerPoolInterface.stop();
-  })
-
-  .then(function () {
-    logger.debug('stopping advertising and listening');
-    return ThaliMobile.stopAdvertisingAndListening();
-  })
-
-  .then(function () {
-    logger.debug('stopping listening for advertisements');
-    return ThaliMobile.stopListeningForAdvertisements();
-  })
-
-  .then(function () {
-    logger.debug('stopping ThaliMobile');
-    return ThaliMobile.stop();
-  })
-
-  .then(function () {
-    self.state = ThaliManager.STATES.STOPPED;
-    self._stoppingPromise = undefined;
-  });
-
-  return this._stoppingPromise;
+  return self._stoppingPromise;
 };
 
 /**
@@ -331,12 +307,12 @@ ThaliManager.prototype._connectionFilter =
  * This is thali id callback. Is thali id valid?
  * @private
  * @param {string} thaliId
- * @param {object} request
+ * @param {Object} request
  * @returns {boolean}
  */
 ThaliManager.prototype._resolveThaliId = function (thaliId, request) {
   // In the case of an id that begins with the string [LOCAL_SEQ_POINT_PREFIX]
-  // we MUST enforce that the value of the :id EXACTLY matches the hashed public
+  // we MUST enforce that the value of the {:id} EXACTLY matches the hashed public
   // key of the caller as generated by
   // thaliNotificationBeacons.createPublicKeyHash.
 
@@ -392,11 +368,11 @@ ThaliManager._acl = [
         'verbs': ['POST']
       },
       {
-        'path': '/{:db}/:id',
+        'path': '/{:db}/{:id}',
         'verbs': ['GET']
       },
       {
-        'path': '/{:db}/:id/attachment',
+        'path': '/{:db}/{:id}/{:attachmentId}',
         'verbs': ['GET']
       },
       {

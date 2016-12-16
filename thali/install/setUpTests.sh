@@ -1,28 +1,14 @@
 #!/usr/bin/env bash
 
-# Exit immediately if a command exits with a non-zero status.
-set -e
+echo ""
+echo "start setUpTests.sh"
 
-ERROR_ABORT()
-{
-  if [[ $? != 0 ]]; then
-    exit -1
-  fi
-}
+SCRIPT_PATH="$(cd "$(dirname "$0")"; pwd -P)"
+source "$SCRIPT_PATH/include.sh/build-dep.sh"
 
-# Check the platform we are running
-IS_MINIGW_PLATFORM=false
-IS_DARWIN_PLATFORM=false
+set -euo pipefail
 
-if test x"$(uname -s | cut -c 1-5)" == xMINGW ; then
-  echo "Running in MinGW Platform"
-
-  IS_MINIGW_PLATFORM=true
-elif test x"`uname`" = xDarwin ; then
-  echo "Running in Darwin Platform"
-
-  IS_DARWIN_PLATFORM=true
-fi
+trap 'log_error $LINENO' ERR
 
 TEST_PROJECT_NAME=ThaliTest
 
@@ -40,37 +26,50 @@ TEST_PROJECT_ROOT_DIR=${REPO_ROOT_DIR}/../${TEST_PROJECT_NAME}
 # Prepares test project
 prepare_project()
 {
-  echo "Preparing ${TEST_PROJECT_NAME} Cordova project"
+  echo ""
+  echo "start preparing ${TEST_PROJECT_NAME} Cordova project"
+
+  IPADDRESS=${1:-}
+  npm install --no-optional --production --prefix $REPO_ROOT_DIR/thali/install
+  node $REPO_ROOT_DIR/thali/install/validateBuildEnvironment.js
 
   cd $REPO_ROOT_DIR/test/TestServer
   npm install --no-optional
-  node generateServerAddress.js $2
-
+  node generateServerAddress.js $IPADDRESS
   cd $REPO_ROOT_DIR/..
-  cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME;ERROR_ABORT
-  mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev;ERROR_ABORT
+  cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME
+  mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev
 
-  if [ $IS_MINIGW_PLATFORM == true ]; then
+  if is_minigw_platform; then
       # The thali package might be installed as link and there will
       # be troubles later on if this link is tried to be copied so
       # remove it here.
-      rm -rf $REPO_ROOT_DIR/test/www/jxcore/node_modules/thali;ERROR_ABORT
-      cp -R $REPO_ROOT_DIR/test/www/ $TEST_PROJECT_NAME/;ERROR_ABORT
+      rm -rf $REPO_ROOT_DIR/test/www/jxcore/node_modules/thali
+      cp -R $REPO_ROOT_DIR/test/www/ $TEST_PROJECT_NAME/
   else
-      rsync -a --no-links $REPO_ROOT_DIR/test/www/ $TEST_PROJECT_NAME/www;ERROR_ABORT
+      rsync -a --no-links $REPO_ROOT_DIR/test/www/ $TEST_PROJECT_NAME/www
   fi
+
+  cd $REPO_ROOT_DIR/thali/install/SSDPReplacer
+  npm install --no-optional
+  cd $REPO_ROOT_DIR/../$TEST_PROJECT_NAME
+  cordova plugin add $REPO_ROOT_DIR/thali/install/SSDPReplacer
+
+  echo "end preparing ${TEST_PROJECT_NAME} Cordova project"
+  echo ""
 }
 
 install_thali()
 {
-  echo "Installing Thali into ${TEST_PROJECT_NAME}"
+  echo ""
+  echo "start installing Thali into ${TEST_PROJECT_NAME}"
 
-  cd $TEST_PROJECT_ROOT_DIR/www/jxcore;ERROR_ABORT
-  node installCustomPouchDB.js;ERROR_ABORT
-  jx npm install $REPO_ROOT_DIR/thali --save --no-optional --production;ERROR_ABORT
+  cd $TEST_PROJECT_ROOT_DIR/www/jxcore
+  node installCustomPouchDB.js
+  jx install $REPO_ROOT_DIR/thali --save --no-optional
   find . -name "*.gz" -delete
 
-  if [ $IS_MINIGW_PLATFORM == true ]; then
+  if is_minigw_platform; then
       # On Windows the package.json file will contain an invalid local file URI for Thali,
       # which needs to be replaced with a valid value. Otherwise the build process
       # will be aborted. Restore write permission after running sed in case
@@ -82,23 +81,25 @@ install_thali()
   # SuperTest which is used by some of the BVTs include a PEM file (for private
   # keys) that makes Android unhappy so we remove it below in addition to the gz
   # files.
-  npm install --no-optionall --production;ERROR_ABORT
+  echo ""
+  echo "run supertest for Android"
+  jx install --no-optional --production
 
   # In case autoremove fails to delete the files, delete them explicitly.
   find . -name "*.gz" -delete
   find . -name "*.pem" -delete
 
-  cp -v $1 app.js;ERROR_ABORT
+  echo "copying app.js"
+  cp -v $1 app.js
 
-  cd $REPO_ROOT_DIR/thali/install
-  npm install --no-optional
-  cd $TEST_PROJECT_ROOT_DIR/thaliDontCheckIn
-  node $REPO_ROOT_DIR/thali/install/setUpThaliTestIds.js
+  echo "end installing Thali"
+  echo ""
 }
 
 add_android_platform()
 {
-  echo "Adding Android platform into ${TEST_PROJECT_NAME}"
+  echo ""
+  echo "start adding Android platform into ${TEST_PROJECT_NAME}"
 
   cd $TEST_PROJECT_ROOT_DIR
 
@@ -106,52 +107,104 @@ add_android_platform()
 
   # A file that identifies the current build as a UT build
   touch platforms/android/unittests
+
+  echo "end adding Android platform"
+  echo ""
 }
 
 build_android()
 {
-  echo "Building Android app"
+  echo ""
+  echo "start building ${TEST_PROJECT_NAME} Android app"
 
   cd $TEST_PROJECT_ROOT_DIR
 
-  cordova build android --release --device;ERROR_ABORT
+  cordova build android --release --device
+
+  echo "end building ${TEST_PROJECT_NAME} Android app"
+  echo ""
 }
 
 # Adds iOS platform when we're running on macOS
 add_ios_platform_if_possible()
 {
-  if [ $IS_DARWIN_PLATFORM == true ]; then
-    echo "Adding iOS platform into ${TEST_PROJECT_NAME}"
+  if is_darwin_platform; then
+    echo ""
+    echo "start adding iOS platform into ${TEST_PROJECT_NAME}"
 
     cd $TEST_PROJECT_ROOT_DIR
 
-    cordova platform add ios;ERROR_ABORT
+    cordova platform add ios
 
     # A file that identifies the current build as a UT build
-    touch platforms/ios/unittests;ERROR_ABORT
+    touch platforms/ios/unittests
+
+    echo "end adding iOS platform"
+    echo ""
+  else
+    echo "skip adding iOS platform"
+    echo ""
   fi
 }
 
 # Builds iOS platform when we're running on macOS
 build_ios_if_possible()
 {
-  if [ $IS_DARWIN_PLATFORM == true ]; then
-    echo "Building iOS app"
+  if is_darwin_platform; then
+    echo ""
+    echo "start building ${TEST_PROJECT_NAME} iOS app"
 
     cd $TEST_PROJECT_ROOT_DIR
 
-    cordova build ios --device;ERROR_ABORT
+    # cordova really doesn't have any flexibility in making builds via CLAIM
+    # they're using their xcconfig that doesn't work in our case
+    # in ideal case we just run the command below
+    # `cordova build ios --device`
+    #
+    # in our case we have to build directly using xcode cli
+    # since we have some required project settings
+    # we've analyzed `cordova build` source code
+    # and emulated it's behaviour
+    #
+    # according to cordova build documentation
+    # it's a shortcut for `cordova prepare` + `cordova compile`
+    # so we have to run cordova prepare and xcodebuild then
 
+    cordova prepare ios --device
+
+    TEST_PROJECT_DIR=$TEST_PROJECT_ROOT_DIR/platforms/ios
+    TEST_PROJECT_PATH=$TEST_PROJECT_DIR/$TEST_PROJECT_NAME.xcodeproj
+
+    echo ""
+    echo "building project: ${TEST_PROJECT_PATH}"
+
+    (\
+    cd $TEST_PROJECT_DIR && \
+    xcodebuild \
+      -xcconfig $REPO_ROOT_DIR/thali/install/ios/build-ci.xcconfig \
+      -project $TEST_PROJECT_NAME.xcodeproj \
+      -target $TEST_PROJECT_NAME \
+      -configuration Debug \
+      -destination 'platform=iOS' \
+      build \
+      CONFIGURATION_BUILD_DIR="${TEST_PROJECT_DIR}/build/device" \
+      SHARED_PRECOMPS_DIR="${TEST_PROJECT_DIR}/build/sharedpch" \
+    )
+
+    echo "end building ${TEST_PROJECT_NAME} iOS app"
+    echo ""
   fi
 }
 
 # Please note that functions order is important
-prepare_project $1 $2
+IPADDRESS=${2:-}
+prepare_project ${IPADDRESS}
 add_android_platform
-# add_ios_platform_if_possible
-install_thali $1 $2
+add_ios_platform_if_possible
+install_thali $1 ${IPADDRESS}
 build_android
-# build_ios_if_possible
-# TODO: iOS builds are disabled temporarily
+build_ios_if_possible
 
 echo "Remember to start the test coordination server by running jx index.js"
+echo "end setUpTests.sh"
+echo ""

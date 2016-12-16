@@ -84,10 +84,7 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
     ThaliPeerPoolDefault.super_.prototype.enqueue.apply(this, arguments);
 
   var actionAgent = new ForeverAgent.SSL({
-    keepAlive: true,
-    keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-    maxSockets: Infinity,
-    maxFreeSockets: 256,
+    maxSockets: 8,
     ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
     pskIdentity: peerAction.getPskIdentity(),
     pskKey: peerAction.getPskKey()
@@ -108,11 +105,10 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
 };
 
 ThaliPeerPoolDefault.prototype.start = function () {
-  var self = this;
   this._stopped = false;
 
   return ThaliPeerPoolDefault.super_.prototype.start.apply(this, arguments);
-}
+};
 
 /**
  * This function is used primarily for cleaning up after tests and will
@@ -121,7 +117,6 @@ ThaliPeerPoolDefault.prototype.start = function () {
  * to enqueue.
  */
 ThaliPeerPoolDefault.prototype.stop = function () {
-  var self = this;
   this._stopped = true;
 
   return ThaliPeerPoolDefault.super_.prototype.stop.apply(this, arguments);

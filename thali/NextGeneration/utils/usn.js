@@ -42,19 +42,10 @@ USN.parse = function (usn) {
   if (isNaN(generation)) {
     throw new Error('Invalid USN (generation is not a number): ' + usn);
   }
-
-  // This is all a hack. For right now the peerIdentifier needs to contain
-  // the actual peerIdentifier as well as the generation in a single value.
-  // But soon we'll switch formats so the two will be handled separately.
-  var waitingForGenerationToBeBrokenOut = {
-    realPeerIdentifier: peerIdentifier,
+  return {
+    peerIdentifier: peerIdentifier,
     generation: generation
   };
-
-  waitingForGenerationToBeBrokenOut.peerIdentifier =
-    USN.stringify(waitingForGenerationToBeBrokenOut);
-
-  return waitingForGenerationToBeBrokenOut;
 };
 
 /**
@@ -62,7 +53,7 @@ USN.parse = function (usn) {
  * @returns {string}
  */
 USN.stringify = function (peer) {
-  return USN._prefix + peer.realPeerIdentifier + ':' + peer.generation;
+  return USN._prefix + peer.peerIdentifier + ':' + peer.generation;
 };
 
 module.exports = USN;

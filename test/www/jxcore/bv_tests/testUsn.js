@@ -17,12 +17,9 @@ test('Correctly parses/stringifies USN', function (t) {
   var invalidGeneration = 'data:' + someUuid + ':notanumber';
 
   var peer = {
-    realPeerIdentifier: someUuid,
+    peerIdentifier: someUuid,
     generation: someGeneration
   };
-
-  peer.peerIdentifier = 'data:' + peer.realPeerIdentifier + ':' +
-                          peer.generation;
 
   t.deepEqual(USN.parse(usn), peer, 'correctly parses USN string');
   t.throws(function () {

@@ -151,16 +151,17 @@ module.exports = function (self) {
   }
 
   return new Promise(function (resolve, reject) {
-    logger.debug('creating native server');
+    logger.debug('Creating Native Server');
 
     self._nativeServer = makeIntoCloseAllServer(net.createServer());
     self._nativeServer._incoming = [];
 
     self._nativeServer.on('error', function (err) {
-      logger.debug(err);
+      logger.debug('Native Server - encountered error %s', err);
     });
 
     self._nativeServer.on('close', function () {
+      logger.debug('Native Server - close');
       // this == self._nativeServer (which is already null by
       // the time this handler is called)
       this._incoming.forEach(function (i) {
@@ -171,9 +172,13 @@ module.exports = function (self) {
       this._incoming = [];
     });
 
+    var incomingConnectionCounter = -1;
     self._nativeServer.on('connection', function (incoming) {
+      ++incomingConnectionCounter;
+      var localIncomingConnectionId = incomingConnectionCounter;
+      logger.debug('incoming - incoming Android TCP/IP client connection <-> ' +
+        'Mux - %d', localIncomingConnectionId);
       self._nativeServer._incoming.push(incoming);
-      logger.debug('new incoming socket');
 
       // We've received a new incoming connection from the P2P layer
       // Wrap this new socket in a multiplex. New streams appearing
@@ -181,18 +186,21 @@ module.exports = function (self) {
       // side and should be connected to the application server port.
 
       incoming.on('error', function (err) {
-        logger.debug(err);
+        logger.debug('incoming - incoming Android TCP/IP client connection ' +
+          '<-> Mux - %d - error %s', localIncomingConnectionId, err);
       });
 
       incoming.setTimeout(thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD);
       incoming.on('timeout', function () {
-        logger.debug('incoming socket timeout');
+        logger.debug('incoming - incoming Android TCP/IP client connection ' +
+          '<-> Mux - %d - incoming socket timeout', localIncomingConnectionId);
         incoming.destroy();
         incoming._mux && incoming._mux.destroy();
       });
 
       incoming.on('close', function () {
-        logger.debug('incoming socket close');
+        logger.debug('incoming - incoming Android TCP/IP client connection' +
+          ' <-> Mux - %d - close', localIncomingConnectionId);
         if (self._nativeServer) {
           removeArrayElement(self._nativeServer._incoming, incoming);
         }
@@ -200,29 +208,51 @@ module.exports = function (self) {
           self.incomingConnectionState.DISCONNECTED);
       });
 
-      logger.debug('creating incoming mux');
-      var mux = multiplex(function onStream(stream) {
-        mux._streams.push(stream);
+      if (logger.level === 'silly') {
+        incoming.on('data', function (data) {
+          logger.silly('incoming - incoming Android TCP/IP client connection ' +
+            '<-> Mux - %d - data length (bytes) - %d',
+            localIncomingConnectionId, data.length);
+        });
+      }
 
-        logger.debug('new stream: ', stream);
+      logger.debug('Native Server - Creating Mux');
+      var incomingMuxStreamCounter = -1;
+      var mux = multiplex(function onStream(stream) {
+        ++incomingMuxStreamCounter;
+        var localIncomingMuxStreamCounter = incomingMuxStreamCounter;
+
+        logger.debug('stream - mux stream <-> outgoing TCP/IP client ' +
+          'connection to node - %d - %d - created', localIncomingConnectionId,
+          localIncomingMuxStreamCounter);
+        mux._streams.push(stream);
 
         // Remote side is trying to connect a new client
         // socket into their mux, connect this new stream
         // to the application server
 
         stream.on('error', function (err) {
-          logger.debug(err);
+          logger.debug('stream - mux stream <-> outgoing TCP/IP client ' +
+            'connection to node - %d - %d - had error %s',
+            localIncomingConnectionId, localIncomingMuxStreamCounter, err);
         });
 
         stream.on('finish', function () {
+          logger.debug('stream - mux stream <-> outgoing TCP/IP client ' +
+            'connection to node - %d - %d - finished',
+            localIncomingConnectionId, localIncomingMuxStreamCounter);
           stream.destroy(); // Guarantees that close event will fire
         });
 
         stream.on('close', function () {
-          logger.debug('stream close:', stream);
+          logger.debug('stream - mux stream <-> outgoing TCP/IP client ' +
+            'connection to node - %d - %d - closed', localIncomingConnectionId,
+            localIncomingMuxStreamCounter);
           stream._outgoing.end();
           if (!removeArrayElement(mux._streams, stream)) {
-            logger.debug('stream not found in mux');
+            logger.debug('stream - mux stream <-> outgoing TCP/IP client ' +
+              'connection to node - %d - %d - cannot find stream in' +
+              'mux._streams');
           }
         });
 
@@ -237,46 +267,52 @@ module.exports = function (self) {
 
         stream._outgoing = outgoing;
 
+        if (logger.level === 'silly') {
+          outgoing.on('data', function (data) {
+            logger.silly('outgoing - mux stream <-> outgoing TCP/IP client ' +
+              'connection to node - %d - %d - data length (bytes) %d',
+              localIncomingConnectionId, localIncomingMuxStreamCounter,
+              data.length);
+          });
+        }
+
         outgoing.on('close', function () {
+          logger.debug('outgoing - mux stream <-> outgoing TCP/IP client ' +
+            'connection to node - %d - %d - close', localIncomingConnectionId,
+            localIncomingMuxStreamCounter);
           stream.destroy();
           removeArrayElement(mux._streams, stream);
         });
 
         outgoing.on('error', function (err) {
-          logger.debug(err);
+          logger.debug('outgoing - mux stream <-> outgoing TCP/IP client ' +
+            'connection to node - %d - %d - error %s',
+            localIncomingConnectionId, localIncomingMuxStreamCounter,
+            err);
           self.emit(self.ROUTER_PORT_CONNECTION_FAILED,
             {
               error: err,
               routerPort: self._routerPort
             });
         });
-
-        logger.debug('new outgoing socket');
       });
 
       incoming._mux = mux;
       mux._incoming = incoming;
       mux._streams = [];
 
-      logger.debug('new mux');
-
       mux.on('error', function (err) {
-        logger.debug('mux ' + err);
+        logger.debug('mux - incoming Android TCP/IP client connection <-> ' +
+          'Mux - %d - error %s', localIncomingConnectionId, err);
       });
 
       mux.on('close', function () {
-        logger.debug('mux close');
+        logger.debug('mux - incoming Android TCP/IP client connection <-> ' +
+          'Mux - %d - close', localIncomingConnectionId);
         mux._incoming.end();
         mux._incoming._mux = null;
         mux._incoming = null;
       });
-
-      // The client connection may have run it's connection
-      // handler before this one.. handle that.
-      if (self._pendingReverseConnections[incoming.remotePort]) {
-        self._pendingReverseConnections[incoming.remotePort]
-          .handleReverseConnection();
-      }
 
       incoming.pipe(mux).pipe(incoming);
       emitIncomingConnectionState(self, incoming,
