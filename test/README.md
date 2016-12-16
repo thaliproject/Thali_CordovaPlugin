@@ -51,10 +51,10 @@ In terms of operating system we assume you are running on macOS. In theory we ca
 run successfully on Linux or Windows but we really don't test there very often
 so things are likely to break.
 
-From there you need to install in macOS a fairly large mountain of software. For
-now you can see the list [here](https://github.com/thaliproject/Thali_CordovaPlugin/blob/1df36b74ee93f1ece85579857ed90a0e05a0cdd1/thali/install/validateBuildEnvironment.js#L16).
-You need to install the listed software at the listed version. Two of the entries
-are about Sinopia. Details on that is in the next section.
+From there you need to install in macOS a fairly large mountain of software. We
+ have a script, validateBuildEnvironment.js, that checks for all the required
+ software. You need to install all that software at the listed version for the
+ build to work. Two of the entries are about Sinopia. Details on that is in the next section.
 
 ### Running your own NPM registry
 From time to time we run into bugs in PouchDB and Express-PouchDB that we can't
