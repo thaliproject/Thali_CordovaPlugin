@@ -22,7 +22,6 @@ var serverAddress = require('../server-address');
 var logger = require('./testLogger')('CoordinatedClient');
 
 var DEFAULT_SERVER_PORT = Number(process.env.COORDINATED_PORT) || 3000;
-var CURRENT_PATH        = __dirname;
 
 function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware,
                            nativeUTFailed) {
@@ -485,7 +484,7 @@ CoordinatedClient.prototype._sync = function (tape, test, timeout) {
       format('stack should have a least %d lines', level + 1)
     );
     var trace    = traces[level];
-    var location = path.relative(CURRENT_PATH, trace.location);
+    var location = path.relative(__dirname, trace.location);
     return location + ":" + trace.line + ":" + trace.column;
   }
   var callerId = getCaller(2);
