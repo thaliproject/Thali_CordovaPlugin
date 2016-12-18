@@ -46,7 +46,7 @@ var extend = require('js-extend').extend;
  * ```
  * console.log('start');
  * wait(100);
- * notmalFn(3);
+ * normalFn(3);
  * wait(100);
  * normalFn(6);
  *
@@ -96,18 +96,18 @@ function throttle(fn, options) {
     }
 
     if (!timeout) {
-      timeout = setTimeout(invoke, minDelay);
+      timeout = global.setTimeout(invoke, minDelay);
     } else {
       var elapsed = now - lastCalledAt;
       var remaining = Math.min(minDelay, maxDelay - elapsed);
-      clearTimeout(timeout);
-      timeout = setTimeout(invoke, remaining);
+      global.clearTimeout(timeout);
+      timeout = global.setTimeout(invoke, remaining);
     }
   }
 
   throttled.clearTimeout = function () {
     if (timeout) {
-      clearTimeout(timeout);
+      global.clearTimeout(timeout);
       lastCalledAt = args = context = null;
     }
   };
@@ -141,6 +141,9 @@ function cachePeer (cache, peerIdentifier, nativeGeneration, handler) {
     fakeGeneration: oldCachedPeer ? oldCachedPeer.fakeGeneration : 0,
     handler: handler,
   };
+  if (oldCachedPeer && oldCachedPeer.handler !== handler) {
+    oldCachedPeer.handler.clearTimeout();
+  }
   cache[peerIdentifier] = newCachedPeer;
   return newCachedPeer;
 }
