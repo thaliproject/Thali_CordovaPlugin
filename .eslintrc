@@ -40,6 +40,7 @@
       }
     ],
     "no-extend-native": 2,
+    "no-fallthrough": 2,
     "max-depth": [
       2,
       3

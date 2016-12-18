@@ -96,10 +96,8 @@ function throttle(fn, options) {
     }
 
     if (!timeout) {
-      console.log('first call fn %s with args: %j', fn.name, args);
       timeout = setTimeout(invoke, minDelay);
     } else {
-      console.log('throttled fn %s with args: %j', fn.name, args);
       var elapsed = now - lastCalledAt;
       var remaining = Math.min(minDelay, maxDelay - elapsed);
       clearTimeout(timeout);

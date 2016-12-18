@@ -339,13 +339,23 @@ var verifyCallWithArguments = function (t, callName, parameters) {
   });
 };
 
-test('make sure terminateConnection is properly hooked up', function (t) {
-  verifyCallWithArguments(t, '_terminateConnection', ['connection-id']);
-});
+test('make sure terminateConnection is properly hooked up',
+  function () {
+    return !platform.isAndroid;
+  },
+  function (t) {
+    verifyCallWithArguments(t, '_terminateConnection', ['connection-id']);
+  }
+);
 
-test('make sure terminateListener is properly hooked up', function (t) {
-  verifyCallWithArguments(t, '_terminateListener', ['peer-id', 8080]);
-});
+test('make sure terminateListener is properly hooked up',
+  function () {
+    return !platform.isAndroid;
+  },
+  function (t) {
+    verifyCallWithArguments(t, '_terminateListener', ['peer-id', 8080]);
+  }
+);
 
 test('make sure we actually call kill connections properly', function (t) {
   thaliMobileNativeWrapper.killConnections()

@@ -1068,6 +1068,9 @@ var handleRecreatedPeer = function (nativePeer) {
 };
 
 var handleNonTCPPeer = makeAsync(function (nativePeer) {
+  if (!thaliMobileStates.started) {
+    return;
+  }
   if (nativePeer.recreated) {
     handleRecreatedPeer(nativePeer);
     return;
@@ -1092,6 +1095,9 @@ var handleNonTCPPeer = makeAsync(function (nativePeer) {
 });
 
 var handleWifiPeer = makeAsync(function (wifiPeer) {
+  if (!thaliMobileStates.started) {
+    return;
+  }
   var peerAvailable = Boolean(wifiPeer.hostAddress && wifiPeer.portNumber);
   var peer = {
     peerIdentifier: wifiPeer.peerIdentifier,
