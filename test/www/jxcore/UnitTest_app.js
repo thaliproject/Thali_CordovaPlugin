@@ -71,7 +71,14 @@ if (platform.isIOS) {
   return;
 }
 
+
 global.NETWORK_TYPE = ThaliMobile.networkTypes.NATIVE;
+
+// for now Wifi tests on iOS until we get a handle on native tests on iOS
+// https://github.com/thaliproject/Thali_CordovaPlugin/issues/1654#issuecomment-267632579
+if (platform.isIOS) {
+  global.NETWORK_TYPE = ThaliMobile.networkTypes.WIFI;
+}
 
 ThaliMobile.getNetworkStatus()
 .then(function (networkStatus) {
