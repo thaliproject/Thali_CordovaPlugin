@@ -21,7 +21,6 @@ var TestPouchDB            = testUtils.getLevelDownPouchDb();
 
 var DB_NAME            = 'repActionTest';
 var EXPIRATION_TIMEOUT = 60 * 60 * 1000;
-var TEST_TIMEOUT       = 5 * 60 * 1000;
 
 if (!tape.coordinated) {
   return;
@@ -161,8 +160,7 @@ test('Coordinated pull replication from notification test', function (t) {
   })
 
   .then(function () {
-    return Promise.resolve()
-    .timeout(TEST_TIMEOUT, 'test timeout exceeded');
+    return Promise.resolve();
   })
   .then(function () {
     t.pass('passed');
