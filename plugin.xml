@@ -9,7 +9,7 @@
     <keywords>cordova,jxcore,node.js,thali</keywords>
 
     <engines>
-        <engine name="cordova-android" version=">=6.1.0" />
+        <engine name="cordova-android" version=">=6.0.0" />
         <engine name="cordova-ios" version=">=4.3.1" />
         <engine name="android-sdk" version=">=23" />
     </engines>

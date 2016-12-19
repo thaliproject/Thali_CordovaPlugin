@@ -46,13 +46,7 @@ function bufferIndexOf(bufferArray, entryToFind) {
   return -1;
 }
 
-test('Coordinated pull replication from notification test',
-function () {
-  // FIXME: it looks like t.sync() disonnects iOS devices from coordinated
-  // server (#1613)
-  return platform._isRealIOS;
-},
-function (t) {
+test('Coordinated pull replication from notification test', function (t) {
   var thaliPeerPoolDefault = new ThaliPeerPoolDefault();
   var router = express.Router();
   router.use(
