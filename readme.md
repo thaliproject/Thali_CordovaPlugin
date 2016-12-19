@@ -234,14 +234,14 @@ cordova build android --release --device
 `cordova build` creates unsigned _apk_. So in order to install the _apk_ into device
 you need to sign the _apk_.
 
-Please note that `build-tools` should be at least `24.0.3`.
+Please note that `build-tools` should be at least `25.0.0`.
 Because this guide uses tool `apksigner` that is available starting
-from `build-tools` `24.0.3`.
+from `build-tools` `25.0.0`.
 
 You should have keystore file before running the command below.
 
 ```
-/usr/local/opt/android-sdk/build-tools/24.0.3/apksigner sign --ks path/to/keystore/file path/to/unsigned.apk
+/usr/local/opt/android-sdk/build-tools/25.0.0/apksigner sign --ks path/to/keystore/file path/to/unsigned.apk
 ```
 
 ### Get devices list
@@ -317,14 +317,14 @@ Download [Xcode 6](https://developer.apple.com/xcode/), or later.
 
 ### Install latest JXCore
 
-The installation guide for JXCore 3.1.7 on Mac OS and Windows can be found [here](https://github.com/thaliproject/jxbuild/blob/master/distribute.md).
+The installation guide for JXCore 3.1.8 on Mac OS and Windows can be found [here](https://github.com/thaliproject/jxbuild/blob/master/distribute.md).
 
-The latest version of JXCore 3.1.7 only for Mac OS can be downloaded from [here](https://jxcore.blob.core.windows.net/jxcore-release/jxcore/0317/release/jx_osx64v8.zip)
+The latest version of JXCore 3.1.8 only for Mac OS can be downloaded from [here](https://jxcore.blob.core.windows.net/jxcore-release/jxcore/0318/release/jx_osx64v8.zip)
 
 To check the version of the current JXCore installation run:
 ```
 $ jx -jxv
-v 0.3.1.7
+v 0.3.1.8
 ```
 
 ### Install Cordova

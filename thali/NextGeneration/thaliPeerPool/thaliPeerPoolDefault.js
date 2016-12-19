@@ -71,11 +71,13 @@ function ThaliPeerPoolDefault() {
 util.inherits(ThaliPeerPoolDefault, ThaliPeerPoolInterface);
 ThaliPeerPoolDefault.ERRORS = ThaliPeerPoolInterface.ERRORS;
 
-ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED = 'We are stopped';
+ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED =
+  'we ignored peer action, because we has been already stopped';
 
 ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
   if (this._stopped) {
-    throw new Error(ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED);
+    peerAction.kill();
+    return new Error(ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED);
   }
 
   // Right now we will just allow everything to run parallel.
@@ -117,7 +119,6 @@ ThaliPeerPoolDefault.prototype.start = function () {
  * to enqueue.
  */
 ThaliPeerPoolDefault.prototype.stop = function () {
-  var self = this;
   this._stopped = true;
 
   return ThaliPeerPoolDefault.super_.prototype.stop.apply(this, arguments);

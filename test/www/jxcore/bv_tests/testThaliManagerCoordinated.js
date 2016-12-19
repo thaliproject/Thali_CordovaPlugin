@@ -48,53 +48,41 @@ var test = tape({
   }
 });
 
-// We have 'localDoc' and 'oldRemoteDocs' already in DB.
-// We are waiting until 'newRemoteDocs' will appears in DB.
-// We are waiting for confirmation that 'localDoc' and 'oldRemoteDocs' is in DB too.
-function waitForRemoteDocs(
-  pouchDB, localDoc, oldRemoteDocs, newRemoteDocs, ignoreRev
-) {
-  // We can remove '_rev' key from compared values.
-  // We can just stringify docs, they wont be circular.
-  function toString(doc) {
-    var keys = Object.keys(doc);
-    var keyIndex = keys.indexOf('_rev');
-    if (keyIndex !== -1) {
-      keys.splice(keyIndex, 1);
-    }
-    return JSON.stringify(doc, keys.sort());
+/**
+ * Deterministically transforms a PouchDB doc to a string so we can compare
+ * docs for equality.
+ * @param {Object} doc A doc object returned by pouchDB
+ * @returns {string} A string that can be used to compare this doc to others
+ */
+function turnDocToString(doc) {
+  var keys = Object.keys(doc);
+  var keyIndex = keys.indexOf('_rev');
+  if (keyIndex !== -1) {
+    keys.splice(keyIndex, 1);
   }
+  return JSON.stringify(doc, keys.sort());
+}
 
-  var localDocString = toString(localDoc);
-  var oldRemoteDocStrings = oldRemoteDocs.map(toString);
-  var newRemoteDocStrings = newRemoteDocs.map(toString);
+/**
+ * Checks that the submitted PouchDB contains exactly the docs submitted in
+ * docsToFind. If any docs are found in the DB that don't match a doc in
+ * docsToFind then an error will be returned. If the current contents of the
+ * DB do not contain all the listed docs in docsToFind then the function will
+ * wait, listening to the changes feed, until they show up.
+ *
+ * @param {PouchDB} pouchDB The database
+ * @param {Object[]} docsToFind An array of PouchDB document objects we are
+ * supposed to find in the DB.
+ * @returns {Promise<?Error>} Resolves true if all docs are found and rejects
+ * with an error if a problem is found such as a doc that appears in the DB
+ * but isn't in docsToFind.
+ */
+function waitForRemoteDocs(pouchDB, docsToFind) {
+
+  var stringifiedDocsToFind = docsToFind.map(turnDocToString);
 
   function allDocsFound() {
-    return !localDocString &&
-      newRemoteDocStrings.length === 0 &&
-      oldRemoteDocStrings.length === 0;
-  }
-
-  function findDoc(doc) {
-    var docString = toString(doc);
-
-    var oldIndex = oldRemoteDocStrings.indexOf(docString);
-    var newIndex = newRemoteDocStrings.indexOf(docString);
-    if (localDocString && docString === localDocString) {
-      localDocString = undefined;
-      return true;
-    }
-    else if (oldIndex !== - 1) {
-      oldRemoteDocStrings.splice(oldIndex, 1);
-      return true;
-    }
-    else if (newIndex !== -1) {
-      newRemoteDocStrings.splice(newIndex, 1);
-      return true;
-    }
-    else {
-      return false;
-    }
+    return stringifiedDocsToFind.length === 0;
   }
 
   return new Promise(function (resolve, reject) {
@@ -118,7 +106,11 @@ function waitForRemoteDocs(
       include_docs: true
     })
     .on('change', function (change) {
-      if (findDoc(change.doc)) {
+      var docIndex = stringifiedDocsToFind.indexOf(turnDocToString(change.doc));
+      if (docIndex !== -1) {
+        // Each doc should match exactly once so once we get a match we remove
+        // the doc from the match list
+        stringifiedDocsToFind.splice(docIndex, 1);
         if (allDocsFound()) {
           changesFeed.cancel();
         }
@@ -147,26 +139,22 @@ test('test write', function (t) {
     t, publicKeyForLocalDevice
   );
 
-  // We are creating a local db for each participant.
   var pouchDB = new PouchDB(DB_NAME);
 
   var localDoc = {
     _id: publicBase64KeyForLocalDevice,
     test1: true
   };
-  var docs;
+
   pouchDB.put(localDoc)
   .then(function (response) {
-    // Doc and its revision is an object
-    // that could be updated and deleted later.
     localDoc._rev = response.rev;
   })
   .then(function () {
-    // Our local DB should have this doc.
-    return waitForRemoteDocs(pouchDB, localDoc, [], [], false);
+    return waitForRemoteDocs(pouchDB, [localDoc]);
   })
   .then(function () {
-    // Starting Thali Manager.
+    t.pass('About to start thali manager');
     thaliManager = new ThaliManager(
       ExpressPouchDB,
       PouchDB,
@@ -178,19 +166,18 @@ test('test write', function (t) {
     return thaliManager.start(partnerKeys);
   })
   .then(function () {
-    // We can imagine what docs our partners will create.
-    docs = partnerKeys.map(function (partnerKey) {
+    t.pass('About to waitForRemoteDocs');
+    var docs = partnerKeys.map(function (partnerKey) {
       return {
         _id: partnerKey.toString('base64'),
         test1: true
       };
     });
-    // Lets check that all imaginary docs has been replicated to our local db.
-    // We can't predict what '_rev' remote doc will have,
-    // so we shouldn't check '_rev' here.
-    return waitForRemoteDocs(pouchDB, localDoc, [], docs, true);
+    docs.push(localDoc);
+    return waitForRemoteDocs(pouchDB, docs);
   })
   .then(function () {
+    t.pass('OK');
     t.end();
   });
 });
@@ -237,7 +224,9 @@ test('test repeat write 1', function (t) {
         test2: true
       };
     });
-    return waitForRemoteDocs(pouchDB, localDoc, oldDocs, newDocs, true);
+    var docs = oldDocs.concat(newDocs);
+    docs.push(localDoc);
+    return waitForRemoteDocs(pouchDB, docs);
   })
   .then(function () {
     t.end();
@@ -288,7 +277,9 @@ test('test repeat write 2', function (t) {
         test3: true
       };
     });
-    return waitForRemoteDocs(pouchDB, localDoc, oldDocs, newDocs, true);
+    var docs = oldDocs.concat(newDocs)
+    docs.push(localDoc);
+    return waitForRemoteDocs(pouchDB, docs);
   })
   .then(function () {
     t.end();

@@ -298,7 +298,7 @@
  *
  * A call to `multiConnect` will immediately return with no information other
  * than a confirmation that the request was received or an error if this is not
- * a `multiConnect` platform. A separate {@link multiConnectResolve}
+ * a `multiConnect` platform. A separate {@link multiConnectResolved}
  * asynchronous callback will be fired with the actual result of the method
  * call.
  *
@@ -434,7 +434,7 @@
  * wise for the app to turn it back on without asking the user's permission?
  *
  * @private
- * @function external:"Mobile('setWifiRadioState')".callNative
+ * @function external:"Mobile('toggleWiFi')".callNative
  * @param {boolean} setRadioTo If true then turn the WiFi radio on. If the Wifi
  * radio was already on then that is not an error. If false then turn the Wifi
  * radio off. If the Wifi radio was already off then that is not an error.
@@ -471,7 +471,7 @@
  * @callback multiConnectResolvedCallback
  * @property {string} syncValue
  * @property {?string} error
- * @property {?number} port
+ * @property {?number} listeningPort
  */
 
 /**
@@ -488,10 +488,7 @@
 
 /**
  * Identifies the peerID of the peer with whom a `multiConnect` initiated
- * connection (read: MCSession) failed. This method MUST be fired when the
- * connection fails even if it is just because of a call to `disconnect`. If
- * this event is fired in direct response to a `disconnect` then error MUST be
- * null.
+ * connection (read: MCSession) failed.
  *
  * @public
  * @callback multiConnectConnectionFailureCallback
@@ -501,7 +498,12 @@
 
 /**
  * Fires the multiConnectConnectionFailureCallback if a multiConnect connection
- * fails for a reason other than a call to {@link disconnect}.
+ * fails. This failure can include a failure induced by a call to `disconnect`.
+ * Note, however, that this callback MUST only occur in response to an actual
+ * connection being terminated. So, for example, if disconnect is called with
+ * a peerID that isn't in the connected state then the disconnect will be
+ * successful but because no actual MCSession was terminated there won't be
+ * a multiConnectConnectionFailureCallback.
  *
  * @public
  * @function external:"Mobile(`multiConnectConnectionFailure`)".registerToNative
@@ -616,7 +618,7 @@
  * @readonly
  * @enum {string}
  */
-var radioState = {
+module.exports.radioState = {
   /** The radio is on and available for use. */
   ON: 'on',
   /** The radio exists on the device but is turned off. */

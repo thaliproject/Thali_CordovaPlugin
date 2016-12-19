@@ -77,12 +77,12 @@ var loadFile = function (filePath) {
   try {
     require(filePath);
   } catch (error) {
-    var err = format(
+    var prettyError = format(
       'test load failed, filePath: \'%s\', error: \'%s\', stack: \'%s\'',
       filePath, error.toString(), error.stack
     );
-    logger.error(err);
-    throw new Error(err);
+    logger.error(prettyError);
+    throw new Error(prettyError);
   }
 };
 
@@ -122,8 +122,10 @@ testUtils.hasRequiredHardware()
   });
 })
 .then(function () {
+  logger.info('Finished');
   process.exit(0);
 })
-.catch(function () {
+.catch(function (error) {
+  logger.error(error.message + '\n' + error.stack);
   process.exit(1);
 });

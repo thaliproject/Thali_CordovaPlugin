@@ -49,13 +49,13 @@ function findFirstFile (name) {
     .on('stop', end)
     .on('end', end);
   })
-  .catch(function (error) {
-    console.error(
-      'finder failed, error: \'%s\', stack: \'%s\'',
-      error.toString(), error.stack
-    );
-    return Promise.reject(error);
-  });
+    .catch(function (error) {
+      console.error(
+        'finder failed, error: \'%s\', stack: \'%s\'',
+        error.toString(), error.stack
+      );
+      return Promise.reject(error);
+    });
 }
 
 function replaceContent(path, content, replacements) {
@@ -138,10 +138,10 @@ function replaceThaliConfig () {
     pattern: new RegExp(
       [
         '(',
-          'SSDP_NT', '\\s*', ':',
+        'SSDP_NT', '\\s*', ':',
         ')',
         '(',
-          '\\s*', '.*?', ',',
+        '\\s*', '.*?', ',',
         ')'
       ].join('')
     ),
@@ -163,10 +163,10 @@ function replaceConnectionHelper () {
         '(',
           ['static', 'final', 'String', 'BLE_SERVICE_UUID_AS_STRING']
             .join('\\s+'),
-          '\\s*', '=', '\\s*',
+        '\\s*', '=', '\\s*',
         ')',
         '(',
-          '"', '.*?', '"',
+        '"', '.*?', '"',
         ')'
       ].join('')
     ),
@@ -187,7 +187,7 @@ function replaceConnectionHelper () {
         '\\s*', '=',
         ')',
         '(',
-          '\\s*', '.*?', ';',
+        '\\s*', '.*?', ';',
         ')'
       ].join('')
     ),
@@ -209,10 +209,10 @@ function replaceJXcoreExtension() {
     pattern: new RegExp(
       [
         '(',
-          ['initWithServiceType', ':', '@'].join('\\s*'),
+        ['initWithServiceType', ':', '@'].join('\\s*'),
         ')',
         '(',
-          '"', '.*?', '"',
+        '"', '.*?', '"',
         ')'
       ].join('')
     ),
@@ -223,10 +223,8 @@ function replaceJXcoreExtension() {
 
 Promise.all([
   replaceThaliConfig(),
-  replaceConnectionHelper()
-  // In our current branch 'JXcoreExtension.m' is old and we shouldn't
-  // try to replace it.
-  // replaceJXcoreExtension()
+  replaceConnectionHelper(),
+  replaceJXcoreExtension()
 ])
 .then(function () {
   console.info('We have replaced hardcoded ids with random values.');

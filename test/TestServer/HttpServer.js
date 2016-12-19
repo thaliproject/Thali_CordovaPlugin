@@ -37,7 +37,8 @@ Server.prototype.defaults = {
 };
 
 Server.prototype._setOptions = function (options) {
-  asserts.isObject(options);
+  asserts.isObject(options, 'Server._setOptions');
+
   this._options = objectAssign({}, this.defaults, options);
 
   asserts.isNumber(this._options.port);

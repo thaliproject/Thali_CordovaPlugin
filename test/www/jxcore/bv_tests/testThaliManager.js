@@ -3,9 +3,7 @@
 var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils.js');
 
-var fs = require('fs-extra-promise');
 var extend = require('js-extend').extend;
-var path = require('path');
 var crypto = require('crypto');
 var Promise = require('bluebird');
 var PouchDB = require('pouchdb');
@@ -16,7 +14,6 @@ var sinon = require('sinon');
 var proxyquire = require('proxyquire').noCallThru();
 
 var Salti = require('salti');
-var PouchDBGenerator = require('thali/NextGeneration/utils/pouchDBGenerator');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
@@ -129,7 +126,7 @@ Mocks.prototype.resetStartStop = function() {
 
   this.ReplicationStart.reset();
   this.ReplicationStop.reset();
-}
+};
 
 Mocks.prototype.checkInit = function(dbName, ecdh, peerPool) {
   this.checkExpressPouchDB();
@@ -137,21 +134,21 @@ Mocks.prototype.checkInit = function(dbName, ecdh, peerPool) {
   this.checkNotification(ecdh);
   this.checkReplication(dbName, peerPool, ecdh);
   this.checkSalti(dbName);
-}
+};
 Mocks.prototype.checkStart = function(partnerKeys, networkType) {
   this.checkMobileStart(networkType);
   this.checkMobileStartLA();
   this.checkMobileStartUAA();
   this.checkNotificationStart(partnerKeys);
   this.checkReplicationStart(partnerKeys);
-}
+};
 Mocks.prototype.checkStop = function() {
   this.checkMobileStop();
   this.checkMobileStopLA();
   this.checkMobileStopUAA();
   this.checkNotificationStop();
   this.checkReplicationStop();
-}
+};
 
 Mocks.prototype.checkExpressPouchDB = function() {
   var self = this;
@@ -174,7 +171,7 @@ Mocks.prototype.checkExpressPouchDB = function() {
       }
     ]
   );
-}
+};
 
 Mocks.prototype.checkPouchDB = function(dbName) {
   testUtils.checkArgs(
@@ -187,7 +184,7 @@ Mocks.prototype.checkPouchDB = function(dbName) {
       }
     }]
   );
-}
+};
 
 Mocks.prototype.checkReplication = function(dbName, peerPool, ecdh) {
   var self = this;
@@ -225,7 +222,7 @@ Mocks.prototype.checkReplication = function(dbName, peerPool, ecdh) {
       }
     ]
   );
-}
+};
 Mocks.prototype.checkReplicationStart = function(remoteKeys) {
   testUtils.checkArgs(
     this.t, this.ReplicationStart,
@@ -238,14 +235,14 @@ Mocks.prototype.checkReplicationStart = function(remoteKeys) {
       }
     }]
   );
-}
+};
 Mocks.prototype.checkReplicationStop = function() {
   testUtils.checkArgs(
     this.t, this.ReplicationStop,
     'ThaliPullReplicationFromNotification.prototype.stop',
     []
   );
-}
+};
 
 Mocks.prototype.checkNotification = function(ecdh) {
   var self = this;
@@ -284,7 +281,7 @@ Mocks.prototype.checkNotification = function(ecdh) {
       }
     ]
   );
-}
+};
 Mocks.prototype.checkNotificationStart = function(remoteKeys) {
   testUtils.checkArgs(
     this.t, this.NotificationStart,
@@ -297,14 +294,14 @@ Mocks.prototype.checkNotificationStart = function(remoteKeys) {
       }
     }]
   );
-}
+};
 Mocks.prototype.checkNotificationStop = function() {
   testUtils.checkArgs(
     this.t, this.NotificationStop,
     'ThaliSendNotificationBasedOnReplication.prototype.stop',
     []
   );
-}
+};
 
 Mocks.prototype.checkMobileStart = function(networkType) {
   var self = this;
@@ -324,7 +321,8 @@ Mocks.prototype.checkMobileStart = function(networkType) {
         description: 'getPskIdToSecret',
         compare: function (arg) {
           return typeof arg === 'function' &&
-            arg.toString() === ThaliNotificationServer.prototype.getPskIdToSecret().toString();
+            arg.toString() ===
+            ThaliNotificationServer.prototype.getPskIdToSecret().toString();
         }
       },
       {
@@ -335,41 +333,41 @@ Mocks.prototype.checkMobileStart = function(networkType) {
       }
     ]
   );
-}
+};
 Mocks.prototype.checkMobileStartLA = function() {
   testUtils.checkArgs(
     this.t, this.MobileStartLA,
     'ThaliMobile.startListeningForAdvertisements',
     []
   );
-}
+};
 Mocks.prototype.checkMobileStartUAA = function() {
   testUtils.checkArgs(
     this.t, this.MobileStartUAA,
     'ThaliMobile.startUpdateAdvertisingAndListening',
     []
   );
-}
+};
 
 Mocks.prototype.checkMobileStop = function() {
   testUtils.checkArgs(
     this.t, this.MobileStop, 'ThaliMobile.stop', []
   );
-}
+};
 Mocks.prototype.checkMobileStopLA = function() {
   testUtils.checkArgs(
     this.t, this.MobileStopLA,
     'ThaliMobile.stopListeningForAdvertisements',
     []
   );
-}
+};
 Mocks.prototype.checkMobileStopUAA = function() {
   testUtils.checkArgs(
     this.t, this.MobileStopUAA,
     'ThaliMobile.stopAdvertisingAndListening',
     []
   );
-}
+};
 
 Mocks.prototype.checkSalti = function(dbName) {
   var self = this;
@@ -405,7 +403,7 @@ Mocks.prototype.checkSalti = function(dbName) {
       }
     ]
   );
-}
+};
 
 test('test thali manager spies', function (t) {
   // This function will return all participant's public keys

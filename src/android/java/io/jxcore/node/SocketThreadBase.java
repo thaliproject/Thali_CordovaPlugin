@@ -13,13 +13,16 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketException;
+
 import android.os.Build;
 
 /**
  * The base (thread) class for outgoing and incoming socket threads.
  */
 abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Listener {
+
     public interface Listener {
+
         void onListeningForIncomingConnections(int portNumber);
 
         void onDataTransferred(int numberOfBytes);
@@ -33,6 +36,8 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
         void onDone(SocketThreadBase who, boolean threadDoneWasSending);
 
         void onDisconnected(SocketThreadBase who, String errorMessage);
+
+        void onDisconnected(SocketThreadBase who, Exception exception);
 
         void onTransferError(SocketThreadBase who, String errorMessage);
     }
@@ -192,7 +197,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
         }, 1000);*/
 
         if (mReceivingThread != null && mReceivingThread.getIsDone()
-                && mSendingThread != null && mSendingThread.getIsDone()) {
+            && mSendingThread != null && mSendingThread.getIsDone()) {
             Log.i(mTag, "Both threads are done, notifying the listener...");
             mListener.onDone(socketThreadBase, (who == mSendingThread));
         }
@@ -249,10 +254,10 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
      */
     protected synchronized void startStreamCopyingThreads(ConnectionData connectionData) {
         if (mBluetoothInputStream == null
-                || mLocalInputStream == null
-                || mBluetoothOutputStream == null
-                || mLocalOutputStream == null
-                || mLocalhostSocket == null) {
+            || mLocalInputStream == null
+            || mBluetoothOutputStream == null
+            || mLocalOutputStream == null
+            || mLocalhostSocket == null) {
             Log.e(mTag, "startStreamCopyingThreads: Cannot start since at least one of the streams is null");
             mListener.onDisconnected(this, "Cannot start stream copying threads since at least one of the streams is null");
         } else {
@@ -265,23 +270,26 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
                 shortName = mTag;
             }
 
-            mSendingThread = new StreamCopyingThread(this, mLocalInputStream, mBluetoothOutputStream, shortName + "/" + SENDING_THREAD_NAME, connectionData);
+            mSendingThread = new StreamCopyingThread(this, mLocalInputStream, mBluetoothOutputStream,
+                shortName + "/" + SENDING_THREAD_NAME, connectionData, false);
             mSendingThread.setUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
             mSendingThread.setBufferSize(STREAM_COPYING_THREAD_BUFFER_SIZE);
             mSendingThread.setNotifyStreamCopyingProgress(true);
             mSendingThread.start();
-            mReceivingThread = new StreamCopyingThread(this, mBluetoothInputStream, mLocalOutputStream, shortName + "/" + RECEIVING_THREAD_NAME, connectionData);
+            mReceivingThread = new StreamCopyingThread(this, mBluetoothInputStream, mLocalOutputStream,
+                shortName + "/" + RECEIVING_THREAD_NAME, connectionData, true);
             mReceivingThread.setUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
             mReceivingThread.setBufferSize(STREAM_COPYING_THREAD_BUFFER_SIZE);
             mReceivingThread.setNotifyStreamCopyingProgress(true);
             mReceivingThread.start();
+
 
             Log.i(mTag, "startStreamCopyingThreads: OK (thread ID: " + getId() + ")");
         }
     }
 
     protected void configureSocket() throws SocketException {
-        if(mLocalhostSocket!=null){
+        if (mLocalhostSocket != null) {
             mLocalhostSocket.setKeepAlive(true);
             mLocalhostSocket.setReuseAddress(false);
             mLocalhostSocket.setOOBInline(false);

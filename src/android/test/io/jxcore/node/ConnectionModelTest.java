@@ -1,7 +1,13 @@
 package io.jxcore.node;
 
+import android.util.Log;
+
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -18,6 +24,14 @@ public class ConnectionModelTest {
     InputStreamMock mInputStreamMock;
     OutputStreamMock mOutputStreamMock;
     ConnectionModel mConnectionModel;
+    final static String mTag = ConnectionModelTest.class.getName();
+
+    @Rule
+    public TestRule watcher = new TestWatcher() {
+        protected void starting(Description description) {
+            Log.i(mTag, "Starting test: " + description.getMethodName());
+        }
+    };
 
     @Before
     public void setUp() throws Exception {
