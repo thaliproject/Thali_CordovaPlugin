@@ -65,11 +65,15 @@ var extend = require('js-extend').extend;
  * @returns {ThrottledFunction} throttled version of `fn`
  */
 function throttle(fn, options) {
-  var minDelay = options.minDelay;
-  var maxDelay = options.maxDelay;
-  assert(minDelay <= maxDelay, format(
+  assert(options, 'options are required');
+  assert.equal(typeof options.minDelay, 'number', 'minDelay is a number');
+  assert.equal(typeof options.maxDelay, 'number', 'maxDelay is a number');
+  assert(options.minDelay <= options.maxDelay, format(
     'minDelay(%d) can\'t be greater than maxDelay(%d)', minDelay, maxDelay
   ));
+
+  var minDelay = options.minDelay;
+  var maxDelay = options.maxDelay;
 
   var args, context;
   var timeout = null;
