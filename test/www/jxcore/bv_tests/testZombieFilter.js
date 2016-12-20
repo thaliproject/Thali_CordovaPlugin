@@ -261,6 +261,7 @@ test('throttle - timing', function (t) {
 
   t.deepEqual(fnCalls, expectedCalls,
     'throttled function invokes original function at the correct time');
+  sandbox.clock.restore();
   t.end();
 });
 
@@ -280,6 +281,7 @@ test('throttle - preserves arguments and context', function (t) {
   t.equals(fn.firstCall.thisValue, context, 'fn called with correct context');
   t.deepEqual(fn.firstCall.args, ['a', 'b', 'c'],
     'fn called with correct arguments');
+  sandbox.clock.restore();
   t.end();
 });
 
@@ -342,6 +344,7 @@ test('throttle - options', function (t) {
   t.deepEqual(fnLongCalls, [[1000, 1], [start + 3000, null]],
     'fn with long delay is called after reaching its maxDelay');
 
+  sandbox.clock.restore();
   t.end();
 });
 
@@ -366,6 +369,7 @@ test('throttle - clearTimeout', function (t) {
   t.equal(fn1.callCount, 0, 'fn1 is not called');
   t.equal(fn2.callCount, 1, 'fn2 is called');
 
+  sandbox.clock.restore();
   t.end();
 });
 
@@ -451,6 +455,7 @@ test('zombieFilter - passes irrelevant events', function (t) {
     peer(id, false, 77),
   ], 'passes through unavailable events');
 
+  sandbox.clock.restore();
   t.end();
 });
 
@@ -471,6 +476,8 @@ test('Passes valid peers', function (t) {
     peer(id, true, 1),
     peer(id, true, 2),
   ], 'passes valid peers');
+
+  sandbox.clock.restore();
   t.end();
 });
 
@@ -500,6 +507,7 @@ test('Fixes generations order', function (t) {
     peer(id, true, 6),
   ], 'changes peers generations');
 
+  sandbox.clock.restore();
   t.end();
 });
 
@@ -525,6 +533,7 @@ test('Unavailable peer removed from filter cache', function (t) {
     peer(id, true,  1)
   ]);
 
+  sandbox.clock.restore();
   t.end();
 });
 
@@ -554,6 +563,7 @@ test('Different peers are handled in parallel', function (t) {
     peer(id1, true, 3),
   ]);
 
+  sandbox.clock.restore();
   t.end();
 });
 
@@ -590,6 +600,7 @@ test('Does not break order of available -> unavailable events', function (t) {
     peer(id, false, null),
   ]);
 
+  sandbox.clock.restore();
   t.end();
 });
 
@@ -622,5 +633,6 @@ test('Filters zombies', function (t) {
     peer(id, true, 3),
   ]);
 
+  sandbox.clock.restore();
   t.end();
 });
