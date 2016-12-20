@@ -1114,8 +1114,8 @@ var handleWifiPeer = makeAsync(function (wifiPeer) {
 
 if (platform.isAndroid) {
   handleNonTCPPeer = require('./utils/zombieFilter')(handleNonTCPPeer, {
-    zombieThreshold: 500,
-    maxDelay: 1000,
+    zombieThreshold: thaliConfig.ANDROID_ZOMBIE_THRESHOLD,
+    maxDelay: thaliConfig.ANDROID_ZOMBIE_MAX_DELAY,
   });
 }
 

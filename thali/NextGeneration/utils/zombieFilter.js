@@ -65,13 +65,6 @@ var extend = require('js-extend').extend;
  * @returns {ThrottledFunction} throttled version of `fn`
  */
 function throttle(fn, options) {
-  assert(options, 'options are required');
-  assert.equal(typeof options.minDelay, 'number', 'minDelay is a number');
-  assert.equal(typeof options.maxDelay, 'number', 'maxDelay is a number');
-  assert(options.minDelay <= options.maxDelay, format(
-    'minDelay(%d) can\'t be greater than maxDelay(%d)', minDelay, maxDelay
-  ));
-
   var minDelay = options.minDelay;
   var maxDelay = options.maxDelay;
 
@@ -226,11 +219,25 @@ function fixPeerHandler(cache, nonTCPPeerHandler) {
  * zombies
  */
 function zombieFilter (nonTCPPeerHandler, options) {
+  assert(options, 'options are required');
+  assert.equal(typeof options.zombieThreshold, 'number',
+    'zombieThreshold is a number');
+  assert.equal(typeof options.maxDelay, 'number', 'maxDelay is a number');
+  assert(
+    options.zombieThreshold <= options.maxDelay,
+    format(
+      'zombieThreshold(%d) can\'t be greater than maxDelay(%d)',
+      options.zombieThreshold,
+      options.maxDelay
+    )
+  );
+
   var cache = {};
   var throttleOptions = {
     minDelay: options.zombieThreshold,
     maxDelay: options.maxDelay,
   };
+
   var fixedHandler = fixPeerHandler(cache, nonTCPPeerHandler);
 
   function filteredNonTCPPeerHandler (nativePeer) {

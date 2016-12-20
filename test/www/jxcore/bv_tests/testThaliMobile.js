@@ -2045,6 +2045,74 @@ test('does not fire duplicate events after peer listener recreation',
   }
 );
 
+var createNativePeer = function (id, gen) {
+  return {
+    peerIdentifier: id,
+    generation: gen,
+    peerAvailable: true,
+    portNumber: null,
+  };
+};
+
+test('zombieFilter works',
+  function () {
+    return !platform.isAndroid;
+  },
+  function (t) {
+    var expectedPeers = [
+      { peerIdentifier: 'peer-x', generation: 0 },
+      { peerIdentifier: 'peer-y', generation: 0 },
+      { peerIdentifier: 'peer-x', generation: 1 },
+      { peerIdentifier: 'peer-y', generation: 1 },
+    ];
+    var secondRealPeersEmitted = false;
+
+    var callCount = 0;
+    var availabilityHandler = function (peer) {
+      var expectedPeer = expectedPeers[callCount];
+      t.equal(peer.peerIdentifier, expectedPeer.peerIdentifier, 'same id');
+      t.equal(peer.generation, expectedPeer.generation, 'same generation');
+
+      callCount++;
+      if (callCount > 2) {
+        t.equal(secondRealPeersEmitted, true,
+          'Last two events handled after getting real peers');
+      }
+      if (callCount >= expectedPeers.length) {
+        end();
+      }
+    };
+
+    ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
+    ThaliMobile.start(express.Router()).then(function () {
+      emitNativePeerAvailability(createNativePeer('peer-x', 10));
+      emitNativePeerAvailability(createNativePeer('peer-y', 20));
+
+      // 2 zombies
+      setImmediate(function () {
+        emitNativePeerAvailability(createNativePeer('peer-x', 11));
+        emitNativePeerAvailability(createNativePeer('peer-y', 21));
+      });
+
+      // real peers
+      setTimeout(
+        function () {
+          emitNativePeerAvailability(createNativePeer('peer-x', 11));
+          emitNativePeerAvailability(createNativePeer('peer-y', 21));
+          secondRealPeersEmitted = true;
+        },
+        thaliConfig.ANDROID_ZOMBIE_THRESHOLD + 100
+      );
+    });
+
+    function end() {
+      ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+        availabilityHandler);
+      t.end();
+    }
+  }
+);
+
 if (!tape.coordinated) {
   return;
 }
@@ -2452,16 +2520,5 @@ test('Discovered peer should be removed if no availability updates ' +
     .catch(function (error) {
       finalizeTest(error);
     });
-  }
-);
-
-test('zombieFilter works',
-  function () {
-    return !platform.isAndroid;
-  },
-  function (t) {
-    // FIXME
-    t.skip('Not implemented');
-    t.end();
   }
 );

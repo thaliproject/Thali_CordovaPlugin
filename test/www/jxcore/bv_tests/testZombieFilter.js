@@ -342,22 +342,6 @@ test('throttle - options', function (t) {
   t.deepEqual(fnLongCalls, [[1000, 1], [start + 3000, null]],
     'fn with long delay is called after reaching its maxDelay');
 
-  var noop = function () {};
-
-  // min > max
-  t.throws(function () {
-    throttle(noop, { minDelay: 100, maxDelay: 50 });
-  }, Error, 'minDelay > maxDelay throws');
-
-  // wrong properties
-  t.throws(function () {
-    throttle(noop, { hello: 'world' });
-  }, Error, 'wrong options properties throw');
-
-  // empty
-  t.throws(function () {
-    throttle(noop);
-  }, Error, 'empty options throw');
   t.end();
 });
 
@@ -381,6 +365,27 @@ test('throttle - clearTimeout', function (t) {
 
   t.equal(fn1.callCount, 0, 'fn1 is not called');
   t.equal(fn2.callCount, 1, 'fn2 is called');
+
+  t.end();
+});
+
+test('zombieFilter - options', function (t) {
+  var noop = function () {};
+
+  // min > max
+  t.throws(function () {
+    zombieFilter(noop, { zombieThreshold: 100, maxDelay: 50 });
+  }, Error, 'minDelay > maxDelay throws');
+
+  // wrong properties
+  t.throws(function () {
+    zombieFilter(noop, { hello: 'world' });
+  }, Error, 'wrong options properties throw');
+
+  // empty
+  t.throws(function () {
+    zombieFilter(noop);
+  }, Error, 'empty options throw');
 
   t.end();
 });
@@ -448,6 +453,7 @@ test('zombieFilter - passes irrelevant events', function (t) {
 
   t.end();
 });
+
 
 test('Passes valid peers', function (t) {
   sandbox.useFakeTimers();
