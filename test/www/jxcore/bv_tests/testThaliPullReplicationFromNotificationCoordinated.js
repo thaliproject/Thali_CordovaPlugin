@@ -21,7 +21,6 @@ var TestPouchDB            = testUtils.getLevelDownPouchDb();
 
 var DB_NAME            = 'repActionTest';
 var EXPIRATION_TIMEOUT = 60 * 60 * 1000;
-var TEST_TIMEOUT       = 5 * 60 * 1000;
 
 if (!tape.coordinated) {
   return;
@@ -46,13 +45,7 @@ function bufferIndexOf(bufferArray, entryToFind) {
   return -1;
 }
 
-test('Coordinated pull replication from notification test',
-function () {
-  // FIXME: it looks like t.sync() disonnects iOS devices from coordinated
-  // server (#1613)
-  return platform._isRealIOS;
-},
-function (t) {
+test('Coordinated pull replication from notification test', function (t) {
   var thaliPeerPoolDefault = new ThaliPeerPoolDefault();
   var router = express.Router();
   router.use(
@@ -167,8 +160,7 @@ function (t) {
   })
 
   .then(function () {
-    return Promise.resolve()
-    .timeout(TEST_TIMEOUT, 'test timeout exceeded');
+    return Promise.resolve();
   })
   .then(function () {
     t.pass('passed');

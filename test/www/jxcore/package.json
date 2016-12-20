@@ -48,6 +48,7 @@
     "salti": "https://github.com/thaliproject/salti.git#master",
     "sinon": "1.17.3",
     "socket.io-client": "1.4.8",
+    "stacky": "1.3.1",
     "supertest": "1.1.0",
     "supertest-as-promised": "2.0.2",
     "tape": "4.0.0",

@@ -196,7 +196,7 @@ public class JXcoreExtension {
                 }
 
                 if (mConnectionHelper.getConnectivityMonitor().isBleMultipleAdvertisementSupported() ==
-                        BluetoothManager.FeatureSupportedStatus.NOT_SUPPORTED) {
+                    BluetoothManager.FeatureSupportedStatus.NOT_SUPPORTED) {
                     ArrayList<Object> args = new ArrayList<Object>();
                     args.add("No Native Non-TCP Support");
                     args.add(null);
@@ -205,7 +205,7 @@ public class JXcoreExtension {
                 }
 
                 if (mConnectionHelper.getDiscoveryManager().getState() ==
-                        DiscoveryManager.DiscoveryManagerState.WAITING_FOR_SERVICES_TO_BE_ENABLED) {
+                    DiscoveryManager.DiscoveryManagerState.WAITING_FOR_SERVICES_TO_BE_ENABLED) {
                     ArrayList<Object> args = new ArrayList<Object>();
                     args.add("Radio Turned Off");
                     args.add(null);
@@ -263,26 +263,26 @@ public class JXcoreExtension {
                 }
 
                 final String errorMessage =
-                        mConnectionHelper.connect(bluetoothMacAddress, new JXcoreThaliCallback() {
-                            @Override
-                            public void onConnectCallback(
-                                    String errorMessage,
-                                    ListenerOrIncomingConnection listenerOrIncomingConnection) {
-                                ArrayList<Object> args = new ArrayList<Object>();
-                                args.add(errorMessage);
+                    mConnectionHelper.connect(bluetoothMacAddress, new JXcoreThaliCallback() {
+                        @Override
+                        public void onConnectCallback(
+                            String errorMessage,
+                            ListenerOrIncomingConnection listenerOrIncomingConnection) {
+                            ArrayList<Object> args = new ArrayList<Object>();
+                            args.add(errorMessage);
 
-                                if (errorMessage == null) {
-                                    if (listenerOrIncomingConnection != null) {
-                                        args.add(listenerOrIncomingConnection.toString());
-                                    } else {
-                                        throw new NullPointerException(
-                                                "ListenerOrIncomingConnection is null even though there is no error message");
-                                    }
+                            if (errorMessage == null) {
+                                if (listenerOrIncomingConnection != null) {
+                                    args.add(listenerOrIncomingConnection.toString());
+                                } else {
+                                    throw new NullPointerException(
+                                        "ListenerOrIncomingConnection is null even though there is no error message");
                                 }
-
-                                jxcore.CallJSMethod(callbackId, args.toArray());
                             }
-                        });
+
+                            jxcore.CallJSMethod(callbackId, args.toArray());
+                        }
+                    });
 
                 if (errorMessage != null) {
                     // Failed to start connecting
@@ -317,7 +317,7 @@ public class JXcoreExtension {
                     Object parameterObject = params.get(0);
 
                     if (parameterObject instanceof String
-                            && CommonUtils.isNonEmptyString((String) parameterObject)) {
+                        && CommonUtils.isNonEmptyString((String) parameterObject)) {
                         String methodName = (String) parameterObject;
 
                         if (methodName.equals(METHOD_ARGUMENT_NETWORK_CHANGED)) {
@@ -400,7 +400,7 @@ public class JXcoreExtension {
                     default:
                         String errorMessage = "Unrecognized status: " + featureSupportedStatus;
                         Log.e(TAG, METHOD_NAME_IS_BLE_MULTIPLE_ADVERTISEMENT_SUPPORTED
-                                + ": " + errorMessage);
+                            + ": " + errorMessage);
                         args.add(errorMessage);
                         args.add(null);
                         break;
@@ -469,7 +469,7 @@ public class JXcoreExtension {
             public void Receiver(ArrayList<Object> params, String callbackId) {
                 ArrayList<Object> args = new ArrayList<Object>();
                 WifiManager wifiManager =
-                        (WifiManager) jxcore.activity.getBaseContext().getSystemService(Context.WIFI_SERVICE);
+                    (WifiManager) jxcore.activity.getBaseContext().getSystemService(Context.WIFI_SERVICE);
 
                 if (wifiManager.reconnect()) {
                     wifiManager.disconnect();
@@ -536,7 +536,11 @@ public class JXcoreExtension {
 
         try {
             jsonObject.put(EVENT_VALUE_PEER_ID, peerProperties.getId());
-            jsonObject.put(EVENT_VALUE_PEER_GENERATION, peerProperties.getExtraInformation());
+            Integer gen = peerProperties.getExtraInformation();
+            if (!isAvailable) {
+                gen = (peerProperties.getExtraInformation() == 0) ? null : peerProperties.getExtraInformation();
+            }
+            jsonObject.put(EVENT_VALUE_PEER_GENERATION, gen);
             jsonObject.put(EVENT_VALUE_PEER_AVAILABLE, isAvailable);
             jsonObjectCreated = true;
         } catch (JSONException e) {
@@ -558,7 +562,7 @@ public class JXcoreExtension {
     }
 
     public static void notifyDiscoveryAdvertisingStateUpdateNonTcp(
-            boolean isDiscoveryActive, boolean isAdvertisingActive) {
+        boolean isDiscoveryActive, boolean isAdvertisingActive) {
         JSONObject jsonObject = new JSONObject();
         boolean jsonObjectCreated = false;
 
@@ -595,12 +599,12 @@ public class JXcoreExtension {
      *                           is connected to.
      */
     public static synchronized void notifyNetworkChanged(
-            boolean isBluetoothEnabled, boolean isWifiEnabled, String bssidName, String ssidName) {
+        boolean isBluetoothEnabled, boolean isWifiEnabled, String bssidName, String ssidName) {
         if (!mNetworkChangedRegistered) {
             Log.d(TAG, "notifyNetworkChanged: Not registered for event \""
-                    + EVENT_NAME_NETWORK_CHANGED + "\" and will not notify, in JS call method \""
-                    + METHOD_NAME_DID_REGISTER_TO_NATIVE + "\" with argument \""
-                    + METHOD_ARGUMENT_NETWORK_CHANGED + "\" to register");
+                + EVENT_NAME_NETWORK_CHANGED + "\" and will not notify, in JS call method \""
+                + METHOD_NAME_DID_REGISTER_TO_NATIVE + "\" with argument \""
+                + METHOD_ARGUMENT_NETWORK_CHANGED + "\" to register");
             return;
         }
 
@@ -612,7 +616,7 @@ public class JXcoreExtension {
         final ConnectivityMonitor connectivityMonitor = mConnectionHelper.getConnectivityMonitor();
 
         if (connectivityMonitor.isBleMultipleAdvertisementSupported() !=
-                BluetoothManager.FeatureSupportedStatus.NOT_SUPPORTED) {
+            BluetoothManager.FeatureSupportedStatus.NOT_SUPPORTED) {
             if (isBluetoothEnabled) {
                 bluetoothLowEnergyRadioState = RadioState.ON;
             } else {
@@ -643,11 +647,11 @@ public class JXcoreExtension {
         }
 
         Log.d(TAG, "notifyNetworkChanged: BLE: " + bluetoothLowEnergyRadioState
-                + ", Bluetooth: " + bluetoothRadioState
-                + ", Wi-Fi: " + wifiRadioState
-                + ", cellular: " + cellularRadioState
-                + ", BSSID name: " + bssidName
-                + ", SSID name: " + ssidName);
+            + ", Bluetooth: " + bluetoothRadioState
+            + ", Wi-Fi: " + wifiRadioState
+            + ", cellular: " + cellularRadioState
+            + ", BSSID name: " + bssidName
+            + ", SSID name: " + ssidName);
 
         JSONObject jsonObject = new JSONObject();
         boolean jsonObjectCreated = false;
@@ -685,7 +689,7 @@ public class JXcoreExtension {
         long currentTime = new Date().getTime();
 
         if (currentTime > mLastTimeIncomingConnectionFailedNotificationWasFired
-                + INCOMING_CONNECTION_FAILED_NOTIFICATION_MIN_INTERVAL_IN_MILLISECONDS) {
+            + INCOMING_CONNECTION_FAILED_NOTIFICATION_MIN_INTERVAL_IN_MILLISECONDS) {
             JSONObject jsonObject = new JSONObject();
             boolean jsonObjectCreated = false;
 
@@ -720,26 +724,26 @@ public class JXcoreExtension {
      * @param callbackId          The JXcore callback ID.
      */
     private static void startConnectionHelper(
-            int serverPortNumber, boolean startAdvertisements, final String callbackId) {
+        int serverPortNumber, boolean startAdvertisements, final String callbackId) {
         final ArrayList<Object> args = new ArrayList<Object>();
         String errorString = null;
 
         if (mConnectionHelper.getConnectivityMonitor().isBleMultipleAdvertisementSupported() !=
-                BluetoothManager.FeatureSupportedStatus.NOT_SUPPORTED) {
+            BluetoothManager.FeatureSupportedStatus.NOT_SUPPORTED) {
             boolean succeededToStartOrWasAlreadyRunning =
-                    mConnectionHelper.start(serverPortNumber, startAdvertisements, new JXcoreThaliCallback() {
-                        @Override
-                        protected void onStartStopCallback(final String errorMessage) {
-                            args.add(errorMessage);
-                            jxcore.CallJSMethod(callbackId, args.toArray());
-                        }
-                    });
+                mConnectionHelper.start(serverPortNumber, startAdvertisements, new JXcoreThaliCallback() {
+                    @Override
+                    protected void onStartStopCallback(final String errorMessage) {
+                        args.add(errorMessage);
+                        jxcore.CallJSMethod(callbackId, args.toArray());
+                    }
+                });
 
             if (succeededToStartOrWasAlreadyRunning) {
                 final DiscoveryManager discoveryManager = mConnectionHelper.getDiscoveryManager();
 
                 if (discoveryManager.getState() ==
-                        DiscoveryManager.DiscoveryManagerState.WAITING_FOR_SERVICES_TO_BE_ENABLED) {
+                    DiscoveryManager.DiscoveryManagerState.WAITING_FOR_SERVICES_TO_BE_ENABLED) {
                     errorString = "Radio Turned Off";
 
                     // If/when radios are turned on, the discovery is started automatically
