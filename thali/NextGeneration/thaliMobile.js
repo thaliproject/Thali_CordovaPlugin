@@ -963,24 +963,6 @@ module.exports._getPeerAvailabilities = function () {
 
 module.exports._peerAvailabilities = peerAvailabilities;
 
-var peersDiff = function (oldState, newState) {
-  var samePeer =
-    oldState.peerIdentifier === newState.peerIdentifier &&
-    oldState.connectionType === newState.connectionType;
-
-  if (!samePeer) {
-    throw new Error('Cannot compare state of different peers');
-  }
-  return {
-    peerIdentifier: oldState.peerIdentifier,
-    connectionType: oldState.connectionType,
-    peerAvailable: newState.peerAvailable !== oldState.peerAvailable,
-    generation: newState.generation - oldState.generation,
-    hostAddress: newState.hostAddress !== oldState.hostAddress,
-    portNumber: newState.portNumber !== oldState.portNumber,
-    availableSince: newState.availableSince - oldState.availableSince
-  };
-};
 
 var handlePeer = function (peer) {
   var cachedPeer = peerAvailabilities[peer.connectionType][peer.peerIdentifier];
@@ -991,19 +973,11 @@ var handlePeer = function (peer) {
 
   var diff = null;
   if (cachedPeer) {
-    // check diff and ignore event if necessary
-    diff = peersDiff(cachedPeer, peer);
-    var ignoreChanges = !diff.peerAvailable && !diff.hostAddress &&
-                          !diff.portNumber;
-
-    if (platform.isAndroid) {
-      var isWrapAroundElapsed =
-        diff.availableSince >= thaliConfig.UPDATE_WINDOWS_FOREGROUND_MS * 255;
-      ignoreChanges = ignoreChanges &&
-        (diff.generation === 0 && !isWrapAroundElapsed);
-    } else {
-      ignoreChanges = ignoreChanges && diff.generation <= 0;
-    }
+    var ignoreChanges =
+      peer.peerAvailable === cachedPeer.peerAvailable &&
+      peer.hostAddress === cachedPeer.hostAddress &&
+      peer.portNumber === cachedPeer.portNumber &&
+      peer.generation <= cachedPeer.generation;
 
     if (ignoreChanges) {
       cachedPeer.availableSince = peer.availableSince;
