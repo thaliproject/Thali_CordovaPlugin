@@ -1,5 +1,7 @@
 'use strict';
 
+var logger = require('../../ThaliLogger')('pouchDBCheckpointsPlugin');
+
 module.exports.onCheckpointReached = function (handler) {
   var db = this;
   var plugin = db.__checkpointPlugin;
@@ -36,6 +38,10 @@ var CheckpointPlugin = function (_db) {
       since: 'now'
     });
 
+    events.on('error', function (error) {
+      logger.error('Error while fetching db changes: \'%s\', stack: \'%s\'', String(error), error.stack);
+      events.cancel();
+    });
     events.on('change', executeOnce(checkDBSize.bind(this), delay));
 
     db.on('destroyed', function () {
@@ -61,8 +67,8 @@ var CheckpointPlugin = function (_db) {
         }
       })
       .catch(function (error) {
+        logger.error('Error while fetching db info: \'%s\', stack: \'%s\'', String(error), error.stack);
         db.emit('error', error);
-        console.log('Error while fetching db info: ', error);
       });
   }
 
