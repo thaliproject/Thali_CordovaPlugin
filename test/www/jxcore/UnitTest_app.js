@@ -6,6 +6,8 @@
 
 'use strict';
 
+console.log('process.jxversion = %s', process.jxversion);
+
 var platform = require('thali/NextGeneration/utils/platform');
 
 if (typeof Mobile === 'undefined') {
@@ -24,7 +26,7 @@ var Promise = require('bluebird');
 
 var utResult = false;
 
-if (platform._isRealMobile) {
+if (false) {
   Mobile('executeNativeTests').callNative(function (result) {
     logger.debug('Running unit tests');
     if (result) {

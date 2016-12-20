@@ -1,5 +1,7 @@
 'use strict';
 
+return;
+
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
   return;

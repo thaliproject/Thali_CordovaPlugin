@@ -200,10 +200,10 @@ build_ios_if_possible()
 IPADDRESS=${2:-}
 prepare_project ${IPADDRESS}
 add_android_platform
-add_ios_platform_if_possible
+#add_ios_platform_if_possible
 install_thali $1 ${IPADDRESS}
 build_android
-build_ios_if_possible
+#build_ios_if_possible
 
 echo "Remember to start the test coordination server by running jx index.js"
 echo "end setUpTests.sh"

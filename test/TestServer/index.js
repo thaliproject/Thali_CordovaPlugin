@@ -13,7 +13,7 @@ var HttpServer        = require('./HttpServer');
 var UnitTestFramework = require('./UnitTestFramework');
 
 var DEFAULT_SERVER_PORT = Number(process.env.COORDINATED_PORT) || 3000;
-var WAITING_FOR_DEVICES_TIMEOUT = 5 * 60 * 1000;
+var WAITING_FOR_DEVICES_TIMEOUT = 5 * 60 * 100000;
 
 var httpServer = new HttpServer({
   port: DEFAULT_SERVER_PORT,
