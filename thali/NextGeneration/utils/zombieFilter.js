@@ -93,6 +93,7 @@ function throttle(fn, options) {
     }
 
     if (!timeout) {
+      // see https://github.com/thaliproject/jxcore/issues/86
       timeout = global.setTimeout(invoke, minDelay);
     } else {
       var elapsed = now - lastCalledAt;
@@ -208,7 +209,9 @@ function fixPeerHandler(cache, nonTCPPeerHandler) {
 
 /**
  * Enhances passed function with anti-zombie power.
- * See #1629 for details.
+ *
+ * See https://github.com/thaliproject/Thali_CordovaPlugin/issues/1629 for
+ * details.
  *
  * @param {function} nonTCPPeerHandler original peerAvailabilityChanged event
  * handler
