@@ -10,8 +10,6 @@ if (!tape.coordinated) {
   return;
 }
 
-// var platform = require('thali/NextGeneration/utils/platform');
-
 var net = require('net');
 var assert = require('assert');
 var Promise = require('lie');
