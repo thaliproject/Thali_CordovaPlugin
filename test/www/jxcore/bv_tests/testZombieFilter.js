@@ -44,110 +44,105 @@ function createEmptyHandler() {
   return fn;
 };
 
-test('cachePeer', function (t) {
+test('Cache#addOrUpdate', function (t) {
   var cache, expectedCache;
 
-  var cachePeer = zombieFilter._cachePeer;
+  var Cache = zombieFilter._Cache;
 
   var handler = createEmptyHandler();
   var handlerClearTimeoutSpy = sandbox.spy(handler, 'clearTimeout');
 
   // test add
-  cache = {};
+  cache = new Cache();
   expectedCache = {};
   expectedCache[DEFAULT_UUID] = {
-    fakeGeneration: 0,
-    nativeGeneration: 10,
+    generation: 10,
     handler: handler,
   };
-  cachePeer(cache, DEFAULT_UUID, 10, handler);
-  t.deepEqual(cache, expectedCache, 'adds peer correctly');
+  cache.addOrUpdate(DEFAULT_UUID, 10, handler);
+  t.deepEqual(cache._cache, expectedCache, 'adds peer correctly');
 
   // test update (without handler overwriting)
-  cache = {};
-  cache[DEFAULT_UUID] = {
-    fakeGeneration: 20,
-    nativeGeneration: 40,
+  cache = new Cache;
+  cache._cache[DEFAULT_UUID] = {
+    generation: 20,
     handler: handler,
   };
   expectedCache = {};
   expectedCache[DEFAULT_UUID] = {
-    fakeGeneration: 20,
-    nativeGeneration: 50,
+    generation: 40,
     handler: handler,
   };
-  cachePeer(cache, DEFAULT_UUID, 50, handler);
-  t.deepEqual(cache, expectedCache, 'updates peer correctly (same handler)');
+  cache.addOrUpdate(DEFAULT_UUID, 40, handler);
+  t.deepEqual(cache._cache, expectedCache,
+    'updates peer correctly (same handler)');
   t.equal(handlerClearTimeoutSpy.callCount, 0, 'clearTimeout is not called');
 
   // test update (with handler overwriting)
-  var newHandler = createEmptyHandler(2);
-  cache = {};
-  cache[DEFAULT_UUID] = {
-    fakeGeneration: 1,
-    nativeGeneration: 1,
+  var newHandler = createEmptyHandler();
+  cache = new Cache();
+  cache._cache[DEFAULT_UUID] = {
+    generation: 1,
     handler: handler,
   };
   expectedCache = {};
   expectedCache[DEFAULT_UUID] = {
-    fakeGeneration: 1,
-    nativeGeneration: 2,
+    generation: 1,
     handler: newHandler,
   };
-  cachePeer(cache, DEFAULT_UUID, 2, newHandler);
-  t.deepEqual(cache, expectedCache, 'updates peer correctly (new handler)');
+  cache.addOrUpdate(DEFAULT_UUID, 1, newHandler);
+  t.deepEqual(cache._cache, expectedCache,
+    'updates peer correctly (new handler)');
   t.equal(handlerClearTimeoutSpy.callCount, 1, 'clearTimeout has been called');
 
   t.end();
 });
 
-test('uncachePeer', function (t) {
+test('Cache#remove', function (t) {
   var cache, expectedCache;
-  var uncachePeer = zombieFilter._uncachePeer;
+  var Cache = zombieFilter._Cache;
 
   var handler = createEmptyHandler();
   var handlerClearTimeoutSpy = sandbox.spy(handler, 'clearTimeout');
 
-  cache = {};
-  cache[DEFAULT_UUID] = {
-    fakeGeneration: 0,
-    nativeGeneration: 0,
+  cache = new Cache;
+  cache._cache[DEFAULT_UUID] = {
+    generation: 0,
     handler: handler,
   };
   expectedCache = {};
 
-  uncachePeer(cache, DEFAULT_UUID);
-  t.deepEqual(cache, expectedCache, 'removes peer from cache');
+  cache.remove(DEFAULT_UUID);
+  t.deepEqual(cache._cache, expectedCache, 'removes peer from cache');
   t.equal(handlerClearTimeoutSpy.callCount, 1, 'clearTimeout has been called');
 
   t.end();
 });
 
-test('clearCache', function (t) {
+test('Cache#clear', function (t) {
   var cache, expectedCache;
-  var clearCache = zombieFilter._clearCache;
+  var Cache = zombieFilter._Cache;
 
   var handler1 = createEmptyHandler();
   var handler1ClearTimeoutSpy = sandbox.spy(handler1, 'clearTimeout');
   var handler2 = createEmptyHandler();
   var handler2ClearTimeoutSpy = sandbox.spy(handler2, 'clearTimeout');
 
-  cache = {
+  cache = new Cache();
+  cache._cache = {
     '00000000-0000-4000-8000-000000000001': {
-      fakeGeneration: 0,
-      nativeGeneration: 0,
+      generation: 0,
       handler: handler1,
     },
     '00000000-0000-4000-8000-000000000002': {
-      fakeGeneration: 0,
-      nativeGeneration: 0,
+      generation: 0,
       handler: handler2,
     },
   };
   expectedCache = {};
 
-  clearCache(cache);
-  t.deepEqual(cache, expectedCache, 'removes peers from cache');
+  cache.clear();
+  t.deepEqual(cache._cache, expectedCache, 'removes peers from cache');
   t.equal(handler1ClearTimeoutSpy.callCount, 1,
     'clearTimeout has been called on the first peer handler');
   t.equal(handler2ClearTimeoutSpy.callCount, 1,
@@ -158,13 +153,13 @@ test('clearCache', function (t) {
 
 test('fixPeerGeneration', function (t) {
   var fixPeerGeneration = zombieFilter._fixPeerGeneration;
+  var Cache = zombieFilter._Cache;
 
   var handler = createEmptyHandler();
 
-  var cache = {};
-  cache[DEFAULT_UUID] = {
-    fakeGeneration: 13,
-    nativeGeneration: 23,
+  var cache = new Cache();
+  cache._cache[DEFAULT_UUID] = {
+    generation: 13,
     handler: handler,
   };
 
@@ -191,11 +186,11 @@ test('fixPeerGeneration', function (t) {
 
 test('fixPeerHandler', function (t) {
   var fixPeerHandler = zombieFilter._fixPeerHandler;
+  var Cache = zombieFilter._Cache;
 
-  var cache = {};
-  cache[DEFAULT_UUID] = {
-    fakeGeneration: 10,
-    nativeGeneration: 133,
+  var cache = new Cache();
+  cache._cache[DEFAULT_UUID] = {
+    generation: 10,
     handler: createEmptyHandler,
   };
 
@@ -219,7 +214,7 @@ test('fixPeerHandler', function (t) {
 
   t.equal(handler.callCount, 1, 'real handler called once');
   t.deepEqual(handler.firstCall.args[0], fixedPeer, 'called with fixed peer');
-  t.equal(cache[DEFAULT_UUID].fakeGeneration, 11,
+  t.equal(cache.get(DEFAULT_UUID).generation, 11,
     'fake generation in cache is incremented');
   t.end();
 });
@@ -496,6 +491,8 @@ test('Fixes generations order', function (t) {
     [interval, peer(id, true, 13)],
     [interval, peer(id, true, 21)],
   ]);
+
+  console.log(filteredEvents);
 
   t.deepEqual(filteredEvents, [
     peer(id, true, 0),

@@ -72,7 +72,7 @@ function throttle(fn, options) {
   var timeout = null;
   var lastCalledAt = null;
 
-  function invoke() {
+  function invoke () {
     timeout = null;
     lastCalledAt = null;
     fn.apply(context, args);
@@ -93,7 +93,9 @@ function throttle(fn, options) {
     }
 
     if (!timeout) {
-      // see https://github.com/thaliproject/jxcore/issues/86
+      // JXcore passes setTimeout as an argument to the module wrapper and it
+      // cannot be overwritten by sinon's fake timers for testing.
+      // See https://github.com/thaliproject/jxcore/issues/86
       timeout = global.setTimeout(invoke, minDelay);
     } else {
       var elapsed = now - lastCalledAt;
@@ -115,65 +117,87 @@ function throttle(fn, options) {
 
 /**
  * @typedef {Object} CachedPeer
- * @property {number} nativeGeneration real generation of the peer (from native
- * layer)
- * @property {number} fakeGeneration custom generation (created by zombieFilter)
+ * @property {number} generation
  * @property {ThrottledFunction} handler
  */
 
 /**
+ * Cache that stores info about available peers (fixed generation and throttled
+ * handlers)
+ * @private
+ * @class
+ */
+function Cache() {
+  this._cache = {};
+}
+
+/**
+ * Get cached peer by its id
+ *
+ * @param {string} peerIdentifier
+ * @returns {?CachedPeer}
+ */
+Cache.prototype.get = function (peerIdentifier) {
+  return this._cache[peerIdentifier] || null;
+};
+
+/**
  * Adds new peer entry into cache or updates existing one
  *
- * @private
- * @param {Object} cache cache to update
  * @param {string} peerIdentifier
- * @param {number} nativeGeneration real peer generation (it is actually not
- * used)
+ * @param {number} generation
  * @param {ThrottledFunction} handler
  * @returns {CachedPeer} cached peer
  */
-function cachePeer (cache, peerIdentifier, nativeGeneration, handler) {
-  var oldCachedPeer = cache[peerIdentifier];
+Cache.prototype.addOrUpdate = function (peerIdentifier, generation, handler) {
+  var oldCachedPeer = this._cache[peerIdentifier];
   var newCachedPeer = {
-    nativeGeneration: nativeGeneration,
-    fakeGeneration: oldCachedPeer ? oldCachedPeer.fakeGeneration : 0,
+    generation: generation,
     handler: handler,
   };
   if (oldCachedPeer && oldCachedPeer.handler !== handler) {
     oldCachedPeer.handler.clearTimeout();
   }
-  cache[peerIdentifier] = newCachedPeer;
+  this._cache[peerIdentifier] = newCachedPeer;
   return newCachedPeer;
-}
+};
+
+/**
+ * Increment generation of the peer in cache if such a peer exists
+ * @param {string} peerIdentifier
+ */
+Cache.prototype.incrementGeneration = function (peerIdentifier) {
+  var peer = this.get(peerIdentifier);
+  if (peer) {
+    this.addOrUpdate(peerIdentifier, peer.generation + 1, peer.handler);
+  }
+};
 
 /**
  * Removes cached peer from cache and clears throttled handler
  *
- * @private
- * @param {Object} cache
  * @param {string} peerIdentifier
  */
-function uncachePeer (cache, peerIdentifier) {
-  var cachedPeer = cache[peerIdentifier];
+Cache.prototype.remove = function (peerIdentifier) {
+  var cachedPeer = this._cache[peerIdentifier];
   if (cachedPeer) {
     cachedPeer.handler.clearTimeout();
   }
-  delete cache[peerIdentifier];
-}
+  delete this._cache[peerIdentifier];
+};
 
 /**
- * "Uncache" every peer in cache
- *
- * @private
- * @param {Object} cache
+ * Remove all peers from cache
  */
-function clearCache (cache) {
-  var uncache = uncachePeer.bind(null, cache);
-  Object.keys(cache).forEach(uncache);
-}
+Cache.prototype.clear = function () {
+  Object.keys(this._cache).forEach(function (peerId) {
+    this.remove(peerId);
+  }, this);
+};
+
 
 /**
- * Change peer's real generation to the fake one from cache.
+ * Replaces peer's real generation with the generation from the cache.
  *
  * @private
  * @param {Object} cache
@@ -181,11 +205,12 @@ function clearCache (cache) {
  * @returns {Object} copy of the `nativePeer` with fake generation
  */
 function fixPeerGeneration (cache, nativePeer) {
-  var cachedPeer = cache[nativePeer.peerIdentifier];
-  var fixedPeer = extend({}, nativePeer);
-  if (cachedPeer) {
-    fixedPeer.generation = cachedPeer.fakeGeneration;
+  var cachedPeer = cache.get(nativePeer.peerIdentifier);
+  if (!cachedPeer) {
+    return nativePeer;
   }
+  var fixedPeer = extend({}, nativePeer);
+  fixedPeer.generation = cachedPeer.generation;
   return fixedPeer;
 }
 
@@ -195,15 +220,14 @@ function fixPeerGeneration (cache, nativePeer) {
  *
  * @private
  * @param {Object} cache
- * @param {function} nonTCPPeerHandler event callback to be fixed
+ * @param {function} originalHandler event callback to be fixed
  * @returns {function}
  */
-function fixPeerHandler(cache, nonTCPPeerHandler) {
+function fixPeerHandler(cache, originalHandler) {
   return function (nativePeer) {
-    var cachedPeer = cache[nativePeer.peerIdentifier];
-    nonTCPPeerHandler(fixPeerGeneration(cache, nativePeer));
-    cachedPeer.fakeGeneration++;
-    cachePeer(cachedPeer);
+    var fixedPeer = fixPeerGeneration(cache, nativePeer);
+    originalHandler(fixedPeer);
+    cache.incrementGeneration(nativePeer.peerIdentifier);
   };
 }
 
@@ -235,7 +259,7 @@ function zombieFilter (nonTCPPeerHandler, options) {
     )
   );
 
-  var cache = {};
+  var cache = new Cache();
   var throttleOptions = {
     minDelay: options.zombieThreshold,
     maxDelay: options.maxDelay,
@@ -246,7 +270,7 @@ function zombieFilter (nonTCPPeerHandler, options) {
   function filteredNonTCPPeerHandler (nativePeer) {
     var peerIdentifier = nativePeer.peerIdentifier;
     var peerAvailable = nativePeer.peerAvailable;
-    var cachedPeer = cache[peerIdentifier];
+    var cachedPeer = cache.get(peerIdentifier);
 
     if (nativePeer.recreated) {
       // Just pass through recreated event. We don't need to update cache. This
@@ -256,30 +280,29 @@ function zombieFilter (nonTCPPeerHandler, options) {
     }
 
     if (!peerAvailable) {
-      uncachePeer(cache, peerIdentifier);
+      cache.remove(peerIdentifier);
       nonTCPPeerHandler(nativePeer);
       return;
     }
 
-    var handler = cachedPeer ?
-      cachedPeer.handler :
-      throttle(fixedHandler, throttleOptions);
+    if (!cachedPeer) {
+      cachedPeer = cache.addOrUpdate(
+        peerIdentifier, 0, throttle(fixedHandler, throttleOptions)
+      );
+    }
 
-    cachePeer(cache, peerIdentifier, nativePeer.generation, handler);
-
-    handler(nativePeer);
+    var throttledAndFixedHandler = cachedPeer.handler;
+    throttledAndFixedHandler(nativePeer);
   };
 
-  filteredNonTCPPeerHandler.clearCache = clearCache.bind(null, cache);
+  filteredNonTCPPeerHandler.clearCache = cache.clear.bind(cache);
 
   return filteredNonTCPPeerHandler;
 }
 
 // export just for testing
 zombieFilter._throttle = throttle;
-zombieFilter._cachePeer = cachePeer;
-zombieFilter._uncachePeer = uncachePeer;
-zombieFilter._clearCache = clearCache;
+zombieFilter._Cache = Cache;
 zombieFilter._fixPeerGeneration = fixPeerGeneration;
 zombieFilter._fixPeerHandler = fixPeerHandler;
 
