@@ -44,7 +44,7 @@ if (process.platform === 'android' || process.platform === 'ios') {
 
 if (!utResult) {
   logger.debug('Failed to execute UT.');
-  global.nativeUTFailed = true;
+  //global.nativeUTFailed = true;
 }
 
 // TODO finish testing here (the node part will be omitted)
