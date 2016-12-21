@@ -28,6 +28,7 @@ cUZ1i8ZkZrPrdVgw2cb28UJM7qZHQnXcMHTXFFvxeQ==\n\
 -----END RSA PRIVATE KEY-----';
 
 module.exports = {
+  SSDP_IP: '228.227.226.225',
   SSDP_NT: process.env.SSDP_NT || 'http://www.thaliproject.org/ssdp',
   SSDP_ADVERTISEMENT_INTERVAL: 500,
   SSDP_OWN_PEERS_HISTORY_SIZE: 10,
