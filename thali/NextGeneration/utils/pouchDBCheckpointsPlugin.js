@@ -41,6 +41,7 @@ var CheckpointPlugin = function (_db) {
     events.on('error', function (error) {
       logger.error('Error while fetching db changes: \'%s\', stack: \'%s\'', String(error), error.stack);
       events.cancel();
+      db.emit('error', error);
     });
     events.on('change', executeOnce(checkDBSize.bind(this), delay));
 
@@ -89,10 +90,11 @@ var CheckpointPlugin = function (_db) {
 var executeOnce = function (fn, delay) {
   var timeout = null;
   return function () {
+    var self = this;
     var args = arguments;
     if (!timeout) {
       timeout = setTimeout(function () {
-        fn.apply(null, args);
+        fn.apply(self, args);
         clearTimeout(timeout);
         timeout = null;
       }, delay);
@@ -102,9 +104,10 @@ var executeOnce = function (fn, delay) {
 
 var executeAsync = function (fn) {
   return function () {
+    var self = this;
     var args = arguments;
-    setTimeout(function () {
-      fn.apply(null, args);
+    process.nextTick(function () {
+      fn.apply(self, args);
     });
   }
 }
