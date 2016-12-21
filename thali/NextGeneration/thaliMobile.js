@@ -1041,6 +1041,8 @@ var handleRecreatedPeer = function (nativePeer) {
   }
 };
 
+// Explicitly make peerAvailabilityChanged handlers asynchronous just to be
+// consistent with zombieFilter, which is always async (it delays execution).
 var handleNonTCPPeer = makeAsync(function (nativePeer) {
   if (!thaliMobileStates.started) {
     return;
