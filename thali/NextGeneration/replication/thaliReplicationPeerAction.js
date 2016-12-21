@@ -256,11 +256,17 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
           self._localSeqManager
             .update(info.last_seq)
             .catch(function (err) {
-              logger.debug(
-                'Got error in update, waiting for main loop to ' +
-                'detect and handle - ',
-                Utils.serializePouchError(err)
-              );
+              if (self.getActionState() === actionState.KILLED) {
+                logger.debug(
+                  'Got error in update: %s, but we are already killed and so we ignored it',
+                  Utils.serializePouchError(err)
+                );
+              } else {
+                logger.debug(
+                  'Got error in update: %s, waiting for main loop to detect and handle',
+                  Utils.serializePouchError(err)
+                );
+              }
             });
           // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
         });
@@ -316,13 +322,22 @@ ThaliReplicationPeerAction.prototype._complete =
       return null;
     }
     self._completed = true;
+
+    assert(self._resolve, 'resolve should exist');
+    assert(self._reject, 'reject should exist');
+
+    if (self.getActionState() === actionState.KILLED) {
+      logger.debug('We called _complete with ' + printErrorArray(errors) +
+      ' but we are already killed and so we ignored it');
+      self._resolve();
+      return null;
+    }
+
     logger.debug('We called _complete with ' + printErrorArray(errors) +
     ' and it caused us to complete');
 
     self.kill();
 
-    assert(self._resolve, 'resolve should exist');
-    assert(self._reject, 'reject should exist');
     var returnError = null;
 
     if (!errors || errors.length === 0) {

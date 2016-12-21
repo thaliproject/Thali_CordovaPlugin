@@ -208,14 +208,15 @@ ThaliManager.prototype.stop = function () {
   );
   self.state = ThaliManager.STATES.STOPPING;
 
-  logger.debug('stopping thaliPullReplicationFromNotification');
-  self._thaliPullReplicationFromNotification.stop();
-
-  logger.debug('stopping thaliSendNotificationBasedOnReplication');
-  self._stoppingPromise = self._thaliSendNotificationBasedOnReplication.stop()
+  logger.debug('stopping thaliPeerPoolInterface');
+  self._stoppingPromise = self._thaliPeerPoolInterface.stop()
     .then(function () {
-      logger.debug('stopping thaliPeerPoolInterface');
-      return self._thaliPeerPoolInterface.stop();
+      logger.debug('stopping thaliPullReplicationFromNotification');
+      return self._thaliPullReplicationFromNotification.stop();
+    })
+    .then(function () {
+      logger.debug('stopping thaliSendNotificationBasedOnReplication');
+      return self._thaliSendNotificationBasedOnReplication.stop();
     })
     .then(function () {
       logger.debug('stopping advertising and listening');

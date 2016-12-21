@@ -70,7 +70,8 @@ function ThaliPeerPoolOneAtATime() {
 util.inherits(ThaliPeerPoolOneAtATime, ThaliPeerPoolInterface);
 ThaliPeerPoolOneAtATime.ERRORS = ThaliPeerPoolInterface.ERRORS;
 
-ThaliPeerPoolOneAtATime.ERRORS.ENQUEUE_WHEN_STOPPED = 'We are stopped';
+ThaliPeerPoolOneAtATime.ERRORS.ENQUEUE_WHEN_STOPPED =
+  'we ignored peer action, because we has been already stopped';
 
 ThaliPeerPoolOneAtATime.prototype._startAction = function (peerAction) {
   var actionAgent = new ForeverAgent.SSL({
@@ -273,7 +274,8 @@ ThaliPeerPoolOneAtATime.prototype._bluetoothEnqueue = function (peerAction) {
 
 ThaliPeerPoolOneAtATime.prototype.enqueue = function (peerAction) {
   if (this._stopped) {
-    throw new Error(ThaliPeerPoolOneAtATime.ERRORS.ENQUEUE_WHEN_STOPPED);
+    peerAction.kill();
+    return new Error(ThaliPeerPoolOneAtATime.ERRORS.ENQUEUE_WHEN_STOPPED);
   }
   var result =
     ThaliPeerPoolOneAtATime.super_.prototype.enqueue.apply(this, arguments);
