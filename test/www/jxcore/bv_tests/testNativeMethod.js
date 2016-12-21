@@ -23,7 +23,7 @@ test('onPeerLost calls jxcore',
   },
   function (t) {
     Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
-      if (typeof peers.forEach !== 'function') {
+      if (!Array.isArray(peers)) {
         peers = [peers];
         t.fail('peers callback should be an array!');
       }
@@ -51,7 +51,7 @@ test('onPeerDiscovered calls jxcore',
   function (t) {
     Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
 
-      if (typeof peers.forEach !== 'function') {
+      if (!Array.isArray(peers)) {
         peers = [peers];
         t.fail('peers callback should be an array!');
       }
@@ -70,5 +70,4 @@ test('onPeerDiscovered calls jxcore',
     Mobile('testNativeMethod').callNative('onPeerDiscovered', function (result) {
       t.pass(result.Testing_);
     });
-    t.end();
   });
