@@ -24,7 +24,7 @@
     "child-process-promise": "1.1.0",
     "concat-map": "0.0.1",
     "express": "4.13.3",
-    "express-pouchdb": "2.1.1",
+    "express-pouchdb": "1.0.6-thali",
     "forever-agent": "https://github.com/thaliproject/forever-agent.git#f1078b5095dfe00ad0d80779eba75e563b54608b",
     "fs-extra-promise": "0.4.0",
     "inherits": "2.0.1",
