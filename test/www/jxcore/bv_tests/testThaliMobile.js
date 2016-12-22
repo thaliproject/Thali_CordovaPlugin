@@ -374,6 +374,7 @@ test('wifi peer is marked unavailable if announcements stop',
     var testServerPort = 8080;
     var testServer = new nodessdp.Server({
       location: 'http://' + testServerHostAddress + ':' + testServerPort,
+      ssdpIp: thaliConfig.SSDP_IP,
       udn: thaliConfig.SSDP_NT,
       // Make the interval 10 times longer than expected
       // to make sure we determine the peer is gone while
