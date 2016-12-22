@@ -16,7 +16,7 @@ const versions =
   xcode: '8.2',
   xcodeCommandLineTools: ' ',
   macOS: '10.12.2',
-  node: '6.9.1',
+  node: '6.9.2',
   npm: '3.10.8',
   brew: '1.1.',
   carthage: '0.18.1',
@@ -34,7 +34,7 @@ const versions =
   cordova: '6.4.0',
   java: '1.8.0_102',
   git: '2.10.0',
-  swiftlint: '0.13.2',
+  swiftlint: '0.14.0',
   sinopiaNode: ' ',
   sinopiaJxCore: ' '
 };
