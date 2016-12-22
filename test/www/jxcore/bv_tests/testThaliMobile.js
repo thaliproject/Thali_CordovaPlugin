@@ -2336,16 +2336,6 @@ test('test for data corruption',
               .then(function () {
                 logger.debug('Got back from parallel requests - ' + uuid);
                 participantsState[uuid] = participantState.finished;
-                areWeDone = Object.getOwnPropertyNames(participantsState)
-                  .every(
-                    function (participant) {
-                      return participantsState[participant] ===  participantState.finished
-                        || participantsState[participant] === participantState.failed;
-                    });
-                if (areWeDone) {
-                  t.ok(true, 'received all uuids');
-                  return resolve(true);
-                }
                 return false;
               });
           })
@@ -2354,9 +2344,19 @@ test('test for data corruption',
             return true;
           })
           .then(function (isError) {
+            areWeDone = Object.getOwnPropertyNames(participantsState)
+              .every(
+                function (participant) {
+                  return participantsState[participant] ===  participantState.finished
+                    || participantsState[participant] === participantState.failed;
+                });
+
             if (areWeDone) {
+              logger.debug('received all uuids');
+
               return resolve(true);
             }
+
             ThaliMobileNativeWrapper._getServersManager()
               .terminateOutgoingConnection(peer.peerIdentifier, peer.portNumber);
             // We have to give Android enough time to notice the killed connection
