@@ -2071,7 +2071,8 @@ function (t) {
 var participantState = {
   running: 'running',
   notRunning: 'notRunning',
-  finished: 'finished'
+  finished: 'finished',
+  failed: ' failed'
 };
 
 test('can get data from all participants',
@@ -2232,33 +2233,68 @@ test('test for data corruption',
     return true;
   },
   function (t) {
-    var router = setUpRouter();
-    var participantsState = {};
-    var peerIDToUUIDMap = {};
-    var areWeDone = false;
-    var promiseQueue = new PromiseQueue();
-    t.participants.forEach(function (participant) {
-      if (participant.uuid === tape.uuid) {
-        return;
-      }
-      participantsState[participant.uuid] = participantState.notRunning;
-    });
-    setupDiscoveryAndFindPeers(t, router, function (peer, done) {
+    var router;
+    var participantsState;
+    var peerIDToUUIDMap;
+    var areWeDone;
+    var promiseQueue;
+
+    var runFunctionTest = function () {
+      router = setUpRouter();
+      participantsState = {};
+      peerIDToUUIDMap = {};
+      areWeDone = false;
+      promiseQueue = new PromiseQueue();
+
+      t.participants.forEach(function (participant) {
+        if (participant.uuid === tape.uuid) {
+          return;
+        }
+        participantsState[participant.uuid] = participantState.notRunning;
+      });
+
+      // fire test
+      setupDiscoveryAndFindPeers(t, router, fireFunctionTest(peer, done));
+    };
+
+    var fireFunctionTest = function(peer, done) {
+      functionTest(peer, done).then(function (result) {
+        // check if we finished with all peers or failed
+        if (result === true) {
+          var success = Object.getOwnPropertyNames(participantsState)
+            .every(
+              function (participant) {
+                return participantsState[participant] === participantState.finished;
+              });
+          if (success === true) {
+            done();
+          } else {
+            // if ThaliMobile.isStarted
+            ThaliMobile.stop().then(function (combinedResult) {
+              verifyCombinedResultSuccess(t, combinedResult);
+              runFunctionTest();
+            });
+          }
+        }
+      })
+    };
+
+    var functionTest = function (peer, done) {
       // Try to get data only from non-TCP peers so that the test
       // works the same way on desktop on CI where Wifi is blocked
       // between peers.
       if (peer.connectionType ===
         ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE) {
-        return;
+        Promise.resolve(null);
       }
       if (peerIDToUUIDMap[peer.peerIdentifier] &&
-          participantsState[peerIDToUUIDMap[peer.peerIdentifier] ===
-            participantState.finished]) {
-        return;
+        participantsState[peerIDToUUIDMap[peer.peerIdentifier] ===
+        participantState.finished]) {
+        Promise.resolve(null);
       }
-      promiseQueue.enqueue(function (resolve) {
+      return promiseQueue.enqueue(function (resolve) {
         if (areWeDone) {
-          return resolve(null);
+          return resolve(true);
         }
 
         logger.debug('Found peer - ' + JSON.stringify(peer));
@@ -2268,69 +2304,72 @@ test('test for data corruption',
         var portNumber = null;
 
         ThaliMobile.getPeerHostInfo(peer.peerIdentifier, peer.connectionType)
-        .then(function (peerHostInfo) {
-          hostAddress = peerHostInfo.hostAddress;
-          portNumber = peerHostInfo.portNumber;
+          .then(function (peerHostInfo) {
+            hostAddress = peerHostInfo.hostAddress;
+            portNumber = peerHostInfo.portNumber;
 
-          return testUtils.get(
-            hostAddress, portNumber,
-            uuidPath, pskIdentity, pskKey
-          );
-        })
-        .then(function (responseBody) {
-          uuid = responseBody;
-          peerIDToUUIDMap[peer.peerIdentifier] = uuid;
-          logger.debug('Got uuid back from GET - ' + uuid);
-          if (participantsState[uuid] !== participantState.notRunning) {
-            logger.debug('Participant is already done - ' + uuid);
-            return false;
-          } else {
-            logger.debug('Participants state is ' + participantsState[uuid]);
-          }
+            return testUtils.get(
+              hostAddress, portNumber,
+              uuidPath, pskIdentity, pskKey
+            );
+          })
+          .then(function (responseBody) {
+            uuid = responseBody;
+            peerIDToUUIDMap[peer.peerIdentifier] = uuid;
+            logger.debug('Got uuid back from GET - ' + uuid);
 
-          participantsState[uuid] = participantState.running;
+            if (participantsState[uuid] === participantState.failed) {
+              return resolve(null);
+            }
+            if (participantsState[uuid] !== participantState.notRunning) {
+              logger.debug('Participant is already done - ' + uuid);
+              return false;
+            } else {
+              logger.debug('Participants state is ' + participantsState[uuid]);
+            }
 
-          return numberOfParallelRequests(t, hostAddress, portNumber,
-            echoPath, pskIdentity, pskKey)
-          .then(function () {
-            logger.debug('Got back from parallel requests - ' + uuid);
-            participantsState[uuid] = participantState.finished;
-            areWeDone = Object.getOwnPropertyNames(participantsState)
-              .every(
-                function (participant) {
-                  return participantsState[participant] ===
-                    participantState.finished;
-                });
+            participantsState[uuid] = participantState.running;
+
+            return numberOfParallelRequests(t, hostAddress, portNumber,
+              echoPath, pskIdentity, pskKey)
+              .then(function () {
+                logger.debug('Got back from parallel requests - ' + uuid);
+                participantsState[uuid] = participantState.finished;
+                areWeDone = Object.getOwnPropertyNames(participantsState)
+                  .every(
+                    function (participant) {
+                      return participantsState[participant] ===  participantState.finished
+                        || participantsState[participant] === participantState.failed;
+                    });
+                if (areWeDone) {
+                  t.ok(true, 'received all uuids');
+                  return resolve(true);
+                }
+                return false;
+              });
+          })
+          .catch(function (error) {
+            logger.debug('Got an error on HTTP requests: ' + error);
+            return true;
+          })
+          .then(function (isError) {
             if (areWeDone) {
-              t.ok(true, 'received all uuids');
-              done();
+              return resolve(true);
             }
-            return false;
+            ThaliMobileNativeWrapper._getServersManager()
+              .terminateOutgoingConnection(peer.peerIdentifier, peer.portNumber);
+            // We have to give Android enough time to notice the killed connection
+            // and recycle everything
+            setTimeout(function () {
+              if (isError) {
+                participantsState[uuid] = participantState.failed;
+              }
+              return resolve(null);
+            }, 1000);
           });
-        })
-        .catch(function (error) {
-          logger.debug('Got an error on HTTP requests: ' + error);
-          return true;
-        })
-        .then(function (isError) {
-          if (areWeDone) {
-            return resolve(null);
-          }
-          ThaliMobileNativeWrapper._getServersManager()
-            .terminateOutgoingConnection(peer.peerIdentifier, peer.portNumber);
-          // We have to give Android enough time to notice the killed connection
-          // and recycle everything
-          setTimeout(function () {
-            if (isError) {
-              participantsState[uuid] = participantState.notRunning;
-            }
-            return resolve(null);
-          }, 1000);
-        });
       });
-    });
-  }
-);
+    };
+  });
 
 test('Discovered peer should be removed if no availability updates ' +
   'were received during availability timeout', function (t) {
