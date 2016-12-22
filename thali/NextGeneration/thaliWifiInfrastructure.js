@@ -90,6 +90,7 @@ inherits(ThaliWifiInfrastructure, EventEmitter);
 
 ThaliWifiInfrastructure.prototype._init = function () {
   var serverOptions = {
+    ssdpIp: thaliConfig.SSDP_IP,
     adInterval: thaliConfig.SSDP_ADVERTISEMENT_INTERVAL,
     udn: thaliConfig.SSDP_NT,
     thaliLogger: require('../ThaliLogger')('nodeSSDPServerLogger')
@@ -98,6 +99,7 @@ ThaliWifiInfrastructure.prototype._init = function () {
   this._setLocation();
 
   var clientOptions = {
+    ssdpIp: thaliConfig.SSDP_IP,
     thaliLogger: require('../ThaliLogger')('nodeSSDPClientLogger')
   }
 
