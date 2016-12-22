@@ -2258,7 +2258,7 @@ test('test for data corruption',
     };
 
     var fireFunctionTest = function(peer, done) {
-      functionTest(peer, done).then(function (result) {
+      functionTest(peer).then(function (result) {
         // check if we finished with all peers or failed
         if (result === true) {
           var success = Object.getOwnPropertyNames(participantsState)
@@ -2279,7 +2279,7 @@ test('test for data corruption',
       })
     };
 
-    var functionTest = function (peer, done) {
+    var functionTest = function (peer) {
       // Try to get data only from non-TCP peers so that the test
       // works the same way on desktop on CI where Wifi is blocked
       // between peers.
@@ -2318,10 +2318,7 @@ test('test for data corruption',
             uuid = responseBody;
             peerIDToUUIDMap[peer.peerIdentifier] = uuid;
             logger.debug('Got uuid back from GET - ' + uuid);
-
-            if (participantsState[uuid] === participantState.failed) {
-              return resolve(null);
-            }
+            
             if (participantsState[uuid] !== participantState.notRunning) {
               logger.debug('Participant is already done - ' + uuid);
               return false;
