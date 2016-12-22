@@ -2229,8 +2229,8 @@ function setUpRouter() {
 
 test('test for data corruption',
   function () {
-    // Bug 1594
-    return true;
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
+      !platform.isAndroid;
   },
   function (t) {
     var router;
