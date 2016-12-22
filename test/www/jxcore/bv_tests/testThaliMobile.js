@@ -2285,12 +2285,13 @@ test('test for data corruption',
       // between peers.
       if (peer.connectionType ===
         ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE) {
-        Promise.resolve(null);
+        Promise.resolve(true);
       }
+      // check if below is necessary
       if (peerIDToUUIDMap[peer.peerIdentifier] &&
         participantsState[peerIDToUUIDMap[peer.peerIdentifier] ===
         participantState.finished]) {
-        Promise.resolve(null);
+        Promise.resolve(true);
       }
       return promiseQueue.enqueue(function (resolve) {
         if (areWeDone) {
