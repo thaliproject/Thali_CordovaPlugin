@@ -84,10 +84,14 @@ const commandsAndResults =
     // they are supposed to be in. I tried http://stackoverflow.com/questions/15371925/how-to-check-if-command-line-tools-is-installed
     // and xcode-select -p returns a directory inside of XCode and none of
     // the pkgutil commands worked properly on my machine.
+    // Also note that in some circumstances this directory can also contain
+    // a subdirectory called SDKs. It's not clear if it's always there so we
+    // don't check for it.
     versionCheck: () => fs.readdirAsync('/Library/Developer/CommandLineTools'),
     versionValidate:
-      (result) => boolToPromise(result && result.length === 2 &&
-                    result[0] === 'Library' && result[1] === 'usr')
+      (result) => boolToPromise(result && result.length >= 2 &&
+                    result.indexOf('Library') !== -1 &&
+                    result.indexOf('usr') !== -1)
   },
   macOS: {
     platform: ['darwin'],

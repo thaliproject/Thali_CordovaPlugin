@@ -83,6 +83,7 @@ function _finishPromise (localFn, globalResolveFn) {
  * @private
  * @param {module:promiseQueue~promiseFunction} fn
  * @param {module:promiseQueue~unshiftOrPush} unshiftOrPushFn
+ * @return {Promise<?Error>}
  */
 PromiseQueue.prototype._changeQueue = function (fn, unshiftOrPushFn) {
   var self = this;
