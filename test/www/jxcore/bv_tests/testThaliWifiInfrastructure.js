@@ -67,6 +67,7 @@ var createTestServer = function (peerIdentifier) {
   var testLocation = 'http://' + testSeverHostAddress + ':' + testServerPort;
   var testServer = new nodessdp.Server({
     location: testLocation,
+    ssdpIp: thaliConfig.SSDP_IP,
     udn: thaliConfig.SSDP_NT,
     adInterval: thaliConfig.SSDP_ADVERTISEMENT_INTERVAL
   });
@@ -177,7 +178,9 @@ test('#startUpdateAdvertisingAndListening generates new peerIdentifier after ' +
 });
 
 test('#startUpdateAdvertisingAndListening sends correct requests', function (t) {
-  var testClient = new nodessdp.Client();
+  var testClient = new nodessdp.Client({
+    ssdpIp: thaliConfig.SSDP_IP
+  });
 
   var aliveCalled = false;
   var byeCalled = false;
@@ -245,7 +248,9 @@ test('Delayed own message are still ignored after advertisement has been ' +
 
   function captureMessages (callback) {
     var captureSize = HISTORY_SIZE * 2; // capture both alive and bye messages
-    var captureClient = new nodessdp.Client();
+    var captureClient = new nodessdp.Client({
+      ssdpIp: thaliConfig.SSDP_IP
+    });
     var capturedMessages = [];
 
     sandbox.stub(
