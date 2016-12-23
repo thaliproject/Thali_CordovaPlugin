@@ -19,8 +19,7 @@
     "salti": "https://github.com/thaliproject/salti.git#master",
     "urlsafe-base64": "1.0.0",
     "uuid": "2.0.2",
-    "winston": "2.2.0",
-    "js-extend": "1.0.1"
+    "winston": "2.2.0"
   },
   "devDependencies": {
     "jsdoc": "3.3.3",
