@@ -2,6 +2,7 @@
 
 var Promise = require('lie');
 var logger = require('../../ThaliLogger')('pouchDBCheckpointsPlugin');
+var makeAsync = require('./common').makeAsync;
 
 module.exports.onCheckpointReached = function (handler) {
   var db = this;
@@ -40,14 +41,11 @@ var CheckpointPlugin = function (_db) {
         return db.getDiskSize()
           .then(function (diskSize) {
             // Handlers should be called only once
-            // after the first reaching of a checkpoint
+            // after the first reaching of a checkpoint.
             if (diskSize >= checkpoint) {
-              handlers
-                .forEach(function (handler) {
-                  // It might be better for performance
-                  // to execute handlers asynchronously
-                  executeAsync(handler)(checkpoint);
-                });
+              handlers.forEach(function (handler) {
+                handler(checkpoint);
+              });
             }
           });
       })
@@ -91,7 +89,9 @@ var CheckpointPlugin = function (_db) {
 
   // Public methods
   CheckpointPlugin.prototype.registerHandler = function (handler) {
-    handlers.push(handler);
+    // It might be better for performance
+    // to execute handlers asynchronously.
+    handlers.push(makeAsync(handler));
   };
 
   return new CheckpointPlugin();
@@ -109,15 +109,5 @@ var executeOnce = function (fn, delay) {
         timeout = null;
       }, delay);
     }
-  }
-}
-
-var executeAsync = function (fn) {
-  return function () {
-    var self = this;
-    var args = arguments;
-    process.nextTick(function () {
-      fn.apply(self, args);
-    });
   }
 }
