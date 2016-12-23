@@ -3,6 +3,7 @@
 var path = require('path');
 var randomString = require('randomstring');
 var testLoader = require('./lib/testLoader');
+var config = require('./config');
 
 // Before including anything serious from thali we want to ensure
 // that we have SSDP_NT env defined.
@@ -78,7 +79,8 @@ logger.info(
 );
 
 var testsToRun = argv._[0] || 'bv_tests';
-testLoader.load(path.join(__dirname, testsToRun));
+var testsPath = path.join(__dirname, testsToRun);
+testLoader.load(testsPath, config.preferredOrder);
 
 testUtils.hasRequiredHardware()
 .then(function (hasRequiredHardware) {
