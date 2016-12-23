@@ -6,6 +6,7 @@ var http = require('http');
 var fs = require('fs'); // Will be overwritten by fs-extra-promise
 var Promise = null; // Wil be set below
 
+var pouchDBNodePackageName = 'pouchdb';
 var expressPouchDBPackageName = 'express-pouchdb';
 
 function getPackageJsonVersion(packageName) {
@@ -154,14 +155,29 @@ function installCustomMonoRepoPackage(gitUrl, branchName, commitId, packageName,
  * stop gap.
  * @returns {promise} Did the install work?
  */
-function installNodePouchDB () {
-  var gitUrl = 'https://github.com/pouchdb/pouchdb.git';
-  var branch = 'master';
-  var commitId = '8d2af9bd78';
+function installNodePouchDB (version) {
+  var gitUrl = 'https://github.com/thaliproject/pouchdb.git';
+  var branch = 'v6.2.0-prerelease_aaladev_1644';
+  var commitId = 'feadf44dd209ec00cbe35590bd0949894c99afcb';
   var targetDir = 'customPouchDir';
 
-  return installCustomMonoRepoPackage(gitUrl, branch, commitId, null,
-                                      targetDir);
+  var customPouchDirPath = path.join(__dirname, targetDir);
+  return fs.removeAsync(targetDir)
+    .then(function () {
+      return childProcessExecCommandLine([
+        ['git clone --single-branch --branch ' + branch + ' ' +
+          gitUrl + ' ' + targetDir, __dirname],
+        ['git reset --hard ' + commitId, customPouchDirPath],
+        // We intentionally are using npm and not 'jx npm' below because
+        // PouchDB at least depends on leveldown which can't be built in
+        // jxcore (only leveldown-mobile). There is probably a way to hack
+        // the build to skip that part and let us use JXcore but since we are
+        // only going to use pure Javascript output by these build process
+        // but it's not worth the effort.
+        ['npm run set-version -- ' + version, customPouchDirPath],
+        ['npm run release', customPouchDirPath]
+      ]);
+    });
 }
 
 /**
@@ -254,18 +270,23 @@ function versionExists(packageName, versionNumber, registryUrl) {
 function installAll() {
   var promises = [];
   var registryUrl = null;
+  var pouchDBNodeVersion = null;
+
   return getNpmRegistryUrl()
   .then(function (foundRegistryUrl) {
     registryUrl = foundRegistryUrl;
     // Uncomment this code to build our custom version of PouchDB
-    //   var pouchDBNodeVersion = getPackageJsonVersion(pouchDBNodePackageName);
-    //   return versionExists(pouchDBNodePackageName, pouchDBNodeVersion,
-    //                        registryUrl);
-    // })
-    // .then(function (pouchDBVersionExists) {
-    //   if (!pouchDBVersionExists) {
-    //     promises.push(installNodePouchDB());
-    //   }
+    // /*
+    pouchDBNodeVersion = getPackageJsonVersion(pouchDBNodePackageName);
+    return versionExists(pouchDBNodePackageName, pouchDBNodeVersion,
+                          registryUrl);
+    })
+    .then(function (pouchDBVersionExists) {
+      if (!pouchDBVersionExists) {
+        promises.push(installNodePouchDB(pouchDBNodeVersion));
+      }
+    // */
+
     var expressPouchDBVersion =
       getPackageJsonVersion(expressPouchDBPackageName);
     return versionExists(expressPouchDBPackageName, expressPouchDBVersion,
