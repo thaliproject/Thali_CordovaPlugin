@@ -637,10 +637,9 @@ var multiConnectCounter = 0;
  * @private
  * @param  {string} peerIdentifier The value taken from a
  * peerAvailabilityChanged event.
- * @return {Promise<number|Error} The promise will either return an integer with
- * the localhost port to connect to or an Error object.
+ * @return {Promise<number|Error>} The promise will either return an integer
+ * with the localhost port to connect to or an Error object.
  */
-
 module.exports._multiConnect = function (peerIdentifier) {
   return gPromiseQueue.enqueue(function (resolve, reject) {
     var originalSyncValue = String(multiConnectCounter);
@@ -662,8 +661,11 @@ module.exports._multiConnect = function (peerIdentifier) {
             '_multiConnectResolved', callback);
 
           if (error) {
-            handleFailedNativeConnectionMPCF(peerIdentifier);
-            return reject(new Error(error));
+            reject(new Error(error));
+            if (error === 'Connection could not be established') {
+              recreatePeer(peerIdentifier);
+            }
+
           }
 
           resolve(portNumber);
@@ -1015,7 +1017,7 @@ function getPeerPort(peer) {
   }
 }
 
-var handleFailedNativeConnectionMPCF = function (peerIdentifier) {
+var recreatePeer = function (peerIdentifier) {
   var peerUnavailable = {
     peerIdentifier: peerIdentifier,
     peerAvailable: false,
@@ -1205,7 +1207,9 @@ module.exports._registerToNative = function () {
         connectionType: connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK
       };
       module.exports.emitter.emit('failedNativeConnection', event);
-      handleFailedNativeConnectionMPCF(failedConnection.peerIdentifier);
+      if (failedConnection.error) {
+        recreatePeer(failedConnection.peerIdentifier);
+      }
     }
   );
 
@@ -1220,9 +1224,9 @@ module.exports._registerToNative = function () {
         return;
       }
 
-      var originalPortNumber = (platform.isAndroid) ?
-                                gServersManagerLocalPort :
-                                gRouterServerPort;
+      var originalPortNumber = platform.isAndroid ?
+                               gServersManagerLocalPort :
+                               gRouterServerPort;
 
       if (originalPortNumber !== portNumber) {
         logger.info('got incomingConnectionToPortNumberFailed for port ' +

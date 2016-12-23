@@ -1245,35 +1245,64 @@ test('multiconnect failure - new peer is ignored (MPCF)',
 );
 
 test('multiconnect failure - cached peer fires peerAvailabilityChanged (MPCF)',
-  testUtils.skipOnAndroid,
+  function () {
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
+           platform.isAndroid;
+  },
   function (t) {
     var nativePeer = generateLowerLevelPeers().nativePeer;
+    var callCounter = 0;
+    var errorMessage = 'Connection could not be established';
 
-    var failedPeer = {
-      peerIdentifier: nativePeer.peerIdentifier,
-      connectionType: getNativeConnectionType()
+    var availabilityHandler = function (peer) {
+      ++callCounter;
+
+      switch (callCounter) {
+        case 1: {
+          var cache = ThaliMobile._getPeerAvailabilities();
+          var cachedPeer =
+            cache[getNativeConnectionType()][peer.peerIdentifier];
+
+          t.equal(cachedPeer.peerIdentifier, nativePeer.peerIdentifier,
+            'should be in the cache');
+          Mobile.fireMultiConnectConnectionFailure({
+            peerIdentifier: peer.peerIdentifier,
+            error: errorMessage
+          });
+          return;
+        }
+        case 2: {
+          t.equal(peer.peerIdentifier, nativePeer.peerIdentifier,
+              'peerIds match');
+          t.equal(peer.peerAvailable, false, 'peer is unavailable');
+          return;
+        }
+        case 3: {
+          t.equal(peer.peerIdentifier, nativePeer.peerIdentifier,
+            'peerIds match');
+          t.equal(peer.peerAvailable, true, 'peer should be available');
+          return cleanUp();
+        }
+      }
     };
 
-    var availabilityHandler = sinon.spy();
+    var cleanUpCalled = false;
 
-    function end() {
-      var cache = ThaliMobile._getPeerAvailabilities();
-      var cachedPeer =
-        cache[getNativeConnectionType()][failedPeer.peerIdentifier];
-
-      t.equal(cachedPeer.peerIdentifier, nativePeer.peerIdentifier,
-        'should be in the cache');
-      t.equal(availabilityHandler.calledOnce, true, 'should be called once');
-      ThaliMobile.emitter
-        .removeListener('peerAvailabilityChanged', availabilityHandler);
+    function cleanUp() {
+      if (cleanUpCalled) {
+        return;
+      }
+      cleanUpCalled = true;
+      ThaliMobile.emitter.removeListener(
+        'peerAvailabilityChanged', availabilityHandler);
       t.end();
     }
 
     ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
 
-    emitNativePeerAvailability(nativePeer);
-
-    end();
+    ThaliMobile.start(express.Router()).then(function () {
+      emitNativePeerAvailability(nativePeer);
+    });
   }
 );
 
@@ -1810,27 +1839,24 @@ test('calls correct starts when network changes',
   }
 );
 
-test('We properly fire peer unavailable and then available when ' +
-'connection fails',
-function () {
-  // After #897 is complete this test should be enabled back
-  return platform.isIOS;
-},
-function(t) {
+// Scenario:
+// 1. We got peerAvailabilityChanged event (peerAvailable: true).
+// 2. We are trying to connect to this peer.
+// 3. Connection fails for some reason (it happens with Bluetooth)
+//
+// Expected result:
+// 1. thaliMobile gets peerAvailabilityChanged event for the same peer and
+//    peerAvailable set to false
+// 2. After peer listener is recreated in mux layer we are getting new
+//    peerAvailabilityChanged event with peerAvailable set to true
+//
+// To emulate failing non-TCP connection we fire artificial
+// peerAvailabilityChanged event with some unknown peer id.
 
-  // Scenario:
-  // 1. We got peerAvailabilityChanged event (peerAvailable: true).
-  // 2. We are trying to connect to this peer.
-  // 3. Connection fails for some reason (it happens with Bluetooth)
-  //
-  // Expected result:
-  // 1. thaliMobile gets peerAvailabilityChanged event for the same peer and
-  //    peerAvailable set to false
-  // 2. After peer listener is recreated in mux layer we are getting new
-  //    peerAvailabilityChanged event with peerAvailable set to true
-  //
-  // To emulate failing non-TCP connection we fire artificial
-  // peerAvailabilityChanged event with some unknown peer id.
+test('We properly fire peer unavailable and then available when ' +
+'connection fails on Android',
+testUtils.skipOnIOS,
+function(t) {
 
   var somePeerIdentifier = uuid.v4();
 
@@ -1861,10 +1887,6 @@ function(t) {
             // At this point mux layer is going to call Mobile('connect') and
             // fail
           });
-        })
-        .catch(function(e) {
-          t.equal(e.message, 'Connection could not be established',
-            'error description matches');
         });
         return;
       }
@@ -1876,9 +1898,7 @@ function(t) {
       case 3: {
         t.equal(peer.peerIdentifier, somePeerIdentifier, 'peerIds match again');
         t.equal(peer.peerAvailable, true, 'peer is available again');
-        if (platform.isAndroid) {
-          t.ok(connectionErrorReceived, 'We got the error we expected');
-        }
+        t.ok(connectionErrorReceived, 'We got the error we expected');
         return cleanUp();
       }
     }
@@ -1900,6 +1920,76 @@ function(t) {
 
   ThaliMobileNativeWrapper.emitter.on('failedNativeConnection',
     failedConnectionHandler);
+
+  ThaliMobile.emitter.on('peerAvailabilityChanged',
+    peerAvailabilityChangedHandler);
+
+  ThaliMobile.start(express.Router(), new Buffer('foo'),
+    ThaliMobile.networkTypes.NATIVE)
+    .then(function () {
+      return ThaliMobile.startListeningForAdvertisements();
+    })
+    .then(function () {
+      return ThaliMobileNativeWrapper._handlePeerAvailabilityChanged({
+        peerIdentifier: somePeerIdentifier,
+        generation: 0,
+        peerAvailable: true
+      });
+    })
+    .catch(function (err) {
+      t.fail(err);
+      return cleanUp();
+    });
+});
+
+test('We properly fire peer unavailable and then available when ' +
+'connection fails on iOS',
+testUtils.skipOnAndroid,
+function(t) {
+
+  var somePeerIdentifier = uuid.v4();
+  var callCounter = 0;
+
+  var peerAvailabilityChangedHandler = function (peer) {
+    ++callCounter;
+    switch (callCounter) {
+      case 1: {
+        t.equal(peer.peerIdentifier, somePeerIdentifier, 'peerIds match');
+        t.equal(peer.peerAvailable, true, 'peer is available');
+        ThaliMobile.getPeerHostInfo(peer.peerIdentifier, peer.connectionType)
+        .then(function () {
+          t.fail('peerHostInfo should failed');
+        })
+        .catch(function(e) {
+          t.equal(e.message, 'Connection could not be established',
+            'error description matches');
+        });
+        return;
+      }
+      case 2: {
+        t.equal(peer.peerIdentifier, somePeerIdentifier, 'still same peer IDs');
+        t.equal(peer.peerAvailable, false, 'peer should not be available');
+        return;
+      }
+      case 3: {
+        t.equal(peer.peerIdentifier, somePeerIdentifier, 'peerIds match again');
+        t.equal(peer.peerAvailable, true, 'peer is available again');
+        return cleanUp();
+      }
+    }
+  };
+
+  var cleanUpCalled = false;
+  // jshint latedef:false
+  function cleanUp() { // jshint latedef:true
+    if (cleanUpCalled) {
+      return;
+    }
+    cleanUpCalled = true;
+    ThaliMobileNativeWrapper.emitter.removeListener(
+      'peerAvailabilityChanged', peerAvailabilityChangedHandler);
+    t.end();
+  }
 
   ThaliMobile.emitter.on('peerAvailabilityChanged',
     peerAvailabilityChangedHandler);

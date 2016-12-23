@@ -546,6 +546,7 @@ test('We fire nonTCPPeerAvailabilityChangedEvent event when we get ' +
     .then(function () {
       var peerIdentifier = 'some-identifier';
       var callCounter = 0;
+      var errorMessage = 'Connection could not be established';
       var peer = {
         peerIdentifier: peerIdentifier,
         peerAvailable: true,
@@ -560,7 +561,8 @@ test('We fire nonTCPPeerAvailabilityChangedEvent event when we get ' +
           case 1: {
             t.equal(peer.peerIdentifier, peerIdentifier, 'peerIds match');
             Mobile.fireMultiConnectConnectionFailure({
-              peerIdentifier: peerIdentifier
+              peerIdentifier: peerIdentifier,
+              error: errorMessage
             });
             return;
           }
@@ -572,6 +574,7 @@ test('We fire nonTCPPeerAvailabilityChangedEvent event when we get ' +
           case 3: {
             t.equal(peer.peerIdentifier, peerIdentifier, 'peerIds match');
             t.equal(peer.peerAvailable, true, 'peer should be available');
+            t.equal(peer.recreated, true, 'peer is recreated');
             return cleanUp();
           }
         }
