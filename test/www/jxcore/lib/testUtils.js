@@ -555,6 +555,7 @@ module.exports.validateCombinedResult = function (combinedResult) {
 };
 
 var MAX_FAILURE = 10;
+var RETRY_DELAY = 10000;
 
 function turnParticipantsIntoBufferArray (t, devicePublicKey) {
   var publicKeys = [];
@@ -644,24 +645,50 @@ module.exports.runTestOnAllParticipants = function (
       resolve();
     }
 
-    function fail(publicKey, error) {
-      logger.error('Got an err - ', error.toString());
+    function fail(notificationForUs, publicKey, error) {
       var count = participantCount[publicKey];
       if (completed || count === -1) {
-        return;
+        logger.warn('error ignored: \'%s\' ', String(error));
+        return Promise.resolve();
       }
+
       count ++;
       participantCount[publicKey] = count;
+
       if (count >= MAX_FAILURE) {
         completed = true;
         clearTimeout(timerCancel);
+
+        logger.error('got error: \'%s\' ', String(error));
         reject(error);
+        return Promise.resolve(error);
       }
+
+      logger.warn('error ignored: \'%s\' ', String(error));
+      return Promise.delay(RETRY_DELAY)
+        .then(function () {
+          logger.warn('retry for notification: \'%s\'', JSON.stringify(notificationForUs));
+          return createTask(notificationForUs);
+        });
     }
 
     var timerCancel = setTimeout(function () {
       reject(new Error('Test timed out'));
     }, 5 * 60 * 1000);
+
+    function createTask(notificationForUs) {
+      if (completed) {
+        return Promise.resolve();
+      }
+
+      return testToRun(notificationForUs)
+      .then(function () {
+        success(notificationForUs.keyId);
+      })
+      .catch(function (error) {
+        return fail(notificationForUs, notificationForUs.keyId, error);
+      });
+    }
 
     thaliNotificationClient.on(
       thaliNotificationClient.Events.PeerAdvertisesDataForUs,
@@ -669,22 +696,19 @@ module.exports.runTestOnAllParticipants = function (
         if (completed) {
           return;
         }
-        participantTask[notificationForUs.keyId]
-        .then(function () {
-          if (!completed) {
-            var task = testToRun(notificationForUs)
-            .then(function () {
-              success(notificationForUs.keyId);
-            })
-            .catch(function (error) {
-              fail(notificationForUs.keyId, error);
-              return Promise.resolve(error);
-            });
-            participantTask[notificationForUs.keyId] = task;
-            return task;
+
+        var task = participantTask[notificationForUs.keyId];
+        task.then(function () {
+          if (completed) {
+            return;
           }
+
+          task = createTask(notificationForUs);
+          participantTask[notificationForUs.keyId] = task;
+          return task;
         });
-      });
+      }
+    );
 
     thaliNotificationClient.start(publicKeys);
     return module.exports.startServerInfrastructure(
