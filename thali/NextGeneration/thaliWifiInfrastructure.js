@@ -12,11 +12,12 @@ var uuid = require('uuid');
 var express = require('express');
 var validations = require('../validations');
 var thaliConfig = require('./thaliConfig');
-var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
+var thaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
 var logger = require('../ThaliLogger')('thaliWifiInfrastructure');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var PromiseQueue = require('./promiseQueue');
 var USN = require('./utils/usn');
+var platform = require('./utils/platform');
 
 var promiseQueue = new PromiseQueue();
 
@@ -264,7 +265,6 @@ ThaliWifiInfrastructure.prototype._updateStatus = function () {
   });
 };
 
-// jscs:disable jsDoc
 /**
  * This method MUST be called before any other method here other than
  * registering for events on the emitter. This method only registers the router
@@ -286,7 +286,6 @@ ThaliWifiInfrastructure.prototype._updateStatus = function () {
  * @param {module:thaliMobileNativeWrapper~pskIdToSecret} pskIdToSecret
  * @returns {Promise<?Error>}
  */
-// jscs:enable jsDoc
 ThaliWifiInfrastructure.prototype.start = function (router, pskIdToSecret) {
   var self = this;
   return promiseQueue.enqueue(function (resolve, reject) {
@@ -294,9 +293,9 @@ ThaliWifiInfrastructure.prototype.start = function (router, pskIdToSecret) {
       return reject(new Error('Call Stop!'));
     }
     self.pskIdToSecret = pskIdToSecret;
-    ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
+    thaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
                                           self._networkChangedHandler);
-    ThaliMobileNativeWrapper.getNonTCPNetworkStatus()
+    thaliMobileNativeWrapper.getNonTCPNetworkStatus()
     .then(function (networkStatus) {
       if (self.states.networkState === null) {
         // Only assign the network state received here if it
@@ -336,7 +335,7 @@ ThaliWifiInfrastructure.prototype.stop = function () {
     })
     .then(function () {
       self.states = self._getInitialStates();
-      ThaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
+      thaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
         self._networkChangedHandler);
       return resolve();
     })
@@ -347,13 +346,17 @@ ThaliWifiInfrastructure.prototype.stop = function () {
   });
 };
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * This will start the local Wi-Fi Infrastructure Mode discovery mechanism
  * (currently SSDP). Calling this method will trigger {@link
  * event:wifiPeerAvailabilityChanged} to fire. This method only causes SSDP
  * queries to be fired and cause us to listen to other service's SSDP:alive and
  * SSDP:byebye messages. It doesn't advertise the service itself.
+ *
+ * If this method is called on the Android platform then the
+ * {@link external:"Mobile('lockAndroidWifiMulticast')".callNative} method
+ * MUST be called.
  *
  * This method is idempotent so multiple consecutive calls without an
  * intervening call to stop will not cause a state change.
@@ -367,7 +370,7 @@ ThaliWifiInfrastructure.prototype.stop = function () {
  *
  * @returns {Promise<?Error>}
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 ThaliWifiInfrastructure.prototype.startListeningForAdvertisements =
 function () {
   var self = this;
@@ -385,6 +388,15 @@ function () {
       self._client.start(function () {
         self.states.listening.current = true;
         self._updateStatus();
+        if (platform.isAndroid) {
+          return thaliMobileNativeWrapper.lockAndroidWifiMulticast()
+            .then(function () {
+              resolve();
+            })
+            .catch(function (err) {
+              reject(err);
+            });
+        }
         return resolve();
       });
     } else {
@@ -399,6 +411,10 @@ function () {
  * event:wifiPeerAvailabilityChanged} from firing. That is, we will not issue
  * any further SSDP queries nor will we listen for other service's SSDP:alive or
  * SSDP:byebye messages.
+ *
+ * If this method is called on the Android platform then the {@link
+ * external:"Mobile('unlockAndroidWifiMulticast')".callNative} method MUST be
+ * called.
  *
  * Note that this method does not affect any existing TCP connections. Not
  * that we could really do anything with them since they are handled directly by
@@ -421,13 +437,22 @@ function (skipPromiseQueue, changeTarget) {
   if (changeTarget) {
     self.states.listening.target = false;
   }
-  var action = function (resolve) {
+  var action = function (resolve, reject) {
     if (!self.states.listening.current) {
       return resolve();
     }
     self._client.stop(function () {
       self.states.listening.current = false;
       self._updateStatus();
+      if (platform.isAndroid) {
+        return thaliMobileNativeWrapper.unlockAndroidWifiMulticast()
+          .then(function () {
+            resolve();
+          })
+          .catch(function (err) {
+            reject(err);
+          });
+      }
       return resolve();
     });
   };
@@ -438,7 +463,7 @@ function (skipPromiseQueue, changeTarget) {
   }
 };
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * This method will start advertising the peer's presence over the local Wi-Fi
  * Infrastructure Mode discovery mechanism (currently SSDP). When creating the
@@ -457,16 +482,17 @@ function (skipPromiseQueue, changeTarget) {
  * MUST process advertisements from other instances of ThaliWifiInfrastructure
  * on the same device.
  *
- * This method will also cause the Express app passed in to be hosted in a
- * HTTP server configured with the device's local IP. In other words, the
- * externally available HTTP server is not actually started and made externally
- * available until this method is called. This is different than {@link
+ * This method will also cause the Express app passed in to be hosted in a HTTP
+ * server configured with the device's local IP. In other words, the externally
+ * available HTTP server is not actually started and made externally available
+ * until this method is called. This is different than {@link
  * module:thaliMobileNative} where the server is started on 127.0.0.1 as soon as
- * {@link module:thaliMobileNative.start} is called but isn't made externally
- * available over the non-TCP transport until the equivalent of this method is
- * called. If the device switches access points (e.g. the BSSID changes) or if
- * WiFi is lost then the server will be shut down. It is up to the caller to
- * catch the networkChanged event and to call start advertising again.
+ * {@link module:thaliMobileNativeWrapper.start} is called but isn't made
+ * externally available over the non-TCP transport until the equivalent of this
+ * method is called. If the device switches access points (e.g. the BSSID
+ * changes) or if WiFi is lost then the server will be shut down. It is up to
+ * the caller to catch the networkChanged event and to call start advertising
+ * again.
  *
  * __OPEN ISSUE:__ If we have a properly configured multiple AP network then
  * all the APs will have different BSSID values but identical SSID values and
@@ -501,7 +527,7 @@ function (skipPromiseQueue, changeTarget) {
  *
  * @returns {Promise<?Error>}
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening =
 function () {
   var self = this;
@@ -695,7 +721,7 @@ function (skipPromiseQueue, changeTarget) {
  * to the peer
  */
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * For the definition of this event please see {@link
  * module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateEvent}
@@ -719,7 +745,7 @@ function (skipPromiseQueue, changeTarget) {
  * @type {Object}
  * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 
 /**
  * [NOT IMPLEMENTED]
@@ -744,7 +770,7 @@ function (skipPromiseQueue, changeTarget) {
  */
 
 ThaliWifiInfrastructure.prototype.getNetworkStatus = function () {
-  return ThaliMobileNativeWrapper.getNonTCPNetworkStatus();
+  return thaliMobileNativeWrapper.getNonTCPNetworkStatus();
 };
 
 module.exports = ThaliWifiInfrastructure;

@@ -62,13 +62,18 @@ test('test defaultAdapter', function (t) {
   t.equals(db._adapter, 'leveldb');
   t.equals(db.__opts.db, leveldownMobile);
 
-  // Passing 'pouchdb' as defaultAdapter has no sense. This is just for testing.
+  // Passing an empty function as defaultAdapter has no sense. This is just for testing.
+  var obj = function () {
+    return {
+      open: function () {}
+    };
+  };
   LocalPouchDB = PouchDBGenerator(PouchDB, defaultDirectory, {
-    defaultAdapter: PouchDB
+    defaultAdapter: obj
   });
   db = LocalPouchDB('dbname');
   t.equals(db._adapter, 'leveldb');
-  t.equals(db.__opts.db, PouchDB);
+  t.equals(db.__opts.db, obj);
 
   t.end();
 });

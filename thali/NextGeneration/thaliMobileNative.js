@@ -177,7 +177,7 @@
  * layer will then relay to the remote peer.
  */
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * This is the callback used by {@link external:"Mobile('connect')".callNative}.
  *
@@ -196,13 +196,13 @@
  * they can do). Rather than fix it we are just sticking this odd behavior
  * into the spec. Sorry. :(
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 
 /**
  * @external "Mobile('connect')"
  */
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * On platforms that support `connect`, this method tells the native layer to
  * establish a non-TCP/IP connection to the identified peer and to then create a
@@ -276,14 +276,14 @@
  * error or the 127.0.0.1 port to connect to in order to get a connection to the
  * remote peer
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 
 /**
  * @external "Mobile('multiConnect')"
  * @public
  */
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * Platforms that support `multiConnect` are able to bridge from a non-TCP
  * transport to a native TCP listener that can accept arbitrary numbers of
@@ -351,7 +351,7 @@
  * support multiConnect". Other than the platform not supported error any other
  * errors will be returned in the {@link multiConnectResolved} callback.
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 
 /**
  * @external "Mobile('disconnect')"
@@ -420,24 +420,48 @@
  */
 
 /**
- * This method is only supported on Android. If called on iOS it MUST return
- * 'Method not supported on this platform'.
+ * This method MUST cause the Android code to take out a MulticastLock from
+ * the WifiManager. This is needed to enable us to continue receiving broadcasts
+ * when we are in the background. Please see https://github.com/thaliproject/Thali_CordovaPlugin/issues/1620
+ * to understand some of the challenges with using this method.
  *
- * In theory all of our Android devices support WiFi (who doesn't) but if we
- * are on a device that doesn't have WiFi then this method MUST return a
- * 'Wifi is not enabled' error.
+ * When this method is called the Android native code MUST check to see if it
+ * has already gotten a MulticastLock object from WifiManager. If the
+ * MulticastLock object does not exist then the Android code MUST call
+ * WifiManager.createMulticastLock with an appropriate tag to identify the
+ * caller as Thali. The resulting MulticastLock object MUST have
+ * setReferenceCounted(false) called on it to not use reference counting. If
+ * there are any problems creating the MulticastLock object or calling
+ * setReferenceCounted(false) then an error MUST be returned in the
+ * lockAndroidWifiMulticast's ThaliMobileCallback err parameter.
  *
- * It is up to the caller to know the existing state of the WiFi radio and to
- * know if it was the app who put the radio into that state. For example, if
- * the WiFi radio is off and the app didn't turn the radio off then this
- * implies the user or another app turned it off and perhaps it would not be
- * wise for the app to turn it back on without asking the user's permission?
+ * Once the MulticastLock object exists and has been configured correctly then
+ * this method MUST cause the acquire() method on the object to be called and
+ * the method MUST then return.
  *
- * @private
- * @function external:"Mobile('toggleWiFi')".callNative
- * @param {boolean} setRadioTo If true then turn the WiFi radio on. If the Wifi
- * radio was already on then that is not an error. If false then turn the Wifi
- * radio off. If the Wifi radio was already off then that is not an error.
+ * The method's design is intentionally idempotent.
+ *
+ * @public
+ * @function external:"Mobile('lockAndroidWifiMulticast')".callNative
+ * @param {module:thaliMobileNative~ThaliMobileCallback} callback
+ */
+
+/**
+ * This method exists to remove a Multicast lock put in place by
+ * lockAndroidWifiMulticast.
+ *
+ * If this method is called and there doesn't exist a MulticastLock object
+ * created by lockAndroidWifiMulticast then a successful response MUST be
+ * returned.
+ *
+ * If this method is called and there does exist a MulticastLock object created
+ * by lockAndroidWifiMulticast then this method MUST call release() on that
+ * object.
+ *
+ * This method's design is intentionally idempotent.
+ *
+ * @public
+ * @function external:"Mobile('unlockAndroidWifiMulticast')".callNative
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 
@@ -449,6 +473,7 @@
  * @external "Mobile('multiConnectResolved')"
  */
 
+/* eslint-disable max-len */
 /**
  * If the MCSession could not be formed then error MUST NOT be null and MUST
  * contain a description of the problem while port MUST be null. If the
@@ -473,6 +498,7 @@
  * @property {?string} error
  * @property {?number} listeningPort
  */
+/* eslint-enable max-len */
 
 /**
  * Every call to `multiConnect` MUST produced exactly one callback of this type.
@@ -496,6 +522,7 @@
  * @property {string} error
  */
 
+/* eslint-disable max-len */
 /**
  * Fires the multiConnectConnectionFailureCallback if a multiConnect connection
  * fails. This failure can include a failure induced by a call to `disconnect`.
@@ -509,6 +536,7 @@
  * @function external:"Mobile(`multiConnectConnectionFailure`)".registerToNative
  * @param {module:thaliMobileNative~multiConnectConnectionFailureCallback} callback
  */
+/* eslint-enable max-len */
 
 /**
  * This object defines peerAvailabilityChanged information about a single peer.
@@ -588,7 +616,7 @@
  * @external "Mobile('discoveryAdvertisingStateUpdateNonTCP')"
  */
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * This is the callback used by
  * {@link external:"Mobile('discoveryAdvertisingStateUpdateNonTCP')".registerToNative}
@@ -597,9 +625,9 @@
  * @callback discoveryAdvertisingStateUpdateNonTCPCallback
  * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * Please see the definition of
  * {@link module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateNonTCPEvent}
@@ -608,7 +636,7 @@
  * @function external:"Mobile('discoveryAdvertisingStateUpdateNonTCP')".registerToNative
  * @param {module:thaliMobileNative~discoveryAdvertisingStateUpdateNonTCPCallback} callback
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 
 /* jshint -W098 */
 /**
@@ -696,7 +724,7 @@ module.exports.radioState = {
  * @external "Mobile('incomingConnectionToPortNumberFailed')"
  */
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * This is the callback used by
  * {@link external:"Mobile('incomingConnectionToPortNumberFailed')".registerToNative}
@@ -706,9 +734,9 @@ module.exports.radioState = {
  * @property {number} portNumber The 127.0.0.1 port that the TCP/IP bridge tried
  * to connect to.
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * Please see the definition of
  * {@link module:thaliMobileNativeWrapper.incomingConnectionToPortNumberFailed}.
@@ -727,4 +755,4 @@ module.exports.radioState = {
  * @function external:"Mobile('incomingConnectionToPortNumberFailed')".registerToNative
  * @param {module:thaliMobileNative~incomingConnectionToPortNumberFailedCallback} callback
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
