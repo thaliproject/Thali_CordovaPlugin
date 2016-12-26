@@ -1246,7 +1246,8 @@ test('multiconnect failure - new peer is ignored (MPCF)',
 
 test('multiconnect failure - cached peer fires peerAvailabilityChanged (MPCF)',
   function () {
-    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
+    return platform._isRealMobile ||
+           global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
            platform.isAndroid;
   },
   function (t) {
