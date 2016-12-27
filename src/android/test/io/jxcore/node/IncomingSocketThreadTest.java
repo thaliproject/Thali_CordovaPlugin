@@ -147,7 +147,7 @@ public class IncomingSocketThreadTest {
             checkStreams();
             copyingFinishedLatch.await(5000L, TimeUnit.MILLISECONDS);
             int attempts = ThaliTestRunner.COUNTER_LIMIT;
-            Log.i(this.getClass().getName(), "OutgoingSocketThreadTest");
+            Log.i(this.getClass().getName(), "testRun");
             while (attempts > 0 && !outgoingOutputStream.toString().equals(textIncoming)) {
                 attempts--;
                 closeSockets();

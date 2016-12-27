@@ -86,7 +86,7 @@ public class OutgoingSocketThreadTest {
     }
 
     private void initIncomingSocketThread() throws IOException {
-        InputStreamMock inputStream = new InputStreamMock(textIncoming);
+        InputStream inputStream = new EmptyInputStreamMock();
         OutputStreamMock outputStream = new OutputStreamMock(incomingOutputStream);
         ListenerMock listenerIncoming = new ListenerMock();
         mIncomingSocketThread = new IncomingSocketThreadMock(null, listenerIncoming, inputStream,
@@ -274,6 +274,13 @@ public class OutgoingSocketThreadTest {
         @Override
         public int read(byte[] buffer) throws IOException {
             return inputStream.read(buffer);
+        }
+    }
+
+    private static class EmptyInputStreamMock extends InputStream {
+        @Override
+        public int read() throws IOException {
+            return 0;
         }
     }
 
