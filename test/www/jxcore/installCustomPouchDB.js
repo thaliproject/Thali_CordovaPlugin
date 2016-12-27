@@ -4,7 +4,6 @@ var exec = require('child_process').exec;
 var path = require('path');
 var http = require('http');
 var fs = require('fs'); // Will be overwritten by fs-extra-promise
-var objectAssign = require('object-assign');
 var Promise = null; // Wil be set below
 
 var pouchDBNodePackageName = 'pouchdb';
@@ -40,7 +39,7 @@ function childProcessExecPromise(commandString, currentWorkingDirectory, env) {
   return new Promise(function (resolve, reject) {
     var commandSplit = commandString.split(' ');
     var command = commandSplit.shift();
-    env = objectAssign({}, process.env, env);
+    env = Object.assign({}, process.env, env);
     var theProcess = spawn(command, commandSplit,
       { cwd: currentWorkingDirectory, env: env });
     theProcess.stdout.on('data', function (data) {
