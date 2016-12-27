@@ -45,7 +45,10 @@ var test = tape({
     .then(function () {
       t.end();
     });
-  }
+  },
+  setupTimeout:     3 * 60 * 1000,
+  testTimeout:      5 * 60 * 1000,
+  teardownTimeout:  3 * 60 * 1000
 });
 
 /**
