@@ -919,16 +919,23 @@ var setupListeners = function (thaliWifiInfrastructure) {
       }
 
       var peerAvailable = !!wifiPeer.hostAddress;
+      var oldPeer = peerAvailabilities[wifiPeer.peerIdentifier];
+      var isSamePeer = peerAvailable && oldPeer &&
+                       oldPeer.generation === wifiPeer.generation;
+
       if (peerAvailable) {
         peerAvailabilities[wifiPeer.peerIdentifier] = wifiPeer;
       } else {
         delete peerAvailabilities[wifiPeer.peerIdentifier];
       }
-      peerAvailabilityChangedCallback([{
-        peerIdentifier: wifiPeer.peerIdentifier,
-        peerAvailable: peerAvailable,
-        generation: wifiPeer.generation
-      }]);
+
+      if (!isSamePeer) {
+        peerAvailabilityChangedCallback([{
+          peerIdentifier: wifiPeer.peerIdentifier,
+          peerAvailable: peerAvailable,
+          generation: wifiPeer.generation
+        }]);
+      }
     }
   );
   thaliWifiInfrastructure.on(
