@@ -75,7 +75,6 @@ public class JXcoreExtension {
     private static final String METHOD_NAME_SHOW_TOAST = "showToast";
 
     private static final String TAG = JXcoreExtension.class.getName();
-    private static final String BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR = "-";
     private static final long INCOMING_CONNECTION_FAILED_NOTIFICATION_MIN_INTERVAL_IN_MILLISECONDS = 100;
 
     private static ConnectionHelper mConnectionHelper = null;
@@ -96,6 +95,7 @@ public class JXcoreExtension {
         }
 
         mConnectionHelper = new ConnectionHelper();
+        mConnectionHelper.listenToConnectivityEvents();
 
         final LifeCycleMonitor lifeCycleMonitor = new LifeCycleMonitor(new LifeCycleMonitor.LifeCycleMonitorListener() {
             @Override
