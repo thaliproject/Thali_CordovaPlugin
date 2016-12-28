@@ -4,6 +4,8 @@ var inherits     = require('inherits');
 var EventEmitter = require('events').EventEmitter;
 var assign       = require('object-assign');
 
+var LeveldownAdapter = require('./leveldownAdapter');
+
 
 /**
  * Old PouchDB did care about database endpoint type before using prefix.
@@ -92,6 +94,8 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
     }
     return PouchAlt;
   }
+
+  PouchAlt.plugin(LeveldownAdapter);
 
   return PouchAlt;
 }
