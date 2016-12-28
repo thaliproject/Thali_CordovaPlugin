@@ -108,6 +108,12 @@ public class ConnectionHelper
         mTestHelper.startTest(TestHelper.TestType.REPETITIVE_CONNECT_AND_DISCONNECT);*/
     }
 
+    void listenToConnectivityEvents(){
+        if (!mConnectivityMonitor.start()){
+            Log.e(TAG, "start: Failed to start monitoring the connectivity");
+        }
+    }
+
     /**
      * Should be called when this class instance is no longer needed.
      * Note that after calling this method, this instance cannot be used anymore.
