@@ -18,6 +18,10 @@ var notificationBeacons = require('thali/NextGeneration/notification/thaliNotifi
 var express = require('express');
 var fs = require('fs-extra-promise');
 
+Promise.config({
+  cancellation: true
+});
+
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
 
@@ -554,8 +558,9 @@ module.exports.validateCombinedResult = function (combinedResult) {
   return Promise.resolve();
 };
 
-var MAX_FAILURE = 10;
-var RETRY_DELAY = 10000;
+var MAX_FAILURE  = 10;
+var RETRY_DELAY  = 10000;
+var TEST_TIMEOUT = 5 * 60 * 1000
 
 function turnParticipantsIntoBufferArray (t, devicePublicKey) {
   var publicKeys = [];
@@ -603,49 +608,53 @@ module.exports.runTestOnAllParticipants = function (
   devicePublicKey,
   testToRun
 ) {
+  var notificationHandler;
   var publicKeys = turnParticipantsIntoBufferArray(t, devicePublicKey);
+
+  var participantCount = publicKeys.reduce(
+    function (participantCount, participantPublicKey) {
+      participantCount[participantPublicKey] = 0;
+      return participantCount;
+    }, {}
+  );
+
+  var participantTask = publicKeys.reduce(
+    function (participantTask, participantPublicKey) {
+      participantTask[participantPublicKey] = Promise.resolve();
+      return participantTask;
+    }, {}
+  );
 
   return new Promise(function (resolve, reject) {
     var completed = false;
-    // Each participant is recorded via their public key
-    // If the value is -1 then they are done
-    // If the value is 0 then no test has completed
-    // If the value is greater than 0 then that is how many failures there have
-    // been.
+    // Each participant is recorded via their public key.
+    // If the value is -1 then they are done.
+    // If the value is 0 then no test has completed.
+    // If the value is greater than 0 then
+    // that is how many failures there have been.
 
-    var participantCount = publicKeys.reduce(function (participantCount,
-                                                       participantPublicKey) {
-      participantCount[participantPublicKey] = 0;
-      return participantCount;
-    }, {});
-
-    var participantTask = publicKeys.reduce(function (participantTask,
-                                                      participantPublicKey) {
-      participantTask[participantPublicKey] = Promise.resolve();
-      return participantTask;
-    }, {});
-
-    function success(publicKey) {
+    function success(notificationForUs) {
       if (completed) {
         return;
       }
 
+      var publicKey = notificationForUs.keyId;
       participantCount[publicKey] = -1;
 
       var hasParticipant = Object.keys(participantCount)
-      .some(function (participantKey) {
-        return participantCount[participantKey] !== -1;
-      });
+        .some(function (participantKey) {
+          return participantCount[participantKey] !== -1;
+        });
       if (hasParticipant) {
         return;
       }
 
       completed = true;
-      clearTimeout(timerCancel);
       resolve();
     }
 
-    function fail(notificationForUs, publicKey, error) {
+    function fail(notificationForUs, error) {
+      var publicKey = notificationForUs.keyId;
       var count = participantCount[publicKey];
       if (completed || count === -1) {
         logger.warn('error ignored: \'%s\' ', String(error));
@@ -657,7 +666,6 @@ module.exports.runTestOnAllParticipants = function (
 
       if (count >= MAX_FAILURE) {
         completed = true;
-        clearTimeout(timerCancel);
 
         logger.error('got error: \'%s\' ', String(error));
         reject(error);
@@ -672,10 +680,6 @@ module.exports.runTestOnAllParticipants = function (
         });
     }
 
-    var timerCancel = setTimeout(function () {
-      reject(new Error('Test timed out'));
-    }, 5 * 60 * 1000);
-
     function createTask(notificationForUs) {
       if (completed) {
         return Promise.resolve();
@@ -683,31 +687,35 @@ module.exports.runTestOnAllParticipants = function (
 
       return testToRun(notificationForUs)
       .then(function () {
-        success(notificationForUs.keyId);
+        success(notificationForUs);
       })
       .catch(function (error) {
-        return fail(notificationForUs, notificationForUs.keyId, error);
+        return fail(notificationForUs, error);
       });
     }
 
-    thaliNotificationClient.on(
-      thaliNotificationClient.Events.PeerAdvertisesDataForUs,
-      function (notificationForUs) {
-        if (completed) {
-          return;
-        }
+    notificationHandler = function(notificationForUs) {
+      if (completed) {
+        return;
+      }
 
-        var task = participantTask[notificationForUs.keyId];
-        task.then(function () {
+      var publicKey = notificationForUs.keyId;
+      var task = participantTask[publicKey];
+      task
+        .then(function () {
           if (completed) {
             return;
           }
 
           task = createTask(notificationForUs);
-          participantTask[notificationForUs.keyId] = task;
+          participantTask[publicKey] = task;
           return task;
         });
-      }
+      task.cancel();
+    }
+    thaliNotificationClient.on(
+      thaliNotificationClient.Events.PeerAdvertisesDataForUs,
+      notificationHandler
     );
 
     thaliNotificationClient.start(publicKeys);
@@ -717,7 +725,17 @@ module.exports.runTestOnAllParticipants = function (
     .catch(function (err) {
       reject(err);
     });
-  });
+  })
+    .timeout(TEST_TIMEOUT)
+    .finally(function () {
+      thaliNotificationClient.removeListener(
+        thaliNotificationClient.Events.PeerAdvertisesDataForUs,
+        notificationHandler
+      );
+      publicKeys.forEach(function (publicKey) {
+        participantTask[publicKey].cancel();
+      });
+    });
 };
 
 module.exports.checkArgs = function (t, spy, description, args) {
