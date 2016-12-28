@@ -37,7 +37,7 @@ prepare_project()
   npm install --no-optional
   node generateServerAddress.js $IPADDRESS
   cd $REPO_ROOT_DIR/..
-  cordova create $TEST_PROJECT_NAME com.test.thalitet $TEST_PROJECT_NAME
+  cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME
   mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev
 
   if is_minigw_platform; then
@@ -199,10 +199,10 @@ build_ios_if_possible()
 # Please note that functions order is important
 IPADDRESS=${2:-}
 prepare_project ${IPADDRESS}
-#add_android_platform
+add_android_platform
 add_ios_platform_if_possible
 install_thali $1 ${IPADDRESS}
-#build_android
+build_android
 build_ios_if_possible
 
 echo "Remember to start the test coordination server by running jx index.js"
