@@ -62,6 +62,7 @@ class ConnectivityMonitor implements BluetoothManager.BluetoothManagerListener {
 
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
+        intentFilter.addAction(WifiManager.SUPPLICANT_STATE_CHANGED_ACTION);
         intentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
         mWifiStateChangedAndConnectivityActionBroadcastReceiver = new WifiStateChangedAndConnectivityActionBroadcastReceiver();
 
