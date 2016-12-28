@@ -86,6 +86,19 @@ module.exports._isStarted = function () {
  * be calling this module.
  */
 
+/**
+ * Enum to define the types of connections
+ *
+ * @readonly
+ * @enum {string}
+ */
+var connectionTypes = {
+  MULTI_PEER_CONNECTIVITY_FRAMEWORK: 'MPCF',
+  BLUETOOTH: 'AndroidBluetooth',
+  TCP_NATIVE: 'tcp'
+};
+module.exports.connectionTypes = connectionTypes;
+
 /*
         METHODS
  */
@@ -602,10 +615,10 @@ module.exports.getNonTCPNetworkStatus = function () {
  * @private
  * @param  {string} peerIdentifier The value taken from a
  * peerAvailabilityChanged event.
- * @return {Promise<number|Error} The promise will either return an integer with
- * the localhost port to connect to or an Error object.
+ * @return {Promise<number|Error>} The promise will either return an integer
+ * with the localhost port to connect to or an Error object.
  */
-module.exports._multiConnect = function (peerIdentifier) {
+module.exports._multiConnect = function (peerIdentifier) { // eslint-disable-line no-unused-vars
   return Promise.reject(new Error('Not yet implemented'));
 };
 
@@ -667,6 +680,7 @@ module.exports._disconnect = function (peerIdentifier) {
  *
  * @param {string} peerIdentifier The value taken from a peerAvailabilityChanged
  * event.
+ * @param {string} portNumber
  * @returns {Promise<?Error>} Unless something bad happens (in which case a
  * reject with an Error will be returned) the response will be a resolve with
  * a null result.
@@ -757,7 +771,7 @@ module.exports.killConnections = function () {
 /**
  * This method is to toggle wifi.
  *
- * @property {boolean} value If true then enable wifi, else disable it.
+ * @param {boolean} value If true then enable wifi, else disable it.
  * @returns {Promise<?Error>}
  */
 module.exports.toggleWiFi = function (value) {
@@ -822,19 +836,6 @@ module.exports.unlockAndroidWifiMulticast = function () {
 };
 
 /* EVENTS */
-
-/**
- * Enum to define the types of connections
- *
- * @readonly
- * @enum {string}
- */
-var connectionTypes = {
-  MULTI_PEER_CONNECTIVITY_FRAMEWORK: 'MPCF',
-  BLUETOOTH: 'AndroidBluetooth',
-  TCP_NATIVE: 'tcp'
-};
-module.exports.connectionTypes = connectionTypes;
 
 /**
  *
@@ -917,7 +918,7 @@ module.exports.connectionTypes = connectionTypes;
  */
 /* eslint-enable max-len */
 var peerAvailabilityChangedQueue = new PromiseQueue();
-var handlePeerAvailabilityChanged = function (peer) {
+function handlePeerAvailabilityChanged (peer) {
   logger.debug('Received peer availability changed event with ' +
     JSON.stringify(peer));
   if (!states.started) {
