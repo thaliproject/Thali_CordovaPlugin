@@ -1,7 +1,5 @@
 'use strict';
 
-var util = require('util');
-var format = util.format;
 var os = require('os');
 var tmp = require('tmp');
 var PouchDB = require('pouchdb');
@@ -33,11 +31,6 @@ function toggleBluetooth (value) {
       'Mobile is not defined'
     ));
   }
-  if (platform.isIOS) {
-    return Promise.reject(new Error(
-      'Mobile(\'toggleBluetooth\') is not implemented on ios'
-    ));
-  }
   return new Promise(function (resolve, reject) {
     Mobile.toggleBluetooth(value, function (error) {
       if (error) {
@@ -55,11 +48,6 @@ function toggleWifi (value) {
   if (typeof Mobile === 'undefined') {
     return Promise.reject(new Error(
       'Mobile is not defined'
-    ));
-  }
-  if (platform.isIOS) {
-    return Promise.reject(new Error(
-      'Mobile(\'toggleWiFi\') is not implemented on ios'
     ));
   }
   return new Promise(function (resolve, reject) {
@@ -223,73 +211,66 @@ module.exports.tmpDirectory = tmpDirectory;
  * always resolves with true.
  */
 module.exports.hasRequiredHardware = function () {
-  function checkNetworks() {
-    if (!ThaliMobile) {
-      ThaliMobile = require('thali/NextGeneration/thaliMobile');
-    }
-    return ThaliMobile.getNetworkStatus()
-      .then(function (networkStatus) {
-        var promises = [];
-        if (networkStatus.wifi === 'off') {
-          promises.push(toggleWifi(true));
-        }
-        if (networkStatus.bluetooth === 'off') {
-          promises.push(toggleBluetooth(true));
-        }
-        return Promise.all(promises);
-      });
+  if (!platform._isRealAndroid) {
+    return Promise.resolve(true);
   }
 
-  function checkBLE () {
-    if (!platform._isRealAndroid) {
-      return Promise.resolve();
-    }
-
-    return new Promise(function (resolve, reject) {
-      function checkBleMultipleAdvertisementSupport () {
-        Mobile('isBleMultipleAdvertisementSupported')
-          .callNative(function (error, result) {
-            if (error) {
-              logger.warn('BLE multiple advertisement error: \'%s\'', String(error));
-              return reject(error);
+  return new Promise(function (resolve, reject) {
+    function checkBleMultipleAdvertisementSupport () {
+      Mobile('isBleMultipleAdvertisementSupported')
+        .callNative(function (error, result) {
+          if (error) {
+            logger.warn('BLE multiple advertisement error: \'%s\'', String(error));
+            return resolve(false);
+          }
+          switch (result) {
+            case 'Not resolved': {
+              logger.info('BLE multiple advertisement support not yet resolved');
+              setTimeout(checkBleMultipleAdvertisementSupport, 5000);
+              break;
             }
-            switch (result) {
-              case 'Not resolved': {
-                logger.info('BLE multiple advertisement support not yet resolved');
-                setTimeout(checkBleMultipleAdvertisementSupport, 5000);
-                break;
-              }
-              case 'Supported': {
-                logger.info('BLE multiple advertisement supported');
-                return resolve();
-              }
-              case 'Not supported': {
-                var error = 'BLE multiple advertisement not supported';
-                logger.info(error);
-                return reject(new Error(error));
-              }
-              default: {
-                var error = format('BLE multiple advertisement issue: \'%s\'', result);
-                logger.warn(error);
-                return reject(new Error(error));
-              }
+            case 'Supported': {
+              logger.info('BLE multiple advertisement supported');
+              return resolve(true);
+            }
+            case 'Not supported': {
+              logger.info('BLE multiple advertisement not supported');
+              return resolve(false);
+            }
+            default: {
+              logger.warn('BLE multiple advertisement issue: \'%s\'', result);
+              return resolve(false);
             }
           }
-        );
-      }
-      checkBleMultipleAdvertisementSupport();
-    });
-  }
+        }
+      );
+    }
+    checkBleMultipleAdvertisementSupport();
+  });
+};
 
-  return checkNetworks()
-    .then(checkBLE)
+module.exports.enableRequiredHardware = function () {
+  if (!ThaliMobile) {
+    ThaliMobile = require('thali/NextGeneration/thaliMobile');
+  }
+  return ThaliMobile.getNetworkStatus()
+    .then(function (networkStatus) {
+      var promises = [];
+      if (networkStatus.wifi === 'off') {
+        promises.push(toggleWifi(true));
+      }
+      if (networkStatus.bluetooth === 'off') {
+        promises.push(toggleBluetooth(true));
+      }
+      return Promise.all(promises);
+    })
     .then(function () {
       return true;
     })
     .catch(function () {
       return false;
     });
-};
+}
 
 module.exports.returnsValidNetworkStatus = function () {
   // The require is here instead of top of file so that
