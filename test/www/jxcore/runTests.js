@@ -114,18 +114,27 @@ if (hasJavaScriptSuffix(testsToRun)) {
 }
 
 testUtils.hasRequiredHardware()
-.then(function (hasRequiredHardware) {
-  return testUtils.getOSVersion()
-  .then(function (version) {
-    return thaliTape.begin(currentPlatform, version, hasRequiredHardware,
-      global.nativeUTFailed);
+  .then(function (hasRequiredHardware) {
+
+    return testUtils.enableRequiredHardware()
+      .then(function (enableRequiredHardware) {
+
+        return testUtils.getOSVersion()
+          .then(function (version) {
+
+            return thaliTape.begin(
+              currentPlatform, version,
+              hasRequiredHardware || enableRequiredHardware,
+              global.nativeUTFailed
+            );
+          });
+      });
+  })
+  .then(function () {
+    logger.info('Finished');
+    process.exit(0);
+  })
+  .catch(function (error) {
+    logger.error(error.message + '\n' + error.stack);
+    process.exit(1);
   });
-})
-.then(function () {
-  logger.info('Finished');
-  process.exit(0);
-})
-.catch(function (error) {
-  logger.error(error.message + '\n' + error.stack);
-  process.exit(1);
-});
