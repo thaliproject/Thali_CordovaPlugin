@@ -1340,29 +1340,42 @@ thaliWifiInfrastructure.on(
 );
 
 function handleNetworkChanged (networkChangedValue) {
-  if (networkChangedValue.wifi === 'off') {
-    // If Wifi is off, we mark Wifi peers unavailable.
-    changePeersUnavailable(connectionTypes.TCP_NATIVE);
-    if (networkChangedValue.bluetooth === 'off') {
-      // If Wifi and bluetooth is off, we know we can't talk to peers over
-      // over MPCF so marking them unavailable.
-      changePeersUnavailable(connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK);
-    }
-  }
-  if (networkChangedValue.bluetooth === 'off' &&
-      networkChangedValue.bluetoothLowEnergy === 'off') {
+  var androidNativeDisabled =
+    networkChangedValue.bluetooth === 'off' &&
+    networkChangedValue.bluetoothLowEnergy === 'off';
+  var iOSNativeDisabled =
+    networkChangedValue.wifi === 'off' &&
+    networkChangedValue.bluetooth === 'off';
+  var wifiDisabled =
+    networkChangedValue.wifi === 'off' ||
+    networkChangedValue.bssidName === null;
+
+  if (androidNativeDisabled) {
     // If both Bluetooth and BLE are off, we mark Android peers unavailable.
     changePeersUnavailable(connectionTypes.BLUETOOTH);
   }
-  var radioEnabled = false;
-  Object.keys(networkChangedValue).forEach(function (key) {
-    if (networkChangedValue[key] === 'on') {
-      radioEnabled = true;
-    }
-  });
+
+  if (iOSNativeDisabled) {
+    // If WiFi and Bluetooth is off, we know we can't talk to peers over
+    // over MPCF so marking them unavailable.
+    changePeersUnavailable(connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK);
+  }
+
+  if (wifiDisabled) {
+    // If WiFi is off or we are not connected to access point, we mark WiFi
+    // peers unavailable.
+    changePeersUnavailable(connectionTypes.TCP_NATIVE);
+  }
+
+  var radioEnabled =
+    networkChangedValue.wifi === 'on' ||
+    networkChangedValue.bluetooth === 'on' ||
+    networkChangedValue.bluetoothLowEnergy === 'on';
+
   if (!radioEnabled) {
     return;
   }
+
   // At least some radio was enabled so try to start
   // whatever can be potentially started.
   promiseResultSuccessOrFailure(module.exports.start())
