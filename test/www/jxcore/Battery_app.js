@@ -24,7 +24,7 @@ var logger    = require('./lib/testLogger')('Battery_app');
 var testUtils = require('./lib/testUtils');
 
 
-var config = require('./config.json');
+var config = require('./config');
 objectAssign(process.env, config.env);
 
 var isWifi = false, isNative = false;
