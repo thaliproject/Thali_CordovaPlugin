@@ -128,27 +128,41 @@ PeerDictionary.MAXSIZE = 100;
  * Entry to be added.
   */
 PeerDictionary.prototype.addUpdateEntry =
-  function (peer, entry) {
-    var peerIdentifier = peer.peerIdentifier;
-    var generation = peer.generation;
+  function (newPeer, newEntry) {
+    var peerIdentifier = newPeer.peerIdentifier;
     assert(peerIdentifier, 'peer.peerIdentifier must be set');
+
+    var generation = newPeer.generation;
     assert(typeof generation === 'number', 'peer.generation must be a number');
 
-    if (!this._dictionary[peerIdentifier]) {
-      this._dictionary[peerIdentifier] = {};
+    var newPeerWillBeAdded = true;
+    var peerEntries = this._dictionary[peerIdentifier];
+    if (peerEntries) {
+      var oldPeer = peerEntries[generation];
+      if (oldPeer) {
+        // peer will be updated.
+        newPeerWillBeAdded = false;
+
+        if (oldPeer.entry != newEntry) {
+          this._removeEntry(oldPeer.entry);
+        }
+      }
+    }
+
+    if (newPeerWillBeAdded) {
+      this._removeOldestIfOverflow();
     }
 
     var peerEntries = this._dictionary[peerIdentifier];
-    if (!peerEntries[generation]) {
-      this._removeOldestIfOverflow();
-      peerEntries[generation] = {
-        peerIdentifier: peerIdentifier,
-        generation: generation,
-      };
+    if (!peerEntries) {
+      peerEntries = this._dictionary[peerIdentifier] = {};
     }
-
-    peerEntries[generation].entry = entry;
-    peerEntries[generation].entryNumber = this._entryCounter++;
+    peerEntries[generation] = {
+      peerIdentifier: peerIdentifier,
+      generation:     generation,
+      entry:          newEntry,
+      entryNumber:    this._entryCounter++
+    };
   };
 
 /**
@@ -173,11 +187,7 @@ PeerDictionary.prototype.remove = function (peer) {
   if (!entry) {
     return;
   }
-  entry.waitingTimeout && clearTimeout(entry.waitingTimeout);
-  entry.notificationAction &&
-    entry.notificationAction.eventEmitter.removeAllListeners(
-    ThaliNotificationAction.Events.Resolved);
-  entry.notificationAction && entry.notificationAction.kill();
+  this._removeEntry(entry);
 
   var peerEntries = this._dictionary[peer.peerIdentifier];
   delete peerEntries[peer.generation];
@@ -185,6 +195,18 @@ PeerDictionary.prototype.remove = function (peer) {
     delete this._dictionary[peer.peerIdentifier];
   }
 };
+
+PeerDictionary.prototype._removeEntry = function (entry) {
+  if (entry.waitingTimeout) {
+    clearTimeout(entry.waitingTimeout);
+  }
+  if (entry.notificationAction) {
+    entry.notificationAction.eventEmitter.removeAllListeners(
+      ThaliNotificationAction.Events.Resolved
+    );
+    entry.notificationAction.kill();
+  }
+}
 
 PeerDictionary.prototype.removeAllPeerEntries = function (peerIdentifier) {
   var peerEntries = this._dictionary[peerIdentifier];
@@ -323,7 +345,7 @@ PeerDictionary.prototype._removeOldestIfOverflow = function () {
     search(exports.peerState.CONTROLLED_BY_POOL);
 
   if (oldestPeer) {
-    self.remove(oldestPeer);
+    this.remove(oldestPeer);
   }
 };
 
