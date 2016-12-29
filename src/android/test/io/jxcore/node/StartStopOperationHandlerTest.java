@@ -32,20 +32,20 @@ import static org.hamcrest.core.IsNot.not;
 
 public class StartStopOperationHandlerTest {
 
-    ConnectionManager mConnectionManager;
-    DiscoveryManager mDiscoveryManager;
-    StartStopOperationHandler mStartStopOperationHandler;
-    JXcoreThaliCallbackMock mJXcoreThaliCallback;
-    static ConnectionHelper mConnectionHelper;
-    static StartStopOperationHandler mStartStopOperatonHandler;
-    static long mOperationTimeout;
-    static boolean isBLESupported;
-    static String mTag = StartStopOperationHandlerTest.class.getName();
-    static ExecutorService mExecutor;
+    private ConnectionManager mConnectionManager;
+    private DiscoveryManager mDiscoveryManager;
+    private StartStopOperationHandler mStartStopOperationHandler;
+    private JXcoreThaliCallbackMock mJXcoreThaliCallback;
+    private static ConnectionHelper mConnectionHelper;
+    private static long mOperationTimeout;
+    private static boolean isBLESupported;
+    private static final String TAG = StartStopOperationHandlerTest.class.getName();
+    private static ExecutorService mExecutor;
 
-    public static Callable<Boolean> createCheckDiscoveryManagerRunningCallable() {
+    private static Callable<Boolean> createCheckDiscoveryManagerRunningCallable() {
         return new Callable<Boolean>() {
             int counter = 0;
+
             @Override
             public Boolean call() {
                 while (!mConnectionHelper
@@ -53,7 +53,7 @@ public class StartStopOperationHandlerTest {
                     try {
                         Thread.sleep(ThaliTestRunner.TIMEOUT_LIMIT);
                         counter++;
-                    } catch (InterruptedException e){
+                    } catch (InterruptedException e) {
                         e.printStackTrace();
                         return false;
                     }
@@ -61,24 +61,25 @@ public class StartStopOperationHandlerTest {
                 if (counter < ThaliTestRunner.COUNTER_LIMIT) {
                     return true;
                 } else {
-                    Log.e(mTag, "Discovery manager didn't start after 5s!");
+                    Log.e(TAG, "Discovery manager didn't start after 5s!");
                     return false;
                 }
             }
         };
     }
 
-    public static Callable<Boolean> createCheckDiscoveryManagerNotRunningCallable() {
+    private static Callable<Boolean> createCheckDiscoveryManagerNotRunningCallable() {
         return new Callable<Boolean>() {
             int counter = 0;
+
             @Override
             public Boolean call() {
-                while (mConnectionHelper
-                    .getDiscoveryManager().isRunning() && counter < ThaliTestRunner.COUNTER_LIMIT) {
+                while (mConnectionHelper.getDiscoveryManager().isRunning() &&
+                    counter < ThaliTestRunner.COUNTER_LIMIT) {
                     try {
                         Thread.sleep(ThaliTestRunner.TIMEOUT_LIMIT);
                         counter++;
-                    } catch (InterruptedException e){
+                    } catch (InterruptedException e) {
                         e.printStackTrace();
                         return false;
                     }
@@ -86,7 +87,7 @@ public class StartStopOperationHandlerTest {
                 if (counter < ThaliTestRunner.COUNTER_LIMIT) {
                     return true;
                 } else {
-                    Log.e(mTag, "Discovery manager still running after 5s!");
+                    Log.e(TAG, "Discovery manager still running after 5s!");
                     return false;
                 }
             }
@@ -96,26 +97,29 @@ public class StartStopOperationHandlerTest {
     @Rule
     public TestRule watcher = new TestWatcher() {
         protected void starting(Description description) {
-            Log.i(mTag, "Starting test: " + description.getMethodName());
+            Log.i(TAG, "Starting test: " + description.getMethodName());
         }
     };
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
         mConnectionHelper = new ConnectionHelper();
-        isBLESupported =
-            mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported();
+        isBLESupported = mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported();
+        mOperationTimeout = getOperationTimeout();
+        mExecutor = Executors.newFixedThreadPool(5);
+    }
 
-        Field fStartStopOperationHandler = mConnectionHelper.getClass().getDeclaredField("mStartStopOperationHandler");
+    private static long getOperationTimeout() throws NoSuchFieldException, IllegalAccessException {
+        Field fStartStopOperationHandler = mConnectionHelper.getClass()
+            .getDeclaredField("mStartStopOperationHandler");
         fStartStopOperationHandler.setAccessible(true);
-        mStartStopOperatonHandler = (StartStopOperationHandler) fStartStopOperationHandler.get(mConnectionHelper);
+        StartStopOperationHandler startStopOperatonHandler =
+            (StartStopOperationHandler) fStartStopOperationHandler.get(mConnectionHelper);
 
-        Field fOperationTimeout = mStartStopOperatonHandler.getClass()
+        Field fOperationTimeout = startStopOperatonHandler.getClass()
             .getDeclaredField("OPERATION_TIMEOUT_IN_MILLISECONDS");
         fOperationTimeout.setAccessible(true);
-        mOperationTimeout = fOperationTimeout.getLong(mStartStopOperatonHandler);
-
-        mExecutor = Executors.newFixedThreadPool(5);
+        return fOperationTimeout.getLong(startStopOperatonHandler);
     }
 
     @Before
@@ -190,85 +194,67 @@ public class StartStopOperationHandlerTest {
 
     @Test
     public void testExecuteStartOperation() throws Exception {
-        Future<Boolean> mFuture;
         mStartStopOperationHandler.executeStartOperation(isBLESupported, mJXcoreThaliCallback);
 
         if (isBLESupported) {
-            mFuture = mExecutor.submit(createCheckDiscoveryManagerRunningCallable());
-            assertThat("DiscoveryManager should be running", mFuture.get(), is(true));
+            Future<Boolean> operationFuture = mExecutor.submit(createCheckDiscoveryManagerRunningCallable());
+            assertThat("DiscoveryManager should be running", operationFuture.get(), is(true));
         }
 
         /* After 3s mCurrentOperation should be null. This is defined in
          * StartStopOperationHandler, field OPERATION_TIMEOUT_IN_MILLISECONDS */
-
         Thread.sleep(mOperationTimeout);
 
-        Field fDiscoveryManager =
-            mStartStopOperationHandler.getClass().getDeclaredField("mDiscoveryManager");
-        Field fCurrentOperation = mStartStopOperationHandler.getClass()
-            .getDeclaredField("mCurrentOperation");
-
-        fDiscoveryManager.setAccessible(true);
-        fCurrentOperation.setAccessible(true);
-
-        DiscoveryManager mDiscoveryManager1 =
-            (DiscoveryManager) fDiscoveryManager.get(mStartStopOperationHandler);
-        StartStopOperation mCurrentOperation =
-            (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
-
-        assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
+        DiscoveryManager discoveryManager = getDiscoveryManager();
+        StartStopOperation currentOperation = getCurrentOperation();
+        assertThat("mCurrentOperation should be null", currentOperation, is(nullValue()));
 
         if (!isBLESupported) {
-            assertThat("mDiscoveryManager1 state should be NOT_STARTED",
-                mDiscoveryManager1.getState(),
+            assertThat("mDiscoveryManager1 state should be NOT_STARTED", discoveryManager.getState(),
                 is(equalTo(DiscoveryManager.DiscoveryManagerState.NOT_STARTED)));
-            assertThat("mDiscoveryManager1 should be not running",
-                mDiscoveryManager1.isRunning(),
+            assertThat("mDiscoveryManager1 should be not running", discoveryManager.isRunning(),
                 is(false));
         } else {
-            assertThat("mDiscoveryManager1 state should not be NOT_STARTED",
-                mDiscoveryManager1.getState(),
+            assertThat("mDiscoveryManager1 state should not be NOT_STARTED", discoveryManager.getState(),
                 is(not(equalTo(DiscoveryManager.DiscoveryManagerState.NOT_STARTED))));
-            assertThat("mDiscoveryManager1 should be running", mDiscoveryManager1.isRunning(),
+            assertThat("mDiscoveryManager1 should be running", discoveryManager.isRunning(),
                 is(true));
         }
     }
 
+    private StartStopOperation getCurrentOperation() throws NoSuchFieldException, IllegalAccessException {
+        Field fCurrentOperation = mStartStopOperationHandler.getClass().getDeclaredField("mCurrentOperation");
+        fCurrentOperation.setAccessible(true);
+        return (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
+    }
+
+    private DiscoveryManager getDiscoveryManager() throws NoSuchFieldException, IllegalAccessException {
+        Field fDiscoveryManager = mStartStopOperationHandler.getClass().getDeclaredField("mDiscoveryManager");
+        fDiscoveryManager.setAccessible(true);
+        return (DiscoveryManager) fDiscoveryManager.get(mStartStopOperationHandler);
+    }
+
     @Test
     public void testExecuteStopOperation() throws Exception {
-        Future<Boolean> mFuture;
+        Future<Boolean> operationFuture;
 
         mStartStopOperationHandler.executeStartOperation(isBLESupported, mJXcoreThaliCallback);
 
         if (isBLESupported) {
-            mFuture = mExecutor.submit(createCheckDiscoveryManagerRunningCallable());
-            assertThat("DiscoveryManager should be running", mFuture.get(), is(true));
+            operationFuture = mExecutor.submit(createCheckDiscoveryManagerRunningCallable());
+            assertThat("DiscoveryManager should be running", operationFuture.get(), is(true));
         }
-
+        mStartStopOperationHandler.executeStopOperation(false, mJXcoreThaliCallback);
         Thread.sleep(mOperationTimeout);
 
-        mStartStopOperationHandler.executeStopOperation(false, mJXcoreThaliCallback);
+        operationFuture = mExecutor.submit(createCheckDiscoveryManagerNotRunningCallable());
 
-        mFuture = mExecutor.submit(createCheckDiscoveryManagerNotRunningCallable());
+        assertThat("DiscoveryManager should not be running", operationFuture.get(), is(true));
 
-        assertThat("DiscoveryManager should not be running", mFuture.get(), is(true));
+        assertThat("mCurrentOperation should be null", getCurrentOperation(), is(nullValue()));
 
-        Field fCurrentOperation = mStartStopOperationHandler.getClass()
-            .getDeclaredField("mCurrentOperation");
-        Field fDiscoveryManager =
-            mStartStopOperationHandler.getClass().getDeclaredField("mDiscoveryManager");
-
-        fCurrentOperation.setAccessible(true);
-        fDiscoveryManager.setAccessible(true);
-
-        StartStopOperation mCurrentOperation =
-            (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
-        DiscoveryManager mDiscoveryManager1 =
-            (DiscoveryManager) fDiscoveryManager.get(mStartStopOperationHandler);
-
-        assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
-
-        assertThat("mDiscoveryManager1 state should be NOT_STARTED", mDiscoveryManager1.getState(),
+        DiscoveryManager discoveryManager = getDiscoveryManager();
+        assertThat("mDiscoveryManager1 state should be NOT_STARTED", discoveryManager.getState(),
             is(equalTo(DiscoveryManager.DiscoveryManagerState.NOT_STARTED)));
     }
 
@@ -288,27 +274,26 @@ public class StartStopOperationHandlerTest {
         executeCurrentOperation.setAccessible(true);
         executeCurrentOperation.invoke(mStartStopOperationHandler);
 
-        StartStopOperation mCurrentOperation =
-            (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
+        StartStopOperation currentOperation = getCurrentOperation();
 
         if (!isBLESupported) {
-            assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
+            assertThat("mCurrentOperation should be null", currentOperation, is(nullValue()));
         } else {
             fCurrentOperation.set(mStartStopOperationHandler,
                 StartStopOperation.createStartOperation(true, mJXcoreThaliCallback));
-            mCurrentOperation =
+            currentOperation =
                 (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
 
-            assertThat("mCurrentOperation should not be null", mCurrentOperation,
+            assertThat("mCurrentOperation should not be null", currentOperation,
                 is(notNullValue()));
 
             Thread.sleep(mOperationTimeout);
             mStartStopOperationHandler.processCurrentOperationStatus();
 
-            mCurrentOperation =
+            currentOperation =
                 (StartStopOperation) fCurrentOperation.get(mStartStopOperationHandler);
 
-            assertThat("mCurrentOperation should be null", mCurrentOperation, is(nullValue()));
+            assertThat("mCurrentOperation should be null", currentOperation, is(nullValue()));
         }
     }
 }
