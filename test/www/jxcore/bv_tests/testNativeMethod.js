@@ -19,7 +19,7 @@ var test = tape({
 
 test('onPeerLost calls jxcore',
   function () {
-    return !platform._isRealMobile;
+    return !platform._isRealAndroid;
   },
   function (t) {
     Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
@@ -42,11 +42,11 @@ test('onPeerLost calls jxcore',
     Mobile('testNativeMethod').callNative('onPeerLost', function (result) {
       t.pass(result.Testing_);
     });
- });
+  });
 
 test('onPeerDiscovered calls jxcore',
   function () {
-    return !platform._isRealMobile;
+    return !platform._isRealAndroid;
   },
   function (t) {
     Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
