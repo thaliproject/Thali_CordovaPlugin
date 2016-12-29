@@ -46,6 +46,8 @@ var test = tape({
       t.end();
     });
   },
+  // BLE or Bluetooth can sleep about 30 seconds between operations,
+  // we need to increase timeouts (issue #1569).
   setupTimeout:     3 * 60 * 1000,
   testTimeout:      5 * 60 * 1000,
   teardownTimeout:  3 * 60 * 1000
