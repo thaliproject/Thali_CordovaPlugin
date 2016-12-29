@@ -109,16 +109,27 @@ function getWifiOrNativeMethodByNetworkType (method, networkType) {
   }
 };
 
-function getInitialStates () {
-  return {
-    started: false,
-    listening: false,
-    advertising: false,
-    networkType: networkTypes.BOTH
-  };
+var thaliMobileStates = {
+  started: false,
+  listening: false,
+  advertising: false,
+  networkType: networkTypes.BOTH,
+
+  // used internally for restarting thaliMobile with correct arguments
+  startArguments: {
+    router: null,
+    pskIdToSecret: null,
+    networkType: null,
+  }
 };
 
-var thaliMobileStates = getInitialStates();
+function resetThaliMobileState () {
+  thaliMobileStates.started = false;
+  thaliMobileStates.listening = false;
+  thaliMobileStates.advertising = false;
+  thaliMobileStates.networkType = networkTypes.BOTH;
+};
+
 
 // TODO: move peer availability cache to the separate module
 var peerAvailabilities = {};
@@ -165,6 +176,24 @@ module.exports._peerAvailabilities = peerAvailabilities;
  * @property {?Error} nativeResult
  */
 
+function start (router, pskIdToSecret, networkType) {
+  if (thaliMobileStates.started === true) {
+    return Promise.reject(new Error('Call Stop!'));
+  }
+  thaliMobileStates.started = true;
+  thaliMobileStates.networkType =
+    networkType || global.NETWORK_TYPE || thaliMobileStates.networkType;
+
+  return getWifiOrNativeMethodByNetworkType('start',
+    thaliMobileStates.networkType)(router, pskIdToSecret)
+    .then(function (result) {
+      if (result.wifiResult === null && result.nativeResult === null) {
+        return result;
+      }
+      return Promise.reject(result);
+    });
+};
+
 /**
  * This method MUST be called before any other method here other than
  * registering for events on the emitter. This method will call start on both
@@ -201,21 +230,10 @@ module.exports._peerAvailabilities = peerAvailabilities;
  */
 module.exports.start = function (router, pskIdToSecret, networkType) {
   return promiseQueue.enqueue(function (resolve, reject) {
-    if (thaliMobileStates.started === true) {
-      return reject(new Error('Call Stop!'));
-    }
-    thaliMobileStates.started = true;
-    thaliMobileStates.networkType =
-      networkType || global.NETWORK_TYPE || thaliMobileStates.networkType;
-
-    getWifiOrNativeMethodByNetworkType('start',
-      thaliMobileStates.networkType)(router, pskIdToSecret)
-      .then(function (result) {
-        if (result.wifiResult === null && result.nativeResult === null) {
-          return resolve(result);
-        }
-        return reject(result);
-      });
+    thaliMobileStates.startArguments.router = router;
+    thaliMobileStates.startArguments.pskIdToSecret = pskIdToSecret;
+    thaliMobileStates.startArguments.networkType = networkType;
+    start(router, pskIdToSecret, networkType).then(resolve, reject);
   });
 };
 
@@ -236,7 +254,7 @@ module.exports.isStarted = function () {
  */
 module.exports.stop = function () {
   return promiseQueue.enqueue(function (resolve) {
-    thaliMobileStates = getInitialStates();
+    resetThaliMobileState();
     removeAllAvailabilityWatchersFromPeers();
     Object.getOwnPropertyNames(connectionTypes)
       .forEach(function (connectionKey) {
@@ -248,6 +266,19 @@ module.exports.stop = function () {
       .then(resolve);
   });
 };
+
+function startListeningForAdvertisements () {
+  if (thaliMobileStates.started === false) {
+    return Promise.reject(new Error('Call Start!'));
+  }
+  thaliMobileStates.listening = true;
+
+  var start = getWifiOrNativeMethodByNetworkType(
+    'startListeningForAdvertisements',
+    thaliMobileStates.networkType
+  );
+  return start();
+}
 
 /**
  * This method calls the underlying startListeningForAdvertisements
@@ -278,14 +309,7 @@ module.exports.stop = function () {
  */
 module.exports.startListeningForAdvertisements = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    if (thaliMobileStates.started === false) {
-      return reject(new Error('Call Start!'));
-    }
-    thaliMobileStates.listening = true;
-
-    getWifiOrNativeMethodByNetworkType('startListeningForAdvertisements',
-       thaliMobileStates.networkType)()
-      .then(resolve);
+    startListeningForAdvertisements().then(resolve, reject);
   });
 };
 
@@ -310,6 +334,18 @@ module.exports.stopListeningForAdvertisements = function () {
   });
 };
 
+function startUpdateAdvertisingAndListening () {
+  if (thaliMobileStates.started === false) {
+    return Promise.reject(new Error('Call Start!'));
+  }
+  thaliMobileStates.advertising = true;
+
+  var start = getWifiOrNativeMethodByNetworkType(
+    'startUpdateAdvertisingAndListening',
+     thaliMobileStates.networkType
+  );
+  return start();
+}
 /**
  * This method calls the underlying startUpdateAdvertisingAndListening
  * functions. This method has the same behavior as
@@ -329,14 +365,7 @@ module.exports.stopListeningForAdvertisements = function () {
  */
 module.exports.startUpdateAdvertisingAndListening = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    if (thaliMobileStates.started === false) {
-      return reject(new Error('Call Start!'));
-    }
-    thaliMobileStates.advertising = true;
-
-    getWifiOrNativeMethodByNetworkType('startUpdateAdvertisingAndListening',
-       thaliMobileStates.networkType)()
-      .then(resolve);
+    startUpdateAdvertisingAndListening().then(resolve, reject);
   });
 };
 
@@ -1376,10 +1405,15 @@ function handleNetworkChanged (networkChangedValue) {
     return;
   }
 
-  // At least some radio was enabled so try to start
-  // whatever can be potentially started.
-  promiseResultSuccessOrFailure(module.exports.start())
-  .then(function () {
+  // At least some radio was enabled so try to start whatever can be potentially
+  // started as soon as possible.
+  var enqueuedStart = promiseQueue.enqueueAtTop(function (resolve, reject) {
+    var args = thaliMobileStates.startArguments;
+    start(args.router, args.pskIdToSecret, args.networkType)
+      .then(resolve, reject);
+  });
+
+  promiseResultSuccessOrFailure(enqueuedStart).then(function () {
     var checkErrors = function (operation, combinedResult) {
       Object.keys(combinedResult).forEach(function (resultType) {
         if (combinedResult[resultType] !== null) {
@@ -1389,14 +1423,16 @@ function handleNetworkChanged (networkChangedValue) {
       });
     };
     if (thaliMobileStates.listening) {
-      module.exports.startListeningForAdvertisements()
-      .then(function (combinedResult) {
+      promiseQueue.enqueueAtTop(function (resolve, reject) {
+        startListeningForAdvertisements().then(resolve, reject);
+      }).then(function (combinedResult) {
         checkErrors('startListeningForAdvertisements', combinedResult);
       });
     }
     if (thaliMobileStates.advertising) {
-      module.exports.startUpdateAdvertisingAndListening()
-      .then(function (combinedResult) {
+      promiseQueue.enqueueAtTop(function (resolve, reject) {
+        startUpdateAdvertisingAndListening().then(resolve, reject);
+      }).then(function (combinedResult) {
         checkErrors('startUpdateAdvertisingAndListening', combinedResult);
       });
     }

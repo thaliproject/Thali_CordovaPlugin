@@ -893,6 +893,26 @@ test('networkChanged - fires peerAvailabilityChanged event for wifi peers',
       });
     }
 
+    function enableWifi() {
+      ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
+        wifi: radioState.ON,
+        bssidName: '00:00:00:00:00:00',
+        bluetoothLowEnergy: radioState.ON,
+        bluetooth: radioState.ON,
+        cellular: radioState.ON
+      });
+    }
+
+    function disconnectWifi() {
+      ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
+        wifi: radioState.ON,
+        bssidName: null,
+        bluetoothLowEnergy: radioState.ON,
+        bluetooth: radioState.ON,
+        cellular: radioState.ON
+      });
+    }
+
     var availabilityHandler = function (peerStatus) {
       if (!isTestPeer(peerStatus)) {
         return;
@@ -911,6 +931,20 @@ test('networkChanged - fires peerAvailabilityChanged event for wifi peers',
           disableWifi();
           break;
         case 3:
+          t.equals(peerStatus.peerAvailable, false,
+            'peer became unavailable');
+          t.equals(peerStatus.peerIdentifier, testPeers.wifiPeer.peerIdentifier,
+            'it was wifi peer');
+          enableWifi();
+          emitWifiPeerAvailability(testPeers.wifiPeer);
+          break;
+        case 4:
+          t.equals(peerStatus.peerAvailable, true, 'we found peer again');
+          t.equals(peerStatus.peerIdentifier, testPeers.wifiPeer.peerIdentifier,
+            'it was wifi peer');
+          disconnectWifi();
+          break;
+        case 5:
           t.equals(peerStatus.peerAvailable, false,
             'peer became unavailable');
           t.equals(peerStatus.peerIdentifier, testPeers.wifiPeer.peerIdentifier,
@@ -976,7 +1010,8 @@ test('networkChanged - fires peerAvailabilityChanged event for native peers ' +
     function disableBluetooth() {
       ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
         wifi: radioState.ON,
-        bssidName: null,
+        ssidName: 'WiFi Network SSID',
+        bssidName: '00:00:00:00:00:00',
         bluetoothLowEnergy: radioState.OFF,
         bluetooth: radioState.OFF,
         cellular: radioState.ON
