@@ -1,12 +1,9 @@
 'use strict';
 
-var util   = require('util');
-var format = util.format;
-
-var fs           = require('fs-extra-promise');
-var path         = require('path');
+var path = require('path');
 var randomString = require('randomstring');
-
+var testLoader = require('./lib/testLoader');
+var config = require('./config');
 
 // Before including anything serious from thali we want to ensure
 // that we have SSDP_NT env defined.
@@ -68,26 +65,6 @@ if (argv.networkType) {
   }
 }
 
-var hasJavaScriptSuffix = function (path) {
-  return path.indexOf('.js', path.length - 3) !== -1;
-};
-
-var loadFile = function (filePath) {
-  logger.info('Test runner loading file:', filePath);
-  try {
-    require(filePath);
-  } catch (error) {
-    var prettyError = format(
-      'test load failed, filePath: \'%s\', error: \'%s\', stack: \'%s\'',
-      filePath, error.toString(), error.stack
-    );
-    logger.error(prettyError);
-    throw new Error(prettyError);
-  }
-};
-
-var testsToRun = argv._[0] || 'bv_tests';
-
 var currentPlatform = platform.name;
 // Our current platform can be 'darwin', 'linux', 'windows', etc.
 // Our 'thaliTape' expects all these platforms will be named as 'desktop'.
@@ -101,17 +78,9 @@ logger.info(
   'Platform: ' + (mockPlatform || currentPlatform)
 );
 
-if (hasJavaScriptSuffix(testsToRun)) {
-  loadFile(path.join(__dirname, testsToRun));
-} else {
-  fs.readdirSync(path.join(__dirname, testsToRun))
-  .forEach(function (fileName) {
-    if (fileName.indexOf('test') === 0 && hasJavaScriptSuffix(fileName)) {
-      var filePath = path.join(__dirname, testsToRun, fileName);
-      loadFile(filePath);
-    }
-  });
-}
+var testsToRun = argv._[0] || 'bv_tests';
+var testsPath = path.join(__dirname, testsToRun);
+testLoader.load(testsPath, config.preferredOrder);
 
 testUtils.hasRequiredHardware()
   .then(function (hasRequiredHardware) {

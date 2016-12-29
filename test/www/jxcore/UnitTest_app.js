@@ -13,7 +13,7 @@ if (typeof Mobile === 'undefined') {
   global.Mobile = require('./lib/wifiBasedNativeMock.js')(mockPlatform);
 }
 
-var config = require('./config.json');
+var config = require('./config');
 var objectAssign = require('object-assign');
 process.env = objectAssign(process.env, config.env);
 
