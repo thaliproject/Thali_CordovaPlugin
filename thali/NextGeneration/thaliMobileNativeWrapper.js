@@ -583,6 +583,8 @@ module.exports.getNonTCPNetworkStatus = function () {
   });
 };
 
+var multiConnectCounter = 0;
+
 /**
  * This calls the native multiConnect method. This code is responsible for
  * honoring the restrictions placed on calls to multiConnect. Which is that
@@ -605,8 +607,35 @@ module.exports.getNonTCPNetworkStatus = function () {
  * @return {Promise<number|Error} The promise will either return an integer with
  * the localhost port to connect to or an Error object.
  */
+
 module.exports._multiConnect = function (peerIdentifier) {
-  return Promise.reject(new Error('Not yet implemented'));
+  return gPromiseQueue.enqueue(function (resolve, reject) {
+    var originalSyncValue = multiConnectCounter++;
+
+    Mobile('multiConnect')
+    .callNative(peerIdentifier, originalSyncValue, function (error) {
+      if (error) {
+        return reject(new Error(error));
+      }
+
+      module.exports.emitter.on('_multiConnectResolved',
+        function callback (syncValue, error, portNumber) {
+          if (originalSyncValue !== syncValue) {
+            return;
+          }
+
+          module.exports.emitter.removeListener(
+            '_multiConnectResolved', callback);
+
+          if (error) {
+            return reject(new Error(error));
+          }
+
+          resolve(portNumber);
+        }
+      );
+    });
+  });
 };
 
 // jscs:disable jsDoc
@@ -1116,6 +1145,15 @@ module.exports._registerToNative = function () {
         'discoveryAdvertisingStateUpdateNonTCP',
         discoveryAdvertisingStateUpdateValue
       );
+    }
+  );
+
+
+  registerToNative('multiConnectResolved',
+    function (syncValue, error, portNumber) {
+      module.exports.emitter.emit(
+        '_multiConnectResolved',
+        syncValue, error, portNumber);
     }
   );
 
