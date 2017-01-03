@@ -108,6 +108,12 @@ public class ConnectionHelper
         mTestHelper.startTest(TestHelper.TestType.REPETITIVE_CONNECT_AND_DISCONNECT);*/
     }
 
+    void listenToConnectivityEvents(){
+        if (!mConnectivityMonitor.start()){
+            Log.e(TAG, "start: Failed to start monitoring the connectivity");
+        }
+    }
+
     /**
      * Should be called when this class instance is no longer needed.
      * Note that after calling this method, this instance cannot be used anymore.
@@ -309,7 +315,7 @@ public class ConnectionHelper
 
         if (selectedDevice == null) {
             Log.w(TAG, "connect: The peer to connect to is not amongst the discovered peers, but trying anyway...");
-            selectedDevice = new PeerProperties(PeerProperties.NO_PEER_NAME_STRING, bluetoothMacAddress);
+            selectedDevice = new PeerProperties(bluetoothMacAddress);
         }
 
         if (!BluetoothAdapter.checkBluetoothAddress(selectedDevice.getBluetoothMacAddress())) {

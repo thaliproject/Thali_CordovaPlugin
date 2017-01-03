@@ -2,9 +2,12 @@
  * See the license file delivered with this project for further information.
  */
 package io.jxcore.node;
+
 import android.bluetooth.BluetoothSocket;
 import android.util.Log;
+
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -19,7 +22,8 @@ class OutgoingSocketThread extends SocketThreadBase {
     private ServerSocket mServerSocket = null;
     private int mListeningOnPortNumber = ConnectionHelper.NO_PORT_NUMBER;
     //TODO remove it. Just for logging and test purposes
-    private ConnectionData connectionData = new ConnectionData(new PeerProperties(), false);
+    private ConnectionData connectionData = new ConnectionData(
+        new PeerProperties(PeerProperties.BLUETOOTH_MAC_ADDRESS_UNKNOWN), false);
 
     /**
      * Constructor for test purposes.
