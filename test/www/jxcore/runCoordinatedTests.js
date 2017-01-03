@@ -1,6 +1,6 @@
 'use strict';
 
-var config       = require('./config.json');
+var config       = require('./config');
 var spawn        = require('child_process').spawn;
 var randomString = require('randomstring');
 var objectAssign = require('object-assign');
