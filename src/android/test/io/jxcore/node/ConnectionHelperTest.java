@@ -54,7 +54,7 @@ public class ConnectionHelperTest {
     static StartStopOperationHandler mStartStopOperatonHandler;
     static boolean isBLESupported;
     private final static String TAG = ConnectionHelperTest.class.getName();
-    static ExecutorService mExecutor;
+    private static ExecutorService mExecutor;
 
     @Rule
     public TestRule watcher = new TestWatcher() {
@@ -123,7 +123,27 @@ public class ConnectionHelperTest {
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
-        mConnectionHelper = new ConnectionHelper();
+        mConnectionHelper = new ConnectionHelper(new SurroundingStateObserver() {
+            @Override
+            public void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
+
+            }
+
+            @Override
+            public void notifyDiscoveryAdvertisingStateUpdateNonTcp(boolean isDiscoveryActive, boolean isAdvertisingActive) {
+
+            }
+
+            @Override
+            public void notifyNetworkChanged(boolean isBluetoothEnabled, boolean isWifiEnabled, String bssidName, String ssidName) {
+
+            }
+
+            @Override
+            public void notifyIncomingConnectionToPortNumberFailed(int portNumber) {
+
+            }
+        });
         isBLESupported = mConnectionHelper.getDiscoveryManager().isBleMultipleAdvertisementSupported();
         mStartStopOperatonHandler = getStartStopOperationHadler();
         mExecutor = Executors.newFixedThreadPool(5);
@@ -694,5 +714,62 @@ public class ConnectionHelperTest {
     public void testOnBluetoothMacAddressResolved() {
         thrown.expect(UnsupportedOperationException.class);
         mConnectionHelper.onBluetoothMacAddressResolved("00:11:22:33:44:55");
+    }
+
+
+    @Test()
+    public void testListenToConnectivityChanges() {
+        ConnectionHelper helper = null;
+        try {
+            TestSurroundingStateObserver stateObserver = new TestSurroundingStateObserver();
+            helper = new ConnectionHelper(stateObserver);
+            helper.listenToConnectivityEvents(); //hidden updateConnectivityInfo call
+
+            assertThat("Network changed should be called", stateObserver.networkChangedCalled, is(true));
+            stateObserver.resetState();
+
+            helper.getConnectivityMonitor().updateConnectivityInfo(false);
+
+            assertThat("Network changed should not be called", stateObserver.networkChangedCalled, is(false));
+
+            stateObserver.resetState();
+            helper.getConnectivityMonitor().updateConnectivityInfo(true);
+
+            assertThat("Network changed should be called", stateObserver.networkChangedCalled, is(true));
+        } finally {
+            if (helper != null) {
+                helper.dispose();
+            }
+        }
+
+    }
+
+    private static class TestSurroundingStateObserver implements SurroundingStateObserver {
+
+        private boolean networkChangedCalled = false;
+
+        @Override
+        public void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
+
+        }
+
+        @Override
+        public void notifyDiscoveryAdvertisingStateUpdateNonTcp(boolean isDiscoveryActive, boolean isAdvertisingActive) {
+
+        }
+
+        @Override
+        public void notifyNetworkChanged(boolean isBluetoothEnabled, boolean isWifiEnabled, String bssidName, String ssidName) {
+            networkChangedCalled = true;
+        }
+
+        @Override
+        public void notifyIncomingConnectionToPortNumberFailed(int portNumber) {
+
+        }
+
+        void resetState() {
+            networkChangedCalled = false;
+        }
     }
 }

@@ -20,6 +20,7 @@ import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.thaliproject.p2p.btconnectorlib.internal.bluetooth.BluetoothManager;
 import org.thaliproject.p2p.btconnectorlib.internal.wifi.WifiDirectManager;
+import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 
 import java.lang.reflect.Field;
 import java.util.concurrent.Callable;
@@ -59,7 +60,27 @@ public class ConnectivityMonitorTest {
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
-        mConnectionHelper = new ConnectionHelper();
+        mConnectionHelper = new ConnectionHelper(new SurroundingStateObserver() {
+            @Override
+            public void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
+
+            }
+
+            @Override
+            public void notifyDiscoveryAdvertisingStateUpdateNonTcp(boolean isDiscoveryActive, boolean isAdvertisingActive) {
+
+            }
+
+            @Override
+            public void notifyNetworkChanged(boolean isBluetoothEnabled, boolean isWifiEnabled, String bssidName, String ssidName) {
+
+            }
+
+            @Override
+            public void notifyIncomingConnectionToPortNumberFailed(int portNumber) {
+
+            }
+        });
 
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
