@@ -3,7 +3,7 @@
 var crypto         = require('crypto');
 var express        = require('express');
 var expressPouchDB = require('express-pouchdb');
-var ForeverAgent = require('forever-agent');
+var ForeverAgent   = require('forever-agent');
 var Promise        = require('bluebird');
 
 var tape      = require('../lib/thaliTape');

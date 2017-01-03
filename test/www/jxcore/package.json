@@ -39,7 +39,7 @@
     "node-ssdp": "https://github.com/thaliproject/node-ssdp.git#caf1a75aa54fb47a9e51b72bf4c902c366536cbd",
     "node-uuid": "1.4.7",
     "object-assign": "4.1.0",
-    "pouchdb": "5.4.5",
+    "pouchdb": "6.2.0-prerelease-thali",
     "pouchdb-size": "1.2.2",
     "proxyquire": "1.7.4",
     "randomstring": "1.1.5",

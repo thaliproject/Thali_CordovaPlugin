@@ -18,6 +18,10 @@ var notificationBeacons = require('thali/NextGeneration/notification/thaliNotifi
 var express = require('express');
 var fs = require('fs-extra-promise');
 
+Promise.config({
+  cancellation: true
+});
+
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
 
@@ -25,11 +29,6 @@ function toggleBluetooth (value) {
   if (typeof Mobile === 'undefined') {
     return Promise.reject(new Error(
       'Mobile is not defined'
-    ));
-  }
-  if (platform._isRealAndroid || platform.isIOS) {
-    return Promise.reject(new Error(
-      '\'toggleBluetooth\' is not implemented on android and ios'
     ));
   }
   return new Promise(function (resolve, reject) {
@@ -49,11 +48,6 @@ function toggleWifi (value) {
   if (typeof Mobile === 'undefined') {
     return Promise.reject(new Error(
       'Mobile is not defined'
-    ));
-  }
-  if (platform.isIOS) {
-    return Promise.reject(new Error(
-      'Mobile(\'toggleWiFi\') is not implemented on ios'
     ));
   }
   return new Promise(function (resolve, reject) {
@@ -217,49 +211,66 @@ module.exports.tmpDirectory = tmpDirectory;
  * always resolves with true.
  */
 module.exports.hasRequiredHardware = function () {
-  return new Promise(function (resolve) {
-    if (platform._isRealAndroid) {
-      var checkBleMultipleAdvertisementSupport = function () {
-        Mobile('isBleMultipleAdvertisementSupported').callNative(
-          function (error, result) {
-            if (error) {
-              logger.warn('BLE multiple advertisement error: ' + error);
-              resolve(false);
-              return;
-            }
-            switch (result) {
-              case 'Not resolved': {
-                logger.info(
-                  'BLE multiple advertisement support not yet resolved'
-                );
-                setTimeout(checkBleMultipleAdvertisementSupport, 5000);
-                break;
-              }
-              case 'Supported': {
-                logger.info('BLE multiple advertisement supported');
-                resolve(true);
-                break;
-              }
-              case 'Not supported': {
-                logger.info('BLE multiple advertisement not supported');
+  if (!platform._isRealAndroid) {
+    return Promise.resolve(true);
+  }
 
-                resolve(false);
-                break;
-              }
-              default: {
-                logger.warn('BLE multiple advertisement issue: ' + result);
-                resolve(false);
-              }
+  return new Promise(function (resolve, reject) {
+    function checkBleMultipleAdvertisementSupport () {
+      Mobile('isBleMultipleAdvertisementSupported')
+        .callNative(function (error, result) {
+          if (error) {
+            logger.warn('BLE multiple advertisement error: \'%s\'', String(error));
+            return resolve(false);
+          }
+          switch (result) {
+            case 'Not resolved': {
+              logger.info('BLE multiple advertisement support not yet resolved');
+              setTimeout(checkBleMultipleAdvertisementSupport, 5000);
+              break;
+            }
+            case 'Supported': {
+              logger.info('BLE multiple advertisement supported');
+              return resolve(true);
+            }
+            case 'Not supported': {
+              logger.info('BLE multiple advertisement not supported');
+              return resolve(false);
+            }
+            default: {
+              logger.warn('BLE multiple advertisement issue: \'%s\'', result);
+              return resolve(false);
             }
           }
-        );
-      };
-      checkBleMultipleAdvertisementSupport();
-    } else {
-      resolve(true);
+        }
+      );
     }
+    checkBleMultipleAdvertisementSupport();
   });
 };
+
+module.exports.enableRequiredHardware = function () {
+  if (!ThaliMobile) {
+    ThaliMobile = require('thali/NextGeneration/thaliMobile');
+  }
+  return ThaliMobile.getNetworkStatus()
+    .then(function (networkStatus) {
+      var promises = [];
+      if (networkStatus.wifi === 'off') {
+        promises.push(toggleWifi(true));
+      }
+      if (networkStatus.bluetooth === 'off') {
+        promises.push(toggleBluetooth(true));
+      }
+      return Promise.all(promises);
+    })
+    .then(function () {
+      return true;
+    })
+    .catch(function () {
+      return false;
+    });
+}
 
 module.exports.returnsValidNetworkStatus = function () {
   // The require is here instead of top of file so that
@@ -554,7 +565,9 @@ module.exports.validateCombinedResult = function (combinedResult) {
   return Promise.resolve();
 };
 
-var MAX_FAILURE = 10;
+var MAX_FAILURE  = 10;
+var RETRY_DELAY  = 10000;
+var TEST_TIMEOUT = 5 * 60 * 1000
 
 function turnParticipantsIntoBufferArray (t, devicePublicKey) {
   var publicKeys = [];
@@ -602,89 +615,115 @@ module.exports.runTestOnAllParticipants = function (
   devicePublicKey,
   testToRun
 ) {
+  var notificationHandler;
   var publicKeys = turnParticipantsIntoBufferArray(t, devicePublicKey);
+
+  var participantCount = publicKeys.reduce(
+    function (participantCount, participantPublicKey) {
+      participantCount[participantPublicKey] = 0;
+      return participantCount;
+    }, {}
+  );
+
+  var participantTask = publicKeys.reduce(
+    function (participantTask, participantPublicKey) {
+      participantTask[participantPublicKey] = Promise.resolve();
+      return participantTask;
+    }, {}
+  );
 
   return new Promise(function (resolve, reject) {
     var completed = false;
-    // Each participant is recorded via their public key
-    // If the value is -1 then they are done
-    // If the value is 0 then no test has completed
-    // If the value is greater than 0 then that is how many failures there have
-    // been.
+    // Each participant is recorded via their public key.
+    // If the value is -1 then they are done.
+    // If the value is 0 then no test has completed.
+    // If the value is greater than 0 then
+    // that is how many failures there have been.
 
-    var participantCount = publicKeys.reduce(function (participantCount,
-                                                       participantPublicKey) {
-      participantCount[participantPublicKey] = 0;
-      return participantCount;
-    }, {});
-
-    var participantTask = publicKeys.reduce(function (participantTask,
-                                                      participantPublicKey) {
-      participantTask[participantPublicKey] = Promise.resolve();
-      return participantTask;
-    }, {});
-
-    function success(publicKey) {
+    function success(notificationForUs) {
       if (completed) {
         return;
       }
 
+      var publicKey = notificationForUs.keyId;
       participantCount[publicKey] = -1;
 
       var hasParticipant = Object.keys(participantCount)
-      .some(function (participantKey) {
-        return participantCount[participantKey] !== -1;
-      });
+        .some(function (participantKey) {
+          return participantCount[participantKey] !== -1;
+        });
       if (hasParticipant) {
         return;
       }
 
       completed = true;
-      clearTimeout(timerCancel);
       resolve();
     }
 
-    function fail(publicKey, error) {
-      logger.error('Got an err - ', error.toString());
+    function fail(notificationForUs, error) {
+      var publicKey = notificationForUs.keyId;
       var count = participantCount[publicKey];
       if (completed || count === -1) {
-        return;
+        logger.warn('error ignored: \'%s\' ', String(error));
+        return Promise.resolve();
       }
+
       count ++;
       participantCount[publicKey] = count;
+
       if (count >= MAX_FAILURE) {
         completed = true;
-        clearTimeout(timerCancel);
+
+        logger.error('got error: \'%s\' ', String(error));
         reject(error);
+        return Promise.resolve(error);
       }
+
+      logger.warn('error ignored: \'%s\' ', String(error));
+      return Promise.delay(RETRY_DELAY)
+        .then(function () {
+          logger.warn('retry for notification: \'%s\'', JSON.stringify(notificationForUs));
+          return createTask(notificationForUs);
+        });
     }
 
-    var timerCancel = setTimeout(function () {
-      reject(new Error('Test timed out'));
-    }, 5 * 60 * 1000);
+    function createTask(notificationForUs) {
+      if (completed) {
+        return Promise.resolve();
+      }
 
+      return testToRun(notificationForUs)
+      .then(function () {
+        success(notificationForUs);
+      })
+      .catch(function (error) {
+        return fail(notificationForUs, error);
+      });
+    }
+
+    notificationHandler = function(notificationForUs) {
+      if (completed) {
+        return;
+      }
+
+      var publicKey = notificationForUs.keyId;
+      var task = participantTask[publicKey];
+      task
+        .then(function () {
+          if (completed) {
+            return;
+          }
+
+          task = createTask(notificationForUs);
+          participantTask[publicKey] = task;
+          return task;
+        });
+      task.cancel();
+    }
     thaliNotificationClient.on(
       thaliNotificationClient.Events.PeerAdvertisesDataForUs,
-      function (notificationForUs) {
-        if (completed) {
-          return;
-        }
-        participantTask[notificationForUs.keyId]
-        .then(function () {
-          if (!completed) {
-            var task = testToRun(notificationForUs)
-            .then(function () {
-              success(notificationForUs.keyId);
-            })
-            .catch(function (error) {
-              fail(notificationForUs.keyId, error);
-              return Promise.resolve(error);
-            });
-            participantTask[notificationForUs.keyId] = task;
-            return task;
-          }
-        });
-      });
+      notificationHandler
+    );
 
     thaliNotificationClient.start(publicKeys);
     return module.exports.startServerInfrastructure(
@@ -693,7 +732,17 @@ module.exports.runTestOnAllParticipants = function (
     .catch(function (err) {
       reject(err);
     });
-  });
+  })
+    .timeout(TEST_TIMEOUT)
+    .finally(function () {
+      thaliNotificationClient.removeListener(
+        thaliNotificationClient.Events.PeerAdvertisesDataForUs,
+        notificationHandler
+      );
+      publicKeys.forEach(function (publicKey) {
+        participantTask[publicKey].cancel();
+      });
+    });
 };
 
 module.exports.checkArgs = function (t, spy, description, args) {

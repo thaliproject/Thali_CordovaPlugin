@@ -49,7 +49,8 @@ public class JXcoreExtension {
     private static final String EVENT_NAME_DISCOVERY_ADVERTISING_STATE_UPDATE = "discoveryAdvertisingStateUpdateNonTCP";
     private static final String EVENT_NAME_NETWORK_CHANGED = "networkChanged";
     private static final String EVENT_NAME_INCOMING_CONNECTION_TO_PORT_NUMBER_FAILED = "incomingConnectionToPortNumberFailed";
-
+    private static final String METHOD_NAME_LOCK_WIFI_MULTICAST = "lockAndroidWifiMulticast";
+    private static final String METHOD_NAME_UNLOCK_WIFI_MULTICAST = "unlockAndroidWifiMulticast";
     private static final String METHOD_ARGUMENT_NETWORK_CHANGED = EVENT_NAME_NETWORK_CHANGED;
 
     private static final String EVENT_VALUE_PEER_ID = "peerIdentifier";
@@ -78,6 +79,7 @@ public class JXcoreExtension {
     private static final long INCOMING_CONNECTION_FAILED_NOTIFICATION_MIN_INTERVAL_IN_MILLISECONDS = 100;
 
     private static ConnectionHelper mConnectionHelper = null;
+    private static WifiLocker wifiLocker = new WifiLocker();
     private static long mLastTimeIncomingConnectionFailedNotificationWasFired = 0;
     private static boolean mNetworkChangedRegistered = false;
 
@@ -504,7 +506,29 @@ public class JXcoreExtension {
                 jxcore.CallJSMethod(callbackId, args.toArray());
             }
         });
+
+        jxcore.RegisterMethod(METHOD_NAME_LOCK_WIFI_MULTICAST, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+                ArrayList<Object> args = new ArrayList<Object>();
+                WifiManager wifiManager = (WifiManager) jxcore.activity.getSystemService(Context.WIFI_SERVICE);
+                String result = wifiLocker.acquireLock(wifiManager);
+                args.add(result);
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
+
+        jxcore.RegisterMethod(METHOD_NAME_UNLOCK_WIFI_MULTICAST, new JXcoreCallback() {
+            @Override
+            public void Receiver(ArrayList<Object> params, String callbackId) {
+                ArrayList<Object> args = new ArrayList<Object>();
+                wifiLocker.releaseLock();
+                args.add(null);
+                jxcore.CallJSMethod(callbackId, args.toArray());
+            }
+        });
     }
+
 
     public static void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
         JSONObject jsonObject = new JSONObject();

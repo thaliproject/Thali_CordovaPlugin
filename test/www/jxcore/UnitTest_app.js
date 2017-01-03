@@ -13,7 +13,7 @@ if (typeof Mobile === 'undefined') {
   global.Mobile = require('./lib/wifiBasedNativeMock.js')(mockPlatform);
 }
 
-var config = require('./config.json');
+var config = require('./config');
 var objectAssign = require('object-assign');
 process.env = objectAssign(process.env, config.env);
 
@@ -73,22 +73,10 @@ if (platform.isIOS) {
 
 global.NETWORK_TYPE = ThaliMobile.networkTypes.NATIVE;
 
-ThaliMobile.getNetworkStatus()
-.then(function (networkStatus) {
-  var promiseList = [];
-  if (networkStatus.wifi === 'off') {
-    promiseList.push(testUtils.toggleWifi(true));
-  }
-  if (networkStatus.bluetooth === 'off') {
-    promiseList.push(testUtils.toggleBluetooth(true));
-  }
-  Promise.all(promiseList).then(function () {
-    Mobile('GetDeviceName').callNative(function (name) {
-      logger.debug('My device name is: %s', name);
-      testUtils.setName(name);
-      require('./runTests.js');
-    });
-  });
+Mobile('GetDeviceName').callNative(function (name) {
+  logger.debug('My device name is: \'%s\'', name);
+  testUtils.setName(name);
+  require('./runTests.js');
 });
 
 logger.debug('Unit Test app is loaded');

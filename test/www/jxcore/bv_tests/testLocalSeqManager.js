@@ -7,7 +7,6 @@ var crypto = require('crypto');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var Promise = require('lie');
 var testUtils = require('../lib/testUtils');
-var platform = require('thali/NextGeneration/utils/platform');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var https = require('https');
 var httpTester = require('../lib/httpTester');
@@ -386,16 +385,13 @@ test('#update - Fail on bad seq value', function (t) {
   });
 });
 
-test('#update - do we cancel timer properly on an immediate?',
-function () {
-  // FIXME: 1000ms update interval is not enough for iOS devices (#1531)
-  return platform._isRealIOS;
-},
-function (t) {
+test('#update - do we cancel timer properly on an immediate?', function (t) {
   testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName,
                                              remotePouchDB) {
+    // TODO: timeout should be around 1000ms but we set it much larger in order
+    // to make test pass on iOS (#1618).
     localSeqManager =
-      new LocalSeqManager(1000, remotePouchDB, devicePublicKey);
+      new LocalSeqManager(8000, remotePouchDB, devicePublicKey);
     var timerPromise = null;
     var immediatePromise = null;
     var lastSyncedSequenceNumber = 12;
@@ -467,8 +463,10 @@ test('#update - do we wait for blocked update', function (t) {
 function testTimer(t, updateFn) {
   testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName,
                                              remotePouchDB) {
+    // TODO: timeout should be around 1000ms but we set it much larger in order
+    // to make test pass on iOS (#1618).
     localSeqManager =
-      new LocalSeqManager(1000, remotePouchDB, devicePublicKey);
+      new LocalSeqManager(8000, remotePouchDB, devicePublicKey);
     var lastSyncedSequenceNumber = 0;
     var firstUpdateTime = Date.now();
     var startTimeForSecondUpdate = null;
@@ -506,10 +504,6 @@ test('#update - test that we wait long enough', function (t) {
 });
 
 test('#update - test that we pick up new sequences while we wait',
-  function () {
-    // FIXME: 1000ms update interval is not enough for iOS devices (#1531)
-    return platform._isRealIOS;
-  },
   function (t) {
     testTimer(t, function (lastSyncedSequenceNumber) {
       lastSyncedSequenceNumber += 101;
