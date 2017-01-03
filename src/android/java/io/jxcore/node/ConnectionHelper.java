@@ -318,7 +318,7 @@ public class ConnectionHelper
 
         if (selectedDevice == null) {
             Log.w(TAG, "connect: The peer to connect to is not amongst the discovered peers, but trying anyway...");
-            selectedDevice = new PeerProperties(PeerProperties.NO_PEER_NAME_STRING, bluetoothMacAddress);
+            selectedDevice = new PeerProperties(bluetoothMacAddress);
         }
 
         if (!BluetoothAdapter.checkBluetoothAddress(selectedDevice.getBluetoothMacAddress())) {

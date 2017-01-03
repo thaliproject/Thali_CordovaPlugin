@@ -62,7 +62,8 @@ public class IncomingSocketThreadMock extends IncomingSocketThread {
             mLocalInputStream = tempInputStream;
             mLocalOutputStream = tempOutputStream;
 
-            startStreamCopyingThreads(new ConnectionData(new PeerProperties(), true));
+            startStreamCopyingThreads(new ConnectionData(
+                new PeerProperties(PeerProperties.BLUETOOTH_MAC_ADDRESS_UNKNOWN), true));
         }
     }
 }

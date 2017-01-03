@@ -81,6 +81,7 @@ public class JXcoreExtension implements SurroundingStateObserver {
     private static final String ERROR_NOT_MULTICONNECT_PLATFORM = "Not multiConnect platform";
 
     private static ConnectionHelper mConnectionHelper = null;
+    private static WifiLocker wifiLocker = new WifiLocker();
     private static long mLastTimeIncomingConnectionFailedNotificationWasFired = 0;
     private static boolean mNetworkChangedRegistered = false;
 
