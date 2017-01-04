@@ -11,8 +11,6 @@ var thaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils');
 
 var logger = require('../lib/testLogger')('testThaliMobileNativeAndroid');
 
-var CONNECTION_RETRIES = 10;
-
 // jshint -W064
 
 // A variable that can be used to store a server
@@ -131,9 +129,13 @@ function startAndGetConnection(t, server, onConnectSuccess, onConnectFailure) {
     peers.forEach(function (peer) {
       if (peer.peerAvailable && !connecting) {
         connecting = true;
-        thaliMobileNativeTestUtils.connectToPeer(
-          peer, CONNECTION_RETRIES, onConnectSuccess, onConnectFailure
-        );
+        thaliMobileNativeTestUtils.connectToPeer(peer)
+          .then(function (connection) {
+            onConnectSuccess(null, connection, peer);
+          })
+          .catch(function (error) {
+            onConnectFailure(error, null, peer);
+          });
       }
     });
   });
@@ -146,19 +148,13 @@ function reconnectToPeerAfterClose(t, peer, port, connectionHandler) {
       connectionHandler.call(null, connection);
     });
 
-    connection
-      .once('error', function (error) {
-        t.ok(error, 'We got an error which is what we wanted');
-        thaliMobileNativeTestUtils.connectToPeer(
-          peer, CONNECTION_RETRIES, resolve, reject
-        );
-      })
-      .once('close', function () {
-        resolve();
-      });
+    connection.once('error', function (error) {
+      t.ok(error, 'We got an error which is what we wanted');
+      thaliMobileNativeTestUtils.connectToPeer(peer)
+        .then(resolve).catch(reject);
+    });
   })
-    .then(function (error) {
-      t.notOk(error, 'We should be able to reconnect');
+    .then(function () {
       t.end();
     })
     .catch(function (error) {

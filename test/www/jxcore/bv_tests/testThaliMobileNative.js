@@ -277,9 +277,13 @@ test('Can connect to a remote peer', function (t) {
       peers.forEach(function (peer) {
         if (peer.peerAvailable && !connecting) {
           connecting = true;
-          var RETRIES = 10;
-          thaliMobileNativeTestUtils.connectToPeer(peer, RETRIES,
-                                            onConnectSuccess, onConnectFailure);
+          thaliMobileNativeTestUtils.connectToPeer(peer)
+            .then(function (connection) {
+              onConnectSuccess(null, connection, peer);
+            })
+            .catch(function (error) {
+              onConnectFailure(error, null, peer);
+            });
         }
       });
     });
@@ -371,9 +375,13 @@ test('Can shift large amounts of data', function (t) {
     peers.forEach(function (peer) {
       if (peer.peerAvailable && !connecting) {
         connecting = true;
-        var RETRIES = 10;
-        thaliMobileNativeTestUtils
-          .connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
+        thaliMobileNativeTestUtils.connectToPeer(peer)
+          .then(function (connection) {
+            onConnectSuccess(null, connection, peer);
+          })
+          .catch(function (error) {
+            onConnectFailure(error, null, peer);
+          });
       }
     });
   });
@@ -684,29 +692,29 @@ function clientRound(t, roundNumber, boundListener, quitSignal) {
 
         peersWeAreOrHaveResolved[peer.peerIdentifier] = true;
 
-        var RETRIES = 10;
-        peerPromises.push(thaliMobileNativeTestUtils.
-          connectToPeerPromise(peer, RETRIES, quitSignal)
-          .catch(function (err) {
-            err.fatal = false;
-            return Promise.reject(err);
-          })
-          .then(function (connection) {
-            if (quitSignal.raised) {
-              return;
-            }
-            return clientSuccessConnect(t, roundNumber, connection,
-              peersWeSucceededWith);
-          })
-          .catch(function (err) {
-            if (err.fatal) {
+        peerPromises.push(
+          thaliMobileNativeTestUtils.connectToPeer(peer, quitSignal)
+            .catch(function (err) {
+              error.fatal = false;
               return Promise.reject(err);
-            }
-            logger.debug('Got recoverable client error ' + err);
-            // Failure could be transient so we have to keep trying
-            delete peersWeAreOrHaveResolved[peer.peerIdentifier];
-            return Promise.resolve();
-          }));
+            })
+            .then(function (connection) {
+              if (quitSignal.raised) {
+                return;
+              }
+              return clientSuccessConnect(t, roundNumber, connection,
+                peersWeSucceededWith);
+            })
+            .catch(function (err) {
+              if (err.fatal) {
+                return Promise.reject(err);
+              }
+              logger.debug('Got recoverable client error ' + err);
+              // Failure could be transient so we have to keep trying
+              delete peersWeAreOrHaveResolved[peer.peerIdentifier];
+              return Promise.resolve();
+            })
+          );
       });
       Promise.all(peerPromises)
         .then(function () {
