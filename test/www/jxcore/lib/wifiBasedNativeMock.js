@@ -765,6 +765,11 @@ MobileCallInstance.prototype.multiConnect =
       return multiConnectResolvedCallbackHandler(syncValue, 'Illegal peerID');
     }
 
+    if (typeof syncValue !== 'string') {
+      callback(null);
+      return multiConnectResolvedCallbackHandler(syncValue, 'Bad parameters');
+    }
+
     // The immediate return just says we got the request.
     callback(null);
     return this._connect(peerIdentifier, function (error, response) {
