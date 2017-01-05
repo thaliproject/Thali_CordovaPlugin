@@ -292,8 +292,8 @@ function killLocal(t, end) {
           // to connect before the listener host doesn't know it should be
           // dead yet. If that happens then we shouldn't be able to send
           // any data.
-          secondConnectionToListeningPort.write(testMessage);
-          getMessageAndThen(t, secondConnectionToListeningPort, closeMessage,
+          connection.write(testMessage);
+          getMessageAndThen(t, connection, closeMessage,
             function () {
               t.fail('We should never have gotten the second message');
               t.end();
