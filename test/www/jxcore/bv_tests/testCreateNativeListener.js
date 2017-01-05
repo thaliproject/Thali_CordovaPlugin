@@ -45,7 +45,7 @@ var test = tape({
   }
 });
 
-test('calling createNativeListener directly rejects', function (t) {
+test.only('calling createNativeListener directly rejects', function (t) {
   serversManager.start()
     .then(function () {
       return serversManager._createNativeListener();
