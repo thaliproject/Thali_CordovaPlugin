@@ -14,6 +14,7 @@ import java.util.Date;
 
 import io.jxcore.node.ConnectionHelper;
 import io.jxcore.node.ConnectionHelperTest;
+import io.jxcore.node.SurroundingStateObserver;
 import io.jxcore.node.jxcore;
 
 public final class RegisterExecuteUT {
@@ -24,8 +25,27 @@ public final class RegisterExecuteUT {
     static String TAG = "RegisterExecuteUT";
 
     private static void FireTestedMethod(String methodName) {
-        ConnectionHelperTest.mConnectionHelper = new ConnectionHelper();
+        ConnectionHelperTest.mConnectionHelper = new ConnectionHelper(new SurroundingStateObserver() {
+            @Override
+            public void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
 
+            }
+
+            @Override
+            public void notifyDiscoveryAdvertisingStateUpdateNonTcp(boolean isDiscoveryActive, boolean isAdvertisingActive) {
+
+            }
+
+            @Override
+            public void notifyNetworkChanged(boolean isBluetoothEnabled, boolean isWifiEnabled, String bssidName, String ssidName) {
+
+            }
+
+            @Override
+            public void notifyIncomingConnectionToPortNumberFailed(int portNumber) {
+
+            }
+        });
         switch (methodName) {
             case "onPeerLost":
                 ConnectionHelperTest.mConnectionHelper
@@ -69,7 +89,6 @@ public final class RegisterExecuteUT {
         jxcore.RegisterMethod("executeNativeTests", new jxcore.JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
-                ConnectionHelperTest.mConnectionHelper = new ConnectionHelper();
                 String logtag = "ExecuteNativeTests";
                 Log.d(logtag, "Running unit tests");
                 Result resultTest = ThaliTestRunner.runTests();
@@ -89,7 +108,7 @@ public final class RegisterExecuteUT {
 
                     jsonObject.put("total", resultTest.getRunCount());
                     jsonObject.put("passed", resultTest.getRunCount() -
-                            resultTest.getFailureCount() - resultTest.getIgnoreCount());
+                        resultTest.getFailureCount() - resultTest.getIgnoreCount());
                     jsonObject.put("failed", resultTest.getFailureCount());
                     jsonObject.put("ignored", resultTest.getIgnoreCount());
                     jsonObject.put("duration", new Date(resultTest.getRunTime()).getTime());
@@ -97,7 +116,7 @@ public final class RegisterExecuteUT {
                     jsonObjectCreated = true;
                 } catch (JSONException e) {
                     Log.e(logtag, "executeNativeTests: " +
-                            "Failed to populate the JSON object: " + e.getMessage(), e);
+                        "Failed to populate the JSON object: " + e.getMessage(), e);
                 }
 
                 if (jsonObjectCreated) {
