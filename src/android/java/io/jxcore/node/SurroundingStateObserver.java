@@ -8,9 +8,20 @@ import org.thaliproject.p2p.btconnectorlib.PeerProperties;
 
 public interface SurroundingStateObserver {
 
-
+    /**
+     * Notifies node layer about peer changes detected on native Android layer
+     *
+     * @param peerProperties Peer properties of new/updated/lost peer.
+     * @param isAvailable    If true, peer is available. False otherwise.
+     */
     void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable);
 
+    /**
+     * Notifies about discovery and/or advertising changes
+     *
+     * @param isDiscoveryActive   We are currently discovering if true. False otherwise.
+     * @param isAdvertisingActive We are currently advertising if true. False otherwise.
+     */
     void notifyDiscoveryAdvertisingStateUpdateNonTcp(boolean isDiscoveryActive, boolean isAdvertisingActive);
 
     /**
@@ -19,6 +30,10 @@ public interface SurroundingStateObserver {
      * @param bssidName          If null this value indicates that either wifiRadioOn is not 'on' or
      *                           that the Wi-Fi isn't currently connected to an access point.
      *                           If non-null then this is the BSSID of the access point that Wi-Fi
+     *                           is connected to.
+     * @param ssidName           If null this value indicates that either wifiRadioOn is not 'on' or
+     *                           that the Wi-Fi isn't currently connected to an access point.
+     *                           If non-null then this is the SSID of the access point that Wi-Fi
      *                           is connected to.
      */
     void notifyNetworkChanged(boolean isBluetoothEnabled, boolean isWifiEnabled, String bssidName, String ssidName);
