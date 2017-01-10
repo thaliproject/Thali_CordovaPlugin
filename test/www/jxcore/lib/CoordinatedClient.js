@@ -111,6 +111,7 @@ CoordinatedClient.prototype._bind = function () {
     .on  ('disqualify',        this._disqualify.bind(this))
     .on  ('disconnect',        this._disconnect.bind(this))
     .on  ('error',             this._error.bind(this))
+    .on  ('customError',       this._customError.bind(this))
     .once('complete',          this._complete.bind(this));
 };
 
@@ -185,7 +186,6 @@ CoordinatedClient.prototype._schedule = function (data) {
 
     if (lastFailedResult) {
       logger.error('failed to run unit tests, platformName: \'%s\'', self._platform);
-      self._failed(lastFailedResult.error);
     } else {
       logger.debug('all unit tests succeeded, platformName: \'%s\'', self._platform);
     }
@@ -275,11 +275,22 @@ CoordinatedClient.prototype._disqualify = function (data) {
 CoordinatedClient.prototype._disconnect = function () {
   if (this._state === CoordinatedClient.states.completed) {
     logger.debug('test client disconnected');
-    this._succeed();
+    if (this._lastCustomError) {
+      this._failed(this._lastCustomError);
+    } else {
+      this._succeed();
+    }
   } else {
     // Just log the error since socket.io will try to reconnect.
     logger.debug('device disconnected from the test server');
   }
+};
+
+CoordinatedClient.prototype._customError = function (data) {
+  this._emit('customError_confirmed', data);
+  this._lastCustomError = new Error(data.content);
+
+  // We are waiting for 'complete' event.
 };
 
 CoordinatedClient.prototype._error = function (error) {
