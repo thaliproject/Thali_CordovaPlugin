@@ -4,7 +4,7 @@ var EventEmitter = require('events').EventEmitter;
 var logger = require('../ThaliLogger')('thaliMobile');
 var platform = require('./utils/platform');
 var format = require('util').format;
-
+var makeAsync = require('./utils/common').makeAsync;
 var thaliConfig = require('./thaliConfig');
 
 var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
@@ -15,6 +15,7 @@ var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
 /**
  * for testing purposes
  * @private
+ * @returns {module:ThaliWifiInfrastructure~ThaliWifiInfrastructure}
  */
 module.exports._getThaliWifiInfrastructure = function () {
   return thaliWifiInfrastructure;
@@ -218,6 +219,12 @@ module.exports.stop = function () {
   return promiseQueue.enqueue(function (resolve) {
     thaliMobileStates = getInitialStates();
     removeAllAvailabilityWatchersFromPeers();
+
+    // clear zombieFilter cache
+    if (typeof handleNonTCPPeer.clearCache === 'function') {
+      handleNonTCPPeer.clearCache();
+    }
+
     Object.getOwnPropertyNames(connectionTypes)
       .forEach(function (connectionKey) {
         var connectionType = connectionTypes[connectionKey];
@@ -394,6 +401,7 @@ module.exports.getNetworkStatus = function () {
  * put on the TCP connection. For some transports a handshake can take quite a
  * long time.
  */
+
 var PeerHostInfo = function (peer) {
   this.hostAddress = peer.hostAddress;
   this.portNumber = peer.portNumber;
@@ -484,11 +492,11 @@ var getPeerHostInfoStrategies = (function () {
  * set per thaliConfig.
  *
  * @public
- * @property {string} peerIdentifier This is exclusively used to detect if
+ * @param {string} peerIdentifier This is exclusively used to detect if
  * this is a repeat announcement or if a peer has gone to correlate it to the
  * announcement of the peer's presence. But this value is not used to establish
  * a connection to the peer, the hostAddress and portNumber handle that.
- * @property {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
+ * @param {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
  * Defines the kind of connection that the request will eventually go over. This
  * information is needed so that we can better manage how we use the different
  * transport types available to us.
@@ -525,9 +533,9 @@ module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
  * from `getPeerHostInfo` method) to prevent possible race conditions...
  *
  * @public
- * @property {string} peerIdentifier Value from peerAvailabilityChanged event.
- * @property {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
- * @property {number} portNumber
+ * @param {string} peerIdentifier Value from peerAvailabilityChanged event.
+ * @param {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
+ * @param {number} portNumber
  * @returns {Promise<?Error>}
  */
 module.exports.disconnect =
@@ -955,24 +963,6 @@ module.exports._getPeerAvailabilities = function () {
 
 module.exports._peerAvailabilities = peerAvailabilities;
 
-var peersDiff = function (oldState, newState) {
-  var samePeer = (
-    oldState.peerIdentifier === newState.peerIdentifier &&
-    oldState.connectionType === newState.connectionType
-  );
-  if (!samePeer) {
-    throw new Error('Cannot compare state of different peers');
-  }
-  return {
-    peerIdentifier: oldState.peerIdentifier,
-    connectionType: oldState.connectionType,
-    peerAvailable: (newState.peerAvailable !== oldState.peerAvailable),
-    generation: (newState.generation - oldState.generation),
-    hostAddress: (newState.hostAddress !== oldState.hostAddress),
-    portNumber: (newState.portNumber !== oldState.portNumber),
-    availableSince: (newState.availableSince - oldState.availableSince)
-  };
-};
 
 var handlePeer = function (peer) {
   var cachedPeer = peerAvailabilities[peer.connectionType][peer.peerIdentifier];
@@ -983,19 +973,11 @@ var handlePeer = function (peer) {
 
   var diff = null;
   if (cachedPeer) {
-    // check diff and ignore event if necessary
-    diff = peersDiff(cachedPeer, peer);
-    var ignoreChanges = !diff.peerAvailable && !diff.hostAddress &&
-                          !diff.portNumber;
-
-    if (platform.isAndroid) {
-      var isWrapAroundElapsed =
-        diff.availableSince >= thaliConfig.UPDATE_WINDOWS_FOREGROUND_MS * 255;
-      ignoreChanges = ignoreChanges &&
-        (diff.generation === 0 && !isWrapAroundElapsed);
-    } else {
-      ignoreChanges = ignoreChanges && (diff.generation <= 0);
-    }
+    var ignoreChanges =
+      peer.peerAvailable === cachedPeer.peerAvailable &&
+      peer.hostAddress === cachedPeer.hostAddress &&
+      peer.portNumber === cachedPeer.portNumber &&
+      peer.generation <= cachedPeer.generation;
 
     if (ignoreChanges) {
       cachedPeer.availableSince = peer.availableSince;
@@ -1059,8 +1041,12 @@ var handleRecreatedPeer = function (nativePeer) {
   }
 };
 
-ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
-function (nativePeer) {
+// Explicitly make peerAvailabilityChanged handlers asynchronous just to be
+// consistent with zombieFilter, which is always async (it delays execution).
+var handleNonTCPPeer = makeAsync(function (nativePeer) {
+  if (!thaliMobileStates.started) {
+    return;
+  }
   if (nativePeer.recreated) {
     handleRecreatedPeer(nativePeer);
     return;
@@ -1084,7 +1070,10 @@ function (nativePeer) {
   handlePeer(peer);
 });
 
-thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeer) {
+var handleWifiPeer = makeAsync(function (wifiPeer) {
+  if (!thaliMobileStates.started) {
+    return;
+  }
   var peerAvailable = Boolean(wifiPeer.hostAddress && wifiPeer.portNumber);
   var peer = {
     peerIdentifier: wifiPeer.peerIdentifier,
@@ -1098,6 +1087,22 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeer) {
   };
   handlePeer(peer);
 });
+
+if (platform.isAndroid) {
+  handleNonTCPPeer = require('./utils/zombieFilter')(handleNonTCPPeer, {
+    zombieThreshold: thaliConfig.ANDROID_ZOMBIE_THRESHOLD,
+    maxDelay: thaliConfig.ANDROID_ZOMBIE_MAX_DELAY,
+  });
+}
+
+ThaliMobileNativeWrapper.emitter.on(
+  'nonTCPPeerAvailabilityChangedEvent',
+  handleNonTCPPeer
+);
+thaliWifiInfrastructure.on(
+  'wifiPeerAvailabilityChanged',
+  handleWifiPeer
+);
 
 // TODO: move watchers to the separate module
 var peerAvailabilityWatchers = {};
