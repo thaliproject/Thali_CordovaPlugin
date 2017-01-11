@@ -34,14 +34,14 @@ function promiseResultSuccessOrFailure (promise) {
     // what the promise outputs the result will always be a resolve
     return failure;
   });
-};
+}
 
 function getCombinedResult (results) {
   return {
     wifiResult: results[0] || null,
     nativeResult: results[1] || null
   };
-};
+}
 
 /**
  * Enum to define the network types
@@ -65,7 +65,7 @@ function getMethodIfExists (target, method) {
     var args = arguments;
     return promiseResultSuccessOrFailure(target[method].apply(target, args));
   };
-};
+}
 
 function getWifiOrNativeMethodByNetworkType (method, networkType) {
   var wifiMethod;
@@ -107,7 +107,7 @@ function getWifiOrNativeMethodByNetworkType (method, networkType) {
       throw new Error('Unsupported network type ' + networkType);
     }
   }
-};
+}
 
 var thaliMobileStates = {
   started: false,
@@ -128,7 +128,7 @@ function resetThaliMobileState () {
   thaliMobileStates.listening = false;
   thaliMobileStates.advertising = false;
   thaliMobileStates.networkType = networkTypes.BOTH;
-};
+}
 
 
 // TODO: move peer availability cache to the separate module
@@ -192,7 +192,7 @@ function start (router, pskIdToSecret, networkType) {
       }
       return Promise.reject(result);
     });
-};
+}
 
 /**
  * This method MUST be called before any other method here other than
@@ -448,7 +448,7 @@ function PeerHostInfo (peer) {
   this.hostAddress = peer.hostAddress;
   this.portNumber = peer.portNumber;
   this.suggestedTCPTimeout = peer.suggestedTCPTimeout;
-};
+}
 
 var getPeerHostInfoStrategies = (function () {
   var LOCALHOST = '127.0.0.1';
@@ -975,7 +975,7 @@ function PeerAvailabilityStatus (peer) {
     this.generation = null;
     this.newAddressPort = null;
   }
-};
+}
 
 function emitPeerUnavailable (peerIdentifier, connectionType) {
   var unavailable = new PeerAvailabilityStatus({
@@ -985,7 +985,7 @@ function emitPeerUnavailable (peerIdentifier, connectionType) {
   logger.debug('Emitting peerAvailabilityChanged from emitPeerUnavailable %s',
     JSON.stringify(unavailable));
   module.exports.emitter.emit('peerAvailabilityChanged', unavailable);
-};
+}
 
 function peersDiff (oldState, newState) {
   var samePeer =
@@ -1004,7 +1004,7 @@ function peersDiff (oldState, newState) {
     portNumber: newState.portNumber !== oldState.portNumber,
     availableSince: newState.availableSince - oldState.availableSince
   };
-};
+}
 
 function handlePeer (peer) {
   var cachedPeer = peerAvailabilities[peer.connectionType][peer.peerIdentifier];
@@ -1056,7 +1056,7 @@ function handlePeer (peer) {
   logger.debug('Emitting peerAvailabilityChanged from handlePeer %s',
     JSON.stringify(peerStatus));
   module.exports.emitter.emit('peerAvailabilityChanged', peerStatus);
-};
+}
 
 function handleRecreatedPeer (nativePeer) {
   var cachedPeer =
@@ -1089,7 +1089,7 @@ function handleRecreatedPeer (nativePeer) {
         });
     }
   }
-};
+}
 
 ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
 function (nativePeer) {
@@ -1148,7 +1148,7 @@ function isAvailabilityWatcherForPeerExist (peer) {
 
   return !!(peerAvailabilityWatchersByConnectionType &&
   peerAvailabilityWatchersByConnectionType[peerIdentifier]);
-};
+}
 
 function watchForPeerAvailability (peer) {
   var peerIdentifier = peer.peerIdentifier;
@@ -1168,7 +1168,7 @@ function watchForPeerAvailability (peer) {
 
   changeCachedPeerUnavailable(peer);
   emitPeerUnavailable(peerIdentifier, connectionType);
-};
+}
 
 function addAvailabilityWatcherToPeerIfNotExist (peer) {
   if (isAvailabilityWatcherForPeerExist(peer)) {
@@ -1186,7 +1186,7 @@ function addAvailabilityWatcherToPeerIfNotExist (peer) {
   // more then once per unavailability threshold
   peerAvailabilityWatchers[connectionType][peerIdentifier] =
     setInterval(watchForPeerAvailability, unavailabilityThreshold, peer);
-};
+}
 
 function removeAvailabilityWatcherFromPeerIfExists (peer) {
   if (!isAvailabilityWatcherForPeerExist(peer)) {
@@ -1200,7 +1200,7 @@ function removeAvailabilityWatcherFromPeerIfExists (peer) {
 
   clearInterval(interval);
   delete peerAvailabilityWatchers[connectionType][peerIdentifier];
-};
+}
 
 var removeAllAvailabilityWatchersFromPeersByConnectionType =
   function (connectionType) {
@@ -1220,18 +1220,18 @@ var removeAllAvailabilityWatchersFromPeersByConnectionType =
 function removeAllAvailabilityWatchersFromPeers () {
   Object.keys(peerAvailabilityWatchers)
     .forEach(removeAllAvailabilityWatchersFromPeersByConnectionType);
-};
+}
 
 function changeCachedPeerUnavailable (peer) {
   removeAvailabilityWatcherFromPeerIfExists(peer);
   delete peerAvailabilities[peer.connectionType][peer.peerIdentifier];
-};
+}
 
 function changeCachedPeerAvailable (peer) {
   var cachedPeer = JSON.parse(JSON.stringify(peer));
   peerAvailabilities[peer.connectionType][peer.peerIdentifier] = cachedPeer;
   addAvailabilityWatcherToPeerIfNotExist(cachedPeer);
-};
+}
 
 function changePeersUnavailable (connectionType) {
   Object.keys(peerAvailabilities[connectionType]).forEach(
@@ -1240,7 +1240,7 @@ function changePeersUnavailable (connectionType) {
       changeCachedPeerUnavailable(peer);
       emitPeerUnavailable(peerIdentifier, connectionType);
     });
-};
+}
 
 /**
  * Fired whenever our state changes.
@@ -1273,7 +1273,7 @@ function getDiscoveryAdvertisingState () {
   state.discoveryActive = thaliMobileStates.listening;
   state.advertisingActive = thaliMobileStates.advertising;
   return state;
-};
+}
 
 function verifyDiscoveryAdvertisingState (state) {
   var listening = thaliMobileStates.listening;
@@ -1286,7 +1286,7 @@ function verifyDiscoveryAdvertisingState (state) {
       thaliMobileStates
     ));
   }
-};
+}
 
 var emittedDiscoveryAdvertisingStateUpdate = {};
 
@@ -1311,7 +1311,7 @@ function emitDiscoveryAdvertisingStateUpdate () {
   emittedDiscoveryAdvertisingStateUpdate = getDiscoveryAdvertisingState();
   module.exports.emitter.emit('discoveryAdvertisingStateUpdate',
     emittedDiscoveryAdvertisingStateUpdate);
-};
+}
 
 /**
  * If we receive a {@link
@@ -1437,7 +1437,7 @@ function handleNetworkChanged (networkChangedValue) {
       });
     }
   });
-};
+}
 
 function handleNetworkChangedNonTCP (networkChangedValue) {
   if (!thaliMobileStates.started) {
@@ -1449,12 +1449,12 @@ function handleNetworkChangedNonTCP (networkChangedValue) {
 
   handleNetworkChanged(networkChangedValue);
   module.exports.emitter.emit('networkChanged', networkChangedValue);
-};
+}
 
 function handleNetworkChangedWifi (networkChangedValue) {
   logger.warn('networkChangedWifi should not be fired because it is not implemented');
   handleNetworkChangedNonTCP(networkChangedValue);
-};
+}
 
 /**
  * Unless something went horribly wrong only one of thaliMobileNativeWrapper

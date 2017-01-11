@@ -978,7 +978,7 @@ function handlePeerAvailabilityChanged (peer) {
       handlePeerUnavailable();
     }
   });
-};
+}
 
 module.exports._handlePeerAvailabilityChanged = handlePeerAvailabilityChanged;
 
