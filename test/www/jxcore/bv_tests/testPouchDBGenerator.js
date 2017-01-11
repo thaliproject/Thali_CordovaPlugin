@@ -59,7 +59,7 @@ test('test defaultAdapter', function (t) {
   t.equals(db.__opts.db, undefined);
 
   db = LocalPouchDB('dbname');
-  t.equals(db._adapter, 'leveldb');
+  t.equals(db._adapter, 'leveldb-mobile');
   t.equals(db.__opts.db, leveldownMobile);
 
   // Passing an empty function as defaultAdapter has no sense. This is just for testing.
@@ -72,7 +72,7 @@ test('test defaultAdapter', function (t) {
     defaultAdapter: obj
   });
   db = LocalPouchDB('dbname');
-  t.equals(db._adapter, 'leveldb');
+  t.equals(db._adapter, 'leveldb-mobile');
   t.equals(db.__opts.db, obj);
 
   t.end();
