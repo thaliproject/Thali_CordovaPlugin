@@ -90,7 +90,7 @@ function connectToPeer(peer, quitSignal) {
           logger.warn('Connect error: \'%s\'', error.message);
 
           if (retryIndex >= RETRY_COUNT) {
-            var error = 'Too many connect retries';
+            error = 'Too many connect retries';
             logger.error(error);
             return reject(new Error(error));
           }
@@ -176,8 +176,8 @@ function iOSConnectToPeer(peer, quitSignal) {
         return;
       }
 
-      var port = new Number(listeningPort);
-      if (isNaN(port)) {
+      var port = parseInt(listeningPort, 10);
+      if (isNaN(port) || port != listeningPort) {
         return reject(new Error(format(
           'listeningPort is not a valid number: \'%s\'', listeningPort
         )));
@@ -185,7 +185,7 @@ function iOSConnectToPeer(peer, quitSignal) {
       resolve({
         listeningPort: port
       });
-    }
+    };
 
     multiConnectEmitter.on('multiConnectResolved', multiConnectHandler);
     Mobile('multiConnect')
@@ -193,7 +193,7 @@ function iOSConnectToPeer(peer, quitSignal) {
         logger.debug('Got \'multiConnect\' callback');
 
         if (error) {
-          var error = new Error(format(
+          error = new Error(format(
             'We got an error synchronously from multiConnect, ' +
             'that really shouldn\'t happen: \'%s\'', error
           ));
