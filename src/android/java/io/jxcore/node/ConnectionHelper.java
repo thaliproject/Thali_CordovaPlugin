@@ -50,6 +50,7 @@ public class ConnectionHelper
     private final ConnectionModel mConnectionModel;
     private final ConnectionManager mConnectionManager;
     private final DiscoveryManager mDiscoveryManager;
+    private final SurroundingStateObserver surroundingStateObserver;
     private final DiscoveryManagerSettings mDiscoveryManagerSettings;
     private final ConnectivityMonitor mConnectivityMonitor;
     private final StartStopOperationHandler mStartStopOperationHandler;
@@ -64,7 +65,7 @@ public class ConnectionHelper
     /**
      * Constructor.
      */
-    public ConnectionHelper() {
+    public ConnectionHelper(SurroundingStateObserver stateObserver) {
         mContext = jxcore.activity.getBaseContext();
 
         mThreadUncaughtExceptionHandler = new Thread.UncaughtExceptionHandler() {
@@ -77,6 +78,8 @@ public class ConnectionHelper
                 // See http://developer.android.com/reference/java/lang/Thread.UncaughtExceptionHandler.html
             }
         };
+
+        surroundingStateObserver = stateObserver;
 
         mConnectionModel = new ConnectionModel();
 
@@ -98,7 +101,7 @@ public class ConnectionHelper
             Log.e(TAG, "Constructor: Bluetooth LE discovery mode is not supported");
         }
 
-        mConnectivityMonitor = new ConnectivityMonitor(mDiscoveryManager);
+        mConnectivityMonitor = new ConnectivityMonitor(mDiscoveryManager, surroundingStateObserver);
 
         mStartStopOperationHandler = new StartStopOperationHandler(mConnectionManager, mDiscoveryManager);
 
@@ -494,7 +497,7 @@ public class ConnectionHelper
                     + isDiscovering + ", is advertising: " + isAdvertising);
 
                 mStartStopOperationHandler.processCurrentOperationStatus();
-                JXcoreExtension.notifyDiscoveryAdvertisingStateUpdateNonTcp(isDiscovering, isAdvertising);
+                surroundingStateObserver.notifyDiscoveryAdvertisingStateUpdateNonTcp(isDiscovering, isAdvertising);
                 mNotifyDiscoveryAdvertisingStateUpdateNonTcp.cancel();
                 mNotifyDiscoveryAdvertisingStateUpdateNonTcp = null;
             }
@@ -513,7 +516,7 @@ public class ConnectionHelper
             + ", device name: '" + peerProperties.getDeviceName()
             + "', device address: '" + peerProperties.getDeviceAddress() + "'");
 
-        JXcoreExtension.notifyPeerAvailabilityChanged(peerProperties, true);
+        surroundingStateObserver.notifyPeerAvailabilityChanged(peerProperties, true);
     }
 
     /**
@@ -527,7 +530,7 @@ public class ConnectionHelper
             + ", device name: '" + peerProperties.getDeviceName()
             + "', device address: '" + peerProperties.getDeviceAddress() + "'");
 
-        JXcoreExtension.notifyPeerAvailabilityChanged(peerProperties, true);
+        surroundingStateObserver.notifyPeerAvailabilityChanged(peerProperties, true);
     }
 
     /**
@@ -543,7 +546,7 @@ public class ConnectionHelper
             // If we are still connected, the peer can't certainly be lost, add it back
             mDiscoveryManager.getPeerModel().addOrUpdateDiscoveredPeer(peerProperties);
         } else {
-            JXcoreExtension.notifyPeerAvailabilityChanged(peerProperties, false);
+            surroundingStateObserver.notifyPeerAvailabilityChanged(peerProperties, false);
         }
     }
 
@@ -748,7 +751,8 @@ public class ConnectionHelper
                         if (!closed) {
                             throw new RuntimeException("Trying to close nonexistent incoming connection");
                         }
-                        JXcoreExtension.notifyIncomingConnectionToPortNumberFailed(incomingSocketThread.getTcpPortNumber());
+                        surroundingStateObserver.notifyIncomingConnectionToPortNumberFailed(
+                            incomingSocketThread.getTcpPortNumber());
                     }
 
                     @Override

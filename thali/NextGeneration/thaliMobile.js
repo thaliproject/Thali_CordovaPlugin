@@ -12,9 +12,11 @@ var connectionTypes = ThaliMobileNativeWrapper.connectionTypes;
 
 var ThaliWifiInfrastructure = require('./thaliWifiInfrastructure');
 var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
+
 /**
  * for testing purposes
  * @private
+ * @returns {module:ThaliWifiInfrastructure~ThaliWifiInfrastructure}
  */
 module.exports._getThaliWifiInfrastructure = function () {
   return thaliWifiInfrastructure;
@@ -24,7 +26,7 @@ var Promise = require('lie');
 var PromiseQueue = require('./promiseQueue');
 var promiseQueue = new PromiseQueue();
 
-var promiseResultSuccessOrFailure = function (promise) {
+function promiseResultSuccessOrFailure (promise) {
   return promise.then(function (success) {
     return success;
   }).catch(function (failure) {
@@ -32,14 +34,14 @@ var promiseResultSuccessOrFailure = function (promise) {
     // what the promise outputs the result will always be a resolve
     return failure;
   });
-};
+}
 
-var getCombinedResult = function (results) {
+function getCombinedResult (results) {
   return {
     wifiResult: results[0] || null,
     nativeResult: results[1] || null
   };
-};
+}
 
 /**
  * Enum to define the network types
@@ -54,7 +56,7 @@ var networkTypes = {
 };
 module.exports.networkTypes = networkTypes;
 
-var getMethodIfExists = function (target, method) {
+function getMethodIfExists (target, method) {
   if (!target[method]) {
     throw new Error(target + ' has no method named ' +
       method);
@@ -63,9 +65,9 @@ var getMethodIfExists = function (target, method) {
     var args = arguments;
     return promiseResultSuccessOrFailure(target[method].apply(target, args));
   };
-};
+}
 
-var getWifiOrNativeMethodByNetworkType = function (method, networkType) {
+function getWifiOrNativeMethodByNetworkType (method, networkType) {
   var wifiMethod;
   var nativeMethod;
   switch (networkType) {
@@ -105,18 +107,35 @@ var getWifiOrNativeMethodByNetworkType = function (method, networkType) {
       throw new Error('Unsupported network type ' + networkType);
     }
   }
+}
+
+var thaliMobileStates = {
+  started: false,
+  listening: false,
+  advertising: false,
+  networkType: networkTypes.BOTH,
+
+  // used internally for restarting thaliMobile with correct arguments
+  startArguments: {
+    router: null,
+    pskIdToSecret: null,
+    networkType: null,
+  }
 };
 
-var getInitialStates = function () {
-  return {
-    started: false,
-    listening: false,
-    advertising: false,
-    networkType: networkTypes.BOTH
-  };
-};
+function resetThaliMobileState () {
+  thaliMobileStates.started = false;
+  thaliMobileStates.listening = false;
+  thaliMobileStates.advertising = false;
+  thaliMobileStates.networkType = networkTypes.BOTH;
+}
 
-var thaliMobileStates = getInitialStates();
+
+// TODO: move peer availability cache to the separate module
+var peerAvailabilities = {};
+peerAvailabilities[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = {};
+peerAvailabilities[connectionTypes.BLUETOOTH] = {};
+peerAvailabilities[connectionTypes.TCP_NATIVE] = {};
 
 /** @module thaliMobile */
 
@@ -136,6 +155,18 @@ var thaliMobileStates = getInitialStates();
  */
 
 /**
+ * for testing purposes
+ * TODO: leave only one way to access peer availabilities
+ * @private
+ * @return {Object}
+ */
+module.exports._getPeerAvailabilities = function () {
+  return peerAvailabilities;
+};
+
+module.exports._peerAvailabilities = peerAvailabilities;
+
+/**
  * This object is our generic status wrapper that lets us return information
  * about both WiFi and Native.
  *
@@ -144,6 +175,24 @@ var thaliMobileStates = getInitialStates();
  * @property {?Error} wifiResult
  * @property {?Error} nativeResult
  */
+
+function start (router, pskIdToSecret, networkType) {
+  if (thaliMobileStates.started === true) {
+    return Promise.reject(new Error('Call Stop!'));
+  }
+  thaliMobileStates.started = true;
+  thaliMobileStates.networkType =
+    networkType || global.NETWORK_TYPE || thaliMobileStates.networkType;
+
+  return getWifiOrNativeMethodByNetworkType('start',
+    thaliMobileStates.networkType)(router, pskIdToSecret)
+    .then(function (result) {
+      if (result.wifiResult === null && result.nativeResult === null) {
+        return result;
+      }
+      return Promise.reject(result);
+    });
+}
 
 /**
  * This method MUST be called before any other method here other than
@@ -181,21 +230,10 @@ var thaliMobileStates = getInitialStates();
  */
 module.exports.start = function (router, pskIdToSecret, networkType) {
   return promiseQueue.enqueue(function (resolve, reject) {
-    if (thaliMobileStates.started === true) {
-      return reject(new Error('Call Stop!'));
-    }
-    thaliMobileStates.started = true;
-    thaliMobileStates.networkType =
-      networkType || global.NETWORK_TYPE || thaliMobileStates.networkType;
-
-    getWifiOrNativeMethodByNetworkType('start',
-      thaliMobileStates.networkType)(router, pskIdToSecret)
-      .then(function (result) {
-        if (result.wifiResult === null && result.nativeResult === null) {
-          return resolve(result);
-        }
-        return reject(result);
-      });
+    thaliMobileStates.startArguments.router = router;
+    thaliMobileStates.startArguments.pskIdToSecret = pskIdToSecret;
+    thaliMobileStates.startArguments.networkType = networkType;
+    start(router, pskIdToSecret, networkType).then(resolve, reject);
   });
 };
 
@@ -216,7 +254,7 @@ module.exports.isStarted = function () {
  */
 module.exports.stop = function () {
   return promiseQueue.enqueue(function (resolve) {
-    thaliMobileStates = getInitialStates();
+    resetThaliMobileState();
     removeAllAvailabilityWatchersFromPeers();
     Object.getOwnPropertyNames(connectionTypes)
       .forEach(function (connectionKey) {
@@ -228,6 +266,19 @@ module.exports.stop = function () {
       .then(resolve);
   });
 };
+
+function startListeningForAdvertisements () {
+  if (thaliMobileStates.started === false) {
+    return Promise.reject(new Error('Call Start!'));
+  }
+  thaliMobileStates.listening = true;
+
+  var start = getWifiOrNativeMethodByNetworkType(
+    'startListeningForAdvertisements',
+    thaliMobileStates.networkType
+  );
+  return start();
+}
 
 /**
  * This method calls the underlying startListeningForAdvertisements
@@ -258,14 +309,7 @@ module.exports.stop = function () {
  */
 module.exports.startListeningForAdvertisements = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    if (thaliMobileStates.started === false) {
-      return reject(new Error('Call Start!'));
-    }
-    thaliMobileStates.listening = true;
-
-    getWifiOrNativeMethodByNetworkType('startListeningForAdvertisements',
-       thaliMobileStates.networkType)()
-      .then(resolve);
+    startListeningForAdvertisements().then(resolve, reject);
   });
 };
 
@@ -290,6 +334,18 @@ module.exports.stopListeningForAdvertisements = function () {
   });
 };
 
+function startUpdateAdvertisingAndListening () {
+  if (thaliMobileStates.started === false) {
+    return Promise.reject(new Error('Call Start!'));
+  }
+  thaliMobileStates.advertising = true;
+
+  var start = getWifiOrNativeMethodByNetworkType(
+    'startUpdateAdvertisingAndListening',
+     thaliMobileStates.networkType
+  );
+  return start();
+}
 /**
  * This method calls the underlying startUpdateAdvertisingAndListening
  * functions. This method has the same behavior as
@@ -309,14 +365,7 @@ module.exports.stopListeningForAdvertisements = function () {
  */
 module.exports.startUpdateAdvertisingAndListening = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    if (thaliMobileStates.started === false) {
-      return reject(new Error('Call Start!'));
-    }
-    thaliMobileStates.advertising = true;
-
-    getWifiOrNativeMethodByNetworkType('startUpdateAdvertisingAndListening',
-       thaliMobileStates.networkType)()
-      .then(resolve);
+    startUpdateAdvertisingAndListening().then(resolve, reject);
   });
 };
 
@@ -394,11 +443,12 @@ module.exports.getNetworkStatus = function () {
  * put on the TCP connection. For some transports a handshake can take quite a
  * long time.
  */
-var PeerHostInfo = function (peer) {
+
+function PeerHostInfo (peer) {
   this.hostAddress = peer.hostAddress;
   this.portNumber = peer.portNumber;
   this.suggestedTCPTimeout = peer.suggestedTCPTimeout;
-};
+}
 
 var getPeerHostInfoStrategies = (function () {
   var LOCALHOST = '127.0.0.1';
@@ -484,11 +534,11 @@ var getPeerHostInfoStrategies = (function () {
  * set per thaliConfig.
  *
  * @public
- * @property {string} peerIdentifier This is exclusively used to detect if
+ * @param {string} peerIdentifier This is exclusively used to detect if
  * this is a repeat announcement or if a peer has gone to correlate it to the
  * announcement of the peer's presence. But this value is not used to establish
  * a connection to the peer, the hostAddress and portNumber handle that.
- * @property {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
+ * @param {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
  * Defines the kind of connection that the request will eventually go over. This
  * information is needed so that we can better manage how we use the different
  * transport types available to us.
@@ -525,9 +575,9 @@ module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
  * from `getPeerHostInfo` method) to prevent possible race conditions...
  *
  * @public
- * @property {string} peerIdentifier Value from peerAvailabilityChanged event.
- * @property {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
- * @property {number} portNumber
+ * @param {string} peerIdentifier Value from peerAvailabilityChanged event.
+ * @param {module:ThaliMobileNativeWrapper~connectionTypes} connectionType
+ * @param {number} portNumber
  * @returns {Promise<?Error>}
  */
 module.exports.disconnect =
@@ -914,7 +964,7 @@ module.exports.disconnect =
  */
 
 
-var PeerAvailabilityStatus = function (peer) {
+function PeerAvailabilityStatus (peer) {
   this.peerIdentifier = peer.peerIdentifier;
   this.connectionType = peer.connectionType;
   this.peerAvailable = Boolean(peer.peerAvailable);
@@ -925,9 +975,9 @@ var PeerAvailabilityStatus = function (peer) {
     this.generation = null;
     this.newAddressPort = null;
   }
-};
+}
 
-var emitPeerUnavailable = function (peerIdentifier, connectionType) {
+function emitPeerUnavailable (peerIdentifier, connectionType) {
   var unavailable = new PeerAvailabilityStatus({
     peerIdentifier: peerIdentifier,
     connectionType: connectionType
@@ -935,46 +985,28 @@ var emitPeerUnavailable = function (peerIdentifier, connectionType) {
   logger.debug('Emitting peerAvailabilityChanged from emitPeerUnavailable %s',
     JSON.stringify(unavailable));
   module.exports.emitter.emit('peerAvailabilityChanged', unavailable);
-};
+}
 
-// TODO: move peer availability cache to the separate module
-var peerAvailabilities = {};
-peerAvailabilities[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = {};
-peerAvailabilities[connectionTypes.BLUETOOTH] = {};
-peerAvailabilities[connectionTypes.TCP_NATIVE] = {};
-
-/**
- * for testing purposes
- * TODO: leave only one way to access peer availabilities
- * @private
- * @return {Object}
- */
-module.exports._getPeerAvailabilities = function () {
-  return peerAvailabilities;
-};
-
-module.exports._peerAvailabilities = peerAvailabilities;
-
-var peersDiff = function (oldState, newState) {
-  var samePeer = (
+function peersDiff (oldState, newState) {
+  var samePeer =
     oldState.peerIdentifier === newState.peerIdentifier &&
-    oldState.connectionType === newState.connectionType
-  );
+    oldState.connectionType === newState.connectionType;
+
   if (!samePeer) {
     throw new Error('Cannot compare state of different peers');
   }
   return {
     peerIdentifier: oldState.peerIdentifier,
     connectionType: oldState.connectionType,
-    peerAvailable: (newState.peerAvailable !== oldState.peerAvailable),
-    generation: (newState.generation - oldState.generation),
-    hostAddress: (newState.hostAddress !== oldState.hostAddress),
-    portNumber: (newState.portNumber !== oldState.portNumber),
-    availableSince: (newState.availableSince - oldState.availableSince)
+    peerAvailable: newState.peerAvailable !== oldState.peerAvailable,
+    generation: newState.generation - oldState.generation,
+    hostAddress: newState.hostAddress !== oldState.hostAddress,
+    portNumber: newState.portNumber !== oldState.portNumber,
+    availableSince: newState.availableSince - oldState.availableSince
   };
-};
+}
 
-var handlePeer = function (peer) {
+function handlePeer (peer) {
   var cachedPeer = peerAvailabilities[peer.connectionType][peer.peerIdentifier];
 
   if (!cachedPeer && !peer.peerAvailable) {
@@ -994,7 +1026,7 @@ var handlePeer = function (peer) {
       ignoreChanges = ignoreChanges &&
         (diff.generation === 0 && !isWrapAroundElapsed);
     } else {
-      ignoreChanges = ignoreChanges && (diff.generation <= 0);
+      ignoreChanges = ignoreChanges && diff.generation <= 0;
     }
 
     if (ignoreChanges) {
@@ -1024,9 +1056,9 @@ var handlePeer = function (peer) {
   logger.debug('Emitting peerAvailabilityChanged from handlePeer %s',
     JSON.stringify(peerStatus));
   module.exports.emitter.emit('peerAvailabilityChanged', peerStatus);
-};
+}
 
-var handleRecreatedPeer = function (nativePeer) {
+function handleRecreatedPeer (nativePeer) {
   var cachedPeer =
     peerAvailabilities[connectionTypes.BLUETOOTH][nativePeer.peerIdentifier];
 
@@ -1057,7 +1089,7 @@ var handleRecreatedPeer = function (nativePeer) {
         });
     }
   }
-};
+}
 
 ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
 function (nativePeer) {
@@ -1108,7 +1140,7 @@ peerAvailabilityWatchers[connectionTypes.TCP_NATIVE] = {};
 
 module.exports._peerAvailabilityWatchers = peerAvailabilityWatchers;
 
-var isAvailabilityWatcherForPeerExist = function (peer) {
+function isAvailabilityWatcherForPeerExist (peer) {
   var connectionType = peer.connectionType;
   var peerIdentifier = peer.peerIdentifier;
   var peerAvailabilityWatchersByConnectionType =
@@ -1116,9 +1148,9 @@ var isAvailabilityWatcherForPeerExist = function (peer) {
 
   return !!(peerAvailabilityWatchersByConnectionType &&
   peerAvailabilityWatchersByConnectionType[peerIdentifier]);
-};
+}
 
-var watchForPeerAvailability = function (peer) {
+function watchForPeerAvailability (peer) {
   var peerIdentifier = peer.peerIdentifier;
   var connectionType = peer.connectionType;
 
@@ -1136,9 +1168,9 @@ var watchForPeerAvailability = function (peer) {
 
   changeCachedPeerUnavailable(peer);
   emitPeerUnavailable(peerIdentifier, connectionType);
-};
+}
 
-var addAvailabilityWatcherToPeerIfNotExist = function (peer) {
+function addAvailabilityWatcherToPeerIfNotExist (peer) {
   if (isAvailabilityWatcherForPeerExist(peer)) {
     return;
   }
@@ -1154,9 +1186,9 @@ var addAvailabilityWatcherToPeerIfNotExist = function (peer) {
   // more then once per unavailability threshold
   peerAvailabilityWatchers[connectionType][peerIdentifier] =
     setInterval(watchForPeerAvailability, unavailabilityThreshold, peer);
-};
+}
 
-var removeAvailabilityWatcherFromPeerIfExists = function (peer) {
+function removeAvailabilityWatcherFromPeerIfExists (peer) {
   if (!isAvailabilityWatcherForPeerExist(peer)) {
     return;
   }
@@ -1168,7 +1200,7 @@ var removeAvailabilityWatcherFromPeerIfExists = function (peer) {
 
   clearInterval(interval);
   delete peerAvailabilityWatchers[connectionType][peerIdentifier];
-};
+}
 
 var removeAllAvailabilityWatchersFromPeersByConnectionType =
   function (connectionType) {
@@ -1185,30 +1217,30 @@ var removeAllAvailabilityWatchersFromPeersByConnectionType =
       });
   };
 
-var removeAllAvailabilityWatchersFromPeers = function () {
+function removeAllAvailabilityWatchersFromPeers () {
   Object.keys(peerAvailabilityWatchers)
     .forEach(removeAllAvailabilityWatchersFromPeersByConnectionType);
-};
+}
 
-var changeCachedPeerUnavailable = function (peer) {
+function changeCachedPeerUnavailable (peer) {
   removeAvailabilityWatcherFromPeerIfExists(peer);
   delete peerAvailabilities[peer.connectionType][peer.peerIdentifier];
-};
+}
 
-var changeCachedPeerAvailable = function (peer) {
+function changeCachedPeerAvailable (peer) {
   var cachedPeer = JSON.parse(JSON.stringify(peer));
   peerAvailabilities[peer.connectionType][peer.peerIdentifier] = cachedPeer;
   addAvailabilityWatcherToPeerIfNotExist(cachedPeer);
-};
+}
 
-var changePeersUnavailable = function (connectionType) {
+function changePeersUnavailable (connectionType) {
   Object.keys(peerAvailabilities[connectionType]).forEach(
     function (peerIdentifier) {
       var peer = peerAvailabilities[connectionType][peerIdentifier];
       changeCachedPeerUnavailable(peer);
       emitPeerUnavailable(peerIdentifier, connectionType);
     });
-};
+}
 
 /**
  * Fired whenever our state changes.
@@ -1236,14 +1268,14 @@ var discoveryAdvertisingState = {
   wifiAdvertisingActive: false
 };
 
-var getDiscoveryAdvertisingState = function () {
+function getDiscoveryAdvertisingState () {
   var state = JSON.parse(JSON.stringify(discoveryAdvertisingState));
   state.discoveryActive = thaliMobileStates.listening;
   state.advertisingActive = thaliMobileStates.advertising;
   return state;
-};
+}
 
-var verifyDiscoveryAdvertisingState = function (state) {
+function verifyDiscoveryAdvertisingState (state) {
   var listening = thaliMobileStates.listening;
   var advertising = thaliMobileStates.advertising;
   if (listening !== state.discoveryActive ||
@@ -1254,11 +1286,11 @@ var verifyDiscoveryAdvertisingState = function (state) {
       thaliMobileStates
     ));
   }
-};
+}
 
 var emittedDiscoveryAdvertisingStateUpdate = {};
 
-var emitDiscoveryAdvertisingStateUpdate = function () {
+function emitDiscoveryAdvertisingStateUpdate () {
   if (!thaliMobileStates.started) {
     logger.info(
       'Filtered out discoveryAdvertisingStateUpdate (was in stopped state).'
@@ -1279,7 +1311,7 @@ var emitDiscoveryAdvertisingStateUpdate = function () {
   emittedDiscoveryAdvertisingStateUpdate = getDiscoveryAdvertisingState();
   module.exports.emitter.emit('discoveryAdvertisingStateUpdate',
     emittedDiscoveryAdvertisingStateUpdate);
-};
+}
 
 /**
  * If we receive a {@link
@@ -1336,34 +1368,52 @@ thaliWifiInfrastructure.on(
   }
 );
 
-var handleNetworkChanged = function (networkChangedValue) {
-  if (networkChangedValue.wifi === 'off') {
-    // If Wifi is off, we mark Wifi peers unavailable.
-    changePeersUnavailable(connectionTypes.TCP_NATIVE);
-    if (networkChangedValue.bluetooth === 'off') {
-      // If Wifi and bluetooth is off, we know we can't talk to peers over
-      // over MPCF so marking them unavailable.
-      changePeersUnavailable(connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK);
-    }
-  }
-  if (networkChangedValue.bluetooth === 'off' &&
-      networkChangedValue.bluetoothLowEnergy === 'off') {
+function handleNetworkChanged (networkChangedValue) {
+  var androidNativeDisabled =
+    networkChangedValue.bluetooth === 'off' &&
+    networkChangedValue.bluetoothLowEnergy === 'off';
+  var iOSNativeDisabled =
+    networkChangedValue.wifi === 'off' &&
+    networkChangedValue.bluetooth === 'off';
+  var wifiDisabled =
+    networkChangedValue.wifi === 'off' ||
+    networkChangedValue.bssidName === null;
+
+  if (androidNativeDisabled) {
     // If both Bluetooth and BLE are off, we mark Android peers unavailable.
     changePeersUnavailable(connectionTypes.BLUETOOTH);
   }
-  var radioEnabled = false;
-  Object.keys(networkChangedValue).forEach(function (key) {
-    if (networkChangedValue[key] === 'on') {
-      radioEnabled = true;
-    }
-  });
+
+  if (iOSNativeDisabled) {
+    // If WiFi and Bluetooth is off, we know we can't talk to peers over
+    // over MPCF so marking them unavailable.
+    changePeersUnavailable(connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK);
+  }
+
+  if (wifiDisabled) {
+    // If WiFi is off or we are not connected to access point, we mark WiFi
+    // peers unavailable.
+    changePeersUnavailable(connectionTypes.TCP_NATIVE);
+  }
+
+  var radioEnabled =
+    networkChangedValue.wifi === 'on' ||
+    networkChangedValue.bluetooth === 'on' ||
+    networkChangedValue.bluetoothLowEnergy === 'on';
+
   if (!radioEnabled) {
     return;
   }
-  // At least some radio was enabled so try to start
-  // whatever can be potentially started.
-  promiseResultSuccessOrFailure(module.exports.start())
-  .then(function () {
+
+  // At least some radio was enabled so try to start whatever can be potentially
+  // started as soon as possible.
+  var enqueuedStart = promiseQueue.enqueueAtTop(function (resolve, reject) {
+    var args = thaliMobileStates.startArguments;
+    start(args.router, args.pskIdToSecret, args.networkType)
+      .then(resolve, reject);
+  });
+
+  promiseResultSuccessOrFailure(enqueuedStart).then(function () {
     var checkErrors = function (operation, combinedResult) {
       Object.keys(combinedResult).forEach(function (resultType) {
         if (combinedResult[resultType] !== null) {
@@ -1373,21 +1423,23 @@ var handleNetworkChanged = function (networkChangedValue) {
       });
     };
     if (thaliMobileStates.listening) {
-      module.exports.startListeningForAdvertisements()
-      .then(function (combinedResult) {
+      promiseQueue.enqueueAtTop(function (resolve, reject) {
+        startListeningForAdvertisements().then(resolve, reject);
+      }).then(function (combinedResult) {
         checkErrors('startListeningForAdvertisements', combinedResult);
       });
     }
     if (thaliMobileStates.advertising) {
-      module.exports.startUpdateAdvertisingAndListening()
-      .then(function (combinedResult) {
+      promiseQueue.enqueueAtTop(function (resolve, reject) {
+        startUpdateAdvertisingAndListening().then(resolve, reject);
+      }).then(function (combinedResult) {
         checkErrors('startUpdateAdvertisingAndListening', combinedResult);
       });
     }
   });
-};
+}
 
-var handleNetworkChangedNonTCP = function (networkChangedValue) {
+function handleNetworkChangedNonTCP (networkChangedValue) {
   if (!thaliMobileStates.started) {
     logger.info(
       'Filtered out networkChangedNonTCP (was in stopped state).'
@@ -1397,12 +1449,12 @@ var handleNetworkChangedNonTCP = function (networkChangedValue) {
 
   handleNetworkChanged(networkChangedValue);
   module.exports.emitter.emit('networkChanged', networkChangedValue);
-};
+}
 
-var handleNetworkChangedWifi = function (networkChangedValue) {
+function handleNetworkChangedWifi (networkChangedValue) {
   logger.warn('networkChangedWifi should not be fired because it is not implemented');
   handleNetworkChangedNonTCP(networkChangedValue);
-};
+}
 
 /**
  * Unless something went horribly wrong only one of thaliMobileNativeWrapper

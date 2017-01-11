@@ -180,7 +180,6 @@ ThaliNotificationClient.prototype.start =
  * @public
  */
 ThaliNotificationClient.prototype.stop = function () {
-
   if (this.peerDictionary) {
     ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
       this._boundListener);
