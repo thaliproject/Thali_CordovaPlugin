@@ -115,21 +115,25 @@ var test = tape({
   setup: function (t) {
     sandbox = sinon.sandbox.create();
     globals = new GlobalVariables();
-    globals.init().then(function () {
-      t.end();
-    }).catch(function (failure) {
-      t.fail('Test setting up failed:' + failure);
-      t.end();
-    });
+    globals.init()
+      .then(function () {
+        t.end();
+      })
+      .catch(function (failure) {
+        t.fail('Test setting up failed:' + failure);
+        t.end();
+      });
   },
   teardown: function (t) {
     sandbox.restore();
-    globals.kill().then(function () {
-      t.end();
-    }).catch(function (failure) {
-      t.fail('Server cleaning failed:' + failure);
-      t.end();
-    });
+    globals.kill()
+      .then(function () {
+        t.end();
+      })
+      .catch(function (failure) {
+        t.fail('Server cleaning failed:' + failure);
+        t.end();
+      });
   }
 });
 
@@ -150,7 +154,8 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
     addressBookCallback
   );
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved,
+  act.eventEmitter.once(
+    NotificationAction.Events.Resolved,
     function (action, res, beaconDetails) {
       t.equals(
         action.getPeerIdentifier(),
@@ -173,16 +178,18 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
           globals.preambleAndBeacons)) === 0, 'good preAmble');
       t.ok(globals.sourcePublicKeyHash.compare(
           beaconDetails.unencryptedKeyId) === 0, 'public keys match!');
-    });
+    }
+  );
 
-  act.start(globals.actionAgent).then(function (res) {
-    t.equals(res, null, 'must return null after successful call');
-    t.equals(act.getActionState(), ThaliPeerAction.actionState.KILLED,
-      'Once start returns the action should be in KILLED state');
-  })
-  .catch(function (failure) {
-    t.fail(failure.stack);
-  });
+  act.start(globals.actionAgent)
+    .then(function (res) {
+      t.equals(res, null, 'must return null after successful call');
+      t.equals(act.getActionState(), ThaliPeerAction.actionState.KILLED,
+        'Once start returns the action should be in KILLED state');
+    })
+    .catch(function (failure) {
+      t.fail(failure.stack);
+    });
 });
 
 test('Test HTTP_BAD_RESPONSE locally', function (t) {
@@ -190,7 +197,6 @@ test('Test HTTP_BAD_RESPONSE locally', function (t) {
 
   httpTester.runServer(globals.expressRouter,
     thaliConfig.NOTIFICATION_BEACON_PATH, 503, 'hello', 1);
-
 
   sandbox.stub(ThaliMobile, 'getPeerHostInfo')
     .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
@@ -203,18 +209,23 @@ test('Test HTTP_BAD_RESPONSE locally', function (t) {
     TCP_NATIVE
   );
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
-    t.equals(
-      res, NotificationAction.ActionResolution.HTTP_BAD_RESPONSE,
-      'Response should be HTTP_BAD_RESPONSE'
-    );
-  });
+  act.eventEmitter.once(
+    NotificationAction.Events.Resolved,
+    function (_, res) {
+      t.equals(
+        res, NotificationAction.ActionResolution.HTTP_BAD_RESPONSE,
+        'Response should be HTTP_BAD_RESPONSE'
+      );
+    }
+  );
 
-  act.start(globals.actionAgent).then( function (res) {
-    t.equals(res, null, 'must return null after successful call');
-  }).catch(function (err) {
-    t.fail('Test failed:' + err.message);
-  });
+  act.start(globals.actionAgent)
+    .then(function (res) {
+      t.equals(res, null, 'must return null after successful call');
+    })
+    .catch(function (err) {
+      t.fail('Test failed:' + err.message);
+    });
 });
 
 test('Test NETWORK_PROBLEM locally', function (t) {
@@ -234,22 +245,27 @@ test('Test NETWORK_PROBLEM locally', function (t) {
     TCP_NATIVE
   );
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
-    t.equals(
-      res, NotificationAction.ActionResolution.NETWORK_PROBLEM,
-      'Response should be NETWORK_PROBLEM'
-    );
-  });
+  act.eventEmitter.once(
+    NotificationAction.Events.Resolved,
+    function (_, res) {
+      t.equals(
+        res, NotificationAction.ActionResolution.NETWORK_PROBLEM,
+        'Response should be NETWORK_PROBLEM'
+      );
+    }
+  );
 
-  act.start(globals.actionAgent).then(function () {
-    t.fail('This call should cause reject.');
-  }).catch(function (err) {
-    testUtils.restoreUnresolvableDomains();
-    t.equals(
-      err.message, 'Could not establish TCP connection',
-      'reject reason should be: Could not establish TCP connection'
-    );
-  });
+  act.start(globals.actionAgent)
+    .then(function () {
+      t.fail('This call should cause reject.');
+    })
+    .catch(function (err) {
+      testUtils.restoreUnresolvableDomains();
+      t.equals(
+        err.message, 'Could not establish TCP connection',
+        'reject reason should be: Could not establish TCP connection'
+      );
+    });
 });
 
 test('Action fails when getPeerHostInfo fails', function (t) {
@@ -272,18 +288,22 @@ test('Action fails when getPeerHostInfo fails', function (t) {
     TCP_NATIVE
   );
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
-    t.equals(
-      res, NotificationAction.ActionResolution.BAD_PEER,
-      'Resolution should be BAD_PEER'
-    );
-  });
+  act.eventEmitter.once(
+    NotificationAction.Events.Resolved,
+    function (_, res) {
+      t.equals(
+        res, NotificationAction.ActionResolution.BAD_PEER,
+        'Resolution should be BAD_PEER'
+      );
+    }
+  );
 
-  act.start(globals.actionAgent).then( function () {
-    t.fail('This call should cause reject.');
-  }).catch(function (err) {
-    t.equals(err.message, errorMessage, 'correct error message');
-  });
+  act.start(globals.actionAgent)
+    .then( function () {
+      t.fail('This call should cause reject.');
+    }).catch(function (err) {
+      t.equals(err.message, errorMessage, 'correct error message');
+    });
 });
 
 test('Call the start two times', function (t) {
@@ -304,31 +324,35 @@ test('Call the start two times', function (t) {
     TCP_NATIVE
   );
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
-    t.equals(
-      res,
-      NotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED,
-      'Response should be BEACONS_RETRIEVED_AND_PARSED'
-    );
-  });
+  act.eventEmitter.once(
+    NotificationAction.Events.Resolved,
+    function (_, res) {
+      t.equals(
+        res,
+        NotificationAction.ActionResolution.BEACONS_RETRIEVED_AND_PARSED,
+        'Response should be BEACONS_RETRIEVED_AND_PARSED'
+      );
+    }
+  );
 
-
-  act.start(globals.actionAgent).then( function (res) {
+  act.start(globals.actionAgent)
+    .then( function (res) {
       t.equals(res, null, 'must return null after successful call.');
     })
     .catch(function (failure) {
       t.fail('Test failed:' + failure);
     });
 
-  act.start(globals.actionAgent).then( function () {
+  act.start(globals.actionAgent)
+    .then(function () {
       t.fail('Second start should not be successful.');
-  }).catch( function (err) {
-    t.equals(err.message, ThaliPeerAction.DOUBLE_START, 'Call start once');
-  });
+    })
+    .catch(function (err) {
+      t.equals(err.message, ThaliPeerAction.DOUBLE_START, 'Call start once');
+    });
 });
 
 test('Call the kill before calling the start', function (t) {
-
   t.plan(2);
 
   sandbox.stub(ThaliMobile, 'getPeerHostInfo')
@@ -342,22 +366,25 @@ test('Call the kill before calling the start', function (t) {
     TCP_NATIVE
   );
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
-    t.equals(
-      res, NotificationAction.ActionResolution.KILLED,
-      'Should be Killed'
-    );
-  });
+  act.eventEmitter.once(
+    NotificationAction.Events.Resolved,
+    function (_, res) {
+      t.equals(
+        res, NotificationAction.ActionResolution.KILLED,
+        'Should be Killed'
+      );
+    }
+  );
   act.kill();
 
-  act.start(globals.actionAgent).catch( function (err) {
-    t.equals(err.message, ThaliPeerAction.START_AFTER_KILLED,
-      'Start after killed');
-  });
+  act.start(globals.actionAgent)
+    .catch( function (err) {
+      t.equals(err.message, ThaliPeerAction.START_AFTER_KILLED,
+        'Start after killed');
+    });
 });
 
 test('Call the kill immediately after the start', function (t) {
-
   t.plan(2);
 
   // Sets 2000 milliseconds delay for request handling.
@@ -377,27 +404,29 @@ test('Call the kill immediately after the start', function (t) {
     TCP_NATIVE
   );
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
-    t.equals(
-      res,
-      NotificationAction.ActionResolution.KILLED,
-      'Should be KILLED'
-    );
-  });
+  act.eventEmitter.once(
+    NotificationAction.Events.Resolved,
+    function (_, res) {
+      t.equals(
+        res,
+        NotificationAction.ActionResolution.KILLED,
+        'Should be KILLED'
+      );
+    }
+  );
 
-  act.start(globals.actionAgent).then(function (res) {
-    t.equals(res, null, 'must return null after successful kill');
-  })
-  .catch(function (failure) {
-    t.fail('Test failed:' + failure);
-  });
+  act.start(globals.actionAgent)
+    .then(function (res) {
+      t.equals(res, null, 'must return null after successful kill');
+    })
+    .catch(function (failure) {
+      t.fail('Test failed:' + failure);
+    });
 
   act.kill();
-
 });
 
 test('Call the kill while waiting a response from the server', function (t) {
-
   t.plan(2);
 
   // Sets 10000 milliseconds delay for request handling.
@@ -418,22 +447,26 @@ test('Call the kill while waiting a response from the server', function (t) {
     TCP_NATIVE
   );
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
-    t.equals(
-      res, NotificationAction.ActionResolution.KILLED,
-      'Should be KILLED'
-    );
-  });
+  act.eventEmitter.once(
+    NotificationAction.Events.Resolved,
+    function (_, res) {
+      t.equals(
+        res, NotificationAction.ActionResolution.KILLED,
+        'Should be KILLED'
+      );
+    }
+  );
 
-
-  act.start(globals.actionAgent).then( function (res) {
-    t.equals(
-      res,
-      null,
-      'must return null after successful kill');
-  }).catch(function (err) {
-    t.fail('Test failed:' + err);
-  });
+  act.start(globals.actionAgent)
+    .then(function (res) {
+      t.equals(
+        res,
+        null,
+        'must return null after successful kill');
+    })
+    .catch(function (err) {
+      t.fail('Test failed:' + err);
+    });
 
   // This kills the action after 2 seconds. This should give enough time to
   // establish a HTTP connection in slow devices but since the server waits
@@ -443,11 +476,9 @@ test('Call the kill while waiting a response from the server', function (t) {
   setTimeout( function () {
     act.kill();
   }, 2000);
-
 });
 
 test('Test to exceed the max content size locally', function (t) {
-
   t.plan(2);
 
   var buffer = new Buffer(1024);
@@ -471,24 +502,28 @@ test('Test to exceed the max content size locally', function (t) {
     TCP_NATIVE
   );
 
-  act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
-    t.equals(
-      res, NotificationAction.ActionResolution.HTTP_BAD_RESPONSE,
-      'HTTP_BAD_RESPONSE should be response when content size is exceeded'
-    );
-  });
+  act.eventEmitter.once(
+    NotificationAction.Events.Resolved,
+    function (_, res) {
+      t.equals(
+        res, NotificationAction.ActionResolution.HTTP_BAD_RESPONSE,
+        'HTTP_BAD_RESPONSE should be response when content size is exceeded'
+      );
+    }
+  );
 
-  act.start(globals.actionAgent).then( function (res) {
-    t.equals(res, null, 'must return null after successful call');
-  }).catch(function (failure) {
-    t.fail('Test failed:' + failure);
-  });
+  act.start(globals.actionAgent)
+    .then(function (res) {
+      t.equals(res, null, 'must return null after successful call');
+    })
+    .catch(function (failure) {
+      t.fail('Test failed:' + failure);
+    });
 });
 
 test('Close the server socket while the client is waiting a response ' +
   'from the server. Local test.',
   function (t) {
-
     t.plan(2);
 
     // Sets 10000 milliseconds delay for request handling.
@@ -512,22 +547,27 @@ test('Close the server socket while the client is waiting a response ' +
       TCP_NATIVE
     );
 
-    act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
-      t.equals(
-        res, NotificationAction.ActionResolution.NETWORK_PROBLEM,
-        'Should be NETWORK_PROBLEM caused closing server socket'
-      );
-    });
+    act.eventEmitter.once(
+      NotificationAction.Events.Resolved,
+      function (_, res) {
+        t.equals(
+          res, NotificationAction.ActionResolution.NETWORK_PROBLEM,
+          'Should be NETWORK_PROBLEM caused closing server socket'
+        );
+      }
+    );
 
-    act.start(globals.actionAgent).then( function () {
-      t.fail('Test should return failure: Could not establish TCP connection');
-    }).catch(function (err) {
-      t.equals(
-        err.message,
-        'Could not establish TCP connection',
-        'Should be Could not establish TCP connection'
-      );
-    });
+    act.start(globals.actionAgent)
+      .then(function () {
+        t.fail('Test should return failure: Could not establish TCP connection');
+      })
+      .catch(function (err) {
+        t.equals(
+          err.message,
+          'Could not establish TCP connection',
+          'Should be Could not establish TCP connection'
+        );
+      });
 
     // This kills the server socket after 2 seconds. This should give enough
     // time to establish a HTTPS connection in slow devices but since the server
@@ -544,7 +584,6 @@ test('Close the server socket while the client is waiting a response ' +
 test('Close the client socket while the client is waiting a response ' +
   'from the server. Local test.',
   function (t) {
-
     t.plan(2);
 
     // Sets 10000 milliseconds delay for request handling.
@@ -567,21 +606,26 @@ test('Close the client socket while the client is waiting a response ' +
       TCP_NATIVE
     );
 
-    act.eventEmitter.on(NotificationAction.Events.Resolved, function (_, res) {
-      t.equals(
-        res, NotificationAction.ActionResolution.NETWORK_PROBLEM,
-        'Should be NETWORK_PROBLEM caused closing client socket'
-      );
-    });
+    act.eventEmitter.once(
+      NotificationAction.Events.Resolved,
+      function (_, res) {
+        t.equals(
+          res, NotificationAction.ActionResolution.NETWORK_PROBLEM,
+          'Should be NETWORK_PROBLEM caused closing client socket'
+        );
+      }
+    );
 
-    act.start(globals.actionAgent).then( function () {
-      t.fail('Test should return failure: Could not establish TCP connection');
-    }).catch(function (err) {
-      t.equals(
-        err.message,
-        'Could not establish TCP connection',
-        'Should be Could not establish TCP connection');
-    });
+    act.start(globals.actionAgent)
+      .then(function () {
+        t.fail('Test should return failure: Could not establish TCP connection');
+      })
+      .catch(function (err) {
+        t.equals(
+          err.message,
+          'Could not establish TCP connection',
+          'Should be Could not establish TCP connection');
+      });
 
     // This kills the client socket after 2 seconds. This should give enough
     // time to establish a HTTP connection in slow devices but since the server
