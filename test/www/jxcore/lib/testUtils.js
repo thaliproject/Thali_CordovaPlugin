@@ -707,18 +707,8 @@ module.exports.runTestOnAllParticipants = function (
       }
 
       var publicKey = notificationForUs.keyId;
-      var task = participantTask[publicKey];
-      task
-        .then(function () {
-          if (completed) {
-            return;
-          }
-
-          task = createTask(notificationForUs);
-          participantTask[publicKey] = task;
-          return task;
-        });
-      task.cancel();
+      participantTask[publicKey].cancel();
+      participantTask[publicKey] = createTask(notificationForUs);
     }
     thaliNotificationClient.on(
       thaliNotificationClient.Events.PeerAdvertisesDataForUs,
