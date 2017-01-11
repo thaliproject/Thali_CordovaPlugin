@@ -157,9 +157,9 @@ function installCustomMonoRepoPackage(gitUrl, branchName, commitId, packageName,
  * @returns {promise} Did the install work?
  */
 function installNodePouchDB (version) {
-  var gitUrl = 'https://github.com/pouchdb/pouchdb.git';
-  var branch = 'master';
-  var commitId = 'b363f7d2c9ed96e2d341e12446de79ccd8739177';
+  var gitUrl = 'https://github.com/thaliproject/pouchdb.git';
+  var branch = 'v6.2.0-prerelease_aaladev_1644';
+  var commitId = 'feadf44dd209ec00cbe35590bd0949894c99afcb';
   var targetDir = 'customPouchDir';
 
   var customPouchDirPath = path.join(__dirname, targetDir);
