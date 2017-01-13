@@ -1666,7 +1666,7 @@ test('calls correct starts when network changes',
       global.NETWORK_TYPE === ThaliMobile.networkTypes.BOTH
     );
 
-    var listeningSpy = null;
+    var listeningSpy   = null;
     var advertisingSpy = null;
 
     function networkChangedHandler (networkChangedValue) {
@@ -1691,19 +1691,22 @@ test('calls correct starts when network changes',
             t.equals(combinedResult.wifiResult.message,
               'Radio Turned Off', 'specific error expected');
           }
+
           listeningSpy = sinon.spy(ThaliMobile,
-            'startListeningForAdvertisements');
+            '_startListeningForAdvertisements');
           advertisingSpy = sinon.spy(ThaliMobile,
-            'startUpdateAdvertisingAndListening');
-          return testUtils.ensureWifi(true);
+            '_startUpdateAdvertisingAndListening');
+
+          return testUtils.toggleWifi(true);
         })
         .then(function () {
           t.equals(listeningSpy.callCount, 1,
-            'startListeningForAdvertisements should have been called');
+            '_startListeningForAdvertisements should have been called');
           t.equals(advertisingSpy.callCount, 1,
-            'startUpdateAdvertisingAndListening should have been called');
-          ThaliMobile.startListeningForAdvertisements.restore();
-          ThaliMobile.startUpdateAdvertisingAndListening.restore();
+            '_startUpdateAdvertisingAndListening should have been called');
+
+          ThaliMobile._startListeningForAdvertisements.restore();
+          ThaliMobile._startUpdateAdvertisingAndListening.restore();
           t.end();
         });
     };

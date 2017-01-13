@@ -279,6 +279,7 @@ function startListeningForAdvertisements () {
   );
   return start();
 }
+module.exports._startListeningForAdvertisements = startListeningForAdvertisements;
 
 /**
  * This method calls the underlying startListeningForAdvertisements
@@ -309,7 +310,7 @@ function startListeningForAdvertisements () {
  */
 module.exports.startListeningForAdvertisements = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    startListeningForAdvertisements().then(resolve, reject);
+    module.exports._startListeningForAdvertisements().then(resolve, reject);
   });
 };
 
@@ -346,6 +347,8 @@ function startUpdateAdvertisingAndListening () {
   );
   return start();
 }
+module.exports._startUpdateAdvertisingAndListening = startUpdateAdvertisingAndListening;
+
 /**
  * This method calls the underlying startUpdateAdvertisingAndListening
  * functions. This method has the same behavior as
@@ -365,7 +368,7 @@ function startUpdateAdvertisingAndListening () {
  */
 module.exports.startUpdateAdvertisingAndListening = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    startUpdateAdvertisingAndListening().then(resolve, reject);
+    module.exports._startUpdateAdvertisingAndListening().then(resolve, reject);
   });
 };
 
@@ -1424,14 +1427,14 @@ function handleNetworkChanged (networkChangedValue) {
     };
     if (thaliMobileStates.listening) {
       promiseQueue.enqueueAtTop(function (resolve, reject) {
-        startListeningForAdvertisements().then(resolve, reject);
+        module.exports._startListeningForAdvertisements().then(resolve, reject);
       }).then(function (combinedResult) {
         checkErrors('startListeningForAdvertisements', combinedResult);
       });
     }
     if (thaliMobileStates.advertising) {
       promiseQueue.enqueueAtTop(function (resolve, reject) {
-        startUpdateAdvertisingAndListening().then(resolve, reject);
+        module.exports._startUpdateAdvertisingAndListening().then(resolve, reject);
       }).then(function (combinedResult) {
         checkErrors('startUpdateAdvertisingAndListening', combinedResult);
       });
