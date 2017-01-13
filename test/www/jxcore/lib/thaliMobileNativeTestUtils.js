@@ -1,9 +1,11 @@
 'use strict';
 
+var util = require('util').format;
+
 var platform = require('thali/NextGeneration/utils/platform');
 var logger = require('../lib/testLogger')('thaliMobileNativeTestUtils');
 var randomString = require('randomstring');
-var Promise = require('lie');
+var Promise = require('bluebird');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var net = require('net');
 var inherits = require('util').inherits;
@@ -53,144 +55,157 @@ function getMessageByLength(socket, lengthOfMessage) {
 
 module.exports.getMessageByLength = getMessageByLength;
 
-function connectRetry(peer, retries, successCb, failureCb, quitSignal,
-                      failureFn) {
-  var TIME_BETWEEN_RETRIES = 3000;
-  // Retry a failed connection...
-  if (retries > 0) {
-    logger.info('Scheduling a connect retry - retries left: ' + retries);
-    var timeoutCancel = setTimeout(function () {
-      quitSignal && quitSignal.removeTimeout(timeoutCancel);
-      connectToPeer(peer, retries, successCb, failureCb, quitSignal);
-    }, TIME_BETWEEN_RETRIES);
-    quitSignal && quitSignal.addTimeout(timeoutCancel, successCb);
+
+var RETRY_COUNT   = 10;
+var RETRY_TIMEOUT = 3000;
+
+function connectToPeer(peer, quitSignal) {
+  var connectMethod;
+  if (platform.isAndroid) {
+    connectMethod = androidConnectToPeer;
+  } else if (platform.isIOS) {
+    connectMethod = iOSConnectToPeer;
   } else {
-    if (failureCb) {
-      logger.warn('Too many connect retries!');
-      failureFn();
-    }
+    return Promise.reject(new Error('unknown platform'));
   }
-}
 
-module.exports.connectRetry = connectRetry;
+  return new Promise(function (resolve, reject) {
+    var retryIndex = 0;
 
-function androidConnectToPeer(peer, retries, successCb, failureCb, quitSignal) {
-  retries--;
-  Mobile('connect').callNative(peer.peerIdentifier, function (err, connection) {
-    if (quitSignal && quitSignal.raised) {
-      successCb(null, null, peer);
-    }
-
-    if (connection) {
-      connection = JSON.parse(connection);
-    }
-
-    if (err == null) {
-      // Connected successfully..
-      successCb(err, connection, peer);
-    } else {
-      logger.info('Connect returned an error: ' + err);
-
-      if (err === 'Already connect(ing/ed)') {
-        failureCb(err, null, peer);
-        return;
+    function retry () {
+      if (quitSignal && quitSignal.raised) {
+        // 'connection' will be null.
+        return resolve(null);
       }
 
-      connectRetry(peer, retries, successCb,
-        failureCb, quitSignal, function () {
-          failureCb(err, null, peer);
+      // It will return 'connection'.
+      connectMethod(peer, quitSignal)
+        .then(resolve)
+        .catch(function (error) {
+          if (error.isFatal) {
+            logger.error('Fatal connect error: \'%s\'', error.message);
+            return reject(error);
+          }
+          logger.warn('Connect error: \'%s\'', error.message);
+
+          if (retryIndex >= RETRY_COUNT) {
+            error = 'Too many connect retries';
+            logger.error(error);
+            return reject(new Error(error));
+          }
+
+          retryIndex ++;
+          logger.info('New connect retry, number: \'%d\'', retryIndex);
+          setTimeout(retry, RETRY_TIMEOUT);
         });
     }
+    retry();
+  });
+}
+module.exports.connectToPeer = connectToPeer;
+
+function androidConnectToPeer(peer, quitSignal) {
+  return new Promise(function (resolve, reject) {
+    Mobile('connect')
+      .callNative(peer.peerIdentifier, function (error, connection) {
+        if (quitSignal && quitSignal.raised) {
+          return resolve(null);
+        }
+
+        if (error) {
+          error = new Error(error);
+          if (error.message === 'Already connect(ing/ed)') {
+            error.isFatal = true;
+          }
+          return reject(error);
+        }
+
+        if (!connection) {
+          return reject(new Error('connect returned no connection'));
+        }
+        connection = JSON.parse(connection);
+        resolve(connection);
+      });
   });
 }
 
-function MultiConnectEmitter () {
-  EventEmitter.call(module.exports.multiConnectEmitter);
-  Mobile('multiConnectResolved').registerToNative(
-    function (syncValue, error, listeningPort) {
-      module.exports.multiConnectEmitter
-        .emit('multiConnectResolved', syncValue, error, listeningPort);
+function createMultiConnectEmitter() {
+  var emitter = new EventEmitter();
+
+  Mobile('multiConnectResolved')
+    .registerToNative(function (syncValue, error, listeningPort) {
+      emitter.emit('multiConnectResolved', syncValue, error, listeningPort);
     });
-  Mobile('multiConnectConnectionFailure').registerToNative(
-    function (peerIdentifier, error) {
-      module.exports.multiConnectEmitter
-        .emit('multiConnectConnectionFailure', peerIdentifier, error);
+  Mobile('multiConnectConnectionFailure')
+    .registerToNative(function (peerIdentifier, error) {
+      emitter.emit('multiConnectConnectionFailure', peerIdentifier, error);
     });
+
+  return emitter;
 }
 
-inherits(MultiConnectEmitter, EventEmitter);
+var multiConnectEmitter = createMultiConnectEmitter();
+module.exports.multiConnectEmitter = multiConnectEmitter;
 
-module.exports.multiConnectEmitter = new MultiConnectEmitter();
-
-function iOSConnectToPeer(peer, retries, successCb, failureCb, quitSignal) {
+function iOSConnectToPeer(peer, quitSignal) {
   var originalSyncValue = randomString.generate();
+  var multiConnectHandler;
 
-  retries--;
+  return new Promise(function (resolve, reject) {
+    multiConnectHandler = function (syncValue, error, listeningPort) {
+      logger.debug(
+        'Got multiConnectResolved -' +
+        'syncValue: \'%s\', error: \'%s\', listeningPort: \'%s\'',
+        syncValue, error, listeningPort
+      );
 
-  module.exports.multiConnectEmitter.on('multiConnectResolved',
-    function(syncValue, error, listeningPort) {
-      logger.debug('Got multiConnectResolved - syncValue: ' + syncValue +
-        ' error: ' + error + ' listeningPort: ' + listeningPort);
       if (quitSignal && quitSignal.raised) {
-        successCb(null, null, peer);
+        return resolve(null);
       }
 
+      if (error) {
+        return reject(new Error(error));
+      }
       if (syncValue !== originalSyncValue) {
+        logger.warn(
+          'multiConnectResolved received invalid ' +
+          'syncValue: \'%s\', originalSyncValue: \'%s\'',
+          syncValue, originalSyncValue
+        );
         return;
       }
 
-      if (error == null) {
-        // Connected successfully..
-        successCb(null, { listeningPort: parseInt(listeningPort, 10) }, peer);
-      } else {
-        connectRetry(peer, retries, successCb, failureCb, quitSignal,
-          function () {
-            failureCb(error, syncValue, peer);
-          });
+      var port = parseInt(listeningPort, 10);
+      if (isNaN(port) || port != listeningPort) {
+        return reject(new Error(format(
+          'listeningPort is not a valid number: \'%s\'', listeningPort
+        )));
       }
-    });
+      resolve({
+        listeningPort: port
+      });
+    };
 
-  Mobile('multiConnect').callNative(peer.peerIdentifier, originalSyncValue,
-    function (err) {
-      logger.debug('Got multiConnect callback');
-      if (err) {
-        logger.info('We got an error synchronously from multiConnect, that ' +
-          'really shouldn\'t happen! - ' + err);
-        if (failureCb) {
-          failureCb(err, peer);
+    multiConnectEmitter.on('multiConnectResolved', multiConnectHandler);
+    Mobile('multiConnect')
+      .callNative(peer.peerIdentifier, originalSyncValue, function (error) {
+        logger.debug('Got \'multiConnect\' callback');
+
+        if (error) {
+          error = new Error(format(
+            'We got an error synchronously from multiConnect, ' +
+            'that really shouldn\'t happen: \'%s\'', error
+          ));
+          error.isFatal = true;
+          return reject(error);
         }
-      }
+      });
+  })
+    .finally(function () {
+      multiConnectEmitter.removeListener('multiConnectResolved', multiConnectHandler);
     });
 }
 
-function connectToPeer(peer, retries, successCb, failureCb, quitSignal) {
-  if (platform.isAndroid) {
-    return androidConnectToPeer(peer, retries, successCb, failureCb,
-      quitSignal);
-  }
-
-  if (platform.isIOS) {
-    return iOSConnectToPeer(peer, retries, successCb, failureCb, quitSignal);
-  }
-
-  if (failureCb) {
-    failureCb('What the heck platform are we on?!??!');
-  }
-}
-
-module.exports.connectToPeer = connectToPeer;
-
-function connectToPeerPromise(peer, retries, quitSignal) {
-  return new Promise(function (resolve, reject) {
-    connectToPeer(peer, retries, function (err, connection) {
-      resolve(connection);
-    }, function (err) {
-      reject(err);
-    }, quitSignal);
-  });
-}
-
-module.exports.connectToPeerPromise = connectToPeerPromise;
 
 function getConnectionToOnePeerAndTest(t, connectTest) {
   var echoServer = net.createServer(function (socket) {
@@ -205,8 +220,7 @@ function getConnectionToOnePeerAndTest(t, connectTest) {
 
   function tryToConnect() {
     runningTest = true;
-    var RETRIES = 10;
-    connectToPeerPromise(currentTestPeer, RETRIES)
+    connectToPeer(currentTestPeer)
       .then(function (connectionCallback) {
         connectTest(connectionCallback.listeningPort, currentTestPeer);
       })
