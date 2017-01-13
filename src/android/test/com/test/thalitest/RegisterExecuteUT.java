@@ -32,7 +32,7 @@ public final class RegisterExecuteUT {
                 break;
             case "onPeerDiscovered":
                 ConnectionHelperTest.mConnectionHelper
-                    .onPeerDiscovered(new PeerProperties("33:44:55:44:33:22"));
+                    .onPeerDiscovered(new PeerProperties("33:44:55:44:33:22", 0));
                 break;
             default:
                 Log.e(TAG, "Method called in FireTestedMethod doesn't exists!");
