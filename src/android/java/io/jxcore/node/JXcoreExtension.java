@@ -92,7 +92,7 @@ public class JXcoreExtension implements SurroundingStateObserver {
     private JXcoreExtension() {
     }
 
-    static SurroundingStateObserver getInstance() {
+    public static SurroundingStateObserver getInstance() {
         return Holder.INSTANCE;
     }
 
@@ -547,7 +547,8 @@ public class JXcoreExtension implements SurroundingStateObserver {
             jsonObject.put(EVENT_VALUE_PEER_ID, peerProperties.getId());
             Integer gen = peerProperties.getExtraInformation();
             if (!isAvailable) {
-                gen = (peerProperties.getExtraInformation() == 0) ? null : peerProperties.getExtraInformation();
+                gen = (peerProperties.getExtraInformation() == PeerProperties.NO_EXTRA_INFORMATION) ?
+                    null : peerProperties.getExtraInformation();
             }
             jsonObject.put(EVENT_VALUE_PEER_GENERATION, gen);
             jsonObject.put(EVENT_VALUE_PEER_AVAILABLE, isAvailable);
@@ -560,7 +561,6 @@ public class JXcoreExtension implements SurroundingStateObserver {
             JSONArray jsonArray = new JSONArray();
             jsonArray.put(jsonObject);
             final String jsonArrayAsString = jsonArray.toString();
-
             jxcore.activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {

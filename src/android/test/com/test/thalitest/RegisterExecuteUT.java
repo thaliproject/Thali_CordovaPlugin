@@ -7,14 +7,13 @@ import org.json.JSONObject;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+
 import java.util.ArrayList;
 import java.util.Date;
 
 import io.jxcore.node.ConnectionHelper;
 import io.jxcore.node.ConnectionHelperTest;
-import io.jxcore.node.SurroundingStateObserver;
+import io.jxcore.node.JXcoreExtension;
 import io.jxcore.node.jxcore;
 
 public final class RegisterExecuteUT {
@@ -25,27 +24,7 @@ public final class RegisterExecuteUT {
     static String TAG = "RegisterExecuteUT";
 
     private static void FireTestedMethod(String methodName) {
-        ConnectionHelperTest.mConnectionHelper = new ConnectionHelper(new SurroundingStateObserver() {
-            @Override
-            public void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
-
-            }
-
-            @Override
-            public void notifyDiscoveryAdvertisingStateUpdateNonTcp(boolean isDiscoveryActive, boolean isAdvertisingActive) {
-
-            }
-
-            @Override
-            public void notifyNetworkChanged(boolean isBluetoothEnabled, boolean isWifiEnabled, String bssidName, String ssidName) {
-
-            }
-
-            @Override
-            public void notifyIncomingConnectionToPortNumberFailed(int portNumber) {
-
-            }
-        });
+        ConnectionHelperTest.mConnectionHelper = new ConnectionHelper(JXcoreExtension.getInstance());
         switch (methodName) {
             case "onPeerLost":
                 ConnectionHelperTest.mConnectionHelper
@@ -97,12 +76,12 @@ public final class RegisterExecuteUT {
                 Boolean jsonObjectCreated = false;
                 String failures = "";
 
-                for (Failure failure: resultTest.getFailures()) {
+                for (Failure failure : resultTest.getFailures()) {
                     failures += failure.getMessage() + "\n";
                 }
 
                 try {
-                    if(!failures.equals("")){
+                    if (!failures.equals("")) {
                         jsonObject.put("failures", failures);
                     }
 
