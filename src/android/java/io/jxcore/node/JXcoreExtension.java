@@ -97,7 +97,6 @@ public class JXcoreExtension implements SurroundingStateObserver {
     }
 
     public static void LoadExtensions() {
-        getInstance();
         if (mConnectionHelper != null) {
             Log.e(TAG, "LoadExtensions: A connection helper instance already exists - this indicates that this method was called twice - disposing of the previous instance");
             mConnectionHelper.dispose();
