@@ -34,8 +34,10 @@ var test = tape({
       t.end();
     });
   },
-  // Extend test and teardown timeouts. Sometimes it takes quite
-  // long to establish bluetooth connection.
+
+  // These time outs are excessive because of issues we are having
+  // with Bluetooth, see #1569. When #1569 is fixed we will be able
+  // to reduce these time outs to a reasonable level.
   testTimeout:      5 * 60 * 1000,
   teardownTimeout:  5 * 60 * 1000
 });
@@ -2247,6 +2249,7 @@ test('test for data corruption',
     // Timer is used because of possible race condition when stopping and starting
     // ThaliMobile every time error occurs, which led to test failure because exception was
     // thrown.
+    // This issue is tracked in #1719.
     var timer = setInterval(function() {
       logger.debug('Restarting test for data corruption');
 
