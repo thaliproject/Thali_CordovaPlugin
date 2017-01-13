@@ -1697,7 +1697,7 @@ test('calls correct starts when network changes',
           advertisingSpy = sinon.spy(ThaliMobile,
             '_startUpdateAdvertisingAndListening');
 
-          return testUtils.toggleWifi(true);
+          return testUtils.ensureWifi(true);
         })
         .then(function () {
           ThaliMobile.getPromiseQueue()
