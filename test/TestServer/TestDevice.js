@@ -133,8 +133,8 @@ TestDevice.prototype.discard = function () {
   return this._socket.emitData('discard');
 };
 
-TestDevice.prototype.error = function (error) {
-  return this._socket.emitData('error', error);
+TestDevice.prototype.customError = function (error) {
+  return this._socket.emitData('customError', error);
 };
 
 module.exports = TestDevice;
