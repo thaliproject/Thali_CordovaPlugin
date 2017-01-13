@@ -39,7 +39,8 @@ var Promise = require('lie');
 var xcode = require('xcode');
 
 function addFramework(
-  projectPath, frameworkProjectDir, frameworkOutputDir, buildWithTests) {
+  projectPath, frameworkProjectDir, frameworkOutputDir,
+  buildWithTests, testingInfrastructureDir) {
 
   // We need to build ThaliCore.framework before embedding it into the project
   return buildFramework(
@@ -72,14 +73,16 @@ function addFramework(
           xcodeProject.addBuildProperty(
             'EMBEDDED_CONTENT_CONTAINS_SWIFT', 'YES');
 
-          xcodeProject.removeBuildProperty(
-            'OTHER_SWIFT_FLAGS');
-          xcodeProject.addBuildProperty('OTHER_SWIFT_FLAGS', '\"-DTEST\"');
+          if (buildWithTests) {
+            xcodeProject.removeBuildProperty(
+              'OTHER_SWIFT_FLAGS');
+            xcodeProject.addBuildProperty('OTHER_SWIFT_FLAGS', '\"-DTEST\"');
 
-          xcodeProject.removeBuildProperty('GCC_PREPROCESSOR_DEFINITIONS');
-          xcodeProject.updateBuildProperty(
-            'GCC_PREPROCESSOR_DEFINITIONS',
-            ['\"$(inherited)\"', '\"TEST=1\"']);
+            xcodeProject.removeBuildProperty('GCC_PREPROCESSOR_DEFINITIONS');
+            xcodeProject.updateBuildProperty(
+              'GCC_PREPROCESSOR_DEFINITIONS',
+              ['\"$(inherited)\"', '\"TEST=1\"']);
+          }
 
           // First check to see if the Embed Framework node exists, if not, add
           // it. This is all we need to do as they are added to the embedded
@@ -134,6 +137,22 @@ function addFramework(
             xcodeProject.addFramework(
               xcTestFrameworkPath,
               {customFramework: true, embed: true, link: true, sign: true});
+          }
+
+          if (buildWithTests) {
+            var testingFiles =
+              fs.readdirSync(testingInfrastructureDir)
+                .filter(function (file) {
+                  return file.endsWith('.swift');
+                })
+                .map(function (file) {
+                  return path.join(testingInfrastructureDir, file);
+                });
+
+            testingFiles
+              .forEach(function (file) {
+                xcodeProject.addSourceFile(file);
+              });
           }
 
           resolve(xcodeProject);
