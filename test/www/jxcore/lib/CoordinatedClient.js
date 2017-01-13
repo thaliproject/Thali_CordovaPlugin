@@ -75,10 +75,10 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware,
     serverUrl,
     {
       reconnection: true,
-      reconnectionAttempts: 15,
-      reconnectionDelay: 200,
-      reconnectionDelayMax: 1000,
-      randomizationFactor: 0,
+      reconnectionAttempts: 100,
+      reconnectionDelay:    2000,
+      reconnectionDelayMax: 10000,
+      randomizationFactor:  0,
 
       transports: ['websocket'],
       rejectUnauthorized: null
@@ -102,15 +102,15 @@ CoordinatedClient.prototype._bind = function () {
   this._io
     .on  ('connect',           this._connect.bind(this))
     .on  ('connect_timeout',   logger.debug.bind(logger))
-    .on  ('connect_error',     this._connectionError.bind(this))
+    .on  ('connect_error',     this._error.bind(this, 'connect_error'))
     .on  ('reconnect',         this._reconnect.bind(this))
-    .on  ('reconnect_error',   this._connectionError.bind(this))
-    .on  ('reconnect_failed',  this._error.bind(this))
+    .on  ('reconnect_error',   this._error.bind(this, 'reconnect_error'))
+    .on  ('reconnect_failed',  this._error.bind(this, 'reconnect_failed'))
     .once('schedule',          this._schedule.bind(this))
     .on  ('discard',           this._discard.bind(this))
     .on  ('disqualify',        this._disqualify.bind(this))
     .on  ('disconnect',        this._disconnect.bind(this))
-    .on  ('error',             this._error.bind(this))
+    .on  ('error',             this._error.bind(this, 'error'))
     .on  ('customError',       this._customError.bind(this))
     .once('complete',          this._complete.bind(this));
 };
@@ -293,21 +293,21 @@ CoordinatedClient.prototype._customError = function (data) {
   // We are waiting for 'complete' event.
 };
 
-CoordinatedClient.prototype._error = function (error) {
-  var stack = error ? error.stack : null;
-  logger.error(
-    'unexpected error: \'%s\', stack: \'%s\'',
-    String(error), stack
-  );
-  this._failed(error);
-};
-
-CoordinatedClient.prototype._connectionError = function (error) {
+CoordinatedClient.prototype._error = function (reason, error) {
   var stack = error ? error.stack : null;
   var description = error ? error.description : null;
+
+  if (error && error.type === 'TransportError') {
+    logger.warn(
+      '%s error ignored for reconnect: \'%s\', description: \'%s\', stack: \'%s\'',
+      reason, String(error), description, stack
+    );
+    return;
+  }
+
   logger.error(
-    'connection error: \'%s\', description: \'%s\', stack: \'%s\'',
-    String(error), description, stack
+    '%s error: \'%s\', description: \'%s\', stack: \'%s\'',
+    reason, String(error), description, stack
   );
   this._failed(error);
 };
