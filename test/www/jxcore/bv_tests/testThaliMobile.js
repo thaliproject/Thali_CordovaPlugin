@@ -1700,14 +1700,18 @@ test('calls correct starts when network changes',
           return testUtils.toggleWifi(true);
         })
         .then(function () {
-          t.equals(listeningSpy.callCount, 1,
-            '_startListeningForAdvertisements should have been called');
-          t.equals(advertisingSpy.callCount, 1,
-            '_startUpdateAdvertisingAndListening should have been called');
+          ThaliMobile.getPromiseQueue()
+            .enqueue(function (resolve) {
+              t.equals(listeningSpy.callCount, 1,
+                '_startListeningForAdvertisements should have been called');
+              t.equals(advertisingSpy.callCount, 1,
+                '_startUpdateAdvertisingAndListening should have been called');
 
-          ThaliMobile._startListeningForAdvertisements.restore();
-          ThaliMobile._startUpdateAdvertisingAndListening.restore();
-          t.end();
+              ThaliMobile._startListeningForAdvertisements.restore();
+              ThaliMobile._startUpdateAdvertisingAndListening.restore();
+              t.end();
+              resolve();
+            });
         });
     };
 

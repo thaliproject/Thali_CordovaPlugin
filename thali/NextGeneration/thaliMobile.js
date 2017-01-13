@@ -26,6 +26,10 @@ var Promise = require('lie');
 var PromiseQueue = require('./promiseQueue');
 var promiseQueue = new PromiseQueue();
 
+module.exports.getPromiseQueue = function () {
+  return promiseQueue;
+};
+
 function promiseResultSuccessOrFailure (promise) {
   return promise.then(function (success) {
     return success;
