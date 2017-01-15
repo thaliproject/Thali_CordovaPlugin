@@ -1,7 +1,6 @@
 'use strict';
 
-var util   = require('util');
-var format = util.format;
+var util = require('util').format;
 
 var platform = require('thali/NextGeneration/utils/platform');
 var logger = require('../lib/testLogger')('thaliMobileNativeTestUtils');
