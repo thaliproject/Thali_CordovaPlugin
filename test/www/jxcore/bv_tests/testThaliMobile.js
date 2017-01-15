@@ -1669,57 +1669,49 @@ test('calls correct starts when network changes',
     var listeningSpy   = null;
     var advertisingSpy = null;
 
-    function networkChangedHandler (networkChangedValue) {
-      if (networkChangedValue.bssidName || networkChangedValue.ssidName) {
-        t.fail('wifi network should become disabled');
-        t.end();
-        return;
-      }
-      ThaliMobileNativeWrapper.emitter
-        .removeListener('networkChangedNonTCP', networkChangedHandler);
-
-      ThaliMobile.startListeningForAdvertisements()
-        .then(function (combinedResult) {
-          if (isWifiEnabled) {
-            t.equals(combinedResult.wifiResult.message,
-              'Radio Turned Off', 'specific error expected');
-          }
-          return ThaliMobile.startUpdateAdvertisingAndListening();
-        })
-        .then(function (combinedResult) {
-          if (isWifiEnabled) {
-            t.equals(combinedResult.wifiResult.message,
-              'Radio Turned Off', 'specific error expected');
-          }
-
-          listeningSpy = sinon.spy(ThaliMobile,
-            '_startListeningForAdvertisements');
-          advertisingSpy = sinon.spy(ThaliMobile,
-            '_startUpdateAdvertisingAndListening');
-
-          return testUtils.ensureWifi(true);
-        })
-        .then(function () {
-          ThaliMobile.getPromiseQueue()
-            .enqueue(function (resolve) {
-              t.equals(listeningSpy.callCount, 1,
-                '_startListeningForAdvertisements should have been called');
-              t.equals(advertisingSpy.callCount, 1,
-                '_startUpdateAdvertisingAndListening should have been called');
-
-              ThaliMobile._startListeningForAdvertisements.restore();
-              ThaliMobile._startUpdateAdvertisingAndListening.restore();
-              t.end();
-              resolve();
-            });
-        });
-    };
-
     ThaliMobile.start(express.Router())
       .then(function () {
-        ThaliMobileNativeWrapper.emitter
-          .once('networkChangedNonTCP', networkChangedHandler);
-        testUtils.toggleWifi(false);
+        return testUtils.ensureWifi(false);
+      })
+      .then(function () {
+        return ThaliMobile.startListeningForAdvertisements();
+      })
+      .then(function (combinedResult) {
+        if (isWifiEnabled) {
+          t.equals(combinedResult.wifiResult.message,
+            'Radio Turned Off', 'specific error expected');
+        }
+        return ThaliMobile.startUpdateAdvertisingAndListening();
+      })
+      .then(function (combinedResult) {
+        if (isWifiEnabled) {
+          t.equals(combinedResult.wifiResult.message,
+            'Radio Turned Off', 'specific error expected');
+        }
+
+        listeningSpy = sinon.spy(ThaliMobile,
+          '_startListeningForAdvertisements');
+        advertisingSpy = sinon.spy(ThaliMobile,
+          '_startUpdateAdvertisingAndListening');
+
+        return testUtils.ensureWifi(true);
+      })
+      .then(function () {
+        return ThaliMobile.getPromiseQueue()
+          .enqueue(function (resolve) {
+            // Android will provide 2 network changed events.
+            // Second event will provide bssid and ssid.
+            var callCount = platform._isRealAndroid? 2: 1;
+            t.equals(listeningSpy.callCount, callCount,
+              '_startListeningForAdvertisements should have been called');
+            t.equals(advertisingSpy.callCount, callCount,
+              '_startUpdateAdvertisingAndListening should have been called');
+
+            ThaliMobile._startListeningForAdvertisements.restore();
+            ThaliMobile._startUpdateAdvertisingAndListening.restore();
+            t.end();
+            resolve();
+          });
       });
   }
 );
