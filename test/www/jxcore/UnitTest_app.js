@@ -24,7 +24,7 @@ var Promise = require('bluebird');
 
 var utResult = false;
 
-if (platform._isRealMobile) {
+if (false) {
   Mobile('executeNativeTests').callNative(function (result) {
     logger.debug('Running unit tests');
     if (result) {

@@ -80,7 +80,7 @@ logger.info(
 
 var testsToRun = argv._[0] || 'bv_tests';
 var testsPath = path.join(__dirname, testsToRun);
-testLoader.load(testsPath, config.preferredOrder);
+testLoader.load(testsPath, config);
 
 testUtils.hasRequiredHardware()
   .then(function (hasRequiredHardware) {

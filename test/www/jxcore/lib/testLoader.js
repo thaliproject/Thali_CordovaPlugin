@@ -50,15 +50,18 @@ function loadFile (filePath) {
   }
 };
 
-module.exports.load = function (testsToRun, preferredOrder) {
+module.exports.load = function (testsToRun, options) {
   if (hasJavaScriptSuffix(testsToRun)) {
     loadFile(testsToRun);
   } else {
     var testFiles = fs.readdirSync(testsToRun).filter(function (fileName) {
       return fileName.indexOf('test') === 0 && hasJavaScriptSuffix(fileName);
     });
-    sortFiles(testFiles, preferredOrder);
-    testFiles.forEach(function (fileName) {
+    sortFiles(testFiles, options.preferredOrder || []);
+    testFiles.filter(function (file) {
+      var isDisabled = options.disabledTests.indexOf(file) !== -1;
+      return !isDisabled;
+    }).forEach(function (fileName) {
       if (fileName.indexOf('test') === 0 && hasJavaScriptSuffix(fileName)) {
         var filePath = path.join(testsToRun, fileName);
         loadFile(filePath);
