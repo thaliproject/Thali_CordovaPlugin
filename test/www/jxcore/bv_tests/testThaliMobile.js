@@ -36,6 +36,7 @@ var test = tape({
   }
 });
 
+
 var testIdempotentFunction = function (t, functionName) {
   ThaliMobile.start(express.Router())
   .then(function () {
@@ -1661,13 +1662,14 @@ test('network changes not emitted in stopped state',
 
 test('calls correct starts when network changes',
   function (t) {
-    var isWifiEnabled = (
+    var isWifiEnabled =
       global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
-      global.NETWORK_TYPE === ThaliMobile.networkTypes.BOTH
-    );
+      global.NETWORK_TYPE === ThaliMobile.networkTypes.BOTH;
 
-    var listeningSpy   = null;
-    var advertisingSpy = null;
+    var listeningSpy =
+      sinon.spy(ThaliMobile, '_startListeningForAdvertisements');
+    var advertisingSpy =
+      sinon.spy(ThaliMobile, '_startUpdateAdvertisingAndListening');
 
     ThaliMobile.start(express.Router())
       .then(function () {
@@ -1689,29 +1691,31 @@ test('calls correct starts when network changes',
             'Radio Turned Off', 'specific error expected');
         }
 
-        listeningSpy = sinon.spy(ThaliMobile,
-          '_startListeningForAdvertisements');
-        advertisingSpy = sinon.spy(ThaliMobile,
-          '_startUpdateAdvertisingAndListening');
+        listeningSpy.reset();
+        advertisingSpy.reset();
 
         return testUtils.ensureWifi(true);
       })
       .then(function () {
-        return ThaliMobile.getPromiseQueue()
-          .enqueue(function (resolve) {
-            // Android will provide 2 network changed events.
-            // Second event will provide bssid and ssid.
-            var callCount = platform._isRealAndroid? 2: 1;
-            t.equals(listeningSpy.callCount, callCount,
-              '_startListeningForAdvertisements should have been called');
-            t.equals(advertisingSpy.callCount, callCount,
-              '_startUpdateAdvertisingAndListening should have been called');
-
-            ThaliMobile._startListeningForAdvertisements.restore();
-            ThaliMobile._startUpdateAdvertisingAndListening.restore();
-            t.end();
-            resolve();
-          });
+        return ThaliMobile.getPromiseQueue().enqueue(function (resolve) {
+          // Real device can emit 2 network changed events: the first one with
+          // wifi:on and without bssid, the second one with wifi:on and with
+          // bssid and ssid. It may be implementation and environment dependant
+          // but we can assume it was emitted at least once
+          t.ok(listeningSpy.called, '_startListeningForAdvertisements should ' +
+            'have been called at least once');
+          t.ok(advertisingSpy.called, '_startUpdateAdvertisingAndListening ' +
+            'should have been called at least once');
+          resolve();
+        });
+      })
+      .catch(function (err) {
+        t.fail(err);
+      })
+      .then(function () {
+        listeningSpy.restore();
+        advertisingSpy.restore();
+        t.end();
       });
   }
 );
