@@ -92,7 +92,7 @@ public class JXcoreExtension implements SurroundingStateObserver {
     private JXcoreExtension() {
     }
 
-    static SurroundingStateObserver getInstance() {
+    public static SurroundingStateObserver getInstance() {
         return Holder.INSTANCE;
     }
 
@@ -545,10 +545,8 @@ public class JXcoreExtension implements SurroundingStateObserver {
 
         try {
             jsonObject.put(EVENT_VALUE_PEER_ID, peerProperties.getId());
-            Integer gen = peerProperties.getExtraInformation();
-            if (!isAvailable) {
-                gen = (peerProperties.getExtraInformation() == 0) ? null : peerProperties.getExtraInformation();
-            }
+            Integer gen = (isAvailable && hasExtraInfo(peerProperties)) ?
+                peerProperties.getExtraInformation() : null;
             jsonObject.put(EVENT_VALUE_PEER_GENERATION, gen);
             jsonObject.put(EVENT_VALUE_PEER_AVAILABLE, isAvailable);
             jsonObjectCreated = true;
@@ -560,7 +558,6 @@ public class JXcoreExtension implements SurroundingStateObserver {
             JSONArray jsonArray = new JSONArray();
             jsonArray.put(jsonObject);
             final String jsonArrayAsString = jsonArray.toString();
-
             jxcore.activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -568,6 +565,10 @@ public class JXcoreExtension implements SurroundingStateObserver {
                 }
             });
         }
+    }
+
+    private boolean hasExtraInfo(PeerProperties peerProperties) {
+        return peerProperties.getExtraInformation() != PeerProperties.NO_EXTRA_INFORMATION;
     }
 
     public void notifyDiscoveryAdvertisingStateUpdateNonTcp(boolean isDiscoveryActive, boolean isAdvertisingActive) {
