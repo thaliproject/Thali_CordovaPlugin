@@ -29,7 +29,7 @@ import io.jxcore.node.jxcore.JXcoreCallback;
  * For the documentation, please see
  * https://github.com/thaliproject/Thali_CordovaPlugin/blob/vNext/thali/NextGeneration/thaliMobileNative.js
  */
-public class JXcoreExtension {
+public class JXcoreExtension implements SurroundingStateObserver {
 
     // Common Thali methods and events
     public static final String CALLBACK_VALUE_LISTENING_ON_PORT_NUMBER = "listeningPort";
@@ -75,18 +75,26 @@ public class JXcoreExtension {
     private static final String METHOD_NAME_SHOW_TOAST = "showToast";
 
     private static final String TAG = JXcoreExtension.class.getName();
-    private static final String BLUETOOTH_MAC_ADDRESS_AND_TOKEN_COUNTER_SEPARATOR = "-";
     private static final long INCOMING_CONNECTION_FAILED_NOTIFICATION_MIN_INTERVAL_IN_MILLISECONDS = 100;
+
+    private static final String ERROR_PLATFORM_DOES_NOT_SUPPORT_MULTICONNECT = "Platform does not support multiConnect";
+    private static final String ERROR_NOT_MULTICONNECT_PLATFORM = "Not multiConnect platform";
 
     private static ConnectionHelper mConnectionHelper = null;
     private static WifiLocker wifiLocker = new WifiLocker();
     private static long mLastTimeIncomingConnectionFailedNotificationWasFired = 0;
     private static boolean mNetworkChangedRegistered = false;
 
+    private static class Holder {
+        private static final JXcoreExtension INSTANCE = new JXcoreExtension();
+    }
 
-    private static String ERROR_PLATFORM_DOES_NOT_SUPPORT_MULTICONNECT = "Platform does not support multiConnect";
-    private static String ERROR_NOT_MULTICONNECT_PLATFORM = "Not multiConnect platform";
+    private JXcoreExtension() {
+    }
 
+    public static SurroundingStateObserver getInstance() {
+        return Holder.INSTANCE;
+    }
 
     public static void LoadExtensions() {
         if (mConnectionHelper != null) {
@@ -95,7 +103,8 @@ public class JXcoreExtension {
             mConnectionHelper = null;
         }
 
-        mConnectionHelper = new ConnectionHelper();
+        mConnectionHelper = new ConnectionHelper(getInstance());
+        mConnectionHelper.listenToConnectivityEvents();
 
         final LifeCycleMonitor lifeCycleMonitor = new LifeCycleMonitor(new LifeCycleMonitor.LifeCycleMonitorListener() {
             @Override
@@ -530,16 +539,14 @@ public class JXcoreExtension {
     }
 
 
-    public static void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
+    public void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
         JSONObject jsonObject = new JSONObject();
         boolean jsonObjectCreated = false;
 
         try {
             jsonObject.put(EVENT_VALUE_PEER_ID, peerProperties.getId());
-            Integer gen = peerProperties.getExtraInformation();
-            if (!isAvailable) {
-                gen = (peerProperties.getExtraInformation() == 0) ? null : peerProperties.getExtraInformation();
-            }
+            Integer gen = (isAvailable && hasExtraInfo(peerProperties)) ?
+                peerProperties.getExtraInformation() : null;
             jsonObject.put(EVENT_VALUE_PEER_GENERATION, gen);
             jsonObject.put(EVENT_VALUE_PEER_AVAILABLE, isAvailable);
             jsonObjectCreated = true;
@@ -551,7 +558,6 @@ public class JXcoreExtension {
             JSONArray jsonArray = new JSONArray();
             jsonArray.put(jsonObject);
             final String jsonArrayAsString = jsonArray.toString();
-
             jxcore.activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -561,8 +567,11 @@ public class JXcoreExtension {
         }
     }
 
-    public static void notifyDiscoveryAdvertisingStateUpdateNonTcp(
-        boolean isDiscoveryActive, boolean isAdvertisingActive) {
+    private boolean hasExtraInfo(PeerProperties peerProperties) {
+        return peerProperties.getExtraInformation() != PeerProperties.NO_EXTRA_INFORMATION;
+    }
+
+    public void notifyDiscoveryAdvertisingStateUpdateNonTcp(boolean isDiscoveryActive, boolean isAdvertisingActive) {
         JSONObject jsonObject = new JSONObject();
         boolean jsonObjectCreated = false;
 
@@ -598,8 +607,8 @@ public class JXcoreExtension {
      *                           If non-null then this is the BSSID of the access point that Wi-Fi
      *                           is connected to.
      */
-    public static synchronized void notifyNetworkChanged(
-        boolean isBluetoothEnabled, boolean isWifiEnabled, String bssidName, String ssidName) {
+    public synchronized void notifyNetworkChanged(boolean isBluetoothEnabled, boolean isWifiEnabled,
+                                                  String bssidName, String ssidName) {
         if (!mNetworkChangedRegistered) {
             Log.d(TAG, "notifyNetworkChanged: Not registered for event \""
                 + EVENT_NAME_NETWORK_CHANGED + "\" and will not notify, in JS call method \""
@@ -685,7 +694,7 @@ public class JXcoreExtension {
      *
      * @param portNumber The 127.0.0.1 port that the TCP/IP bridge tried to connect to.
      */
-    public static void notifyIncomingConnectionToPortNumberFailed(int portNumber) {
+    public void notifyIncomingConnectionToPortNumberFailed(int portNumber) {
         long currentTime = new Date().getTime();
 
         if (currentTime > mLastTimeIncomingConnectionFailedNotificationWasFired

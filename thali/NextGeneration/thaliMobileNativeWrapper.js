@@ -86,6 +86,19 @@ module.exports._isStarted = function () {
  * be calling this module.
  */
 
+/**
+ * Enum to define the types of connections
+ *
+ * @readonly
+ * @enum {string}
+ */
+var connectionTypes = {
+  MULTI_PEER_CONNECTIVITY_FRAMEWORK: 'MPCF',
+  BLUETOOTH: 'AndroidBluetooth',
+  TCP_NATIVE: 'tcp'
+};
+module.exports.connectionTypes = connectionTypes;
+
 /*
         METHODS
  */
@@ -736,6 +749,7 @@ module.exports._disconnect = function (peerIdentifier) {
  *
  * @param {string} peerIdentifier The value taken from a peerAvailabilityChanged
  * event.
+ * @param {string} portNumber
  * @returns {Promise<?Error>} Unless something bad happens (in which case a
  * reject with an Error will be returned) the response will be a resolve with
  * a null result.
@@ -826,7 +840,7 @@ module.exports.killConnections = function () {
 /**
  * This method is to toggle wifi.
  *
- * @property {boolean} value If true then enable wifi, else disable it.
+ * @param {boolean} value If true then enable wifi, else disable it.
  * @returns {Promise<?Error>}
  */
 module.exports.toggleWiFi = function (value) {
@@ -891,19 +905,6 @@ module.exports.unlockAndroidWifiMulticast = function () {
 };
 
 /* EVENTS */
-
-/**
- * Enum to define the types of connections
- *
- * @readonly
- * @enum {string}
- */
-var connectionTypes = {
-  MULTI_PEER_CONNECTIVITY_FRAMEWORK: 'MPCF',
-  BLUETOOTH: 'AndroidBluetooth',
-  TCP_NATIVE: 'tcp'
-};
-module.exports.connectionTypes = connectionTypes;
 
 /**
  *
@@ -986,7 +987,7 @@ module.exports.connectionTypes = connectionTypes;
  */
 /* eslint-enable max-len */
 var peerAvailabilityChangedQueue = new PromiseQueue();
-var handlePeerAvailabilityChanged = function (peer) {
+function handlePeerAvailabilityChanged (peer) {
   logger.debug('Received peer availability changed event with ' +
     JSON.stringify(peer));
   if (!states.started) {
@@ -1047,7 +1048,7 @@ var handlePeerAvailabilityChanged = function (peer) {
       handlePeerUnavailable();
     }
   });
-};
+}
 
 module.exports._handlePeerAvailabilityChanged = handlePeerAvailabilityChanged;
 

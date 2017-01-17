@@ -42,6 +42,7 @@
         <source-file src="src/android/java/io/jxcore/node/StreamCopyingThread.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/TestHelper.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/WifiLocker.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/SurroundingStateObserver.java" target-dir="src/io/jxcore/node/" />
 
         <!-- ThaliPermissions -->
         <config-file target="config.xml" parent="/*">

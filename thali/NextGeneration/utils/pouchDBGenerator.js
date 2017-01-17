@@ -4,6 +4,8 @@ var inherits     = require('inherits');
 var EventEmitter = require('events').EventEmitter;
 var assign       = require('object-assign');
 
+var LeveldownAdapter = require('./leveldownMobileAdapter');
+
 
 /**
  * Old PouchDB did care about database endpoint type before using prefix.
@@ -54,7 +56,8 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
       name.indexOf('https') !== 0
     ) {
       if (!opts.db && options.defaultAdapter) {
-        opts.db = options.defaultAdapter;
+        opts.db      = options.defaultAdapter;
+        opts.adapter = 'leveldb-mobile';
       }
       if (!opts.prefix) {
         opts.prefix = defaultDirectory;
@@ -80,10 +83,19 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
 
   PouchAlt.__defaults = assign({}, PouchDB.__defaults);
 
+  PouchAlt.adapter = function (id, obj, addToPreferredAdapters) {
+    if (obj.valid()) {
+      PouchAlt.adapters[id] = obj;
+      if (addToPreferredAdapters) {
+        PouchAlt.preferredAdapters.push(id);
+      }
+    }
+  };
+
   PouchAlt.plugin = function (obj) {
     if (typeof obj === 'function') { // function style for plugins
       obj(PouchAlt);
-    } else if (typeof obj !== 'object' || Object.keys(obj).length === 0){
+    } else if (typeof obj !== 'object' || Object.keys(obj).length === 0) {
       throw new Error('Invalid plugin: got \"' + obj + '\", expected an object or a function');
     } else {
       Object.keys(obj).forEach(function (id) { // object style for plugins
@@ -92,6 +104,8 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
     }
     return PouchAlt;
   }
+
+  PouchAlt.plugin(LeveldownAdapter);
 
   return PouchAlt;
 }

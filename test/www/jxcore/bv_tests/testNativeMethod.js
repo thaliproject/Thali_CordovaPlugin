@@ -19,7 +19,7 @@ var test = tape({
 
 test('onPeerLost calls jxcore',
   function () {
-    return !platform._isRealMobile;
+    return !platform._isRealAndroid;
   },
   function (t) {
     Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
@@ -33,7 +33,7 @@ test('onPeerLost calls jxcore',
 
       t.equal(callbackPeer.peerIdentifier, '11:22:33:22:11:00',
         'check if callback was fired by onPeerLost');
-      t.equal(callbackPeer.generation, null, 'check if generation is null');
+      t.ok(callbackPeer.generation == null, 'check if generation is null');
       t.notOk(callbackPeer.peerAvailable, 'check if peerAvailable is false');
 
       t.end();
@@ -42,11 +42,11 @@ test('onPeerLost calls jxcore',
     Mobile('testNativeMethod').callNative('onPeerLost', function (result) {
       t.pass(result.Testing_);
     });
- });
+  });
 
 test('onPeerDiscovered calls jxcore',
   function () {
-    return !platform._isRealMobile;
+    return !platform._isRealAndroid;
   },
   function (t) {
     Mobile('peerAvailabilityChanged').registerToNative(function (peers) {

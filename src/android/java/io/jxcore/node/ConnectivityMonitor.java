@@ -27,6 +27,7 @@ class ConnectivityMonitor implements BluetoothManager.BluetoothManagerListener {
     private final Activity mActivity = jxcore.activity;
     private final BluetoothManager mBluetoothManager;
     private final WifiDirectManager mWifiDirectManager;
+    private final SurroundingStateObserver surroundingStateObserver;
     private WifiStateChangedAndConnectivityActionBroadcastReceiver mWifiStateChangedAndConnectivityActionBroadcastReceiver = null;
     private String mBssidName = null;
     private String mSsidName = null;
@@ -38,7 +39,7 @@ class ConnectivityMonitor implements BluetoothManager.BluetoothManagerListener {
     /**
      * Constructor.
      */
-    public ConnectivityMonitor(DiscoveryManager discoveryManager) {
+    public ConnectivityMonitor(DiscoveryManager discoveryManager, SurroundingStateObserver stateObserver) {
         if (discoveryManager == null) {
             throw new IllegalArgumentException("Discovery manager is null");
         }
@@ -47,6 +48,7 @@ class ConnectivityMonitor implements BluetoothManager.BluetoothManagerListener {
         mWifiDirectManager = discoveryManager.getWifiDirectManager();
         mIsBluetoothEnabled = mBluetoothManager.isBluetoothEnabled();
         mIsWifiEnabled = mWifiDirectManager.isWifiEnabled();
+        surroundingStateObserver = stateObserver;
     }
 
     /**
@@ -62,6 +64,7 @@ class ConnectivityMonitor implements BluetoothManager.BluetoothManagerListener {
 
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
+        intentFilter.addAction(WifiManager.SUPPLICANT_STATE_CHANGED_ACTION);
         intentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
         mWifiStateChangedAndConnectivityActionBroadcastReceiver = new WifiStateChangedAndConnectivityActionBroadcastReceiver();
 
@@ -151,7 +154,7 @@ class ConnectivityMonitor implements BluetoothManager.BluetoothManagerListener {
      */
     public synchronized void updateConnectivityInfo(boolean forceNotify) {
         ConnectivityManager connectivityManager =
-                (ConnectivityManager) mActivity.getSystemService(Context.CONNECTIVITY_SERVICE);
+            (ConnectivityManager) mActivity.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
 
         final boolean isConnectedOrConnecting = (activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting());
@@ -174,15 +177,15 @@ class ConnectivityMonitor implements BluetoothManager.BluetoothManagerListener {
         final boolean isBluetoothEnabled = mBluetoothManager.isBluetoothEnabled();
 
         boolean notificationNecessary =
-                (forceNotify
-                        || mIsBluetoothEnabled != isBluetoothEnabled
-                        || mIsWifiEnabled != isWifiEnabled
-                        || !stringsMatch(mBssidName, bssid)
-                        || !stringsMatch(mSsidName, ssid));
+            (forceNotify
+                || mIsBluetoothEnabled != isBluetoothEnabled
+                || mIsWifiEnabled != isWifiEnabled
+                || !stringsMatch(mBssidName, bssid)
+                || !stringsMatch(mSsidName, ssid));
 
         boolean unimportantStateChange =
-                (mIsConnectedOrConnectingToActiveNetwork != isConnectedOrConnecting
-                        || mActiveNetworkTypeIsWifi != activeNetworkTypeIsWifi);
+            (mIsConnectedOrConnectingToActiveNetwork != isConnectedOrConnecting
+                || mActiveNetworkTypeIsWifi != activeNetworkTypeIsWifi);
 
         if (notificationNecessary || unimportantStateChange) {
             // Store the state and log even if this was an unimportant state change
@@ -194,17 +197,17 @@ class ConnectivityMonitor implements BluetoothManager.BluetoothManagerListener {
             mActiveNetworkTypeIsWifi = activeNetworkTypeIsWifi;
 
             Log.v(TAG, "updateConnectivityInfo: " + (forceNotify ? "FORCED notification:" : "State changed:")
-                    + "\n    - is Wi-Fi Direct supported: " + isWifiDirectSupported()
-                    + "\n    - is Bluetooth LE multiple advertisement supported: " + isBleMultipleAdvertisementSupported()
-                    + "\n    - is Wi-Fi enabled: " + mIsWifiEnabled
-                    + "\n    - is Bluetooth enabled: " + mIsBluetoothEnabled
-                    + "\n    - BSSID name: " + mBssidName
-                    + "\n    - SSID name: " + mSsidName
-                    + "\n    - is connected/connecting to active network: " + mIsConnectedOrConnectingToActiveNetwork
-                    + "\n    - active network type is Wi-Fi: " + mActiveNetworkTypeIsWifi);
+                + "\n    - is Wi-Fi Direct supported: " + isWifiDirectSupported()
+                + "\n    - is Bluetooth LE multiple advertisement supported: " + isBleMultipleAdvertisementSupported()
+                + "\n    - is Wi-Fi enabled: " + mIsWifiEnabled
+                + "\n    - is Bluetooth enabled: " + mIsBluetoothEnabled
+                + "\n    - BSSID name: " + mBssidName
+                + "\n    - SSID name: " + mSsidName
+                + "\n    - is connected/connecting to active network: " + mIsConnectedOrConnectingToActiveNetwork
+                + "\n    - active network type is Wi-Fi: " + mActiveNetworkTypeIsWifi);
 
             if (notificationNecessary) {
-                JXcoreExtension.notifyNetworkChanged(mIsBluetoothEnabled, mIsWifiEnabled, mBssidName, mSsidName);
+                surroundingStateObserver.notifyNetworkChanged(mIsBluetoothEnabled, mIsWifiEnabled, mBssidName, mSsidName);
             }
         } else {
             Log.v(TAG, "updateConnectivityInfo: No relevant state changes");

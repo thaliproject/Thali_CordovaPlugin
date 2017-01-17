@@ -37,8 +37,8 @@ CoordinatedThaliTape.prototype.defaults = objectAssign(
   {},
   CoordinatedThaliTape.prototype.defaults,
   {
-    emitRetryCount:   20,
-    emitRetryTimeout: 1000
+    emitRetryCount:   100,
+    emitRetryTimeout: 2000
   }
 );
 

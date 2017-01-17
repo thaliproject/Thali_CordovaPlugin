@@ -123,18 +123,49 @@ function getMessageAndThen(t, socket, messageToReceive, cb) {
 function startAndGetConnection(t, server, onConnectSuccess, onConnectFailure) {
   var connecting = false;
   thaliMobileNativeTestUtils.startAndListen(t, server, function (peers) {
-    logger.info('Received peerAvailabilityChanged with peers: ' +
-      JSON.stringify(peers)
+    logger.info(
+      'Received peerAvailabilityChanged with peers: ' + JSON.stringify(peers)
     );
     peers.forEach(function (peer) {
       if (peer.peerAvailable && !connecting) {
         connecting = true;
-        var RETRIES = 10;
-        thaliMobileNativeTestUtils
-          .connectToPeer(peer, RETRIES, onConnectSuccess, onConnectFailure);
+        thaliMobileNativeTestUtils.connectToPeer(peer)
+          .then(function (connection) {
+            onConnectSuccess(null, connection, peer);
+          })
+          .catch(function (error) {
+            onConnectFailure(error, null, peer);
+          });
       }
     });
   });
+}
+
+function reconnectToPeerAfterClose(t, peer, port, connectionHandler) {
+  var connection;
+  return new Promise(function (resolve, reject) {
+    connection = net.connect(port, function () {
+      connectionHandler.call(null, connection);
+    });
+
+    connection.once('error', function (error) {
+      t.ok(error, 'We got an error which is what we wanted');
+      thaliMobileNativeTestUtils.connectToPeer(peer)
+        .then(resolve).catch(reject);
+    });
+  })
+    .then(function () {
+      t.end();
+    })
+    .catch(function (error) {
+      t.fail('We should be able to reconnect, error: \'%s\'', String(error));
+      t.end();
+    })
+    .then(function () {
+      if (connection) {
+        connection.destroy();
+      }
+    });
 }
 
 function killSkeleton(t, createServerWriteSuccessHandler,
@@ -207,52 +238,39 @@ function killRemote(t, end) {
     function () {},
     function (connection, testMessage, closeMessage, peer) {
       // Confirm that nobody is listening on the port
-      var secondConnectionToListeningPort =
-        net.connect(connection.listeningPort, function () {
+      reconnectToPeerAfterClose(
+        t, peer, connection.listeningPort,
+        function (connection) {
           t.fail('The port should be closed');
           t.end();
-        });
-      secondConnectionToListeningPort.on('error', function (err) {
-        t.ok(err, 'We got an error which is what we wanted');
-        thaliMobileNativeTestUtils.connectToPeer(
-          peer, 1,
-          function (err) {
-            t.notOk(err, 'We should be able to reconnect');
-            t.end();
-          },
-          function (err) {
-            t.fail('We should be able to reconnect ' + err);
-          }
-        );
-      });
+        }
+      );
     });
 }
 
-test('#startUpdateAdvertisingAndListening - ending remote peers connection ' +
-'kills the local connection',
+test(
+  '#startUpdateAdvertisingAndListening - ending remote peers connection ' +
+  'kills the local connection',
   function () {
-    // #1231 & #1374
-    // FIXME: requires connection retries
-    return true;
-    // return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
-    //   !platform.isAndroid;
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
+      !platform.isAndroid;
   },
   function (t) {
     killRemote(t, true);
-  });
+  }
+);
 
-test('#startUpdateAdvertisingAndListening - destroying remote peers ' +
-'connection kills the local connection',
+test(
+  '#startUpdateAdvertisingAndListening - destroying remote peers ' +
+  'connection kills the local connection',
   function () {
-    // #1231 & #1374
-    // FIXME: requires connection retries
-    return true;
-    // return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
-    //   !platform.isAndroid;
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
+      !platform.isAndroid;
   },
   function (t) {
     killRemote(t, false);
-  });
+  }
+);
 
 function killLocal(t, end) {
   // pretendLocalMux ---> listeningPort ---> remoteServerNativeListener --->
@@ -267,48 +285,26 @@ function killLocal(t, end) {
     },
     function (connection, testMessage, closeMessage, peer) {
       // Confirm that nobody is listening on the port
-      var secondConnectionToListeningPort =
-        net.connect(connection.listeningPort, function () {
+      reconnectToPeerAfterClose(
+        t, peer, connection.listeningPort,
+        function (connection) {
           // In this test there is a race condition where it's possible for us
           // to connect before the listener host doesn't know it should be
           // dead yet. If that happens then we shouldn't be able to send
           // any data.
-          secondConnectionToListeningPort.write(testMessage);
-          getMessageAndThen(t, secondConnectionToListeningPort, closeMessage,
+          connection.write(testMessage);
+          getMessageAndThen(t, connection, closeMessage,
             function () {
               t.fail('We should never have gotten the second message');
               t.end();
             });
-        });
-
-      new Promise(function (resolve, reject) {
-        secondConnectionToListeningPort.on('error', function (err) {
-          t.ok(err, 'We got an error which is what we wanted');
-          thaliMobileNativeTestUtils.connectToPeer(
-            peer, 1,
-            function (err) {
-              resolve(err);
-            },
-            function (err) {
-              reject(err);
-            }
-          );
-        });
-        secondConnectionToListeningPort.on('close', function () {
-          resolve();
-        });
-      })
-        .then(function (err) {
-          t.notOk(err, 'We should be able to reconnect');
-          t.end();
-        })
-        .catch(function (err) {
-          t.fail('We should be able to reconnect' + err);
-        });
+        }
+      );
     });
 }
 
-test('#startUpdateAdvertisingAndListening - destroying the local connection ' +
+test(
+  '#startUpdateAdvertisingAndListening - destroying the local connection ' +
   'kills the connection to the remote peer',
   function () {
     return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
@@ -316,9 +312,11 @@ test('#startUpdateAdvertisingAndListening - destroying the local connection ' +
   },
   function (t) {
     killLocal(t, false);
-  });
+  }
+);
 
-test('#startUpdateAdvertisingAndListening - ending the local connection ' +
+test(
+  '#startUpdateAdvertisingAndListening - ending the local connection ' +
   'kills the connection to the remote peer',
   function () {
     return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
@@ -326,4 +324,5 @@ test('#startUpdateAdvertisingAndListening - ending the local connection ' +
   },
   function (t) {
     killLocal(t, true);
-  });
+  }
+);

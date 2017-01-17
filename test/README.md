@@ -187,6 +187,10 @@ $ jx npm run test-meta
 $ jx npm run test-coordinated
 ```
 
+You can change the order of the tests via `"preferredOrder"` option in
+Thali_CordovaPlugin/test/www/jxcore/config.json. Unlisted tests are sorted
+alphabetically and added to the end of the list.
+
 Some test files will also happily run stand-alone so you can run a test directly
 (e.g. `jx runTests.js bv_tests/testTests.js`)
 thus allowing you to easily run and debug individual tests.
@@ -208,7 +212,7 @@ starting the coordinated test from the command line but passing in the parameter
 it runs with the assumption that one will then run `jx UnitTest_app.js` from
 inside an IDE to debug.
 
-By default tests are running with mocked android native API and with WiFi
+By default tests are running with mocked android native API and with native
 network type. It is possible to change it via `--networkType=<wifi|both|native>`
 and `--platform=<ios|android>` parameters, for example:
 

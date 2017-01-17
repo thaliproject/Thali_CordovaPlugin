@@ -765,6 +765,11 @@ MobileCallInstance.prototype.multiConnect =
       return multiConnectResolvedCallbackHandler(syncValue, 'Illegal peerID');
     }
 
+    if (typeof syncValue !== 'string') {
+      callback(null);
+      return multiConnectResolvedCallbackHandler(syncValue, 'Bad parameters');
+    }
+
     // The immediate return just says we got the request.
     callback(null);
     return this._connect(peerIdentifier, function (error, response) {
@@ -919,16 +924,23 @@ var setupListeners = function (thaliWifiInfrastructure) {
       }
 
       var peerAvailable = !!wifiPeer.hostAddress;
+      var oldPeer = peerAvailabilities[wifiPeer.peerIdentifier];
+      var isSamePeer = peerAvailable && oldPeer &&
+                       oldPeer.generation === wifiPeer.generation;
+
       if (peerAvailable) {
         peerAvailabilities[wifiPeer.peerIdentifier] = wifiPeer;
       } else {
         delete peerAvailabilities[wifiPeer.peerIdentifier];
       }
-      peerAvailabilityChangedCallback([{
-        peerIdentifier: wifiPeer.peerIdentifier,
-        peerAvailable: peerAvailable,
-        generation: wifiPeer.generation
-      }]);
+
+      if (!isSamePeer) {
+        peerAvailabilityChangedCallback([{
+          peerIdentifier: wifiPeer.peerIdentifier,
+          peerAvailable: peerAvailable,
+          generation: wifiPeer.generation
+        }]);
+      }
     }
   );
   thaliWifiInfrastructure.on(
