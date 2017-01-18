@@ -133,23 +133,23 @@ function androidConnectToPeer(peer, quitSignal) {
   });
 }
 
-function MultiConnectEmitter () {
-  EventEmitter.call(module.exports.multiConnectEmitter);
+function createMultiConnectEmitter() {
+  var emitter = new EventEmitter();
   ThaliMobileNativeWrapper.emitter.on('_multiConnectResolved',
     function (syncValue, error, listeningPort) {
-      module.exports.multiConnectEmitter
-        .emit('multiConnectResolved', syncValue, error, listeningPort);
-    });
+      emitter.emit('multiConnectResolved', syncValue, error, listeningPort);
+    }
+  );
   ThaliMobileNativeWrapper.emitter.on('_multiConnectConnectionFailure',
     function (peerIdentifier, error) {
-      module.exports.multiConnectEmitter
-        .emit('multiConnectConnectionFailure', peerIdentifier, error);
-    });
+      emitter.emit('multiConnectConnectionFailure', peerIdentifier, error);
+    }
+  );
+  return emitter;
 }
 
-inherits(MultiConnectEmitter, EventEmitter);
-
-module.exports.multiConnectEmitter = new MultiConnectEmitter();
+var multiConnectEmitter = createMultiConnectEmitter();
+module.exports.multiConnectEmitter = multiConnectEmitter;
 
 function iOSConnectToPeer(peer, quitSignal) {
   var originalSyncValue = randomString.generate();
