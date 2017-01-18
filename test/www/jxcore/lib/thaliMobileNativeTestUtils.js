@@ -1,6 +1,6 @@
 'use strict';
 
-var util = require('util').format;
+var format = require('util').format;
 
 var platform = require('thali/NextGeneration/utils/platform');
 var logger = require('../lib/testLogger')('thaliMobileNativeTestUtils');
@@ -191,6 +191,10 @@ function iOSConnectToPeer(peer, quitSignal) {
     };
 
     multiConnectEmitter.on('multiConnectResolved', multiConnectHandler);
+    logger.debug(format(
+      'Issuing multiConnect for %s (syncValue: %s)',
+      peer.peerIdentifier, originalSyncValue
+    ));
     Mobile('multiConnect')
       .callNative(peer.peerIdentifier, originalSyncValue, function (error) {
         logger.debug('Got \'multiConnect\' callback');
