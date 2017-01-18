@@ -363,8 +363,9 @@ test('Can shift large amounts of data', function (t) {
     var client = null;
 
     // We're happy here if we make a connection to anyone
-    logger.info(connection);
+    logger.info('Connection info: ' + JSON.stringify(connection));
     client = net.connect(connection.listeningPort, function () {
+      logger.info('Connected to the ' + connection.listeningPort);
       shiftData(client);
     });
   }
