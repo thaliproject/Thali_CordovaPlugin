@@ -1830,6 +1830,10 @@ test('network changes not emitted in stopped state',
   });
 
 test('calls correct starts when network changes',
+  function () {
+    // iOS does not support disabling/enabling radios
+    return platform.isIOS;
+  },
   function (t) {
     var isWifiEnabled =
       global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
