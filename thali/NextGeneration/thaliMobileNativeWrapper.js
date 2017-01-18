@@ -657,10 +657,14 @@ module.exports._multiConnect = function (peerIdentifier) {
   return gPromiseQueue.enqueue(function (resolve, reject) {
     var originalSyncValue = String(multiConnectCounter);
     multiConnectCounter++;
+    logger.debug('Issuing multiConnect for %s', peerIdentifier);
 
     Mobile('multiConnect')
     .callNative(peerIdentifier, originalSyncValue, function (error) {
       if (error) {
+        logger.error(
+          'multiConnect for %s failed with %s', peerIdentifier, error
+        );
         return reject(new Error(error));
       }
 
@@ -1225,6 +1229,11 @@ module.exports._registerToNative = function () {
 
   registerToNative('multiConnectResolved',
     function (syncValue, error, portNumber) {
+      logger.debug('multiConnectResolved: %s', JSON.stringify({
+        syncValue: syncValue,
+        error: error,
+        portNumber: portNumber,
+      }));
       module.exports.emitter.emit(
         '_multiConnectResolved',
         syncValue, error, portNumber);
