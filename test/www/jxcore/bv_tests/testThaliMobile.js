@@ -43,6 +43,7 @@ var test = tape({
   teardownTimeout:  5 * 60 * 1000
 });
 
+
 var testIdempotentFunction = function (t, functionName) {
   ThaliMobile.start(express.Router())
   .then(function () {
@@ -1839,53 +1840,56 @@ test('calls correct starts when network changes',
       global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
       global.NETWORK_TYPE === ThaliMobile.networkTypes.BOTH;
 
-    var listeningSpy = null;
-    var advertisingSpy = null;
-
-    function networkChangedHandler (networkChangedValue) {
-      if (networkChangedValue.bssidName || networkChangedValue.ssidName) {
-        t.fail('wifi network should become disabled');
-        t.end();
-        return;
-      }
-      ThaliMobileNativeWrapper.emitter
-        .removeListener('networkChangedNonTCP', networkChangedHandler);
-
-      ThaliMobile.startListeningForAdvertisements()
-        .then(function (combinedResult) {
-          if (isWifiEnabled) {
-            t.equals(combinedResult.wifiResult.message,
-              'Radio Turned Off', 'specific error expected');
-          }
-          return ThaliMobile.startUpdateAdvertisingAndListening();
-        })
-        .then(function (combinedResult) {
-          if (isWifiEnabled) {
-            t.equals(combinedResult.wifiResult.message,
-              'Radio Turned Off', 'specific error expected');
-          }
-          listeningSpy = sinon.spy(ThaliMobile,
-            'startListeningForAdvertisements');
-          advertisingSpy = sinon.spy(ThaliMobile,
-            'startUpdateAdvertisingAndListening');
-          return testUtils.ensureWifi(true);
-        })
-        .then(function () {
-          t.equals(listeningSpy.callCount, 1,
-            'startListeningForAdvertisements should have been called');
-          t.equals(advertisingSpy.callCount, 1,
-            'startUpdateAdvertisingAndListening should have been called');
-          ThaliMobile.startListeningForAdvertisements.restore();
-          ThaliMobile.startUpdateAdvertisingAndListening.restore();
-          t.end();
-        });
-    };
+    var listeningSpy =
+      sinon.spy(ThaliMobile, '_startListeningForAdvertisements');
+    var advertisingSpy =
+      sinon.spy(ThaliMobile, '_startUpdateAdvertisingAndListening');
 
     ThaliMobile.start(express.Router())
       .then(function () {
-        ThaliMobileNativeWrapper.emitter
-          .once('networkChangedNonTCP', networkChangedHandler);
-        testUtils.toggleWifi(false);
+        return testUtils.ensureWifi(false);
+      })
+      .then(function () {
+        return ThaliMobile.startListeningForAdvertisements();
+      })
+      .then(function (combinedResult) {
+        if (isWifiEnabled) {
+          t.equals(combinedResult.wifiResult.message,
+            'Radio Turned Off', 'specific error expected');
+        }
+        return ThaliMobile.startUpdateAdvertisingAndListening();
+      })
+      .then(function (combinedResult) {
+        if (isWifiEnabled) {
+          t.equals(combinedResult.wifiResult.message,
+            'Radio Turned Off', 'specific error expected');
+        }
+
+        listeningSpy.reset();
+        advertisingSpy.reset();
+
+        return testUtils.ensureWifi(true);
+      })
+      .then(function () {
+        return ThaliMobile.getPromiseQueue().enqueue(function (resolve) {
+          // Real device can emit 2 network changed events: the first one with
+          // wifi:on and without bssid, the second one with wifi:on and with
+          // bssid and ssid. It may be implementation and environment dependant
+          // but we can assume it was emitted at least once
+          t.ok(listeningSpy.called, '_startListeningForAdvertisements should ' +
+            'have been called at least once');
+          t.ok(advertisingSpy.called, '_startUpdateAdvertisingAndListening ' +
+            'should have been called at least once');
+          resolve();
+        });
+      })
+      .catch(function (err) {
+        t.fail(err);
+      })
+      .then(function () {
+        listeningSpy.restore();
+        advertisingSpy.restore();
+        t.end();
       });
   }
 );
