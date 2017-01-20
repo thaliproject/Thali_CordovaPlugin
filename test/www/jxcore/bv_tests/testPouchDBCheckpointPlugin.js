@@ -5,6 +5,8 @@ var testUtils = require('../lib/testUtils');
 var sinon = require('sinon');
 var randomString = require('randomstring');
 
+var logger = require('../lib/testLogger.js')('testPouchDBCheckpoint');
+
 var PouchDB = testUtils.getLevelDownPouchDb()
   .plugin(require('pouchdb-size'))
   .plugin(require('thali/NextGeneration/utils/pouchDBCheckpointsPlugin'));
@@ -125,4 +127,106 @@ test('Call of onCheckpointReached handler on multiple db changes ' +
         .catch(function (error) {
           t.end(error);
         });
+});
+
+test('Can safely destroy db in the middle of the checkpoint delay interval',
+  function (t) {
+    var CHECKPOINT_DELAY = 100;
+
+    var customDb = new PouchDB(testUtils.getRandomPouchDBName(), {
+      checkpoint: 100,
+      checkpointDelay: CHECKPOINT_DELAY
+    });
+
+    var checkpointCallbackSpy = sinon.spy();
+    customDb.onCheckpointReached(checkpointCallbackSpy);
+
+    var dbDestroyed = false;
+
+    var changes = customDb.changes({ live: true, since: 'now' })
+      .on('change', function () {
+        // At this point checkpoint plugin already scheduled internal
+        // checkDBSize function to be called after `checkpointDelay` interval.
+        // We are going to destroy database before this function actually
+        // called.
+        var start = Date.now();
+        customDb.destroy()
+          .then(function () {
+            dbDestroyed = true;
+            var destroyTime = Date.now() - start;
+            if (destroyTime >= CHECKPOINT_DELAY) {
+              logger.warn('Destroying database takes too long. Try to ' +
+                'increase CHECKPOINT_DELAY for this test');
+            }
+
+            // wait delay interval to make sure that checkpoint callback is not
+            // called
+            setTimeout(end, CHECKPOINT_DELAY);
+          })
+          .catch(endWithError);
+      });
+
+    customDb.put(new Doc()).catch(endWithError);
+
+    function endWithError (error) {
+      end(error || new Error('Unknown error'));
+    }
+
+    function end (error) {
+      t.equal(checkpointCallbackSpy.callCount, 0,
+        'checkpoint callback should not be called');
+      t.ok(dbDestroyed, 'db should be destroyed');
+      changes.cancel();
+      t.end(error);
+    }
+  }
+);
+
+test('Can safely destroy db in the middle of its size calculating', function (t) {
+  var customDb = new PouchDB(testUtils.getRandomPouchDBName(), {
+    checkpoint: 100,
+  });
+
+  var checkpointCallbackSpy = sinon.spy();
+  customDb.onCheckpointReached(checkpointCallbackSpy);
+
+  var dbDestroyed = false;
+
+  var originalGetDiskSize = customDb.getDiskSize;
+  customDb.getDiskSize = function () {
+    var self = this;
+    var args = arguments;
+
+    var result = customDb.destroy()
+      .then(function () {
+        dbDestroyed = true;
+      })
+      .catch(endWithError)
+      .then(function () {
+        return originalGetDiskSize.call(self, args);
+      });
+
+    result.catch(function () {
+      return; // ignore all errors
+    }).then(function () {
+      // schedule end as a macrotask so it is performed after all promise chains
+      // are processed
+      setImmediate(end);
+    });
+
+    return result;
+  };
+
+  customDb.put(new Doc()).catch(endWithError);
+
+  function endWithError (error) {
+    end(error || new Error('Unknown error'));
+  }
+
+  function end (error) {
+    t.equal(checkpointCallbackSpy.callCount, 0,
+      'checkpoint callback should not be called');
+    t.ok(dbDestroyed, 'db should be destroyed');
+    t.end(error);
+  }
 });

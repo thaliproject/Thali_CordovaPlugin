@@ -1,11 +1,11 @@
 'use strict';
 
-var Promise = require('lie');
+var throttle = require('lodash.throttle');
 var logger = require('../../ThaliLogger')('pouchDBCheckpointsPlugin');
 var makeAsync = require('./common').makeAsync;
 
 module.exports.onCheckpointReached = function (handler) {
-  var db = this;
+  var db = this; // eslint-disable-line consistent-this
   var plugin = db.__checkpointPlugin;
 
   if (!plugin) {
@@ -17,7 +17,7 @@ module.exports.onCheckpointReached = function (handler) {
 
 var DEFAULT_DELAY = 200;
 
-var CheckpointPlugin = function (_db) {
+function CheckpointPlugin (_db) {
   // Private data
   var db = _db;
   var checkpoint = db.__opts.checkpoint;
@@ -27,29 +27,25 @@ var CheckpointPlugin = function (_db) {
 
   // Private methods
   function checkDBSize () {
-    if (destroyed) {
-      logger.warn('Couldn\'t check db size after destroy');
-      return Promise.resolve();
-    }
-
-    return db.info()
-      .then(function (response) {
-        if (!response) return;
-
-        // We want to call 'getDiskSize' directly without ignoring errors.
-        // https://github.com/pouchdb/pouchdb-size/issues/22
-        return db.getDiskSize()
-          .then(function (diskSize) {
-            // Handlers should be called only once
-            // after the first reaching of a checkpoint.
-            if (diskSize >= checkpoint) {
-              handlers.forEach(function (handler) {
-                handler(checkpoint);
-              });
-            }
+    // We want to call 'getDiskSize' directly without ignoring errors.
+    // https://github.com/pouchdb/pouchdb-size/issues/22
+    return db.getDiskSize()
+      .then(function (diskSize) {
+        // Handlers should be called only once
+        // after the first reaching of a checkpoint.
+        if (diskSize >= checkpoint) {
+          handlers.forEach(function (handler) {
+            handler(checkpoint);
           });
+        }
       })
       .catch(function (error) {
+        if (destroyed) {
+          // ignore error if db has been destroyed
+          logger.debug('Database has been destroyed in the middle of the ' +
+            'size calculating');
+          return;
+        }
         logger.error(
           'Error while fetching db info: \'%s\', stack: \'%s\'',
           String(error), error.stack
@@ -63,9 +59,13 @@ var CheckpointPlugin = function (_db) {
     if (!db.getDiskSize) {
       throw new Error(
         'This plugin depends on pouchdb-size plugin. ' +
-        'Please add pouchdb-size plugin befor this one.'
+        'Please add pouchdb-size plugin before this one.'
       );
     }
+
+    var checkDBSizeThrottled = throttle(checkDBSize, delay, {
+      leading: false
+    });
 
     var changes = db.changes({
       live: true,
@@ -79,10 +79,11 @@ var CheckpointPlugin = function (_db) {
         changes.cancel();
         db.emit('error', error);
       })
-      .on('change', executeOnce(checkDBSize, delay));
+      .on('change', checkDBSizeThrottled);
 
     db.on('destroyed', function () {
       destroyed = true;
+      checkDBSizeThrottled.cancel();
       changes.cancel();
     });
   }
@@ -96,18 +97,3 @@ var CheckpointPlugin = function (_db) {
 
   return new CheckpointPlugin();
 };
-
-var executeOnce = function (fn, delay) {
-  var timeout = null;
-  return function () {
-    var self = this;
-    var args = arguments;
-    if (!timeout) {
-      timeout = setTimeout(function () {
-        fn.apply(self, args);
-        clearTimeout(timeout);
-        timeout = null;
-      }, delay);
-    }
-  }
-}
