@@ -259,6 +259,8 @@ function killRemote(t, end) {
     });
 }
 
+for (var i = 0; i < 100; i++) {
+
 test(
   '#startUpdateAdvertisingAndListening - ending remote peers connection ' +
   'kills the local connection',
@@ -271,6 +273,7 @@ test(
   }
 );
 
+
 test(
   '#startUpdateAdvertisingAndListening - destroying remote peers ' +
   'connection kills the local connection',
@@ -282,6 +285,8 @@ test(
     killRemote(t, false);
   }
 );
+
+}
 
 function killLocal(t, end) {
   // pretendLocalMux ---> listeningPort ---> remoteServerNativeListener --->
