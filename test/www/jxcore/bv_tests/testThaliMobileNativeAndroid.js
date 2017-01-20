@@ -144,7 +144,9 @@ function startAndGetConnection(t, server, onConnectSuccess, onConnectFailure) {
 function reconnectToPeerAfterClose(t, peer, port, connectionHandler) {
   var connection;
   return new Promise(function (resolve, reject) {
+    logger.debug('Reconnecting to the port ' + port + ' after close event');
     connection = net.connect(port, function () {
+      logger.debug('Successfully reconnected to the port ' + port);
       connectionHandler.call(null, connection);
     });
 
@@ -176,7 +178,9 @@ function killSkeleton(t, createServerWriteSuccessHandler,
 
   var pretendLocalMux = net.createServer(function (socket) {
     getMessageAndThen(t, socket, testMessage, function () {
+      logger.debug('Mux received testMessage. Sending closeMessage back');
       socket.write(closeMessage, function () {
+        logger.debug('closeMessage has been sent');
         createServerWriteSuccessHandler(socket);
       });
     });
@@ -197,10 +201,13 @@ function killSkeleton(t, createServerWriteSuccessHandler,
     var connectToListeningPort = net.connect(connection.listeningPort,
       function () {
         logger.info('connection to listening port is made');
-        connectToListeningPort.write(testMessage);
+        connectToListeningPort.write(testMessage, function () {
+          logger.debug('testMessage has been sent');
+        });
       });
 
     getMessageAndThen(t, connectToListeningPort, closeMessage, function () {
+      logger.debug('Client received closeMessage');
       gotCloseMessage = true;
       getMessageAndThenHandler(connectToListeningPort);
     });
