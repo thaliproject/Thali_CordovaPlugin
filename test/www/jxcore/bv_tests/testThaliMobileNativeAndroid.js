@@ -211,8 +211,12 @@ function killSkeleton(t, createServerWriteSuccessHandler,
 
     connectToListeningPort.on('close', function () {
       t.ok(gotCloseMessage, 'We got the close message and we are closed');
-      connectToListeningPortCloseHandler(connection, testMessage,
-        closeMessage, peer);
+      // Call close handler asynchronously to give mock proxy sockets a time
+      // to shut down completely.
+      setImmediate(function () {
+        connectToListeningPortCloseHandler(connection, testMessage,
+          closeMessage, peer);
+      });
     });
   }
 
