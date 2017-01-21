@@ -283,7 +283,16 @@ function startListeningForAdvertisements () {
   );
   return start();
 }
-module.exports._startListeningForAdvertisements = startListeningForAdvertisements;
+
+/**
+ * Exported for testing purposes
+ * @private
+ *
+ * TODO: remove this export and instead check thaliWifiInfrastructure and
+ * thaliMobileNativeWrapper start methods in tests
+ */
+module.exports._startListeningForAdvertisements =
+  startListeningForAdvertisements;
 
 /**
  * This method calls the underlying startListeningForAdvertisements
@@ -351,7 +360,16 @@ function startUpdateAdvertisingAndListening () {
   );
   return start();
 }
-module.exports._startUpdateAdvertisingAndListening = startUpdateAdvertisingAndListening;
+
+/**
+ * Exported for testing purposes
+ * @private
+ *
+ * TODO: remove this export and instead check thaliWifiInfrastructure and
+ * thaliMobileNativeWrapper start methods in tests
+ */
+module.exports._startUpdateAdvertisingAndListening =
+  startUpdateAdvertisingAndListening;
 
 /**
  * This method calls the underlying startUpdateAdvertisingAndListening
@@ -1438,7 +1456,8 @@ function handleNetworkChanged (networkChangedValue) {
     }
     if (thaliMobileStates.advertising) {
       promiseQueue.enqueueAtTop(function (resolve, reject) {
-        module.exports._startUpdateAdvertisingAndListening().then(resolve, reject);
+        module.exports._startUpdateAdvertisingAndListening()
+          .then(resolve, reject);
       }).then(function (combinedResult) {
         checkErrors('startUpdateAdvertisingAndListening', combinedResult);
       });

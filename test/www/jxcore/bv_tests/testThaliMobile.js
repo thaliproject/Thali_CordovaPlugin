@@ -1364,7 +1364,7 @@ function (t) {
     });
 });
 
-function checkPeerHostInfoProperties(t, peerHostInfo, peer) {
+function validatePeerHostInfo (t, peerHostInfo) {
   var expectedKeys = ['hostAddress', 'portNumber', 'suggestedTCPTimeout'];
   var actualKeys = Object.keys(peerHostInfo);
   expectedKeys.sort();
@@ -1393,7 +1393,7 @@ test('#getPeerHostInfo - returns discovered cached native peer (BLUETOOTH)',
 
     ThaliMobile.getPeerHostInfo(peer.peerIdentifier, connectionType)
     .then(function (peerHostInfo) {
-      checkPeerHostInfoProperties(t, peerHostInfo, peer);
+      validatePeerHostInfo(t, peerHostInfo);
       t.equal(peerHostInfo.hostAddress, '127.0.0.1', 'the same hostAddress');
       t.equal(peerHostInfo.portNumber, peer.portNumber, 'the same portNumber');
       t.end();
@@ -1435,7 +1435,7 @@ test('#getPeerHostInfo - returns discovered cached native peer and calls ' +
 
     ThaliMobile.getPeerHostInfo(peer.peerIdentifier, connectionType)
     .then(function (peerHostInfo) {
-      checkPeerHostInfoProperties(t, peerHostInfo, peer);
+      validatePeerHostInfo(t, peerHostInfo);
       t.equal(peerHostInfo.hostAddress, '127.0.0.1', 'the same hostAddress');
       t.equal(peerHostInfo.portNumber, resolvedPortNumber, 'the same portNumber');
     })
@@ -1463,7 +1463,7 @@ test('#getPeerHostInfo - returns discovered cached wifi peer',
 
     ThaliMobile.getPeerHostInfo(peer.peerIdentifier, connectionType)
     .then(function (peerHostInfo) {
-      checkPeerHostInfoProperties(t, peerHostInfo, peer);
+      validatePeerHostInfo(t, peerHostInfo);
       t.equal(peerHostInfo.hostAddress, peer.hostAddress,
         'the same hostAddress');
       t.equal(peerHostInfo.portNumber, peer.portNumber, 'the same portNumber');
@@ -1593,7 +1593,7 @@ test('network changes emitted correctly',
               // Phone is still trying to connect to wifi.
               // We are waiting for 'ssidName' and 'bssidName'.
             }
-          }
+          };
           ThaliMobile.emitter.on('networkChanged', networkChangedHandler);
           testUtils.toggleWifi(true);
         })
@@ -1762,7 +1762,7 @@ function(t) {
 
   var peerAvailabilityChangedHandler = function (peer) {
     ++callCounter;
-    switch(callCounter) {
+    switch (callCounter) {
       case 1: {
         t.equal(peer.peerIdentifier, somePeerIdentifier, 'peerIds match');
         t.equal(peer.peerAvailable, true, 'peer is available');
@@ -2153,20 +2153,20 @@ test('can get data from all participants',
         return testUtils.get(
           peerHostInfo.hostAddress, peerHostInfo.portNumber,
           uuidPath, pskIdentity, pskKey
-        ).catch(function (err) {
+        ).catch(function () {
           // Ignore request failures. After peer listener recreating we are
           // getting new peerAvailabilityChanged event and retrying this request
           return null;
         });
       })
-      .then(function (responseBody) {
-        if (responseBody === null) {
+      .then(function (uuid) {
+        if (uuid === null) {
           return;
         }
-        if (remainingParticipants[responseBody] !== participantState.notRunning) {
+        if (remainingParticipants[uuid] !== participantState.notRunning) {
           return Promise.resolve(true);
         }
-        remainingParticipants[responseBody] = participantState.finished;
+        remainingParticipants[uuid] = participantState.finished;
         var areWeDone = Object.getOwnPropertyNames(remainingParticipants)
           .every(
             function (participant) {
@@ -2174,8 +2174,8 @@ test('can get data from all participants',
                 participantState.finished;
             });
         if (areWeDone) {
-            t.pass('received all uuids');
-            done();
+          t.pass('received all uuids');
+          done();
         }
       })
       .catch(function (error) {
@@ -2219,7 +2219,7 @@ function numberOfParallelRequests(t, hostAddress, portNumber, echoPath,
   logger.debug('Number of connections for hostAddress ' + hostAddress +
     ', portNumber ' + portNumber + ', is ' + numberOfConnections);
   var promises = [];
-  for(var i = 0; i < numberOfConnections; ++i) {
+  for (var i = 0; i < numberOfConnections; ++i) {
     promises.push(twoSerialRequests(t, hostAddress, portNumber, echoPath,
       pskIdentity, pskKey));
   }
@@ -2273,8 +2273,8 @@ function setUpRouter() {
 
 test('test for data corruption',
   function () {
-    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI
-      || !platform.isAndroid;
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
+      !platform.isAndroid;
   },
   function (t) {
     var router = setUpRouter();
@@ -2284,10 +2284,13 @@ test('test for data corruption',
     var promiseQueue = new PromiseQueue();
 
     // This timer purpose is to manually restart ThaliMobile every 60 seconds.
-    // Whole test timeout is set to 5 minutes, so there will be at most 4 restart attempts.
-    // Timer is used because of possible race condition when stopping and starting
-    // ThaliMobile every time error occurs, which led to test failure because exception was
-    // thrown.
+    // Whole test timeout is set to 5 minutes, so there will be at most 4
+    // restart attempts.
+    //
+    // Timer is used because of possible race condition when stopping and
+    // starting ThaliMobile every time error occurs, which led to test failure
+    // because exception was thrown.
+    //
     // This issue is tracked in #1719.
     var timer = setInterval(function() {
       logger.debug('Restarting test for data corruption');
@@ -2297,7 +2300,7 @@ test('test for data corruption',
       });
     }, 60 * 1000);
 
-    var runTestFunction = function () {
+    function runTestFunction () {
       t.participants.forEach(function (participant) {
         if (participant.uuid === tape.uuid) {
           return;
@@ -2313,11 +2316,11 @@ test('test for data corruption',
             done();
             clearInterval(timer);
           }
-        })
+        });
       });
-    };
+    }
 
-    var testFunction = function (peer) {
+    function testFunction (peer) {
       // Try to get data only from non-TCP peers so that the test
       // works the same way on desktop on CI where Wifi is blocked
       // between peers.
@@ -2382,7 +2385,8 @@ test('test for data corruption',
             areWeDone = Object.getOwnPropertyNames(participantsState)
               .every(
                 function (participant) {
-                  return participantsState[participant] ===  participantState.finished
+                  return participantsState[participant] ===
+                    participantState.finished;
                 });
 
             if (areWeDone) {
@@ -2391,24 +2395,29 @@ test('test for data corruption',
               return resolve(true);
             }
 
-            ThaliMobileNativeWrapper._getServersManager()
-              .terminateOutgoingConnection(peer.peerIdentifier, peer.portNumber);
+            var serversManager = ThaliMobileNativeWrapper._getServersManager();
+            serversManager.terminateOutgoingConnection(
+              peer.peerIdentifier,
+              peer.portNumber
+            );
 
-            // We have to give Android enough time to notice the killed connection
-            // and recycle everything
+            // We have to give Android enough time to notice the killed
+            // connection and recycle everything
             setTimeout(function () {
               return resolve(null);
             }, 1000);
           });
       });
-    };
+    }
 
     runTestFunction();
   }
  );
 
-test('Discovered peer should be removed if no availability updates ' +
-  'were received during availability timeout', function (t) {
+test(
+  'Discovered peer should be removed if no availability updates ' +
+  'were received during availability timeout',
+  function (t) {
     var peerIdentifier = 'urn:uuid:' + uuid.v4();
     var portNumber = 8080;
     var generation = 50;
@@ -2464,4 +2473,5 @@ test('Discovered peer should be removed if no availability updates ' +
     .catch(function (error) {
       finalizeTest(error);
     });
-});
+  }
+);
