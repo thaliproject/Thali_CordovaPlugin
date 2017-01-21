@@ -33,7 +33,6 @@
     ],
     "no-new": 2,
     "no-extra-semi": 2,
-    "no-extra-parens": 2,
     "no-use-before-define": [
       2,
       {

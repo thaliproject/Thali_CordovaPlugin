@@ -30,15 +30,14 @@ module.exports.getPromiseQueue = function () {
   return promiseQueue;
 };
 
-function promiseResultSuccessOrFailure (promise) {
-  return promise.then(function (success) {
-    return success;
-  }).catch(function (failure) {
-    // This turns the catch into a normal 'then' response so no matter
-    // what the promise outputs the result will always be a resolve
-    return failure;
-  });
-}
+var muteRejection = (function () {
+  function returnNull () { return null; }
+  function returnArg (arg) { return arg; }
+
+  return function muteRejection (promise) {
+    return promise.then(returnNull).catch(returnArg);
+  };
+}());
 
 function getCombinedResult (results) {
   return {
@@ -67,7 +66,7 @@ function getMethodIfExists (target, method) {
   }
   return function () {
     var args = arguments;
-    return promiseResultSuccessOrFailure(target[method].apply(target, args));
+    return muteRejection(target[method].apply(target, args));
   };
 }
 
@@ -1420,49 +1419,6 @@ function handleNetworkChanged (networkChangedValue) {
     // peers unavailable.
     changePeersUnavailable(connectionTypes.TCP_NATIVE);
   }
-
-  var radioEnabled =
-    networkChangedValue.wifi === 'on' ||
-    networkChangedValue.bluetooth === 'on' ||
-    networkChangedValue.bluetoothLowEnergy === 'on';
-
-  if (!radioEnabled) {
-    return;
-  }
-
-  // At least some radio was enabled so try to start whatever can be potentially
-  // started as soon as possible.
-  var enqueuedStart = promiseQueue.enqueueAtTop(function (resolve, reject) {
-    var args = thaliMobileStates.startArguments;
-    start(args.router, args.pskIdToSecret, args.networkType)
-      .then(resolve, reject);
-  });
-
-  promiseResultSuccessOrFailure(enqueuedStart).then(function () {
-    var checkErrors = function (operation, combinedResult) {
-      Object.keys(combinedResult).forEach(function (resultType) {
-        if (combinedResult[resultType] !== null) {
-          logger.info('Failed operation %s with error: ' +
-                      combinedResult[resultType], operation);
-        }
-      });
-    };
-    if (thaliMobileStates.listening) {
-      promiseQueue.enqueueAtTop(function (resolve, reject) {
-        module.exports._startListeningForAdvertisements().then(resolve, reject);
-      }).then(function (combinedResult) {
-        checkErrors('startListeningForAdvertisements', combinedResult);
-      });
-    }
-    if (thaliMobileStates.advertising) {
-      promiseQueue.enqueueAtTop(function (resolve, reject) {
-        module.exports._startUpdateAdvertisingAndListening()
-          .then(resolve, reject);
-      }).then(function (combinedResult) {
-        checkErrors('startUpdateAdvertisingAndListening', combinedResult);
-      });
-    }
-  });
 }
 
 function handleNetworkChangedNonTCP (networkChangedValue) {

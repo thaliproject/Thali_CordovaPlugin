@@ -43,12 +43,15 @@ test(
     }
 
     var wifiInfrastructure = new ThaliWifiInfrastructure();
-    var serverStartSpy = sinon.spy(wifiInfrastructure._server, 'start');
-    var serverStopSpy  = sinon.spy(wifiInfrastructure._server, 'stop');
+    var serverStartSpy =
+      sinon.spy(wifiInfrastructure._getSSDPServer(), 'start');
+    var serverStopSpy  =
+      sinon.spy(wifiInfrastructure._getSSDPServer(), 'stop');
 
     wifiInfrastructure.start(express.Router(), pskIdToSecret)
       .then(function () {
-        t.ok(wifiInfrastructure.states.started, 'should be in started state');
+        t.ok(wifiInfrastructure._getCurrentState().started,
+          'should be in started state');
       })
       .then(function () {
         return wifiInfrastructure.startUpdateAdvertisingAndListening();
@@ -73,7 +76,10 @@ test(
       })
       .then(function () {
         t.ok(serverStopSpy.calledTwice, 'server stop should be called twice');
-        t.ok(!wifiInfrastructure.states.started, 'should not be in started state');
+        t.ok(!wifiInfrastructure._getCurrentState().started,
+          'should not be in started state');
+        serverStartSpy.restore();
+        serverStopSpy.restore();
         t.end();
       });
   }

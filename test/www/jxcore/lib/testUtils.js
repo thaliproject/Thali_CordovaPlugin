@@ -18,10 +18,6 @@ var notificationBeacons = require('thali/NextGeneration/notification/thaliNotifi
 var express = require('express');
 var fs = require('fs-extra-promise');
 
-Promise.config({
-  cancellation: true
-});
-
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
 
@@ -59,55 +55,46 @@ function toggleWifi (value) {
       }
     });
   });
-};
+}
+
 module.exports.toggleWifi = toggleWifi;
 
-var ThaliMobile;
 var ensureNetwork = function (type, toggle, value, customCheck) {
-  if (!ThaliMobile) {
-    ThaliMobile = require('thali/NextGeneration/thaliMobile');
-  }
+  // We don't load thaliMobileNativeWrapper until after the tests have started
+  // running so we pick up the right version of mobile
+  var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 
   var valueString = value? 'on' : 'off';
   function check (networkStatus) {
-    return networkStatus[type] === valueString && (customCheck? customCheck(networkStatus) : true);
+    return (
+      networkStatus[type] === valueString &&
+      (customCheck ? customCheck(networkStatus) : true)
+    );
   }
 
-  return ThaliMobile.getNetworkStatus()
+  return thaliMobileNativeWrapper.getNonTCPNetworkStatus()
   .then(function (networkStatus) {
     if (!check(networkStatus)) {
 
       // We will wait until network status will reach required 'value'.
-      // We need to start ThaliMobile to receive 'networkChanged' event.
       // We can't use Mobile('networkChanged').registerToNative here because it
       // can replace existing listener.
-      var isStarted = ThaliMobile.isStarted();
-      return (ThaliMobile.isStarted() ? Promise.resolve() :
-          ThaliMobile.start(express.Router()))
-        .then(function () {
-          return new Promise(function (resolve) {
-            function networkChangedHandler (networkStatus) {
-              if (check(networkStatus)) {
-                ThaliMobile.emitter.removeListener('networkChanged',
-                  networkChangedHandler);
-                resolve();
-              } else {
-                logger.warn(
-                  'we are %s %s network, but it don\'t want to obey',
-                  value? 'enabling' : 'disabling', type
-                );
-              }
-            }
-            ThaliMobile.emitter.on('networkChanged', networkChangedHandler);
-            toggle(value);
-          });
-        })
-
-      .then(function () {
-        if (!isStarted) {
-          // We need to cleanup after our 'ThaliMobile.start'.
-          return ThaliMobile.stop();
+      return new Promise(function (resolve) {
+        function networkChangedHandler (networkStatus) {
+          if (check(networkStatus)) {
+            thaliMobileNativeWrapper.emitter
+              .removeListener('networkChangedNonTCP', networkChangedHandler);
+            resolve();
+          } else {
+            logger.warn(
+              'we are %s %s network, but it don\'t want to obey',
+              value? 'enabling' : 'disabling', type
+            );
+          }
         }
+        thaliMobileNativeWrapper.emitter
+          .on('networkChangedNonTCP', networkChangedHandler);
+        toggle(value);
       });
     }
   });
@@ -115,7 +102,10 @@ var ensureNetwork = function (type, toggle, value, customCheck) {
 
 module.exports.ensureWifi = function (value) {
   return ensureNetwork('wifi', toggleWifi, value, function (networkStatus) {
-    var isConnected = networkStatus.bssidName != null && networkStatus.ssidName != null;
+    var isConnected = (
+      networkStatus.bssidName != null &&
+      networkStatus.ssidName != null
+    );
     return value === isConnected;
   });
 };
@@ -256,6 +246,7 @@ module.exports.hasRequiredHardware = function () {
   });
 };
 
+var ThaliMobile;
 module.exports.enableRequiredHardware = function () {
   if (!ThaliMobile) {
     ThaliMobile = require('thali/NextGeneration/thaliMobile');

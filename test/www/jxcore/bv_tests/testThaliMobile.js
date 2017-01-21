@@ -25,6 +25,7 @@ var verifyCombinedResultSuccess = testUtils.verifyCombinedResultSuccess;
 
 var test = tape({
   setup: function (t) {
+    t.notOk(ThaliMobile.isStarted(), 'ThaliMobile should be stopped');
     t.end();
   },
   teardown: function (t) {
@@ -1678,70 +1679,6 @@ test('network changes not emitted in stopped state',
         t.end();
       });
   });
-
-test('calls correct starts when network changes',
-  function () {
-    // iOS does not support toggleWifi
-    return platform.isIOS;
-  },
-  function (t) {
-    var isWifiEnabled =
-      global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
-      global.NETWORK_TYPE === ThaliMobile.networkTypes.BOTH;
-
-    var listeningSpy =
-      sinon.spy(ThaliMobile, '_startListeningForAdvertisements');
-    var advertisingSpy =
-      sinon.spy(ThaliMobile, '_startUpdateAdvertisingAndListening');
-
-    ThaliMobile.start(express.Router())
-      .then(function () {
-        return testUtils.ensureWifi(false);
-      })
-      .then(function () {
-        return ThaliMobile.startListeningForAdvertisements();
-      })
-      .then(function (combinedResult) {
-        if (isWifiEnabled) {
-          t.equals(combinedResult.wifiResult.message,
-            'Radio Turned Off', 'specific error expected');
-        }
-        return ThaliMobile.startUpdateAdvertisingAndListening();
-      })
-      .then(function (combinedResult) {
-        if (isWifiEnabled) {
-          t.equals(combinedResult.wifiResult.message,
-            'Radio Turned Off', 'specific error expected');
-        }
-
-        listeningSpy.reset();
-        advertisingSpy.reset();
-
-        return testUtils.ensureWifi(true);
-      })
-      .then(function () {
-        return ThaliMobile.getPromiseQueue().enqueue(function (resolve) {
-          // Real device can emit 2 network changed events: the first one with
-          // wifi:on and without bssid, the second one with wifi:on and with
-          // bssid and ssid. It may be implementation and environment dependant
-          // but we can assume it was emitted at least once
-          t.ok(listeningSpy.called, '_startListeningForAdvertisements should ' +
-            'have been called at least once');
-          t.ok(advertisingSpy.called, '_startUpdateAdvertisingAndListening ' +
-            'should have been called at least once');
-          resolve();
-        });
-      })
-      .catch(function (err) {
-        t.fail(err);
-      })
-      .then(function () {
-        listeningSpy.restore();
-        advertisingSpy.restore();
-        t.end();
-      });
-  }
-);
 
 test('We properly fire peer unavailable and then available when ' +
 'connection fails',
