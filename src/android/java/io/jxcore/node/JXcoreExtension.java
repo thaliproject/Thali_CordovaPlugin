@@ -573,15 +573,13 @@ public class JXcoreExtension implements SurroundingStateObserver {
     public void notifyDiscoveryAdvertisingStateUpdateNonTcp(boolean isDiscoveryActive, boolean isAdvertisingActive) {
         JSONObject jsonObject = new JSONObject();
         boolean jsonObjectCreated = false;
-
         try {
-            jsonObject.put(EVENT_VALUE_DISCOVERY_ACTIVE, isDiscoveryActive);
-            jsonObject.put(EVENT_VALUE_ADVERTISING_ACTIVE, isAdvertisingActive);
+            putValueInJson(jsonObject, EVENT_VALUE_DISCOVERY_ACTIVE, isDiscoveryActive);
+            putValueInJson(jsonObject, EVENT_VALUE_ADVERTISING_ACTIVE, isAdvertisingActive);
             jsonObjectCreated = true;
         } catch (JSONException e) {
             Log.e(TAG, "notifyDiscoveryAdvertisingStateUpdateNonTcp: Failed to populate the JSON object: " + e.getMessage(), e);
         }
-
         if (jsonObjectCreated) {
             final String jsonObjectAsString = jsonObject.toString();
 
@@ -726,14 +724,12 @@ public class JXcoreExtension implements SurroundingStateObserver {
             + INCOMING_CONNECTION_FAILED_NOTIFICATION_MIN_INTERVAL_IN_MILLISECONDS) {
             JSONObject jsonObject = new JSONObject();
             boolean jsonObjectCreated = false;
-
             try {
-                jsonObject.put(EVENT_VALUE_PORT_NUMBER, portNumber);
+                putValueInJson(jsonObject, EVENT_VALUE_PORT_NUMBER, portNumber);
                 jsonObjectCreated = true;
             } catch (JSONException e) {
                 Log.e(TAG, "notifyIncomingConnectionToPortNumberFailed: Failed to populate the JSON object: " + e.getMessage(), e);
             }
-
             if (jsonObjectCreated) {
                 mLastTimeIncomingConnectionFailedNotificationWasFired = currentTime;
                 final String jsonObjectAsString = jsonObject.toString();
