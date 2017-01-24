@@ -1563,7 +1563,8 @@ test('network changes emitted correctly',
       .then(function () {
         return new Promise(function (resolve) {
           function networkChangedHandler (networkStatus) {
-            // TODO Android can send event with 'wifi': 'off' and without 'bssidName' and 'ssidName'.
+            // TODO Android can send event with 'wifi': 'off' and without
+            // 'bssidName' and 'ssidName'.
             // t.equals(networkStatus.wifi, 'off', 'wifi should be off');
             t.ok(networkStatus.bssidName == null, 'bssid should be null');
             t.ok(networkStatus.ssidName  == null, 'ssid should be null');
