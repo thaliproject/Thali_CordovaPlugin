@@ -760,14 +760,14 @@ MobileCallInstance.prototype.multiConnect =
       return callback('Platform does not support multiConnect');
     }
 
+    if (typeof syncValue !== 'string') {
+      callback('Bad parameters');
+      return;
+    }
+
     if (!uuidValidator(peerIdentifier)) {
       callback(null);
       return multiConnectResolvedCallbackHandler(syncValue, 'Illegal peerID');
-    }
-
-    if (typeof syncValue !== 'string') {
-      callback(null);
-      return multiConnectResolvedCallbackHandler(syncValue, 'Bad parameters');
     }
 
     // The immediate return just says we got the request.

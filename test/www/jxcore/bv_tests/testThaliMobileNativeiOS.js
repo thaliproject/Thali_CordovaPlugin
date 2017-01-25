@@ -122,23 +122,14 @@ test('multiConnect properly fails on legal but non-existent peerID',
 test('cannot call multiConnect with invalid syncValue',
   function (t) {
     var connectReturned = false;
-    var invalidSyncValue = 123;
-    thaliMobileNativeTestUtils.multiConnectEmitter
-      .on('multiConnectResolved', function (syncValue, error, listeningPort) {
-        t.ok(connectReturned, 'Should only get called after multiConnect ' +
-        'returned');
-        t.equal(invalidSyncValue, syncValue, 'SyncValue matches');
-        t.equal(error, 'Bad parameters', 'Got right error');
-        t.notOk(listeningPort, 'listeningPort is null');
-        t.end();
-      });
+    var invalidSyncValue = /I am not a string/;
     Mobile('startListeningForAdvertisements').callNative(function (err) {
       t.notOk(err, 'No error on starting');
       var peerId = nodeUuid.v4();
       Mobile('multiConnect').callNative(peerId, invalidSyncValue,
-        function (err) {
-          t.notOk(err, 'Got null as expected');
-          connectReturned = true;
+        function (error) {
+          t.equal(error, 'Bad parameters', 'Got right error');
+          t.end();
         });
     });
   });
