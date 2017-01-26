@@ -55,6 +55,140 @@ class BrowserRelayTests: XCTestCase {
   }
 
   // MARK: - Tests
+  func testMoveDataThrouhgRelayFromAdvertiserToBrowserUsingTCP() {
+    // Expectations
+    var browserNodeClientReceivedMessage: XCTestExpectation?
+    var MPCFBrowserFoundAdvertiser: XCTestExpectation?
+    var browserManagerConnected: XCTestExpectation?
+
+    // Given
+    // Start listening on fake node server (Advertiser's side)
+    let advertiserNodeMock = TCPServerMock(didAcceptConnection: { },
+                                           didReadData: { _ in},
+                                           didDisconnect: unexpectedSocketDisconnectHandler)
+    var advertiserNodeListenerPort: UInt16 = 0
+    do {
+      advertiserNodeListenerPort = try advertiserNodeMock.startListening(on: anyAvailalbePort)
+    } catch {
+      XCTFail("Can't start listening on fake node server")
+    }
+
+    // Prepare pair of advertiser and browser
+    MPCFBrowserFoundAdvertiser =
+      expectationWithDescription("Browser peer found Advertiser peer")
+
+    // Start listening for advertisements on Browser's side
+    let browserManager = BrowserManager(serviceType: randomlyGeneratedServiceType,
+                                        inputStreamReceiveTimeout: streamReceivedTimeout,
+                                        peerAvailabilityChanged: {
+                                          peerAvailability in
+
+                                          guard let peer = peerAvailability.first else {
+                                            XCTFail("Browser didn't find Advertiser peer")
+                                            return
+                                          }
+                                          XCTAssertTrue(peer.available)
+                                          MPCFBrowserFoundAdvertiser?.fulfill()
+    })
+    browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+
+    // Start advertising on Advertiser's side
+    let advertiserManager = AdvertiserManager(serviceType: randomlyGeneratedServiceType,
+                                              disposeAdvertiserTimeout: disposeTimeout)
+    advertiserManager.startUpdateAdvertisingAndListening(onPort: advertiserNodeListenerPort,
+                                                         errorHandler: unexpectedErrorHandler)
+
+    waitForExpectationsWithTimeout(browserFindPeerTimeout) {
+      error in
+      MPCFBrowserFoundAdvertiser = nil
+    }
+
+    // Create MCsession between browser and adveriser
+    // Then get TCP listener port from browser manager
+    guard let peerToConnect = browserManager.availablePeers.value.first else {
+      XCTFail("BrowserManager does not have available peers to connect")
+      return        }
+
+    // Connect method invocation
+    browserManagerConnected =
+      expectationWithDescription("BrowserManager is connected")
+
+    var browserNativeTCPListenerPort: UInt16 = 0
+    browserManager.connectToPeer(peerToConnect.uuid, syncValue: "0") {
+      syncValue, error, port in
+
+      guard let port = port else {
+        XCTFail("Port must not be nil")
+        return
+      }
+
+      browserNativeTCPListenerPort = port
+      browserManagerConnected?.fulfill()
+    }
+
+    waitForExpectationsWithTimeout(browserConnectTimeout) {
+      error in
+      browserManager.stopListeningForAdvertisements()
+      browserManagerConnected = nil
+    }
+
+    // Check if relay objectes are valid
+    guard
+      let browserRelayInfo: (uuid: String, relay: BrowserRelay) =
+        browserManager.activeRelays.value.first,
+      let advertiserRelayInfo: (uuid: String, relay: AdvertiserRelay) =
+        advertiserManager.activeRelays.value.first
+      else {
+        return
+    }
+
+    guard browserRelayInfo.uuid == advertiserRelayInfo.uuid else {
+      XCTFail("MPCF Connection is not valid")
+      return
+    }
+
+    XCTAssertEqual(browserRelayInfo.relay.virtualSocketsAmount,
+                   0,
+                   "BrowserRelay must not have active virtual sockets")
+
+    // Connect to browser's native TCP listener port
+    let browserNodeClientMock = TCPClientMock(didReadData: {
+                                                      [weak self] data in
+                                                      guard let strongSelf = self else { return }
+
+                                                      let receivedMessage = String(
+                                                        data: data,
+                                                        encoding: NSUTF8StringEncoding
+                                                      )
+
+                                                      XCTAssertEqual(strongSelf.randomMessage,
+                                                        receivedMessage,
+                                                        "Received message is wrong")
+
+                                                      browserNodeClientReceivedMessage?.fulfill()
+      },
+                                              didConnect: {},
+                                              didDisconnect: unexpectedDisconnectHandler)
+
+    browserNodeClientMock.connectToLocalHost(on: browserNativeTCPListenerPort,
+                                             errorHandler: unexpectedErrorHandler)
+
+    // When
+    // Send message from advertiser's node mock server to browser's node mock client
+    browserNodeClientReceivedMessage =
+      expectationWithDescription("Browser's mock node client received a message")
+    advertiserNodeMock.send(self.randomMessage)
+
+    // Then
+    waitForExpectationsWithTimeout(receiveMessageTimeout) {
+      error in
+      browserNodeClientReceivedMessage = nil
+    }
+
+    // Cleanup
+    advertiserManager.stopAdvertising()
+  }
+
   func testOpenRelayMethodReturnsTCPListenerPort() {
     // Expectations
     var TCPPortIsReturned: XCTestExpectation?
@@ -175,143 +309,5 @@ class BrowserRelayTests: XCTestCase {
       error in
       clientCantConnectToListener = nil
     }
-  }
-
-  func testMoveDataThrouhgRelayFromAdvertiserToBrowserUsingTCP() {
-    // Expectations
-    var browserNodeClientReceivedMessage: XCTestExpectation?
-    var MPCFBrowserFoundAdvertiser: XCTestExpectation?
-    var browserManagerConnected: XCTestExpectation?
-
-    // Given
-    // Start listening on fake node server (Advertiser's side)
-    let advertiserNodeMock = TCPServerMock(didAcceptConnection: { },
-                                           didReadData: { _ in},
-                                           didDisconnect: unexpectedSocketDisconnectHandler)
-    var advertiserNodeListenerPort: UInt16 = 0
-    do {
-      advertiserNodeListenerPort = try advertiserNodeMock.startListening(on: anyAvailalbePort)
-    } catch {
-      XCTFail("Can't start listening on fake node server")
-    }
-
-    // Prepare pair of advertiser and browser
-    MPCFBrowserFoundAdvertiser =
-      expectationWithDescription("Browser peer found Advertiser peer")
-
-    // Start listening for advertisements on Browser's side
-    let browserManager = BrowserManager(serviceType: randomlyGeneratedServiceType,
-                                        inputStreamReceiveTimeout: streamReceivedTimeout,
-                                        peerAvailabilityChanged: {
-                                          peerAvailability in
-
-                                          guard let peer = peerAvailability.first else {
-                                            XCTFail("Browser didn't find Advertiser peer")
-                                            return
-                                          }
-                                          XCTAssertTrue(peer.available)
-                                          MPCFBrowserFoundAdvertiser?.fulfill()
-                                        })
-    browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
-
-    // Start advertising on Advertiser's side
-    let advertiserManager = AdvertiserManager(serviceType: randomlyGeneratedServiceType,
-                                              disposeAdvertiserTimeout: disposeTimeout)
-    advertiserManager.startUpdateAdvertisingAndListening(onPort: advertiserNodeListenerPort,
-                                                         errorHandler: unexpectedErrorHandler)
-
-    waitForExpectationsWithTimeout(browserFindPeerTimeout) {
-      error in
-      MPCFBrowserFoundAdvertiser = nil
-    }
-
-    // Create MCsession between browser and adveriser
-    // Then get TCP listener port from browser manager
-    guard let peerToConnect = browserManager.availablePeers.value.first else {
-      XCTFail("BrowserManager does not have available peers to connect")
-      return        }
-
-    // Connect method invocation
-    browserManagerConnected =
-      expectationWithDescription("BrowserManager is connected")
-
-    var browserNativeTCPListenerPort: UInt16 = 0
-    browserManager.connectToPeer(peerToConnect.uuid, syncValue: "0") {
-      syncValue, error, port in
-
-      guard let port = port else {
-        XCTFail("Port must not be nil")
-        return
-      }
-
-      browserNativeTCPListenerPort = port
-      browserManagerConnected?.fulfill()
-    }
-
-    waitForExpectationsWithTimeout(browserConnectTimeout) {
-      error in
-      guard error == nil else {
-        XCTFail("Browser could not connect to peer")
-        return
-      }
-      browserManager.stopListeningForAdvertisements()
-      browserManagerConnected = nil
-    }
-
-    // Check if relay objectes are valid
-    guard
-      let browserRelayInfo: (uuid: String, relay: BrowserRelay) =
-      browserManager.activeRelays.value.first,
-      let advertiserRelayInfo: (uuid: String, relay: AdvertiserRelay) =
-      advertiserManager.activeRelays.value.first
-      else {
-        return
-    }
-
-    guard browserRelayInfo.uuid == advertiserRelayInfo.uuid else {
-      XCTFail("MPCF Connection is not valid")
-      return
-    }
-
-    XCTAssertEqual(browserRelayInfo.relay.virtualSocketsAmount,
-                   0,
-                   "BrowserRelay must not have active virtual sockets")
-
-    // Connect to browser's native TCP listener port
-    let browserNodeClientMock = TCPClientMock(didReadData: {
-                                                [weak self] data in
-                                                guard let strongSelf = self else { return }
-
-                                                let receivedMessage = String(
-                                                  data: data,
-                                                  encoding: NSUTF8StringEncoding
-                                                )
-
-                                                XCTAssertEqual(strongSelf.randomMessage,
-                                                               receivedMessage,
-                                                               "Received message is wrong")
-
-                                                browserNodeClientReceivedMessage?.fulfill()
-                                              },
-                                              didConnect: {},
-                                              didDisconnect: unexpectedDisconnectHandler)
-
-    browserNodeClientMock.connectToLocalHost(on: browserNativeTCPListenerPort,
-                                             errorHandler: unexpectedErrorHandler)
-
-    // When
-    // Send message from advertiser's node mock server to browser's node mock client
-    browserNodeClientReceivedMessage =
-      expectationWithDescription("Browser's mock node client received a message")
-    advertiserNodeMock.send(self.randomMessage)
-
-    // Then
-    waitForExpectationsWithTimeout(receiveMessageTimeout) {
-      error in
-      browserNodeClientReceivedMessage = nil
-    }
-
-    // Cleanup
-    advertiserManager.stopAdvertising()
   }
 }
