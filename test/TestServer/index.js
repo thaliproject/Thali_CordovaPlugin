@@ -1,5 +1,11 @@
 'use strict';
 
+// enable socket.io debug logging
+if (process.env.DEBUG) {
+  process.env.DEBUG += ',';
+}
+process.env.DEBUG += 'engine*,socket.io*';
+
 // Main entry point for Thali test frameworks coordinator server
 // jx index.js "{ 'devices': { 'android': 3, 'ios': 2 } }"
 

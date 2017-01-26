@@ -6,6 +6,12 @@
 
 'use strict';
 
+// enable socket.io debug logging
+if (process.env.DEBUG) {
+  process.env.DEBUG += ',';
+}
+process.env.DEBUG += 'engine*,socket.io*';
+
 if (typeof Mobile === 'undefined') {
   var mockPlatform = require('./lib/parsePlatformArg')();
   global.Mobile = require('./lib/wifiBasedNativeMock.js')(mockPlatform);
