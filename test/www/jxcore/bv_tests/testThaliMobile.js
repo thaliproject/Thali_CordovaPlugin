@@ -1716,8 +1716,12 @@ test('#disconnect delegates native peers to the native wrapper',
 
 test('network changes emitted correctly',
   function () {
-    return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI ||
-      global.NETWORK_TYPE      !== ThaliMobile.networkTypes.BOTH;
+    return (
+      // iOS does not support toggleWifi
+      platform.isIOS ||
+      global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI ||
+      global.NETWORK_TYPE      !== ThaliMobile.networkTypes.BOTH
+    );
   },
   function (t) {
     testUtils.ensureWifi(true)
@@ -1796,8 +1800,12 @@ function noNetworkChanged (t, toggle) {
 
 test('network changes not emitted in started state',
   function () {
-    return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI ||
-      global.NETWORK_TYPE      !== ThaliMobile.networkTypes.BOTH;
+    return (
+      // iOS does not support toggleWifi
+      platform.isIOS ||
+      global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI ||
+      global.NETWORK_TYPE      !== ThaliMobile.networkTypes.BOTH
+    );
   },
   function (t) {
     testUtils.ensureWifi(true)
@@ -1813,8 +1821,12 @@ test('network changes not emitted in started state',
 
 test('network changes not emitted in stopped state',
   function () {
-    return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI ||
-      global.NETWORK_TYPE      !== ThaliMobile.networkTypes.BOTH;
+    return (
+      // iOS does not support toggleWifi
+      platform.isIOS ||
+      global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI ||
+      global.NETWORK_TYPE      !== ThaliMobile.networkTypes.BOTH
+    );
   },
   function (t) {
     testUtils.ensureWifi(false)
@@ -1832,10 +1844,8 @@ test('network changes not emitted in stopped state',
   });
 
 test('calls correct starts when network changes',
-  function () {
-    // iOS does not support disabling/enabling radios
-    return platform.isIOS;
-  },
+  // iOS does not support disabling/enabling radios
+  testUtils.skipOnIOS,
   function (t) {
     var isWifiEnabled =
       global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||

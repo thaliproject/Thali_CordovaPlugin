@@ -346,10 +346,11 @@
  * on the correlated {@link multiConnectResolved} callback for the result of
  * this particular method call.
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback The err value
- * MUST be null unless this is not a platform that supports multiconnect in
- * which case an error object MUST be returned with the value "Platform does not
- * support multiConnect". Other than the platform not supported error any other
- * errors will be returned in the {@link multiConnectResolved} callback.
+ * MUST be null unless native layer cannot parse and process passed parameters
+ * in which case a "Bad parameters" error MUST be returned, or unless this is
+ * not a platform that supports multiconnect in which case an error object MUST
+ * be returned with the value "Platform does not support multiConnect". Any
+ * other errors will be returned in the {@link multiConnectResolved} callback.
  */
 /* eslint-enable max-len */
 
