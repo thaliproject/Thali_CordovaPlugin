@@ -343,7 +343,6 @@ function stop(resolve, reject) {
     if (platform.isAndroid) {
       return stopServersManager();
     }
-    return Promise.resolve();
   })
   .catch(function (err) {
     errorDescriptions.stopServersManagerError = err;
@@ -351,22 +350,24 @@ function stop(resolve, reject) {
   .then(function () {
     var oldRouterServer = gRouterServer;
     gRouterServer = null;
-    return oldRouterServer ? oldRouterServer.closeAllPromise() :
-      Promise.resolve();
+    if (oldRouterServer) {
+      return oldRouterServer.closeAllPromise();
+    }
   })
   .catch(function (err) {
     errorDescriptions.stopRouterServerError = err;
   })
   .then(function () {
     if (Object.keys(errorDescriptions).length === 0) {
-      return resolve();
+      return;
     }
 
     var error = new Error('check errorDescriptions property');
     error.errorDescriptions = errorDescriptions;
 
-    return reject(error);
-  });
+    return Promise.reject(error);
+  })
+  .then(resolve, reject);
 }
 
 function stopNative() {
@@ -554,9 +555,9 @@ module.exports.startUpdateAdvertisingAndListening = function () {
       return reject(new Error('Call Start!'));
     }
 
-    var port = (platform.isAndroid) ?
-                gServersManagerLocalPort :
-                gRouterServerPort;
+    var port = platform.isAndroid ?
+      gServersManagerLocalPort :
+      gRouterServerPort;
 
     Mobile('startUpdateAdvertisingAndListening').callNative(
       port,
@@ -1061,15 +1062,12 @@ function handlePeerAvailabilityChanged (peer) {
 module.exports._handlePeerAvailabilityChanged = handlePeerAvailabilityChanged;
 
 function getPeerPort(peer) {
-  if (gServersManager) {
-    return gServersManager.createPeerListener(peer.peerIdentifier,
-      peer.pleaseConnect);
-  } else {
-    return Promise.resolve(null);
-  }
+  return gServersManager ?
+    gServersManager.createPeerListener(peer.peerIdentifier) :
+    Promise.resolve(null);
 }
 
-var recreatePeer = function (peerIdentifier) {
+function recreatePeer(peerIdentifier) {
   var peerUnavailable = {
     peerIdentifier: peerIdentifier,
     peerAvailable: false,
@@ -1090,7 +1088,7 @@ var recreatePeer = function (peerIdentifier) {
   };
 
   handlePeerAvailabilityChanged(peerAvailable);
-};
+}
 
 /* eslint-disable max-len */
 /**

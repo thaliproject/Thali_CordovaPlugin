@@ -61,7 +61,7 @@ function toggleWifi (value) {
       }
     });
   });
-};
+}
 module.exports.toggleWifi = toggleWifi;
 
 var ThaliMobile;
@@ -72,7 +72,10 @@ var ensureNetwork = function (type, toggle, value, customCheck) {
 
   var valueString = value? 'on' : 'off';
   function check (networkStatus) {
-    return networkStatus[type] === valueString && (customCheck? customCheck(networkStatus) : true);
+    return (
+      networkStatus[type] === valueString &&
+      (customCheck? customCheck(networkStatus) : true)
+    );
   }
 
   return ThaliMobile.getNetworkStatus()
@@ -117,7 +120,10 @@ var ensureNetwork = function (type, toggle, value, customCheck) {
 
 module.exports.ensureWifi = function (value) {
   return ensureNetwork('wifi', toggleWifi, value, function (networkStatus) {
-    var isConnected = networkStatus.bssidName != null && networkStatus.ssidName != null;
+    var isConnected = (
+      networkStatus.bssidName != null &&
+      networkStatus.ssidName != null
+    );
     return value === isConnected;
   });
 };
@@ -218,13 +224,14 @@ module.exports.tmpDirectory = tmpDirectory;
  * device has the hardware capabilities required.
  * On Android, checks the BLE multiple advertisement feature and elsewhere
  * always resolves with true.
+ * @returns {Promise<boolean>}
  */
 module.exports.hasRequiredHardware = function () {
   if (!platform._isRealAndroid) {
     return Promise.resolve(true);
   }
 
-  return new Promise(function (resolve, reject) {
+  return new Promise(function (resolve) {
     function checkBleMultipleAdvertisementSupport () {
       Mobile('isBleMultipleAdvertisementSupported')
         .callNative(function (error, result) {
@@ -279,7 +286,7 @@ module.exports.enableRequiredHardware = function () {
     .catch(function () {
       return false;
     });
-}
+};
 
 module.exports.returnsValidNetworkStatus = function () {
   // The require is here instead of top of file so that
@@ -489,6 +496,10 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
     var getRequestPromise = null;
     var cancelGetPortTimeout = null;
 
+    var timeoutId = setTimeout(function () {
+      exitCall(null, new Error('Timer expired'));
+    }, MAX_TIME_TO_WAIT_IN_MILLISECONDS);
+
     function exitCall(success, failure) {
       if (exitCalled) {
         return;
@@ -505,10 +516,6 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
           peerId: peerID
         });
     }
-
-    var timeoutId = setTimeout(function () {
-      exitCall(null, new Error('Timer expired'));
-    }, MAX_TIME_TO_WAIT_IN_MILLISECONDS);
 
     function tryAgain(portNumber) {
       ++retryCount;
@@ -561,7 +568,7 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
         }
       });
 
-    };
+    }
 
     function nonTCPAvailableHandler(record) {
       // Ignore peer unavailable events
@@ -607,7 +614,7 @@ module.exports.validateCombinedResult = function (combinedResult) {
 
 var MAX_FAILURE  = 10;
 var RETRY_DELAY  = 10000;
-var TEST_TIMEOUT = 5 * 60 * 1000
+var TEST_TIMEOUT = 5 * 60 * 1000;
 
 function turnParticipantsIntoBufferArray (t, devicePublicKey) {
   var publicKeys = [];
@@ -749,7 +756,7 @@ module.exports.runTestOnAllParticipants = function (
       var publicKey = notificationForUs.keyId;
       participantTask[publicKey].cancel();
       participantTask[publicKey] = createTask(notificationForUs);
-    }
+    };
     thaliNotificationClient.on(
       thaliNotificationClient.Events.PeerAdvertisesDataForUs,
       notificationHandler

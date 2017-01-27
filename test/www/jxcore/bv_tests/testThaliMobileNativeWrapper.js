@@ -201,11 +201,19 @@ var connectionTester = function(port, reversed) {
   return new Promise(function(resolve, reject) {
     var connection = net.createConnection(port, function () {
       connection.destroy();
-      reversed ? reject() : resolve();
+      if (reversed) {
+        reject(new Error('Unexpectedly successful connection'));
+      } else {
+        resolve();
+      }
     });
     connection.on('error', function (error) {
       connection.destroy();
-      reversed ? resolve() : reject(error);
+      if (reversed) {
+        resolve();
+      } else {
+        reject(error);
+      }
     });
   });
 };
