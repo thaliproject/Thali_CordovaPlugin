@@ -352,7 +352,6 @@ WifiAdvertiser.prototype.stop = function () {
   });
 };
 
-
 WifiAdvertiser.prototype._errorStop = function (error) {
   this._isAdvertising = false;
   this.peer = null;
@@ -645,47 +644,67 @@ inherits(ThaliWifiInfrastructure, EventEmitter);
 
 ThaliWifiInfrastructure.prototype._handleNetworkChanges =
 function (networkStatus) {
-  var isWifiUnchanged = this._lastNetworkStatus &&
-      networkStatus.wifi === this._lastNetworkStatus.wifi;
+  var isWifiChanged = this._lastNetworkStatus ?
+    networkStatus.wifi !== this._lastNetworkStatus.wifi :
+    true;
+
+  var isBssidChanged = this._lastNetworkStatus ?
+    networkStatus.bssidName !== this._lastNetworkStatus.bssidName :
+    true;
 
   this._lastNetworkStatus = networkStatus;
 
   // If we are stopping or the wifi state hasn't changed,
   // we are not really interested.
-  if (!this._isStarted || isWifiUnchanged) {
+  if (!this._isStarted || (!isWifiChanged && !isBssidChanged)) {
     return;
   }
 
   var actionResults = [];
-  if (networkStatus.wifi === 'on') {
-    // If the wifi state turned on, try to get into the target states
-    if (this._isListening) {
+
+  // Handle on -> off and off -> on changes
+  if (isWifiChanged) {
+    if (networkStatus.wifi === 'on') {
+      // If the wifi state turned on, try to get into the target states
+      if (this._isListening) {
+        actionResults.push(
+          muteRejection(this.startListeningForAdvertisements())
+        );
+      }
+      if (this._isAdvertising) {
+        actionResults.push(
+          muteRejection(this.startUpdateAdvertisingAndListening())
+        );
+      }
+    } else {
+      // If wifi didn't turn on, it was turned into a state where we want
+      // to stop our actions
       actionResults.push(
-        muteRejection(this.startListeningForAdvertisements())
+        muteRejection(
+          this._pauseAdvertisingAndListening()
+        ),
+        muteRejection(
+          this._pauseListeningForAdvertisements()
+        )
       );
     }
-    if (this._isAdvertising) {
-      actionResults.push(
-        muteRejection(this.startUpdateAdvertisingAndListening())
-      );
-    }
-  } else {
-    // If wifi didn't turn on, it was turned into a state where we want
-    // to stop our actions
+  }
+
+  // Handle bssid only changes. We do not care about bssid when wifi was
+  // entirely disabled, because node-ssdp server would be restarted anyway
+  if (isBssidChanged && !isWifiChanged) {
+    // Without restarting node-ssdp server just does not advertise messages
+    // after disconnecting and then connecting again to the access point
     actionResults.push(
-      muteRejection(
-        this._pauseAdvertisingAndListening()
-      ),
-      muteRejection(
-        this._pauseListeningForAdvertisements()
-      )
+      muteRejection(this.advertiser.restartSSDPServer())
     );
   }
+
   Promise.all(actionResults).then(function (results) {
     results.forEach(function (result) {
       if (result) {
         logger.warn('Error when reacting to wifi state changes: %s',
-                    result.toString());
+          result.toString());
       }
     });
   });
