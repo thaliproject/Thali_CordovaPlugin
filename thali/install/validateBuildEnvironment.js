@@ -28,7 +28,7 @@ const versions =
   // We don't have an easy way to identify the version of the support libraries
   // we have but if they were installed recently enough then they will have
   // what we need.
-  androidSupportLibraries: '40.0.0',
+  androidSupportLibraries: '41.0.0',
   python: '2.7.10',
   cordova: '6.4.0',
   java: '1.8.0_102',
