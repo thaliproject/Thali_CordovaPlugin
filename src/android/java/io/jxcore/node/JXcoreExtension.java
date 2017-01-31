@@ -758,32 +758,36 @@ public class JXcoreExtension implements SurroundingStateObserver {
         final ArrayList<Object> args = new ArrayList<Object>();
         String errorString = null;
 
-        if (mConnectionHelper.getConnectivityMonitor().isBleMultipleAdvertisementSupported() !=
-            BluetoothManager.FeatureSupportedStatus.NOT_SUPPORTED) {
-            boolean succeededToStartOrWasAlreadyRunning =
-                mConnectionHelper.start(serverPortNumber, startAdvertisements, new JXcoreThaliCallback() {
-                    @Override
-                    protected void onStartStopCallback(final String errorMessage) {
-                        args.add(errorMessage);
-                        jxcore.CallJSMethod(callbackId, args.toArray());
+        if (!isRadioOn()) {
+            errorString = "Radio Turned Off";
+        } else {
+            if (mConnectionHelper.getConnectivityMonitor().isBleMultipleAdvertisementSupported() !=
+                BluetoothManager.FeatureSupportedStatus.NOT_SUPPORTED) {
+                boolean succeededToStartOrWasAlreadyRunning =
+                    mConnectionHelper.start(serverPortNumber, startAdvertisements, new JXcoreThaliCallback() {
+                        @Override
+                        protected void onStartStopCallback(final String errorMessage) {
+                            args.add(errorMessage);
+                            jxcore.CallJSMethod(callbackId, args.toArray());
+                        }
+                    });
+
+                if (succeededToStartOrWasAlreadyRunning) {
+                    final DiscoveryManager discoveryManager = mConnectionHelper.getDiscoveryManager();
+
+                    if (discoveryManager.getState() ==
+                        DiscoveryManager.DiscoveryManagerState.WAITING_FOR_SERVICES_TO_BE_ENABLED) {
+                        errorString = "Radio Turned Off";
+
+                        // If/when radios are turned on, the discovery is started automatically
+                        // unless stop is called
                     }
-                });
-
-            if (succeededToStartOrWasAlreadyRunning) {
-                final DiscoveryManager discoveryManager = mConnectionHelper.getDiscoveryManager();
-
-                if (discoveryManager.getState() ==
-                    DiscoveryManager.DiscoveryManagerState.WAITING_FOR_SERVICES_TO_BE_ENABLED) {
-                    errorString = "Radio Turned Off";
-
-                    // If/when radios are turned on, the discovery is started automatically
-                    // unless stop is called
+                } else {
+                    errorString = "Unspecified Error with Radio infrastructure";
                 }
             } else {
-                errorString = "Unspecified Error with Radio infrastructure";
+                errorString = "No Native Non-TCP Support";
             }
-        } else {
-            errorString = "No Native Non-TCP Support";
         }
 
         if (errorString != null) {
@@ -791,6 +795,10 @@ public class JXcoreExtension implements SurroundingStateObserver {
             args.add(errorString);
             jxcore.CallJSMethod(callbackId, args.toArray());
         }
+    }
+
+    private static boolean isRadioOn() {
+        return mConnectionHelper.getConnectivityMonitor().isBluetoothEnabled();
     }
 
     /**
