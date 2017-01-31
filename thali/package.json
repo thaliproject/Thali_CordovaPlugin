@@ -34,7 +34,7 @@
     },
     "androidConfig": {
       "minSdkVersion": "21",
-      "buildToolsVersion": "25.0.0",
+      "buildToolsVersion": "25.0.2",
       "compileSdkVersion": "android-23"
     },
     "btconnectorlib2": "0.3.8-alpha",
