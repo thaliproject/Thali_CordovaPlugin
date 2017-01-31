@@ -669,10 +669,23 @@ test('calls correct starts when network changes',
         return testUtils.ensureBluetooth(false);
       })
       .then(function () {
-        var listen =
-          thaliMobileNativeWrapper.startListeningForAdvertisements();
-        var advertise =
-          thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
+        var validateStartResult = function (promise) {
+          return promise
+            .then(function () {
+              t.fail('Should fail');
+            })
+            .catch(function (error) { // eslint-disable-line
+              // TODO: enable when (if) #1767 is fixed
+              // t.equals(error.message, 'Radio Turned Off',
+              //   'specific error expected');
+            });
+        };
+        var listen = validateStartResult(
+          thaliMobileNativeWrapper.startListeningForAdvertisements()
+        );
+        var advertise = validateStartResult(
+          thaliMobileNativeWrapper.startUpdateAdvertisingAndListening()
+        );
         return Promise.all([ listen, advertise ]);
       })
       .then(function () {

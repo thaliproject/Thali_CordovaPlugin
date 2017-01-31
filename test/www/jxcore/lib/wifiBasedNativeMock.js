@@ -278,6 +278,13 @@ MobileCallInstance.prototype.startListeningForAdvertisements =
 
 MobileCallInstance.prototype._startListeningForAdvertisements =
   function (callback) {
+    var btOff =
+      currentNetworkStatus.bluetooth !== 'on' ||
+      currentNetworkStatus.bluetoothLowEnergy !== 'on';
+    if (btOff) {
+      callback('Radio Turned Off');
+      return;
+    }
     this.thaliWifiInfrastructure.startListeningForAdvertisements()
     .then(function () {
       startListeningForAdvertisementsIsActive = true;
@@ -365,6 +372,13 @@ MobileCallInstance.prototype.startUpdateAdvertisingAndListening =
 MobileCallInstance.prototype._startUpdateAdvertisingAndListening =
 function (portNumber, callback) {
   var self = this;
+  var btOff =
+    currentNetworkStatus.bluetooth !== 'on' ||
+    currentNetworkStatus.bluetoothLowEnergy !== 'on';
+  if (btOff) {
+    callback('Radio Turned Off');
+    return;
+  }
   var doStart = function () {
     self.thaliWifiInfrastructure.startUpdateAdvertisingAndListening()
     .then(function () {
