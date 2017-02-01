@@ -72,7 +72,6 @@
 
         <source-file src="src/ios/JXcoreExtension.m" compiler-flags="-Werror"/>
         <source-file src="src/ios/AppContext.swift" compiler-flags="-Werror"/>
-        <source-file src="src/ios/AppContextTests.swift" compiler-flags="-Werror"/>
 
     </platform>
 </plugin>
