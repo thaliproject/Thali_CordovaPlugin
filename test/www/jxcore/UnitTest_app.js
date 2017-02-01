@@ -28,7 +28,7 @@ var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 
 var utResult = false;
 
-if (platform._isRealMobile) {
+if (false) {
   Mobile('executeNativeTests').callNative(function (result) {
     logger.debug('Running unit tests');
     if (result) {
@@ -75,7 +75,7 @@ if (platform.isIOS) {
   return;
 }
 
-global.NETWORK_TYPE = ThaliMobile.networkTypes.NATIVE;
+global.NETWORK_TYPE = ThaliMobile.networkTypes.WIFI;
 
 Mobile('GetDeviceName').callNative(function (name) {
   logger.debug('My device name is: \'%s\'', name);
