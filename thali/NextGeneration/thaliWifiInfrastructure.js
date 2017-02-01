@@ -352,6 +352,11 @@ WifiAdvertiser.prototype.stop = function () {
   });
 };
 
+/**
+ * @private
+ * @param {Error} error
+ * @return {Promise}
+ */
 WifiAdvertiser.prototype._errorStop = function (error) {
   this._isAdvertising = false;
   this.peer = null;
@@ -360,6 +365,9 @@ WifiAdvertiser.prototype._errorStop = function (error) {
   });
 };
 
+/**
+ * @return {Promise}
+ */
 WifiAdvertiser.prototype.restartSSDPServer = function () {
   var self = this;
   return self._server.stopAsync().then(function () {
@@ -441,6 +449,10 @@ WifiAdvertiser.prototype._setUpExpressApp = function (router, pskIdToSecret) {
     });
 };
 
+/**
+ * @private
+ * @return {Promise}
+ */
 WifiAdvertiser.prototype._destroyExpressApp = function () {
   var self = this;
   var promise;
@@ -692,7 +704,7 @@ function (networkStatus) {
 
   // Handle bssid only changes. We do not care about bssid when wifi was
   // entirely disabled, because node-ssdp server would be restarted anyway
-  if (isBssidChanged && !isWifiChanged) {
+  if (!isWifiChanged && isBssidChanged) {
     // Without restarting node-ssdp server just does not advertise messages
     // after disconnecting and then connecting again to the access point
     actionResults.push(

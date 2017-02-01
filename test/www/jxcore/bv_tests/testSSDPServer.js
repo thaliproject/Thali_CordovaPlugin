@@ -10,6 +10,11 @@ var ThaliMobile              = require('thali/NextGeneration/thaliMobile');
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var ThaliWifiInfrastructure  = require('thali/NextGeneration/thaliWifiInfrastructure');
 
+var networkTypes = ThaliMobile.networkTypes;
+
+function pskIdToSecret () {
+  return null;
+}
 
 var test = tape({
   setup: function (t) {
@@ -23,22 +28,17 @@ var test = tape({
 test(
   'ssdp server should be restarted when wifi toggled',
   function () {
-    return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
+    return global.NETWORK_TYPE !== networkTypes.WIFI;
   },
   function (t) {
-    var pskId  = 'I am an id';
-    var pskKey = new Buffer('I am a secret');
-
-    function pskIdToSecret (id) {
-      return id === pskId ? pskKey : null;
-    };
-
     function toggleWifi(value) {
       ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
         wifi:               value? 'on' : 'off',
         bluetooth:          'on',
         bluetoothLowEnergy: 'on',
-        cellular:           'on'
+        cellular:           'on',
+        bssidName:          '00:00:00:00:00:00',
+        ssidName:           'WiFi Network'
       });
     }
 
@@ -80,6 +80,78 @@ test(
           'should not be in started state');
         serverStartSpy.restore();
         serverStopSpy.restore();
+        t.end();
+      });
+  }
+);
+
+test(
+  'ssdp server should be restarted when bssid changed',
+  function () {
+    return global.NETWORK_TYPE !== networkTypes.WIFI;
+  },
+  function (t) {
+    function changeBssid (value) {
+      ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
+        wifi:               'on',
+        bluetooth:          'on',
+        bluetoothLowEnergy: 'on',
+        cellular:           'on',
+        bssidName:          value,
+        ssidName:           (value === null) ? null : 'WiFi Network'
+      });
+    }
+
+    var wifiInfrastructure = new ThaliWifiInfrastructure();
+    var ssdpServer = wifiInfrastructure._getSSDPServer();
+    var startStub = sinon.stub(ssdpServer, 'start', function (cb) {
+      cb();
+    });
+    var stopStub = sinon.stub(ssdpServer, 'stop', function (cb) {
+      cb();
+    });
+
+    function testBssidChangeReaction (newBssid) {
+      // reset call counts
+      startStub.reset();
+      stopStub.reset();
+      return new Promise(function (resolve) {
+        changeBssid(newBssid);
+        setImmediate(function () {
+          t.equal(stopStub.callCount, 1, 'start called once');
+          t.equal(startStub.callCount, 1, 'start called once');
+          resolve();
+        });
+      });
+    }
+
+    wifiInfrastructure.start(express.Router(), pskIdToSecret)
+      .then(function () {
+        return wifiInfrastructure.startUpdateAdvertisingAndListening();
+      })
+      .then(function () {
+        // bssid -> null
+        return testBssidChangeReaction(null);
+      })
+      .then(function () {
+        // null -> bssid
+        return testBssidChangeReaction('00:00:00:00:00:00');
+      })
+      .then(function () {
+        // bssid -> another bssid
+        return testBssidChangeReaction('11:11:11:11:11:11');
+      })
+      .then(function () {
+        return wifiInfrastructure.stop();
+      })
+      .catch(function (error) {
+        t.fail('Test failed:' + error.message + '. ' + error.stack);
+      })
+      .then(function () {
+        t.ok(!wifiInfrastructure._getCurrentState().started,
+          'should not be in started state');
+        startStub.restore();
+        stopStub.restore();
         t.end();
       });
   }
