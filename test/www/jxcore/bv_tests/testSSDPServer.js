@@ -16,17 +16,26 @@ function pskIdToSecret () {
   return null;
 }
 
+function callArg(arg) {
+  arg();
+}
+
+var sandbox = null;
+
 var test = tape({
   setup: function (t) {
+    sandbox = sinon.sandbox.create();
     t.end();
   },
   teardown: function (t) {
+    sandbox.restore();
+    sandbox = null;
     t.end();
   }
 });
 
 test(
-  'ssdp server should be restarted when wifi toggled',
+  'ssdp server and client should be restarted when wifi toggled',
   function () {
     return global.NETWORK_TYPE !== networkTypes.WIFI;
   },
@@ -44,9 +53,13 @@ test(
 
     var wifiInfrastructure = new ThaliWifiInfrastructure();
     var serverStartSpy =
-      sinon.spy(wifiInfrastructure._getSSDPServer(), 'start');
+      sandbox.spy(wifiInfrastructure._getSSDPServer(), 'start');
     var serverStopSpy  =
-      sinon.spy(wifiInfrastructure._getSSDPServer(), 'stop');
+      sandbox.spy(wifiInfrastructure._getSSDPServer(), 'stop');
+    var clientStartSpy =
+      sandbox.spy(wifiInfrastructure._getSSDPClient(), 'start');
+    var clientStopSpy  =
+      sandbox.spy(wifiInfrastructure._getSSDPClient(), 'stop');
 
     wifiInfrastructure.start(express.Router(), pskIdToSecret)
       .then(function () {
@@ -57,8 +70,13 @@ test(
         return wifiInfrastructure.startUpdateAdvertisingAndListening();
       })
       .then(function () {
+        return wifiInfrastructure.startListeningForAdvertisements();
+      })
+      .then(function () {
         t.ok(serverStartSpy.calledOnce, 'server start should be called once');
         t.ok(!serverStopSpy.called,     'server stop should not be called');
+        t.ok(clientStartSpy.calledOnce, 'client start should be called once');
+        t.ok(!clientStopSpy.called,     'client stop should not be called');
 
         return new Promise(function (resolve) {
           toggleWifi(false);
@@ -71,22 +89,23 @@ test(
       .then(function () {
         t.ok(serverStartSpy.calledTwice, 'server start should be called twice');
         t.ok(serverStopSpy.calledOnce,   'server stop should be called once');
+        t.ok(clientStartSpy.calledTwice, 'client start should be called twice');
+        t.ok(clientStopSpy.calledOnce,   'client stop should be called once');
 
         return wifiInfrastructure.stop();
       })
       .then(function () {
         t.ok(serverStopSpy.calledTwice, 'server stop should be called twice');
+        t.ok(clientStopSpy.calledTwice, 'client stop should be called twice');
         t.ok(!wifiInfrastructure._getCurrentState().started,
           'should not be in started state');
-        serverStartSpy.restore();
-        serverStopSpy.restore();
         t.end();
       });
   }
 );
 
 test(
-  'ssdp server should be restarted when bssid changed',
+  'ssdp server and client should be restarted when bssid changed',
   function () {
     return global.NETWORK_TYPE !== networkTypes.WIFI;
   },
@@ -104,22 +123,29 @@ test(
 
     var wifiInfrastructure = new ThaliWifiInfrastructure();
     var ssdpServer = wifiInfrastructure._getSSDPServer();
-    var startStub = sinon.stub(ssdpServer, 'start', function (cb) {
-      cb();
-    });
-    var stopStub = sinon.stub(ssdpServer, 'stop', function (cb) {
-      cb();
-    });
+    var ssdpClient = wifiInfrastructure._getSSDPClient();
+    var serverStartStub = sandbox.stub(ssdpServer, 'start', callArg);
+    var serverStopStub = sandbox.stub(ssdpServer, 'stop', callArg);
+    var clientStartStub = sandbox.stub(ssdpClient, 'start', callArg);
+    var clientStopStub = sandbox.stub(ssdpClient, 'stop', callArg);
 
     function testBssidChangeReaction (newBssid) {
       // reset call counts
-      startStub.reset();
-      stopStub.reset();
+      serverStartStub.reset();
+      serverStopStub.reset();
+      clientStartStub.reset();
+      clientStopStub.reset();
       return new Promise(function (resolve) {
         changeBssid(newBssid);
         setImmediate(function () {
-          t.equal(stopStub.callCount, 1, 'start called once');
-          t.equal(startStub.callCount, 1, 'start called once');
+          t.equal(serverStartStub.callCount, 1, 'server start called once');
+          t.equal(serverStopStub.callCount, 1, 'server stop called once');
+          t.equal(clientStartStub.callCount, 1, 'client start called once');
+          t.equal(clientStopStub.callCount, 1, 'client start called once');
+          t.ok(serverStopStub.calledBefore(serverStartStub),
+            'server stop called before start');
+          t.ok(clientStopStub.calledBefore(clientStartStub),
+            'client stop called before start');
           resolve();
         });
       });
@@ -150,8 +176,6 @@ test(
       .then(function () {
         t.ok(!wifiInfrastructure._getCurrentState().started,
           'should not be in started state');
-        startStub.restore();
-        stopStub.restore();
         t.end();
       });
   }

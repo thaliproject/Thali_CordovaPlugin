@@ -156,15 +156,14 @@ WifiListener.prototype.start = function () {
   self._isListening = true;
 
   return self._client.startAsync()
-    .catch(function (error) {
-      self._isListening = false;
-      return Promise.reject(error);
-    })
     .then(function () {
       self._notifyStateChange();
       if (platform.isAndroid) {
         return thaliMobileNativeWrapper.lockAndroidWifiMulticast();
       }
+    })
+    .catch(function (error) {
+      self._errorStop(error);
     });
 };
 
@@ -183,6 +182,30 @@ WifiListener.prototype.stop = function () {
     if (platform.isAndroid) {
       return thaliMobileNativeWrapper.unlockAndroidWifiMulticast();
     }
+  });
+};
+
+/**
+ * @private
+ * @param {Error} error
+ * @return {Promise}
+ */
+WifiListener.prototype._errorStop = function (error) {
+  this._isListening = false;
+  return this._client.stopAsync().then(function () {
+    return Promise.reject(error);
+  });
+};
+
+/**
+ * @return {Promise}
+ */
+WifiListener.prototype.restartSSDPClient = function () {
+  var self = this;
+  return self._client.stopAsync().then(function () {
+    return self._client.startAsync();
+  }).catch(function (error) {
+    return self._errorStop(error);
   });
 };
 
@@ -338,7 +361,6 @@ WifiAdvertiser.prototype.update = function () {
 WifiAdvertiser.prototype.stop = function () {
   var self = this;
 
-
   if (!self._isAdvertising) {
     return Promise.resolve();
   }
@@ -360,7 +382,10 @@ WifiAdvertiser.prototype.stop = function () {
 WifiAdvertiser.prototype._errorStop = function (error) {
   this._isAdvertising = false;
   this.peer = null;
-  return this._destroyExpressApp().then(function () {
+  return Promise.all([
+    this._destroyExpressApp(),
+    this._server.stopAsync()
+  ]).then(function () {
     return Promise.reject(error);
   });
 };
@@ -705,10 +730,11 @@ function (networkStatus) {
   // Handle bssid only changes. We do not care about bssid when wifi was
   // entirely disabled, because node-ssdp server would be restarted anyway
   if (!isWifiChanged && isBssidChanged) {
-    // Without restarting node-ssdp server just does not advertise messages
-    // after disconnecting and then connecting again to the access point
+    // Without restarting node-ssdp server just does not advertise messages and
+    // client does not receive them after connecting to another access point
     actionResults.push(
-      muteRejection(this.advertiser.restartSSDPServer())
+      muteRejection(this.advertiser.restartSSDPServer()),
+      muteRejection(this.listener.restartSSDPClient())
     );
   }
 
