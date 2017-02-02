@@ -202,6 +202,9 @@ WifiListener.prototype._errorStop = function (error) {
  */
 WifiListener.prototype.restartSSDPClient = function () {
   var self = this;
+  if (!self._isListening) {
+    return Promise.reject(new Error('Can\'t restart stopped SSDP client'));
+  }
   return self._client.stopAsync().then(function () {
     return self._client.startAsync();
   }).catch(function (error) {
@@ -395,6 +398,9 @@ WifiAdvertiser.prototype._errorStop = function (error) {
  */
 WifiAdvertiser.prototype.restartSSDPServer = function () {
   var self = this;
+  if (!self._isAdvertising) {
+    return Promise.reject(new Error('Can\'t restart stopped SSDP server'));
+  }
   return self._server.stopAsync().then(function () {
     return self._server.startAsync();
   }).catch(function (error) {
@@ -732,10 +738,12 @@ function (networkStatus) {
   if (!isWifiChanged && isBssidChanged) {
     // Without restarting node-ssdp server just does not advertise messages and
     // client does not receive them after connecting to another access point
-    actionResults.push(
-      muteRejection(this.advertiser.restartSSDPServer()),
-      muteRejection(this.listener.restartSSDPClient())
-    );
+    if (this.advertiser.isAdvertising()) {
+      actionResults.push(muteRejection(this.advertiser.restartSSDPServer()));
+    }
+    if (this.listener.isListening()) {
+      actionResults.push(muteRejection(this.listener.restartSSDPClient()));
+    }
   }
 
   Promise.all(actionResults).then(function (results) {

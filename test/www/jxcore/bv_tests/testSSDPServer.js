@@ -104,23 +104,23 @@ test(
   }
 );
 
+function changeBssid (value) {
+  ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
+    wifi:               'on',
+    bluetooth:          'on',
+    bluetoothLowEnergy: 'on',
+    cellular:           'on',
+    bssidName:          value,
+    ssidName:           (value === null) ? null : 'WiFi Network'
+  });
+}
+
 test(
   'ssdp server and client should be restarted when bssid changed',
   function () {
     return global.NETWORK_TYPE !== networkTypes.WIFI;
   },
   function (t) {
-    function changeBssid (value) {
-      ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
-        wifi:               'on',
-        bluetooth:          'on',
-        bluetoothLowEnergy: 'on',
-        cellular:           'on',
-        bssidName:          value,
-        ssidName:           (value === null) ? null : 'WiFi Network'
-      });
-    }
-
     var wifiInfrastructure = new ThaliWifiInfrastructure();
     var ssdpServer = wifiInfrastructure._getSSDPServer();
     var ssdpClient = wifiInfrastructure._getSSDPClient();
@@ -155,6 +155,64 @@ test(
       .then(function () {
         return wifiInfrastructure.startUpdateAdvertisingAndListening();
       })
+      .then(function () {
+        return wifiInfrastructure.startListeningForAdvertisements();
+      })
+      .then(function () {
+        // bssid -> null
+        return testBssidChangeReaction(null);
+      })
+      .then(function () {
+        // null -> bssid
+        return testBssidChangeReaction('00:00:00:00:00:00');
+      })
+      .then(function () {
+        // bssid -> another bssid
+        return testBssidChangeReaction('11:11:11:11:11:11');
+      })
+      .then(function () {
+        return wifiInfrastructure.stop();
+      })
+      .catch(function (error) {
+        t.fail('Test failed:' + error.message + '. ' + error.stack);
+      })
+      .then(function () {
+        t.ok(!wifiInfrastructure._getCurrentState().started,
+          'should not be in started state');
+        t.end();
+      });
+  }
+);
+
+test(
+  'ssdp server and client should be restarted only when ' +
+  'advertising/listening is active',
+  function () {
+    return global.NETWORK_TYPE !== networkTypes.WIFI;
+  },
+  function (t) {
+    var wifiInfrastructure = new ThaliWifiInfrastructure();
+    var ssdpServer = wifiInfrastructure._getSSDPServer();
+    var ssdpClient = wifiInfrastructure._getSSDPClient();
+    var serverStartStub = sandbox.stub(ssdpServer, 'start', callArg);
+    var serverStopStub = sandbox.stub(ssdpServer, 'stop', callArg);
+    var clientStartStub = sandbox.stub(ssdpClient, 'start', callArg);
+    var clientStopStub = sandbox.stub(ssdpClient, 'stop', callArg);
+
+    function testBssidChangeReaction (newBssid) {
+      return new Promise(function (resolve) {
+        changeBssid(newBssid);
+        setImmediate(function () {
+          t.equal(serverStartStub.callCount, 0, 'server start never called');
+          t.equal(serverStopStub.callCount, 0, 'server stop never called');
+          t.equal(clientStartStub.callCount, 0, 'client start never called');
+          t.equal(clientStopStub.callCount, 0, 'client start never called');
+          resolve();
+        });
+      });
+    }
+
+    wifiInfrastructure.start(express.Router(), pskIdToSecret)
       .then(function () {
         // bssid -> null
         return testBssidChangeReaction(null);
