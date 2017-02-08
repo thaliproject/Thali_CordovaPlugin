@@ -14,6 +14,8 @@ var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServe
 var Promise = require('lie');
 var assert = require('assert');
 var thaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils');
+var thaliMobileNativeWrapper =
+  require('thali/NextGeneration/thaliMobileNativeWrapper');
 
 var logger = require('../lib/testLogger')('testThaliMobileNative');
 
@@ -45,6 +47,7 @@ var test = tape({
             err,
             'Should be able to call stopAdvertisingAndListening in teardown'
           );
+          thaliMobileNativeWrapper._registerToNative();
           t.end();
         });
       });
@@ -360,8 +363,9 @@ test('Can shift large amounts of data', function (t) {
     var client = null;
 
     // We're happy here if we make a connection to anyone
-    logger.info(connection);
+    logger.info('Connection info: ' + JSON.stringify(connection));
     client = net.connect(connection.listeningPort, function () {
+      logger.info('Connected to the ' + connection.listeningPort);
       shiftData(client);
     });
   }

@@ -14,9 +14,14 @@ var net = require('net');
 var assert = require('assert');
 var Promise = require('lie');
 
-var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
+var makeIntoCloseAllServer =
+  require('thali/NextGeneration/makeIntoCloseAllServer');
 
-var logger = require('../lib/testLogger')('testThaliMobileNativeDiscoveryCoordinated');
+var logger =
+  require('../lib/testLogger')('testThaliMobileNativeDiscoveryCoordinated');
+
+var thaliMobileNativeWrapper =
+  require('thali/NextGeneration/thaliMobileNativeWrapper');
 
 // Global server that should be stopped with it's mobile sources in teardown.
 var serverToBeClosed;
@@ -85,6 +90,7 @@ var test = tape({
       t.fail(error);
     })
     .then(function () {
+      thaliMobileNativeWrapper._registerToNative();
       t.end();
     });
   }
