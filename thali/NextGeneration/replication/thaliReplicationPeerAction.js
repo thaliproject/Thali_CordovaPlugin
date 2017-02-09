@@ -84,7 +84,7 @@ ThaliReplicationPeerAction.ACTION_TYPE = 'ReplicationAction';
  * @readonly
  * @type {number}
  */
-ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 3;
+ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 15;
 
 /**
  * The number of milliseconds to wait between updating `_Local/<peer ID>` on the
