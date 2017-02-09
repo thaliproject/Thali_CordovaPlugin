@@ -53,6 +53,13 @@ var test = tape({
   teardownTimeout:  3 * 60 * 1000
 });
 
+function log() {
+  var prefix = new Date().toISOString().replace(/[TZ]/g, ' ') + 'TMC-DEBUG:';
+  var args = Array.prototype.slice.call(arguments);
+  args.unshift(prefix);
+  return console.log.apply(console, args);
+}
+
 /**
  * Deterministically transforms a PouchDB doc to a string so we can compare
  * docs for equality.
@@ -134,6 +141,13 @@ function waitForRemoteDocs(pouchDB, docsToFind) {
       error = err;
       complete();
     });
+
+    var originalEmit = changesFeed.emit;
+    changesFeed.emit = function () {
+      var args = Array.prototype.slice.call(arguments);
+      log('Changes feed emits:', args);
+      return originalEmit.apply(this, args);
+    };
   });
 }
 
@@ -187,106 +201,94 @@ test('test write', function (t) {
   });
 });
 
-test('test repeat write 1', function (t) {
-  var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
-    t, publicKeyForLocalDevice
-  );
+function assignTestFields(i, target) {
+  for (var j = 1; j <= i; j++) {
+    target['test' + j] = true;
+  }
+  return target;
+}
 
-  // We are using an old db for each participant.
-  var pouchDB = new PouchDB(DB_NAME);
+function testRepeatWrite(i) {
+  var name = 'test repeat write ' + i;
 
-  // We are getting our previous doc from a local db.
-  // It should consist of it's public key (base64 representation)
-  // and 1 test boolean.
-  var localDoc;
-  thaliManager.start(partnerKeys)
-  .then(function () {
-    return pouchDB.get(publicBase64KeyForLocalDevice);
-  })
-  .then(function (response) {
-    localDoc = response;
-  })
-  .then(function () {
-    // Lets update our doc with new boolean.
-    localDoc.test2 = true;
-    return pouchDB.put(localDoc)
-      .then(function (response) {
-        localDoc._rev = response.rev;
-      });
-  })
-  .then(function () {
+  test(name, function (t) {
+    var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
+      t, publicKeyForLocalDevice
+    );
+
+    // We are using an old db for each participant.
+    var pouchDB = new PouchDB(DB_NAME);
+
     // Our partners should update its docs the same way.
     var oldDocs = partnerKeys.map(function (partnerKey) {
-      return {
+      return assignTestFields(i, {
         _id: partnerKey.toString('base64'),
-        test1: true
-      };
+      });
     });
     var newDocs = partnerKeys.map(function (partnerKey) {
-      return {
-        _id: partnerKey.toString('base64'),
-        test1: true,
-        test2: true
-      };
+      return assignTestFields(i + 1, {
+        _id: partnerKey.toString('base64')
+      });
     });
     var docs = oldDocs.concat(newDocs);
-    docs.push(localDoc);
-    return waitForRemoteDocs(pouchDB, docs);
-  })
-  .then(function () {
-    t.end();
-  });
-});
+    docs.push(assignTestFields(i + 1, {
+      _id: publicBase64KeyForLocalDevice,
+    }));
+    docs.push(assignTestFields(i, {
+      _id: publicBase64KeyForLocalDevice,
+    }));
 
-test('test repeat write 2', function (t) {
-  var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
-    t, publicKeyForLocalDevice
-  );
+    log('Create waiter for docs:', docs);
+    var waiter = waitForRemoteDocs(pouchDB, docs);
 
-  // We are using an old db for each participant.
-  var pouchDB = new PouchDB(DB_NAME);
+    // We are getting our previous doc from a local db.
+    // It should consist of it's public key (base64 representation)
+    // and 2 test booleans.
+    var localDoc;
+    thaliManager.start(partnerKeys)
+    .then(function () {
+      t.pass('ThaliManager started');
+      return pouchDB.get(publicBase64KeyForLocalDevice);
+    })
+    .then(function (response) {
+      t.pass('Got response');
+      localDoc = response;
+      log('LOCAL DOC:', localDoc);
 
-  // We are getting our previous doc from a local db.
-  // It should consist of it's public key (base64 representation)
-  // and 2 test booleans.
-  var localDoc;
-  thaliManager.start(partnerKeys)
-  .then(function () {
-    return pouchDB.get(publicBase64KeyForLocalDevice);
-  })
-  .then(function (response) {
-    localDoc = response;
-  })
-  .then(function () {
-    // Lets update our doc with new boolean.
-    localDoc.test3 = true;
-    return pouchDB.put(localDoc)
-      .then(function (response) {
-        localDoc._rev = response.rev;
-      });
-  })
-  .then(function () {
-    // Our partners should update its docs the same way.
-    var oldDocs = partnerKeys.map(function (partnerKey) {
-      return {
-        _id: partnerKey.toString('base64'),
-        test1: true,
-        test2: true
-      };
+      // Lets update our doc with new boolean.
+      assignTestFields(i + 1, localDoc);
+      log('PUTTING UPDATED LOCAL DOC:', localDoc);
+      return pouchDB.put(localDoc)
+        .then(function (response) {
+          log('PUT SUCCESS. RESPONSE:', response);
+          localDoc._rev = response.rev;
+        });
+    })
+    .then(function () {
+      t.pass('Put updated doc');
+      log('Waiting for docs');
+      return waiter;
+    })
+    .then(function () {
+      t.pass('Got all docs');
+    })
+    .catch(function (error) {
+      t.fail('Got error: ' + error.message);
+      log(error);
+    })
+    .then(function () {
+      t.end();
     });
-    var newDocs = partnerKeys.map(function (partnerKey) {
-      return {
-        _id: partnerKey.toString('base64'),
-        test1: true,
-        test2: true,
-        test3: true
-      };
-    });
-    var docs = oldDocs.concat(newDocs)
-    docs.push(localDoc);
-    return waitForRemoteDocs(pouchDB, docs);
-  })
-  .then(function () {
-    t.end();
   });
-});
+}
+
+testRepeatWrite(1);
+testRepeatWrite(2);
+testRepeatWrite(3);
+testRepeatWrite(4);
+testRepeatWrite(5);
+testRepeatWrite(6);
+testRepeatWrite(7);
+testRepeatWrite(8);
+testRepeatWrite(9);
+testRepeatWrite(10);
