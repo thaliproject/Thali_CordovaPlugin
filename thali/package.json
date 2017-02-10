@@ -37,7 +37,7 @@
       "buildToolsVersion": "25.0.2",
       "compileSdkVersion": "android-23"
     },
-    "btconnectorlib2": "0.3.8-alpha",
+    "btconnectorlib2": "0.3.9",
     "jxcore-cordova": "0.1.9",
     "jxcore-cordova-url": "http://jxcore.azureedge.net/jxcore-cordova/0.1.9/release/io.jxcore.node.jx"
   },
