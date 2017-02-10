@@ -33,7 +33,7 @@ test('onPeerLost calls jxcore',
 
       t.equal(callbackPeer.peerIdentifier, '11:22:33:22:11:00',
         'check if callback was fired by onPeerLost');
-      t.equal(callbackPeer.generation, null, 'check if generation is null');
+      t.ok(callbackPeer.generation == null, 'check if generation is null');
       t.notOk(callbackPeer.peerAvailable, 'check if peerAvailable is false');
 
       t.end();

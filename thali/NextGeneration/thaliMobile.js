@@ -26,6 +26,10 @@ var Promise = require('lie');
 var PromiseQueue = require('./promiseQueue');
 var promiseQueue = new PromiseQueue();
 
+module.exports.getPromiseQueue = function () {
+  return promiseQueue;
+};
+
 function promiseResultSuccessOrFailure (promise) {
   return promise.then(function (success) {
     return success;
@@ -281,6 +285,16 @@ function startListeningForAdvertisements () {
 }
 
 /**
+ * Exported for testing purposes
+ * @private
+ *
+ * TODO: remove this export and instead check thaliWifiInfrastructure and
+ * thaliMobileNativeWrapper start methods in tests
+ */
+module.exports._startListeningForAdvertisements =
+  startListeningForAdvertisements;
+
+/**
  * This method calls the underlying startListeningForAdvertisements
  * functions.
  *
@@ -309,7 +323,7 @@ function startListeningForAdvertisements () {
  */
 module.exports.startListeningForAdvertisements = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    startListeningForAdvertisements().then(resolve, reject);
+    module.exports._startListeningForAdvertisements().then(resolve, reject);
   });
 };
 
@@ -346,6 +360,17 @@ function startUpdateAdvertisingAndListening () {
   );
   return start();
 }
+
+/**
+ * Exported for testing purposes
+ * @private
+ *
+ * TODO: remove this export and instead check thaliWifiInfrastructure and
+ * thaliMobileNativeWrapper start methods in tests
+ */
+module.exports._startUpdateAdvertisingAndListening =
+  startUpdateAdvertisingAndListening;
+
 /**
  * This method calls the underlying startUpdateAdvertisingAndListening
  * functions. This method has the same behavior as
@@ -365,7 +390,7 @@ function startUpdateAdvertisingAndListening () {
  */
 module.exports.startUpdateAdvertisingAndListening = function () {
   return promiseQueue.enqueue(function (resolve, reject) {
-    startUpdateAdvertisingAndListening().then(resolve, reject);
+    module.exports._startUpdateAdvertisingAndListening().then(resolve, reject);
   });
 };
 
@@ -544,7 +569,7 @@ var getPeerHostInfoStrategies = (function () {
  * transport types available to us.
  * @returns {Promise<peerHostInfo | Error>}
  */
-module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
+module.exports.getPeerHostInfo = function (peerIdentifier, connectionType) {
   var peersByConnectionType = peerAvailabilities[connectionType];
   if (!peersByConnectionType) {
     return Promise.reject(new Error('Unsupported connection type ' +
@@ -558,7 +583,8 @@ module.exports.getPeerHostInfo = function(peerIdentifier, connectionType) {
 
   var getPeerHostInfo = getPeerHostInfoStrategies[connectionType];
   if (!getPeerHostInfo) {
-    return Promise.reject(new Error('getPeerHostInfo is not implemented for ' + connectionType));
+    return Promise.reject(new Error('getPeerHostInfo is not implemented for ' +
+      connectionType));
   }
 
   return getPeerHostInfo(peer);
@@ -1058,14 +1084,19 @@ function handlePeer (peer) {
   module.exports.emitter.emit('peerAvailabilityChanged', peerStatus);
 }
 
-function handleRecreatedPeer (nativePeer) {
+var handleRecreatedPeer = function (nativePeer) {
+  var connectionType =
+    platform.isAndroid ?
+    connectionTypes.BLUETOOTH :
+    connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK;
+
   var cachedPeer =
-    peerAvailabilities[connectionTypes.BLUETOOTH][nativePeer.peerIdentifier];
+    peerAvailabilities[connectionType][nativePeer.peerIdentifier];
 
   if (cachedPeer) {
     var peerStatus = {
       peerIdentifier: nativePeer.peerIdentifier,
-      connectionType: connectionTypes.BLUETOOTH,
+      connectionType: connectionType,
       peerAvailable: nativePeer.peerAvailable,
       generation: nativePeer.generation,
       newAddressPort: nativePeer.peerAvailable ? false : null
@@ -1424,14 +1455,15 @@ function handleNetworkChanged (networkChangedValue) {
     };
     if (thaliMobileStates.listening) {
       promiseQueue.enqueueAtTop(function (resolve, reject) {
-        startListeningForAdvertisements().then(resolve, reject);
+        module.exports._startListeningForAdvertisements().then(resolve, reject);
       }).then(function (combinedResult) {
         checkErrors('startListeningForAdvertisements', combinedResult);
       });
     }
     if (thaliMobileStates.advertising) {
       promiseQueue.enqueueAtTop(function (resolve, reject) {
-        startUpdateAdvertisingAndListening().then(resolve, reject);
+        module.exports._startUpdateAdvertisingAndListening()
+          .then(resolve, reject);
       }).then(function (combinedResult) {
         checkErrors('startUpdateAdvertisingAndListening', combinedResult);
       });
@@ -1451,10 +1483,11 @@ function handleNetworkChangedNonTCP (networkChangedValue) {
   module.exports.emitter.emit('networkChanged', networkChangedValue);
 }
 
-function handleNetworkChangedWifi (networkChangedValue) {
-  logger.warn('networkChangedWifi should not be fired because it is not implemented');
+var handleNetworkChangedWifi = function (networkChangedValue) {
+  logger.warn('networkChangedWifi should not be ' +
+    'fired because it is not implemented');
   handleNetworkChangedNonTCP(networkChangedValue);
-}
+};
 
 /**
  * Unless something went horribly wrong only one of thaliMobileNativeWrapper

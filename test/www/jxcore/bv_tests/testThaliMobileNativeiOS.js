@@ -6,6 +6,8 @@ var Platform = require('thali/NextGeneration/utils/platform');
 var nodeUuid = require('node-uuid');
 var net = require('net');
 var thaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils');
+var thaliMobileNativeWrapper =
+  require('thali/NextGeneration/thaliMobileNativeWrapper');
 var logger = require('../lib/testLogger')('testThaliMobileNativeiOS');
 var Promise = require('lie');
 if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
@@ -44,6 +46,7 @@ var test = tape({
             err,
             'Should be able to call stopAdvertisingAndListening in teardown'
           );
+          thaliMobileNativeWrapper._registerToNative();
           t.end();
         });
       });
@@ -122,23 +125,14 @@ test('multiConnect properly fails on legal but non-existent peerID',
 test('cannot call multiConnect with invalid syncValue',
   function (t) {
     var connectReturned = false;
-    var invalidSyncValue = 123;
-    thaliMobileNativeTestUtils.multiConnectEmitter
-      .on('multiConnectResolved', function (syncValue, error, listeningPort) {
-        t.ok(connectReturned, 'Should only get called after multiConnect ' +
-        'returned');
-        t.equal(invalidSyncValue, syncValue, 'SyncValue matches');
-        t.equal(error, 'Bad parameters', 'Got right error');
-        t.notOk(listeningPort, 'listeningPort is null');
-        t.end();
-      });
+    var invalidSyncValue = /I am not a string/;
     Mobile('startListeningForAdvertisements').callNative(function (err) {
       t.notOk(err, 'No error on starting');
       var peerId = nodeUuid.v4();
       Mobile('multiConnect').callNative(peerId, invalidSyncValue,
-        function (err) {
-          t.notOk(err, 'Got null as expected');
-          connectReturned = true;
+        function (error) {
+          t.equal(error, 'Bad parameters', 'Got right error');
+          t.end();
         });
     });
   });

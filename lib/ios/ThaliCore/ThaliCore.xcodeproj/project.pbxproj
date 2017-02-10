@@ -31,6 +31,10 @@
 		1C6D71411DAF9BDB00802569 /* StringRandomTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD347541D9FEED9006F1126 /* StringRandomTests.swift */; };
 		1C6D71421DAFBBD100802569 /* TCPClientMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C148D151DA3B17500E0E1AC /* TCPClientMock.swift */; };
 		1C6D71431DAFBBDC00802569 /* TCPServerMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C148D131DA3B16C00E0E1AC /* TCPServerMock.swift */; };
+		1C8776E81DC0F2E0004CF9BD /* NSRunLoop+NSStreamEventsThread.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8776E71DC0F2E0004CF9BD /* NSRunLoop+NSStreamEventsThread.swift */; };
+		1C8776EA1DC0F324004CF9BD /* NSStreamEventsThread.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8776E91DC0F324004CF9BD /* NSStreamEventsThread.swift */; };
+		1C8776EB1DC0F324004CF9BD /* NSStreamEventsThread.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8776E91DC0F324004CF9BD /* NSStreamEventsThread.swift */; };
+		1C8776EC1DC0F32A004CF9BD /* NSRunLoop+NSStreamEventsThread.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8776E71DC0F2E0004CF9BD /* NSRunLoop+NSStreamEventsThread.swift */; };
 		1CB9B4211D7063C700C59CCF /* BluetoothManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1CB9B4201D7063C700C59CCF /* BluetoothManager.h */; };
 		1CD4C0AF1DA68E7B005FFC3B /* AdvertiserRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CD4C0AE1DA68E7B005FFC3B /* AdvertiserRelay.swift */; };
 		1CD4C0B01DA68E7B005FFC3B /* AdvertiserRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CD4C0AE1DA68E7B005FFC3B /* AdvertiserRelay.swift */; };
@@ -126,6 +130,9 @@
 		1C38DDD11D74153900418F15 /* BluetoothHardwareControlManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BluetoothHardwareControlManager.h; path = Utils/HardwareControl/Bluetooth/BluetoothHardwareControlManager.h; sourceTree = "<group>"; };
 		1C38DDD21D74153900418F15 /* BluetoothHardwareControlManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = BluetoothHardwareControlManager.m; path = Utils/HardwareControl/Bluetooth/BluetoothHardwareControlManager.m; sourceTree = "<group>"; };
 		1C38DDD31D74153900418F15 /* BluetoothHardwareControlObserver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BluetoothHardwareControlObserver.h; path = Utils/HardwareControl/Bluetooth/BluetoothHardwareControlObserver.h; sourceTree = "<group>"; };
+		1C5E18BD1D780D5400518DB8 /* BluetoothHardwareControlObserver.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BluetoothHardwareControlObserver.m; sourceTree = "<group>"; };
+		1C8776E71DC0F2E0004CF9BD /* NSRunLoop+NSStreamEventsThread.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "NSRunLoop+NSStreamEventsThread.swift"; sourceTree = "<group>"; };
+		1C8776E91DC0F324004CF9BD /* NSStreamEventsThread.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NSStreamEventsThread.swift; sourceTree = "<group>"; };
 		1CB9B4201D7063C700C59CCF /* BluetoothManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BluetoothManager.h; path = Utils/HardwareControl/Bluetooth/PrivateAPI/BluetoothManager.h; sourceTree = "<group>"; };
 		1CD4C0AE1DA68E7B005FFC3B /* AdvertiserRelay.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdvertiserRelay.swift; sourceTree = "<group>"; };
 		1CD4C0B11DA68E86005FFC3B /* BrowserRelay.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BrowserRelay.swift; sourceTree = "<group>"; };
@@ -420,6 +427,8 @@
 				3AD347511D9FB556006F1126 /* TCPClient.swift */,
 				1CEBB3F91D997BF700B229C9 /* TCPListener.swift */,
 				1CEBB3FC1D997CB200B229C9 /* VirtualSocket.swift */,
+				1C8776E91DC0F324004CF9BD /* NSStreamEventsThread.swift */,
+				1C8776E71DC0F2E0004CF9BD /* NSRunLoop+NSStreamEventsThread.swift */,
 			);
 			path = SocketConnection;
 			sourceTree = "<group>";
@@ -650,6 +659,7 @@
 				FAADDB5F680C576D4D34638B /* Advertiser.swift in Sources */,
 				1CEBB3F21D997A8600B229C9 /* GCDAsyncSocket.m in Sources */,
 				FAADD49592809F2012ED7B29 /* ApplicationStateNotificationsManager.swift in Sources */,
+				1C8776E81DC0F2E0004CF9BD /* NSRunLoop+NSStreamEventsThread.swift in Sources */,
 				3AD347521D9FB556006F1126 /* TCPClient.swift in Sources */,
 				FAADD7B9451F32511828885E /* Browser.swift in Sources */,
 				1C148DDA1DA55D4900E0E1AC /* Dictionary+KeyForValue.swift in Sources */,
@@ -659,6 +669,7 @@
 				FAADD5FE7712039E773BC6E5 /* AdvertiserManager.swift in Sources */,
 				FAADDDA8FB9D6E557F49081B /* BrowserManager.swift in Sources */,
 				3AD347561D9FEF78006F1126 /* String+Random.swift in Sources */,
+				1C8776EA1DC0F324004CF9BD /* NSStreamEventsThread.swift in Sources */,
 				FAADD04D8930DF3297562D09 /* Session.swift in Sources */,
 				1CD4C0B21DA68E86005FFC3B /* BrowserRelay.swift in Sources */,
 				FAADD16070404F0C249AF956 /* VirtualSocketBuilder.swift in Sources */,
@@ -706,6 +717,7 @@
 				CCA573131D4BA04B00FBEC41 /* TestRunner.swift in Sources */,
 				D377C5021D6D9C1600916A7B /* VirtualSocketBuilder.swift in Sources */,
 				FAADDA5FCF7F856DF4224B68 /* Advertiser.swift in Sources */,
+				1C8776EC1DC0F32A004CF9BD /* NSRunLoop+NSStreamEventsThread.swift in Sources */,
 				FAADD705CAB9E45559605B8F /* Browser.swift in Sources */,
 				1C38DDD51D74153900418F15 /* BluetoothHardwareControlManager.m in Sources */,
 				FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */,
@@ -738,6 +750,7 @@
 				1CEBB3FB1D997BF700B229C9 /* TCPListener.swift in Sources */,
 				1C6D713C1DAF9BCB00802569 /* AdvertiserRelayTests.swift in Sources */,
 				FAADD38EEA68209A678157F2 /* AdvertiserTests.swift in Sources */,
+				1C8776EB1DC0F324004CF9BD /* NSStreamEventsThread.swift in Sources */,
 				FAADD2472EF20C245A535EB0 /* AdvertiserManagerTests.swift in Sources */,
 				1CEBB4011D997CF500B229C9 /* PeerAvailability.swift in Sources */,
 				FAADDC4F91EB0C57EF22ADEC /* VirtualSocketBuilderTests.swift in Sources */,

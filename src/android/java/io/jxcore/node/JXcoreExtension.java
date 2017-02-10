@@ -92,7 +92,7 @@ public class JXcoreExtension implements SurroundingStateObserver {
     private JXcoreExtension() {
     }
 
-    static SurroundingStateObserver getInstance() {
+    public static SurroundingStateObserver getInstance() {
         return Holder.INSTANCE;
     }
 
@@ -538,19 +538,16 @@ public class JXcoreExtension implements SurroundingStateObserver {
         });
     }
 
-
     public void notifyPeerAvailabilityChanged(PeerProperties peerProperties, boolean isAvailable) {
         JSONObject jsonObject = new JSONObject();
         boolean jsonObjectCreated = false;
 
         try {
-            jsonObject.put(EVENT_VALUE_PEER_ID, peerProperties.getId());
-            Integer gen = peerProperties.getExtraInformation();
-            if (!isAvailable) {
-                gen = (peerProperties.getExtraInformation() == 0) ? null : peerProperties.getExtraInformation();
-            }
-            jsonObject.put(EVENT_VALUE_PEER_GENERATION, gen);
-            jsonObject.put(EVENT_VALUE_PEER_AVAILABLE, isAvailable);
+            putValueInJson(jsonObject, EVENT_VALUE_PEER_ID, peerProperties.getId());
+            Integer gen = (isAvailable && hasExtraInfo(peerProperties)) ?
+                peerProperties.getExtraInformation() : null;
+            putValueInJson(jsonObject, EVENT_VALUE_PEER_GENERATION, gen);
+            putValueInJson(jsonObject, EVENT_VALUE_PEER_AVAILABLE, isAvailable);
             jsonObjectCreated = true;
         } catch (JSONException e) {
             Log.e(TAG, "notifyPeerAvailabilityChanged: Failed to populate the JSON object: " + e.getMessage(), e);
@@ -560,7 +557,6 @@ public class JXcoreExtension implements SurroundingStateObserver {
             JSONArray jsonArray = new JSONArray();
             jsonArray.put(jsonObject);
             final String jsonArrayAsString = jsonArray.toString();
-
             jxcore.activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -570,18 +566,20 @@ public class JXcoreExtension implements SurroundingStateObserver {
         }
     }
 
+    private boolean hasExtraInfo(PeerProperties peerProperties) {
+        return peerProperties.getExtraInformation() != PeerProperties.NO_EXTRA_INFORMATION;
+    }
+
     public void notifyDiscoveryAdvertisingStateUpdateNonTcp(boolean isDiscoveryActive, boolean isAdvertisingActive) {
         JSONObject jsonObject = new JSONObject();
         boolean jsonObjectCreated = false;
-
         try {
-            jsonObject.put(EVENT_VALUE_DISCOVERY_ACTIVE, isDiscoveryActive);
-            jsonObject.put(EVENT_VALUE_ADVERTISING_ACTIVE, isAdvertisingActive);
+            putValueInJson(jsonObject, EVENT_VALUE_DISCOVERY_ACTIVE, isDiscoveryActive);
+            putValueInJson(jsonObject, EVENT_VALUE_ADVERTISING_ACTIVE, isAdvertisingActive);
             jsonObjectCreated = true;
         } catch (JSONException e) {
             Log.e(TAG, "notifyDiscoveryAdvertisingStateUpdateNonTcp: Failed to populate the JSON object: " + e.getMessage(), e);
         }
-
         if (jsonObjectCreated) {
             final String jsonObjectAsString = jsonObject.toString();
 
@@ -623,36 +621,9 @@ public class JXcoreExtension implements SurroundingStateObserver {
 
         final ConnectivityMonitor connectivityMonitor = mConnectionHelper.getConnectivityMonitor();
 
-        if (connectivityMonitor.isBleMultipleAdvertisementSupported() !=
-            BluetoothManager.FeatureSupportedStatus.NOT_SUPPORTED) {
-            if (isBluetoothEnabled) {
-                bluetoothLowEnergyRadioState = RadioState.ON;
-            } else {
-                bluetoothLowEnergyRadioState = RadioState.OFF;
-            }
-        } else {
-            bluetoothLowEnergyRadioState = RadioState.NOT_HERE;
-        }
-
-        if (connectivityMonitor.isBluetoothSupported()) {
-            if (isBluetoothEnabled) {
-                bluetoothRadioState = RadioState.ON;
-            } else {
-                bluetoothRadioState = RadioState.OFF;
-            }
-        } else {
-            bluetoothRadioState = RadioState.NOT_HERE;
-        }
-
-        if (connectivityMonitor.isWifiDirectSupported()) {
-            if (isWifiEnabled) {
-                wifiRadioState = RadioState.ON;
-            } else {
-                wifiRadioState = RadioState.OFF;
-            }
-        } else {
-            wifiRadioState = RadioState.NOT_HERE;
-        }
+        bluetoothLowEnergyRadioState = getBleRadioState(connectivityMonitor, isBluetoothEnabled);
+        bluetoothRadioState = getBluetoothRadioState(connectivityMonitor, isBluetoothEnabled);
+        wifiRadioState = getWifiRadioState(connectivityMonitor, isWifiEnabled);
 
         Log.d(TAG, "notifyNetworkChanged: BLE: " + bluetoothLowEnergyRadioState
             + ", Bluetooth: " + bluetoothRadioState
@@ -665,12 +636,18 @@ public class JXcoreExtension implements SurroundingStateObserver {
         boolean jsonObjectCreated = false;
 
         try {
-            jsonObject.put(EVENT_VALUE_BLUETOOTH_LOW_ENERGY, radioStateEnumValueToString(bluetoothLowEnergyRadioState));
-            jsonObject.put(EVENT_VALUE_BLUETOOTH, radioStateEnumValueToString(bluetoothRadioState));
-            jsonObject.put(EVENT_VALUE_WIFI, radioStateEnumValueToString(wifiRadioState));
-            jsonObject.put(EVENT_VALUE_CELLULAR, radioStateEnumValueToString(cellularRadioState));
-            jsonObject.put(EVENT_VALUE_BSSID_NAME, bssidName);
-            jsonObject.put(EVENT_VALUE_SSID_NAME, ssidName);
+            putValueInJson(jsonObject, EVENT_VALUE_BLUETOOTH_LOW_ENERGY,
+                radioStateEnumValueToString(bluetoothLowEnergyRadioState));
+            putValueInJson(jsonObject, EVENT_VALUE_BLUETOOTH,
+                radioStateEnumValueToString(bluetoothRadioState));
+            putValueInJson(jsonObject, EVENT_VALUE_WIFI,
+                radioStateEnumValueToString(wifiRadioState));
+            putValueInJson(jsonObject, EVENT_VALUE_CELLULAR,
+                radioStateEnumValueToString(cellularRadioState));
+            if (wifiRadioState != RadioState.NOT_HERE) {
+                putValueInJson(jsonObject, EVENT_VALUE_BSSID_NAME, bssidName);
+                putValueInJson(jsonObject, EVENT_VALUE_SSID_NAME, removeQuotes(ssidName));
+            }
             jsonObjectCreated = true;
         } catch (JSONException e) {
             Log.e(TAG, "notifyNetworkChanged: Failed to populate the JSON object: " + e.getMessage(), e);
@@ -678,7 +655,6 @@ public class JXcoreExtension implements SurroundingStateObserver {
 
         if (jsonObjectCreated) {
             final String jsonObjectAsString = jsonObject.toString();
-
             jxcore.activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -686,6 +662,54 @@ public class JXcoreExtension implements SurroundingStateObserver {
                 }
             });
         }
+    }
+
+    private void putValueInJson(JSONObject jsonObject, String key, Object value) throws JSONException {
+        jsonObject.put(key, (value == null) ? JSONObject.NULL : value);
+    }
+
+    private RadioState getBleRadioState(ConnectivityMonitor connectivityMonitor, boolean isBluetoothEnabled) {
+        if (connectivityMonitor.isBleMultipleAdvertisementSupported() !=
+            BluetoothManager.FeatureSupportedStatus.NOT_SUPPORTED) {
+            if (isBluetoothEnabled) {
+                return RadioState.ON;
+            } else {
+                return RadioState.OFF;
+            }
+        } else {
+            return RadioState.NOT_HERE;
+        }
+    }
+
+    private RadioState getBluetoothRadioState(ConnectivityMonitor connectivityMonitor, boolean isBluetoothEnabled) {
+        if (connectivityMonitor.isBluetoothSupported()) {
+            if (isBluetoothEnabled) {
+                return RadioState.ON;
+            } else {
+                return RadioState.OFF;
+            }
+        } else {
+            return RadioState.NOT_HERE;
+        }
+    }
+
+    private RadioState getWifiRadioState(ConnectivityMonitor connectivityMonitor, boolean isWifiEnabled) {
+        if (connectivityMonitor.isWifiDirectSupported()) {
+            if (isWifiEnabled) {
+                return RadioState.ON;
+            } else {
+                return RadioState.OFF;
+            }
+        } else {
+            return RadioState.NOT_HERE;
+        }
+    }
+
+    private String removeQuotes(String strWithQuotes) {
+        if (strWithQuotes != null && !strWithQuotes.isEmpty()) {
+            return strWithQuotes.substring(1, strWithQuotes.length() - 1);
+        }
+        return strWithQuotes;
     }
 
     /**
@@ -700,14 +724,12 @@ public class JXcoreExtension implements SurroundingStateObserver {
             + INCOMING_CONNECTION_FAILED_NOTIFICATION_MIN_INTERVAL_IN_MILLISECONDS) {
             JSONObject jsonObject = new JSONObject();
             boolean jsonObjectCreated = false;
-
             try {
-                jsonObject.put(EVENT_VALUE_PORT_NUMBER, portNumber);
+                putValueInJson(jsonObject, EVENT_VALUE_PORT_NUMBER, portNumber);
                 jsonObjectCreated = true;
             } catch (JSONException e) {
                 Log.e(TAG, "notifyIncomingConnectionToPortNumberFailed: Failed to populate the JSON object: " + e.getMessage(), e);
             }
-
             if (jsonObjectCreated) {
                 mLastTimeIncomingConnectionFailedNotificationWasFired = currentTime;
                 final String jsonObjectAsString = jsonObject.toString();
@@ -736,32 +758,36 @@ public class JXcoreExtension implements SurroundingStateObserver {
         final ArrayList<Object> args = new ArrayList<Object>();
         String errorString = null;
 
-        if (mConnectionHelper.getConnectivityMonitor().isBleMultipleAdvertisementSupported() !=
-            BluetoothManager.FeatureSupportedStatus.NOT_SUPPORTED) {
-            boolean succeededToStartOrWasAlreadyRunning =
-                mConnectionHelper.start(serverPortNumber, startAdvertisements, new JXcoreThaliCallback() {
-                    @Override
-                    protected void onStartStopCallback(final String errorMessage) {
-                        args.add(errorMessage);
-                        jxcore.CallJSMethod(callbackId, args.toArray());
+        if (!isRadioOn()) {
+            errorString = "Radio Turned Off";
+        } else {
+            if (mConnectionHelper.getConnectivityMonitor().isBleMultipleAdvertisementSupported() !=
+                BluetoothManager.FeatureSupportedStatus.NOT_SUPPORTED) {
+                boolean succeededToStartOrWasAlreadyRunning =
+                    mConnectionHelper.start(serverPortNumber, startAdvertisements, new JXcoreThaliCallback() {
+                        @Override
+                        protected void onStartStopCallback(final String errorMessage) {
+                            args.add(errorMessage);
+                            jxcore.CallJSMethod(callbackId, args.toArray());
+                        }
+                    });
+
+                if (succeededToStartOrWasAlreadyRunning) {
+                    final DiscoveryManager discoveryManager = mConnectionHelper.getDiscoveryManager();
+
+                    if (discoveryManager.getState() ==
+                        DiscoveryManager.DiscoveryManagerState.WAITING_FOR_SERVICES_TO_BE_ENABLED) {
+                        errorString = "Radio Turned Off";
+
+                        // If/when radios are turned on, the discovery is started automatically
+                        // unless stop is called
                     }
-                });
-
-            if (succeededToStartOrWasAlreadyRunning) {
-                final DiscoveryManager discoveryManager = mConnectionHelper.getDiscoveryManager();
-
-                if (discoveryManager.getState() ==
-                    DiscoveryManager.DiscoveryManagerState.WAITING_FOR_SERVICES_TO_BE_ENABLED) {
-                    errorString = "Radio Turned Off";
-
-                    // If/when radios are turned on, the discovery is started automatically
-                    // unless stop is called
+                } else {
+                    errorString = "Unspecified Error with Radio infrastructure";
                 }
             } else {
-                errorString = "Unspecified Error with Radio infrastructure";
+                errorString = "No Native Non-TCP Support";
             }
-        } else {
-            errorString = "No Native Non-TCP Support";
         }
 
         if (errorString != null) {
@@ -769,6 +795,10 @@ public class JXcoreExtension implements SurroundingStateObserver {
             args.add(errorString);
             jxcore.CallJSMethod(callbackId, args.toArray());
         }
+    }
+
+    private static boolean isRadioOn() {
+        return mConnectionHelper.getConnectivityMonitor().isBluetoothEnabled();
     }
 
     /**

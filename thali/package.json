@@ -7,7 +7,7 @@
     "bluebird": "3.4.6",
     "body-parser": "1.13.3",
     "express": "4.13.3",
-    "forever-agent": "https://github.com/thaliproject/forever-agent.git#f1078b5095dfe00ad0d80779eba75e563b54608b",
+    "forever-agent": "https://github.com/thaliproject/forever-agent.git#f9a92c7a1b7ce4da849beca32b0ec2aeb855e0fd",
     "ip": "1.0.1",
     "javascript-state-machine": "2.3.5",
     "lie": "3.1.0",
@@ -34,12 +34,12 @@
     },
     "androidConfig": {
       "minSdkVersion": "21",
-      "buildToolsVersion": "25.0.0",
+      "buildToolsVersion": "25.0.2",
       "compileSdkVersion": "android-23"
     },
     "btconnectorlib2": "0.3.9",
-    "jxcore-cordova": "0.1.8",
-    "jxcore-cordova-url": "http://jxcore.azureedge.net/jxcore-cordova/0.1.8/release/io.jxcore.node.jx"
+    "jxcore-cordova": "0.1.9",
+    "jxcore-cordova-url": "http://jxcore.azureedge.net/jxcore-cordova/0.1.9/release/io.jxcore.node.jx"
   },
   "scripts": {
     "prepublish": "node install/prePublishThaliCordovaPlugin.js",
