@@ -1921,7 +1921,10 @@ test('calls correct starts when network changes',
 
 test('We properly fire peer unavailable and then available when ' +
 'connection fails on Android',
-testUtils.skipOnIOS,
+function () {
+  return !(platform.isAndroid &&
+    global.NETWORK_TYPE === ThaliMobile.networkTypes.NATIVE);
+},
 function(t) {
 
   var somePeerIdentifier = uuid.v4();
@@ -2013,7 +2016,10 @@ function(t) {
 
 test('We properly fire peer unavailable and then available when ' +
 'connection fails on iOS',
-testUtils.skipOnAndroid,
+function () {
+  return !(platform.isIOS &&
+    global.NETWORK_TYPE === ThaliMobile.networkTypes.NATIVE);
+},
 function(t) {
 
   var somePeerIdentifier = uuid.v4();
