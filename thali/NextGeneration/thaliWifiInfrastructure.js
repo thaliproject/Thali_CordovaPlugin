@@ -476,8 +476,9 @@ WifiAdvertiser.prototype._setUpExpressApp = function (router, pskIdToSecret) {
     });
   }
 
-  self.routerServer = https.createServer(options, self.expressApp);
-  self.routerServer = makeIntoCloseAllServer(self.routerServer);
+  self.routerServer = makeIntoCloseAllServer(
+    https.createServer(options, self.expressApp)
+  );
   return listen(self.routerServer, self.routerServerPort)
     .catch(function (listenError) {
       logger.error(
