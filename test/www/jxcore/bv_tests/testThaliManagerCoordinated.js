@@ -6,6 +6,7 @@ if (!tape.coordinated) {
 }
 
 var testUtils = require('../lib/testUtils.js');
+var logger = require('../lib/testLogger.js')('testThaliManagerCoordinated');
 
 var crypto = require('crypto');
 var Promise = require('bluebird');
@@ -16,6 +17,8 @@ var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var ThaliManager = require('thali/NextGeneration/thaliManager');
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
+var ThaliReplicationPeerAction =
+  require('thali/NextGeneration/replication/thaliReplicationPeerAction');
 
 // Public key for local device should be passed
 // to the tape 'setup' as 'tape.data'.
@@ -29,9 +32,13 @@ var DB_NAME = 'ThaliManagerCoordinated';
 PouchDB = testUtils.getLevelDownPouchDb();
 
 var thaliManager;
+var originalReplicationIdle =
+  ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS;
 
 var test = tape({
   setup: function (t) {
+    // TODO: some requests take up to 15 seconds on iOS devices (see #1618).
+    ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 30;
     t.data = publicKeyForLocalDevice.toJSON();
     t.end();
   },
@@ -43,6 +50,8 @@ var test = tape({
       }
     })
     .then(function () {
+      ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS =
+        originalReplicationIdle;
       t.end();
     });
   },
@@ -52,6 +61,24 @@ var test = tape({
   testTimeout:      5 * 60 * 1000,
   teardownTimeout:  3 * 60 * 1000
 });
+
+var DEBUG = false;
+function debug() {
+  if (!DEBUG) {
+    return;
+  }
+  var output = Array.prototype.map.call(arguments, function (arg) {
+    if (typeof arg === 'string') {
+      return arg;
+    }
+    try {
+      return JSON.stringify(arg, null, 2);
+    } catch(e) {
+      return String(arg);
+    }
+  });
+  return logger.debug(output.join(' '));
+}
 
 /**
  * Deterministically transforms a PouchDB doc to a string so we can compare
@@ -134,6 +161,15 @@ function waitForRemoteDocs(pouchDB, docsToFind) {
       error = err;
       complete();
     });
+
+    if (DEBUG) {
+      var originalEmit = changesFeed.emit;
+      changesFeed.emit = function () {
+        var args = Array.prototype.slice.call(arguments);
+        debug('Changes feed emits:', args);
+        return originalEmit.apply(this, args);
+      };
+    }
   });
 }
 
@@ -187,106 +223,107 @@ test('test write', function (t) {
   });
 });
 
-test('test repeat write 1', function (t) {
-  var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
-    t, publicKeyForLocalDevice
-  );
 
-  // We are using an old db for each participant.
-  var pouchDB = new PouchDB(DB_NAME);
+// Adds test1:true, test2:true, ... , testN:true fields to the provided object
+function assignTestFields(n, target) {
+  for (var i = 1; i <= n; i++) {
+    target['test' + i] = true;
+  }
+  return target;
+}
 
-  // We are getting our previous doc from a local db.
-  // It should consist of it's public key (base64 representation)
-  // and 1 test boolean.
-  var localDoc;
-  thaliManager.start(partnerKeys)
-  .then(function () {
-    return pouchDB.get(publicBase64KeyForLocalDevice);
-  })
-  .then(function (response) {
-    localDoc = response;
-  })
-  .then(function () {
-    // Lets update our doc with new boolean.
-    localDoc.test2 = true;
-    return pouchDB.put(localDoc)
-      .then(function (response) {
-        localDoc._rev = response.rev;
+function runRepeats(n) {
+  function testRepeatWrite(n) {
+    var name = 'test repeat write ' + n;
+
+    test(name, function (t) {
+      var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
+        t, publicKeyForLocalDevice
+      );
+
+      // Every iteration we pull our doc from database and add one more `testX`
+      // field to it and put it back. Every participant does the same. At the
+      // end of the test we expect our database to update all old docs with new
+      // ones for every participant (including ourselves)
+      //
+      // Every doc consist of participant's public key (base64 representation)
+      // and n test booleans (test1:true, test2:true, ... , testn: true).
+      //
+      // We start listening for changes at the beginning of the test to not miss
+      // any updates in the middle (I'm not sure but probably this is what was
+      // happening on android devices in BOTH mode - #1781 issue)
+
+      // We are using an old db for each participant.
+      var pouchDB = new PouchDB(DB_NAME);
+
+      // Old docs from our participants
+      var oldDocs = partnerKeys.map(function (partnerKey) {
+        return assignTestFields(n, {
+          _id: partnerKey.toString('base64'),
+        });
       });
-  })
-  .then(function () {
-    // Our partners should update its docs the same way.
-    var oldDocs = partnerKeys.map(function (partnerKey) {
-      return {
-        _id: partnerKey.toString('base64'),
-        test1: true
-      };
-    });
-    var newDocs = partnerKeys.map(function (partnerKey) {
-      return {
-        _id: partnerKey.toString('base64'),
-        test1: true,
-        test2: true
-      };
-    });
-    var docs = oldDocs.concat(newDocs);
-    docs.push(localDoc);
-    return waitForRemoteDocs(pouchDB, docs);
-  })
-  .then(function () {
-    t.end();
-  });
-});
-
-test('test repeat write 2', function (t) {
-  var partnerKeys = testUtils.turnParticipantsIntoBufferArray(
-    t, publicKeyForLocalDevice
-  );
-
-  // We are using an old db for each participant.
-  var pouchDB = new PouchDB(DB_NAME);
-
-  // We are getting our previous doc from a local db.
-  // It should consist of it's public key (base64 representation)
-  // and 2 test booleans.
-  var localDoc;
-  thaliManager.start(partnerKeys)
-  .then(function () {
-    return pouchDB.get(publicBase64KeyForLocalDevice);
-  })
-  .then(function (response) {
-    localDoc = response;
-  })
-  .then(function () {
-    // Lets update our doc with new boolean.
-    localDoc.test3 = true;
-    return pouchDB.put(localDoc)
-      .then(function (response) {
-        localDoc._rev = response.rev;
+      // New docs should have n + 1 fields
+      var newDocs = partnerKeys.map(function (partnerKey) {
+        return assignTestFields(n + 1, {
+          _id: partnerKey.toString('base64')
+        });
       });
-  })
-  .then(function () {
-    // Our partners should update its docs the same way.
-    var oldDocs = partnerKeys.map(function (partnerKey) {
-      return {
-        _id: partnerKey.toString('base64'),
-        test1: true,
-        test2: true
-      };
+      var ourOldDoc = assignTestFields(n, {
+        _id: publicBase64KeyForLocalDevice,
+      });
+      var ourNewDoc = assignTestFields(n + 1, {
+        _id: publicBase64KeyForLocalDevice,
+      });
+      var docs = oldDocs.concat(newDocs);
+      docs.push(ourOldDoc, ourNewDoc);
+
+      debug('Create waiter for docs:', docs);
+
+      var waiter = waitForRemoteDocs(pouchDB, docs);
+
+      var localDoc;
+
+      thaliManager.start(partnerKeys)
+      .then(function () {
+        t.pass('ThaliManager started');
+        return pouchDB.get(publicBase64KeyForLocalDevice);
+      })
+      .then(function (response) {
+        t.pass('Local doc retrieved');
+        localDoc = response;
+
+        debug('LOCAL DOC:', localDoc);
+
+        // Lets update our doc with new boolean.
+        assignTestFields(n + 1, localDoc);
+        debug('PUTTING UPDATED LOCAL DOC:', localDoc);
+        return pouchDB.put(localDoc);
+      })
+      .then(function () {
+        t.pass('Updated doc saved');
+        debug('Waiting for docs');
+        // now we are waiting to be served
+        return waiter;
+      })
+      .then(function () {
+        t.pass('Got all docs');
+      })
+      .catch(function (error) {
+        t.fail('Got error: ' + error.message);
+        debug(error.stack);
+      })
+      .then(function () {
+        t.end();
+      });
     });
-    var newDocs = partnerKeys.map(function (partnerKey) {
-      return {
-        _id: partnerKey.toString('base64'),
-        test1: true,
-        test2: true,
-        test3: true
-      };
-    });
-    var docs = oldDocs.concat(newDocs)
-    docs.push(localDoc);
-    return waitForRemoteDocs(pouchDB, docs);
-  })
-  .then(function () {
-    t.end();
-  });
-});
+  }
+
+  // testRepeatWrite tests work only when they are running consequentially,
+  // from 1 to n, because every next test depends on the fact that the previous
+  // one left specific documents in the database
+  for (var i = 1; i <= n; i++) {
+    testRepeatWrite(i);
+  }
+}
+
+runRepeats(3);

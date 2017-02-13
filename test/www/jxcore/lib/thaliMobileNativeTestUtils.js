@@ -1,16 +1,20 @@
 'use strict';
 
-var util = require('util').format;
+var format = require('util').format;
 
 var platform = require('thali/NextGeneration/utils/platform');
 var logger = require('../lib/testLogger')('thaliMobileNativeTestUtils');
 var randomString = require('randomstring');
+var Promise = require('lie');
+var makeIntoCloseAllServer =
+  require('thali/NextGeneration/makeIntoCloseAllServer');
 var Promise = require('bluebird');
-var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var net = require('net');
 var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 
+var ThaliMobileNativeWrapper =
+  require('thali/NextGeneration/thaliMobileNativeWrapper.js');
 
 function startAndListen(t, server, peerAvailabilityChangedHandler) {
   server.listen(0, function () {
@@ -131,16 +135,16 @@ function androidConnectToPeer(peer, quitSignal) {
 
 function createMultiConnectEmitter() {
   var emitter = new EventEmitter();
-
-  Mobile('multiConnectResolved')
-    .registerToNative(function (syncValue, error, listeningPort) {
+  ThaliMobileNativeWrapper.emitter.on('_multiConnectResolved',
+    function (syncValue, error, listeningPort) {
       emitter.emit('multiConnectResolved', syncValue, error, listeningPort);
-    });
-  Mobile('multiConnectConnectionFailure')
-    .registerToNative(function (peerIdentifier, error) {
+    }
+  );
+  ThaliMobileNativeWrapper.emitter.on('_multiConnectConnectionFailure',
+    function (peerIdentifier, error) {
       emitter.emit('multiConnectConnectionFailure', peerIdentifier, error);
-    });
-
+    }
+  );
   return emitter;
 }
 
@@ -187,6 +191,10 @@ function iOSConnectToPeer(peer, quitSignal) {
     };
 
     multiConnectEmitter.on('multiConnectResolved', multiConnectHandler);
+    logger.debug(format(
+      'Issuing multiConnect for %s (syncValue: %s)',
+      peer.peerIdentifier, originalSyncValue
+    ));
     Mobile('multiConnect')
       .callNative(peer.peerIdentifier, originalSyncValue, function (error) {
         logger.debug('Got \'multiConnect\' callback');

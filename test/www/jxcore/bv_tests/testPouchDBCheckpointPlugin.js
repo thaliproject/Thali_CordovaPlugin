@@ -39,7 +39,13 @@ var Doc = function () {
   this._id = prefix + '-' + Date.now();
 };
 
-test('Call of onCheckpointReached handler on a single db change', function (t) {
+test('Call of onCheckpointReached handler on a single db change',
+function () {
+  // TODO: checkpoints plugin has race conditions. See #1741 PR for the
+  // incomplete solution
+  return true;
+},
+function (t) {
   db.onCheckpointReached(function () {
     t.end();
   });
@@ -48,6 +54,11 @@ test('Call of onCheckpointReached handler on a single db change', function (t) {
 });
 
 test('Call of multiple onCheckpointReached handlers on a single db change',
+function () {
+  // TODO: checkpoints plugin has race conditions. See #1741 PR for the
+  // incomplete solution
+  return true;
+},
 function (t) {
   var spy = sinon.spy();
   var anotherSpy = sinon.spy();
@@ -76,7 +87,13 @@ function (t) {
 });
 
 test('Call of onCheckpointReached handler on multiple db changes ' +
-'that are in the checkpoints plugin delay interval', function (t) {
+'that are in the checkpoints plugin delay interval',
+function () {
+  // TODO: checkpoints plugin has race conditions. See #1741 PR for the
+  // incomplete solution
+  return true;
+},
+function (t) {
   var ENSURE_DELAY = 1000;
   var spy = sinon.spy();
 
@@ -103,7 +120,13 @@ test('Call of onCheckpointReached handler on multiple db changes ' +
 });
 
 test('Call of onCheckpointReached handler on multiple db changes ' +
-    'that are out of the checkpoints plugin delay interval', function (t) {
+'that are out of the checkpoints plugin delay interval',
+function () {
+  // TODO: checkpoints plugin has race conditions. See #1741 PR for the
+  // incomplete solution
+  return true;
+},
+function (t) {
   var spy = sinon.spy();
 
   var handler = function () {

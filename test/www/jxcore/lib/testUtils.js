@@ -13,8 +13,10 @@ var ForeverAgent = require('forever-agent');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var expressPouchdb = require('express-pouchdb');
 var platform = require('thali/NextGeneration/utils/platform');
-var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
-var notificationBeacons = require('thali/NextGeneration/notification/thaliNotificationBeacons');
+var makeIntoCloseAllServer =
+  require('thali/NextGeneration/makeIntoCloseAllServer');
+var notificationBeacons =
+  require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var express = require('express');
 var fs = require('fs-extra-promise');
 
@@ -206,13 +208,14 @@ module.exports.tmpDirectory = tmpDirectory;
  * device has the hardware capabilities required.
  * On Android, checks the BLE multiple advertisement feature and elsewhere
  * always resolves with true.
+ * @returns {Promise<boolean>}
  */
 module.exports.hasRequiredHardware = function () {
   if (!platform._isRealAndroid) {
     return Promise.resolve(true);
   }
 
-  return new Promise(function (resolve, reject) {
+  return new Promise(function (resolve) {
     function checkBleMultipleAdvertisementSupport () {
       Mobile('isBleMultipleAdvertisementSupported')
         .callNative(function (error, result) {
@@ -268,7 +271,7 @@ module.exports.enableRequiredHardware = function () {
     .catch(function () {
       return false;
     });
-}
+};
 
 module.exports.returnsValidNetworkStatus = function () {
   // The require is here instead of top of file so that
@@ -467,13 +470,20 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
                                                 selectedPeerId) {
   // We don't load thaliMobileNativeWrapper until after the tests have started
   // running so we pick up the right version of mobile
-  var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
+  var thaliMobileNativeWrapper =
+    require('thali/NextGeneration/thaliMobileNativeWrapper');
   return new Promise(function (resolve, reject) {
     var retryCount = 0;
-    var MAX_TIME_TO_WAIT_IN_MILLISECONDS = 1000 * 30 * 2;
+    var MAX_TIME_TO_WAIT_IN_MILLISECONDS = 1000 * 60;
+    var GET_PORT_TIMEOUT = 1000 * 3;
     var exitCalled = false;
     var peerID = selectedPeerId;
     var getRequestPromise = null;
+    var cancelGetPortTimeout = null;
+
+    var timeoutId = setTimeout(function () {
+      exitCall(null, new Error('Timer expired'));
+    }, MAX_TIME_TO_WAIT_IN_MILLISECONDS);
 
     function exitCall(success, failure) {
       if (exitCalled) {
@@ -481,6 +491,7 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
       }
       exitCalled = true;
       clearTimeout(timeoutId);
+      clearTimeout(cancelGetPortTimeout);
       thaliMobileNativeWrapper.emitter
         .removeListener('nonTCPPeerAvailabilityChangedEvent',
           nonTCPAvailableHandler);
@@ -491,15 +502,11 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
         });
     }
 
-    var timeoutId = setTimeout(function () {
-      exitCall(null, new Error('Timer expired'));
-    }, MAX_TIME_TO_WAIT_IN_MILLISECONDS);
-
     function tryAgain(portNumber) {
       ++retryCount;
       logger.warn('Retry count for getSamePeerWithRetry is ' + retryCount);
-      getRequestPromise =
-        module.exports.get('127.0.0.1', portNumber, path, pskIdentity, pskKey);
+      getRequestPromise = module.exports.get('127.0.0.1',
+                          portNumber, path, pskIdentity, pskKey);
       getRequestPromise
         .then(function (result) {
           exitCall(result);
@@ -510,31 +517,11 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
         });
     }
 
-    function nonTCPAvailableHandler(record) {
-      // Ignore peer unavailable events
-      if (record.portNumber === null) {
-        if (peerID && record.peerIdentifier === peerID) {
-          logger.warn('We got a peer unavailable notification for a ' +
-            'peer we are looking for.');
-        }
-        return;
-      }
-
-      if (peerID && record.peerIdentifier !== peerID) {
-        return;
-      }
-
-      logger.debug('We got a peer ' + JSON.stringify(record));
-
-      if (!peerID) {
-        peerID = record.peerIdentifier;
-        return tryAgain(record.portNumber);
-      }
-
+    function callTryAgain(portNumber) {
 
       // We have a predefined peerID
       if (!getRequestPromise) {
-        return tryAgain(record.portNumber);
+        return tryAgain(portNumber);
       }
 
       getRequestPromise
@@ -545,11 +532,58 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
           // unlikely
         })
         .catch(function (err) {
-          return tryAgain(record.portNumber, err);
+          return tryAgain(portNumber, err);
         });
     }
 
-    thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
+    function getPort(record) {
+      return new Promise(function (resolve) {
+        if (platform.isIOS) {
+          thaliMobileNativeWrapper._multiConnect(record.peerIdentifier)
+          .then(function (port) {
+            resolve(port);
+          })
+          .catch(function () {
+            cancelGetPortTimeout = setTimeout(function () {
+              resolve(getPort(record));
+            }, GET_PORT_TIMEOUT);
+          });
+        } else {
+          resolve(record.portNumber);
+        }
+      });
+
+    }
+
+    function nonTCPAvailableHandler(record) {
+      // Ignore peer unavailable events
+      if (!record.peerAvailable) {
+        return;
+      }
+
+      if (peerID && record.peerIdentifier === peerID) {
+        logger.warn('We got a peer unavailable notification for a ' +
+          'peer we are looking for.');
+      }
+
+      if (peerID && record.peerIdentifier !== peerID) {
+        return;
+      }
+
+      logger.debug('We got a peer ' + JSON.stringify(record));
+
+      if (!peerID) {
+        peerID = record.peerIdentifier;
+      }
+
+      getPort(record)
+      .then(function (port) {
+        callTryAgain(port);
+      });
+    }
+
+    thaliMobileNativeWrapper.emitter.on(
+      'nonTCPPeerAvailabilityChangedEvent',
       nonTCPAvailableHandler);
   });
 };
@@ -565,7 +599,7 @@ module.exports.validateCombinedResult = function (combinedResult) {
 
 var MAX_FAILURE  = 10;
 var RETRY_DELAY  = 10000;
-var TEST_TIMEOUT = 5 * 60 * 1000
+var TEST_TIMEOUT = 5 * 60 * 1000;
 
 function turnParticipantsIntoBufferArray (t, devicePublicKey) {
   var publicKeys = [];
@@ -707,7 +741,7 @@ module.exports.runTestOnAllParticipants = function (
       var publicKey = notificationForUs.keyId;
       participantTask[publicKey].cancel();
       participantTask[publicKey] = createTask(notificationForUs);
-    }
+    };
     thaliNotificationClient.on(
       thaliNotificationClient.Events.PeerAdvertisesDataForUs,
       notificationHandler
@@ -875,4 +909,12 @@ module.exports.restoreUnresolvableDomains = function () {
     dns.lookup = dns.__originalLookup;
     delete dns.__originalLookup;
   }
+};
+
+module.exports.skipOnIOS = function () {
+  return platform.isIOS;
+};
+
+module.exports.skipOnAndroid = function () {
+  return platform.isAndroid;
 };

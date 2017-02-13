@@ -64,6 +64,8 @@ module.exports = function (context) {
     context.opts.plugin.dir, 'lib', 'ios', 'ThaliCore');
   var thaliCoreOutputFolder = path.join(
     context.opts.plugin.dir, 'lib', 'ios');
+  var testingInfrastructureDir = path.join(
+    context.opts.plugin.dir, 'src', 'ios', 'Testing');
 
   // We need to embded frameworks to the project here.
   // They need to be embedded binaries and cordova does not yet support that.
@@ -83,5 +85,5 @@ module.exports = function (context) {
     projectRoot, 'platforms', 'ios', cfg.name() + '.xcodeproj');
 
   return nativeInstaller.addFramework(projectPath, thaliCoreProjectFolder,
-    thaliCoreOutputFolder, isTestEnvironment);
+    thaliCoreOutputFolder, isTestEnvironment, testingInfrastructureDir);
 };
