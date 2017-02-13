@@ -317,14 +317,14 @@ Download [Xcode 6](https://developer.apple.com/xcode/), or later.
 
 ### Install latest JXCore
 
-The installation guide for JXCore 3.1.9 on Mac OS and Windows can be found [here](https://github.com/thaliproject/jxbuild/blob/master/distribute.md).
+The installation guide for JXCore 3.1.10 on Mac OS and Windows can be found [here](https://github.com/thaliproject/jxbuild/blob/master/distribute.md).
 
-The latest version of JXCore 3.1.9 only for Mac OS can be downloaded from [here](https://jxcore.blob.core.windows.net/jxcore-release/jxcore/0319/release/jx_osx64v8.zip)
+The latest version of JXCore 3.1.10 only for Mac OS can be downloaded from [here](https://jxcore.blob.core.windows.net/jxcore-release/jxcore/03110/release/jx_osx64v8.zip)
 
 To check the version of the current JXCore installation run:
 ```
 $ jx -jxv
-v 0.3.1.9
+v 0.3.1.10
 ```
 
 ### Install Cordova
