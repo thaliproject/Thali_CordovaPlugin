@@ -732,7 +732,7 @@ test('network changes are ignored while stopping', function (t) {
     })
     .then(function (networkStatus) {
       realNetworkStatus = networkStatus;
-      wifiInfrastructure._isStarted = false;
+      wifiInfrastructure.stop();
       spy = sinon.spy(wifiInfrastructure, 'startListeningForAdvertisements');
       ThaliMobileNativeWrapper.emitter
         .emit('networkChangedNonTCP', wifiOffNetworkStatus);
@@ -741,8 +741,7 @@ test('network changes are ignored while stopping', function (t) {
       return Promise.delay(0);
     }).then(function () {
       t.equals(spy.callCount, 0, 'should not be called');
-      wifiInfrastructure.startListeningForAdvertisements.restore();
-      wifiInfrastructure._isStarted = true;
+      spy.restore();
       t.end();
     });
 });
