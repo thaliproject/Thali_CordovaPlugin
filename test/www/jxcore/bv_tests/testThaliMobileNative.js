@@ -240,7 +240,7 @@ function connectToListenerSendMessageGetResponseLength(t, port, request,
 }
 
 test('Can connect to a remote peer', function (t) {
-  var connecting = false;
+  var connected = false;
 
   var echoServer = net.createServer(function (socket) {
     socket.pipe(socket);
@@ -249,25 +249,34 @@ test('Can connect to a remote peer', function (t) {
   echoServer = makeIntoCloseAllServer(echoServer);
   serverToBeClosed = echoServer;
 
-  function onConnectSuccess(err, connection) {
+  function onConnectSuccess(err, connection, peer) {
+    if (connected) {
+      return;
+    }
+    connected = true;
     // Called if we successfully connect to to a peer
-    logger.info(connection);
+    logger.info(
+      'Connected to ' + peer.peerIdentifier + '. ' +
+      'Connection: ' + JSON.stringify(connection)
+    );
 
     t.ok(connection.hasOwnProperty('listeningPort'),
       'Must have listeningPort');
-    t.ok(typeof connection.listeningPort === 'number',
+    t.equal(typeof connection.listeningPort, 'number',
       'listeningPort must be a number');
 
     // A check if any of our old reverse connection or please connect code
     // is still hiding around.
-    t.ok(connection.listeningPort !== 0, 'listening port should not be 0');
+    t.notEqual(connection.listeningPort, 0, 'listening port should not be 0');
 
     t.end();
   }
 
-  function onConnectFailure () {
-    t.fail('Connect failed!');
-    t.end();
+  function onConnectFailure (error, _, peer) {
+    logger.info(
+      'Connection to ' + peer.peerIdentifier + ' failed. ' +
+      'Error: ' + String(error)
+    );
   }
 
   echoServer.listen(0, function () {
@@ -277,9 +286,12 @@ test('Can connect to a remote peer', function (t) {
       logger.info('Received peerAvailabilityChanged with peers: ' +
         JSON.stringify(peers)
       );
+      if (connected) {
+        logger.info('But we have already connected. Ignoring those peers');
+        return;
+      }
       peers.forEach(function (peer) {
-        if (peer.peerAvailable && !connecting) {
-          connecting = true;
+        if (peer.peerAvailable) {
           thaliMobileNativeTestUtils.connectToPeer(peer)
             .then(function (connection) {
               onConnectSuccess(null, connection, peer);
