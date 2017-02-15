@@ -1,0 +1,140 @@
+Humans must become cyborgs to survive, says Elon Musk
+
+Humans must become cyborgs and develop a direct high-bandwidth connection with
+machines or risk irrelevance and obsolescence, says Tesla and SpaceX founder
+Elon Musk.
+
+Musk's latest cheery thoughts were imparted at the World Government Summit in
+the UAE. "Over time I think we will probably see a closer merger of biological
+intelligence and digital intelligence," Musk said, according to CNBC.
+
+The main thrust of Musk's argument seems to hinge on the limited bandwidth and
+processing power of a single human being. Computers can ingest, transfer, and
+process gigabytes of data per second, every second, forever. Meatbags, however,
+are severely limited by an input/output rate—talking, typing, listening—that's
+best measured in bits per second. Thus, avoid replacement by robot or artificial
+intelligence, we need to become machines.
+
+By way of example, Musk spoke about self-driving cars, which will very soon
+start displacing jobs—lots and lots of jobs. "The most near term impact from a
+technology standpoint is autonomous cars ... There are many people whose jobs
+are to drive. In fact I think it might be the single largest employer of people
+... We need to figure out new roles for what do those people do, but it will be
+very disruptive and very quick."
+
+Autonomous vehicles are perhaps the most visible prominence when it comes to
+recent developments in AI, but rest assured (or not) that we aren't even close
+to AI's capability ceiling. Current deployments of AI are quite limited in that
+they can only perform one or two tasks adequately—drive a car, lift a piece of
+steel, flip a burger—but AI research is slowly bubbling towards artificial
+general intelligence (AGI), which can ostensibly perform every task that a human
+is capable of.
+
+Once that happens, it's fairly safe to assume that AGI will continue to improve
+until, in the words of Elon Musk, it is "smarter than the smartest human on
+earth."
+
+As for how humans might achieve silicon symbiosis, the jury's still out. Musk,
+according to CNBC, proposed a brain-attached high-bandwidth computer link,
+perhaps via neural lace. Low-speed and low-resolution EEG-based brain-computer
+interfaces already exist, of course, but I doubt that's what Musk has in mind.
+In all likelihood, we will need to massively improve our understanding of the
+human brain before any such interface can be created.
+
+It's quite fun to plot the journey of Musk's thoughts. Back in 2015, Musk called
+for a ban on military use of AI. In 2016 he asserted that we'd need a universal
+income because robots will take all the jobs. Now he's worked out that we can be
+useful and retain our jobs—we just need to increase our output by merging with
+the machines.
+
+Hopefully we'll be allowed to keep our higher faculties, like Doctor Who's
+Cybermen, which themselves were based on early musings on cybernetics and
+cyborgs.
+
+---
+
+It might be time to stop using antivirus
+
+Former Firefox developer Robert O'Callahan, now a free agent and safe from the
+PR tentacles of his corporate overlord, says that antivirus software is
+terrible, AV vendors are terrible, and that you should uninstall your antivirus
+software immediately—unless you use Microsoft's Windows Defender, which is
+apparently okay.
+
+A couple of months back, Justin Schuh, Google Chrome's security chief, and
+indeed one of the world's top infosec bods, said that antivirus software is "my
+single biggest impediment to shipping a secure browser." Further down the thread
+he explains that meddling AV software delayed Win32 Flash sandboxing "for over a
+year" and that further sandboxing efforts are still on hold due to AV. The
+man-in-the-middle nature of antivirus also causes a stream of TLS (transport
+layer security) errors, says Schuh, which in turn breaks some elements of
+HTTPS/HSTS.
+
+These are just two recent instances of browser makers being increasingly upset
+with antivirus software. Back in 2012, Nicholas Nethercote, another Mozillian
+working on Firefox's MemShrink project said that "McAfee is killing us." In that
+case, Nethercote was trying to reduce the memory footprint of Firefox, and found
+that gnarly browser add-ons like McAfee were consuming a huge amount of memory,
+amongst other things. If you venture off-piste into the browser mailing lists,
+anti-antivirus sentiment has bubbled away just below the surface for a very long
+time.
+
+The problem, from the perspective of the browser makers, is that antivirus
+software is incredibly invasive. Antivirus, in an attempt to catch viruses
+before they can infect your system, forcibly hooks itself into other pieces of
+software on your computer, such as your browser, word processor, or even the OS
+kernel. O'Callahan gives one particularly egregious example: "Back when we first
+made sure ASLR was working for Firefox on Windows, many AV vendors broke it by
+injecting their own ASLR-disabled DLLs into our processes." ASLR, or
+address-space layout randomisation, is one of the better protections against
+buffer overflow exploits.
+
+Furthermore, because of the aforementioned knotweed-style rhizomes of antivirus
+programs, the AV software itself presents a very large attack surface. As in,
+without AV installed, a hacker might have to find a vulnerability in the browser
+or operating system—but if there's AV present, the hacker can also look for a
+vulnerability there. This wouldn't necessarily be a problem if AV makers made
+secure software, but for the most part they don't (except for Windows Defender,
+because Microsoft is "generally competent," according to O'Callahan).
+
+Back in June last year, Google's Project Zero found 25 high-severity bugs in
+Symantec/Norton security products. "These vulnerabilities are as bad as it
+gets," said Tavis Ormandy, a Project Zero researcher. "They don’t require any
+user interaction, they affect the default configuration, and the software runs
+at the highest privilege levels possible. In certain cases on Windows,
+vulnerable code is even loaded into the kernel, resulting in remote kernel
+memory corruption." Over the past five years, Ormandy has found similar
+vulnerabilities in security software from Kaspersky, McAfee, Eset, Comodo, Trend
+Micro, and others.
+
+All this isn't to say that you (or your parents) shouldn't use antivirus
+software, but you should certainly be aware that using antivirus software
+doesn't necessarily make your computer any more secure. In some cases, AV might
+make your computer less secure, and cause a deleterious effect on system
+performance—and, if you believe the browser makers, the continuing popularity of
+AV software might have a gnarly knock-on effect on other developers, too.
+
+The nail in the coffin, according to O'Callahan, is that software vendors rarely
+speak out about antivirus issues "because they need cooperation from the AV
+vendors." He then links to a mailing list thread in 2012, where he suggests
+keeping a list of the AV software that interferes with Firefox. Later in the
+thread, Mozilla PR swoops in and tells him to knock it off.
+
+Antivirus software is so ingrained with Windows users, and synonymous with the
+concept of "good security," that software makers have their hands tied. "When
+your product crashes on startup due to AV interference, users blame your
+product, not AV," O'Callahan says. "Worse still, if they make your product
+incredibly slow and bloated, users just think that's how your product is ... You
+can't tell users to turn off AV software because if anything bad were to happen
+that the AV software might have prevented, you'll catch the blame."
+
+As always, irrespective of whether you decide to use AV, regularly updating your
+OS and software is one of the best ways to keep your computer safe. This also
+means that you should stop using Windows 7 or 8 and update to Windows 10.
+
+When it comes to keeping your personal data safe, the problem is a little more
+complex: all of the sandboxing and antimalware software in the world won't save
+you from a well-executed phishing attack, or if a database that contains your
+details is breached. For that, you should use unique passwords, a physical
+security key where possible, and generally be very wary of offering up any kind
+of personally identifiable data.

@@ -7,6 +7,8 @@ if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
   return;
 }
 
+var fs = require('fs');
+var path = require('path');
 var net = require('net');
 var randomString = require('randomstring');
 var tape = require('../lib/thaliTape');
@@ -18,6 +20,7 @@ var thaliMobileNativeWrapper =
   require('thali/NextGeneration/thaliMobileNativeWrapper');
 
 var logger = require('../lib/testLogger')('testThaliMobileNative');
+var testText = fs.readFileSync(path.join(__dirname, '../lib/text.txt')).toString();
 
 // jshint -W064
 
@@ -301,17 +304,25 @@ test('Can connect to a remote peer', function (t) {
   });
 });
 
-test('Can shift large amounts of data', function (t) {
-  var connecting = false;
+test.only('Can shift large amounts of data', function (t) {
+  var connected = false;
 
   var sockets = {};
+
+  var id = 1;
   var echoServer = net.createServer(function (socket) {
+    var sid = id++;
     socket.on('data', function (data) {
+      console.log(
+        '============   #' + sid + ' echo   ============\n' +
+        data.toString() + '\n' +
+        '==========   #' + sid + ' echo end   =========='
+      );
       socket.write(data);
     });
     socket.on('end', socket.end);
     socket.on('error', function (error) {
-      logger.warn('Error on echo server socket: ' + error);
+      logger.warn('#' + sid + ' Error on echo server socket: ' + error);
       t.fail();
     });
     sockets[socket.remotePort] = socket;
@@ -319,11 +330,10 @@ test('Can shift large amounts of data', function (t) {
   echoServer = makeIntoCloseAllServer(echoServer);
   serverToBeClosed = echoServer;
 
-  var dataSize = 4096;
-  var toSend = randomString.generate(dataSize);
+  var toSend = 'I am ' + tape.uuid + '\n' + testText;
+  var dataSize = toSend.length;
 
   function shiftData(sock) {
-
     sock.on('error', function (error) {
       logger.warn('Error on client socket: ' + error);
       t.fail();
@@ -335,6 +345,15 @@ test('Can shift large amounts of data', function (t) {
     sock.on('data', function (data) {
       var remaining = dataSize - toRecv.length;
 
+      console.log(
+        'Total: %d, received: %d, remaining: %d',
+        dataSize, data.length, remaining);
+      console.log(
+        '============ chunk reply ============\n' +
+        data.toString() + '\n' +
+        '========== chunk reply end =========='
+      );
+
       if (remaining >= data.length) {
         toRecv += data.toString();
         data = data.slice(0, 0);
@@ -342,6 +361,10 @@ test('Can shift large amounts of data', function (t) {
       else {
         toRecv += data.toString('utf8', 0, remaining);
         data = data.slice(remaining);
+        console.log(
+          'Data overflow (%d bytes):\n%s',
+          data.length, data.toString()
+        );
       }
 
       if (toRecv.length === dataSize) {
@@ -356,12 +379,21 @@ test('Can shift large amounts of data', function (t) {
       }
     });
 
+    console.log(
+      '============  send data  ============\n' +
+      toSend + '\n' +
+      '==========  send data end  =========='
+    );
     sock.write(toSend);
   }
 
-  function onConnectSuccess(err, connection) {
+  function onConnectSuccess(err, connection, peer) {
     var client = null;
-
+    if (connected) {
+      console.log('Already connected. Ignore peer %s', peer.peerIdentifier);
+      return;
+    }
+    connected = true;
     // We're happy here if we make a connection to anyone
     logger.info('Connection info: ' + JSON.stringify(connection));
     client = net.connect(connection.listeningPort, function () {
@@ -370,15 +402,13 @@ test('Can shift large amounts of data', function (t) {
     });
   }
 
-  function onConnectFailure() {
-    t.fail('Connect failed!');
-    t.end();
+  function onConnectFailure(error, _, peer) {
+    console.log('Connection to peer %s failed: %s', peer.peerIdentifier, error);
   }
 
   Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
     peers.forEach(function (peer) {
-      if (peer.peerAvailable && !connecting) {
-        connecting = true;
+      if (peer.peerAvailable && !connected) {
         thaliMobileNativeTestUtils.connectToPeer(peer)
           .then(function (connection) {
             onConnectSuccess(null, connection, peer);
