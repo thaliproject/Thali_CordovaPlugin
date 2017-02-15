@@ -487,6 +487,7 @@ WifiAdvertiser.prototype._setUpExpressApp = function (router, pskIdToSecret) {
       );
       self.routerServer = null;
       var error = new Error('Unspecified Error with Radio infrastructure');
+      error.causedBy = listenError;
       return Promise.reject(error);
     })
     .then(function () {
