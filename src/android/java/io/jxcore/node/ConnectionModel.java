@@ -13,9 +13,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class ConnectionModel {
     private static final String TAG = ConnectionModel.class.getName();
-    private final CopyOnWriteArrayList<IncomingSocketThread> mIncomingSocketThreads = new CopyOnWriteArrayList<IncomingSocketThread>();
-    private final CopyOnWriteArrayList<OutgoingSocketThread> mOutgoingSocketThreads = new CopyOnWriteArrayList<OutgoingSocketThread>();
-    private final HashMap<String, JXcoreThaliCallback> mOutgoingConnectionCallbacks = new HashMap<String, JXcoreThaliCallback>();
+    private final CopyOnWriteArrayList<IncomingSocketThread> mIncomingSocketThreads = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<OutgoingSocketThread> mOutgoingSocketThreads = new CopyOnWriteArrayList<>();
+    private final HashMap<String, JXcoreThaliCallback> mOutgoingConnectionCallbacks = new HashMap<>();
 
     /**
      * Constructor.
@@ -147,12 +147,7 @@ public class ConnectionModel {
      * @return True, if the thread was successfully added to the collection. False otherwise.
      */
     public synchronized boolean addConnectionThread(IncomingSocketThread incomingSocketThread) {
-        if (!mIncomingSocketThreads.addIfAbsent(incomingSocketThread)) {
-            Log.e(TAG, "addConnectionThread: A matching thread for incoming connection already exists");
-            return false;
-        }
-
-        return true;
+        return mIncomingSocketThreads.add(incomingSocketThread);
     }
 
     /**
@@ -162,12 +157,27 @@ public class ConnectionModel {
      * @return True, if the thread was successfully added to the collection. False otherwise.
      */
     public synchronized boolean addConnectionThread(OutgoingSocketThread outgoingSocketThread) {
-        if (!mOutgoingSocketThreads.addIfAbsent(outgoingSocketThread)) {
-            Log.e(TAG, "addConnectionThread: A matching thread for outgoing connection already exists");
-            return false;
-        }
+        return mOutgoingSocketThreads.add(outgoingSocketThread);
+    }
 
-        return true;
+    /**
+     * Check that current collection contains the provided thread
+     *
+     * @param incomingSocketThread An incoming (connection) socket thread instance to add.
+     * @return True, if the thread is already added to the collection. False otherwise.
+     */
+    public boolean contains(IncomingSocketThread incomingSocketThread) {
+        return mIncomingSocketThreads.contains(incomingSocketThread);
+    }
+
+    /**
+     * Check that current collection contains the provided thread
+     *
+     * @param outgoingSocketThread An outgoing (connection) socket thread instance to add.
+     * @return True, if the thread is already added to the collection. False otherwise.
+     */
+    public boolean contains(OutgoingSocketThread outgoingSocketThread) {
+        return mOutgoingSocketThreads.contains(outgoingSocketThread);
     }
 
     /**
