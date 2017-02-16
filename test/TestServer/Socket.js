@@ -34,21 +34,21 @@ inherits(Socket, EventEmitter);
 
 Socket.prototype._setOptions = function (options) {
   if (options) {
-    asserts.isObject(options);
+    asserts.isObject(options, 'Socket._setOptions');
   }
   this._options = objectAssign({}, defaultConfig, options);
   asserts.isNumber(this._options.retryCount);
   asserts.isNumber(this._options.retryTimeout);
-}
+};
 
 Socket.prototype._init = function () {
   var self = this;
 
-  // Current socket client wants to be synchonized with other clients.
+  // Current socket client wants to be synchronized with other clients.
   this._bind('on', 'sync', function (data) {
     self.emit('sync', data);
   });
-}
+};
 
 // We want to notify all our auto-bind and auto-apply handlers
 // that raw socket was updated.
@@ -57,9 +57,10 @@ Socket.prototype.update = function (socket) {
   asserts.exists(socket._rawSocket);
   this._rawSocket = socket._rawSocket;
   this.emit('updated');
-}
+};
 
-// For example _bind('once', 'schedule_confirmed', function (receivedData) { ... })
+// For example _bind('once', 'schedule_confirmed',
+// function (receivedData) { ... })
 // We want our handler not to care about socket.
 // We want to receive data from any raw socket.
 // So we want to auto-bind to any new socket and unbind from previous one.
@@ -69,7 +70,8 @@ Socket.prototype._bind = function (method, event, handler) {
 
   var prevSocket;
   function bind(socket) {
-    // We should remove listener from previous socket and add listener to new one.
+    // We should remove listener from previous socket and add listener to new
+    // one.
     if (prevSocket) {
       prevSocket.removeListener(event, handler);
     }
@@ -89,7 +91,7 @@ Socket.prototype._bind = function (method, event, handler) {
       self._rawSocket.removeListener(event, handler);
     }
   };
-}
+};
 
 // For example _apply('emit', 'schedule', '[test1, test2]')
 // We need to apply this 'emit' method on current socket.
@@ -110,7 +112,7 @@ Socket.prototype._apply = function (method) {
       self.removeListener('updated', updatedHandler);
     }
   };
-}
+};
 
 // We will emit data until confirmation.
 // For example: emitData('schedule', '[test1, test2]');
@@ -142,8 +144,8 @@ Socket.prototype.emitData = function (event, data) {
         } else {
           reject(new Error(
             format(
-              'received confirmation with invalid data, sent data: \'%s\', received data: \'%s\'',
-              dataString, receivedDataString
+              'received confirmation with invalid data, sent data: \'%s\', ' +
+              'received data: \'%s\'', dataString, receivedDataString
             )
           ));
         }
@@ -177,15 +179,17 @@ Socket.prototype.emitData = function (event, data) {
       onceConfirmed.unbind();
     }
   });
-}
+};
 
 // We will emit data until confirmation and then verify the test finish.
 // For example: runEvent('teardown', '2. my test', '{ a: 1 }', 1000).
 // 1. We will send 'teardown_2. my test' until confirmation.
-// 2. We will wait until 'teardown_2. my test_finished' or 'teardown_2. my test_skipped' will be received.
+// 2. We will wait until 'teardown_2. my test_finished' or 'teardown_2.
+// my test_skipped' will be received.
 // 3. We will check whether skip is allowed if event was skipped.
 // 3. We will verify that test succeeded.
-Socket.prototype.runEvent = function (event, test, data, timeout, canBeSkipped) {
+Socket.prototype.runEvent = function (event, test, data, timeout, canBeSkipped)
+{
   var self = this;
 
   var dataString = JSON.stringify(data);
@@ -199,8 +203,8 @@ Socket.prototype.runEvent = function (event, test, data, timeout, canBeSkipped) 
         resolve(receivedData.data);
       } else {
         throw new Error(format(
-          'run failed, test: \'%s\', event: \'%s\', sent data: \'%s\', received data: \'%s\'',
-          test, event, dataString, receivedDataString
+          'run failed, test: \'%s\', event: \'%s\', sent data: \'%s\', ' +
+          'received data: \'%s\'', test, event, dataString, receivedDataString
         ));
       }
     } catch (error) {
@@ -263,6 +267,6 @@ Socket.prototype.runEvent = function (event, test, data, timeout, canBeSkipped) 
       onceSkipped.unbind();
     }
   });
-}
+};
 
 module.exports = Socket;

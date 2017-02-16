@@ -1,34 +1,55 @@
 #!/usr/bin/env bash
 
-echo "Start setUpDesktop.sh"
+echo ""
+echo "start setUpDesktop.sh"
 
+SCRIPT_PATH="$(cd "$(dirname "$0")"; pwd -P)"
+source "$SCRIPT_PATH/include.sh/build-dep.sh"
+
+set -euo pipefail
+
+trap 'log_error $LINENO' ERR
+
+# These variables are set since a bug in jxcore
+# `jx npm install` and `jx install` have different behaviours
 NVM_NODEJS_ORG_MIRROR=https://jxcore.azureedge.net
 export NVM_NODEJS_ORG_MIRROR
-JX_NPM_JXB=jxb311
+JX_NPM_JXB="${JX_NPM_JXB-jxb311}"
 export JX_NPM_JXB
 
-# Exit immediately if a command exits with a non-zero status.
-set -e
-
-echo "Setup TestServer"
+echo ""
+echo "start preparing TestServer"
 cd `dirname $0`
 cd ../../test/TestServer
 npm install --no-optional
 node generateServerAddress.js
+echo "end preparing TestServer"
+echo ""
 
-echo "Install Thali Root"
+echo ""
+echo "start installing Thali root"
 cd ../../thali
 jx npm install --no-optional
 npm link
+echo "end installing Thali root"
+echo ""
 
-echo "Install Thali Install Directory"
+echo ""
+echo "start installing Thali install"
 cd install
 npm install --no-optional
+node validateBuildEnvironment.js
+echo "end installing Thali install"
+echo ""
 
-echo "Final Desktop Step"
+echo ""
+echo "start preparing 'test/www/jxcore'"
 cd ../../test/www/jxcore
 npm link thali
 node installCustomPouchDB.js
 jx npm install --no-optional
+echo "end prepating 'test/www/jxcore'"
+echo ""
 
-echo "End setUpDesktop.sh"
+echo "end setUpDesktop.sh"
+echo ""

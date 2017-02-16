@@ -1,7 +1,5 @@
 'use strict';
 
-var util = require('util');
-
 var os = require('os');
 var tmp = require('tmp');
 var PouchDB = require('pouchdb');
@@ -15,11 +13,16 @@ var ForeverAgent = require('forever-agent');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var expressPouchdb = require('express-pouchdb');
 var platform = require('thali/NextGeneration/utils/platform');
-var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
+var makeIntoCloseAllServer =
+  require('thali/NextGeneration/makeIntoCloseAllServer');
 var notificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var express = require('express');
 var fs = require('fs-extra-promise');
+
+Promise.config({
+  cancellation: true
+});
 
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
@@ -30,13 +33,8 @@ function toggleBluetooth (value) {
       'Mobile is not defined'
     ));
   }
-  if (platform.isAndroid || platform.isIOS) {
-    return Promise.reject(new Error(
-      '\'toggleBluetooth\' is not implemented on android and ios'
-    ));
-  }
   return new Promise(function (resolve, reject) {
-    Mobile['toggleBluetooth'](value, function (error) {
+    Mobile.toggleBluetooth(value, function (error) {
       if (error) {
         reject(error);
       } else {
@@ -44,7 +42,8 @@ function toggleBluetooth (value) {
       }
     });
   });
-};
+}
+
 module.exports.toggleBluetooth = toggleBluetooth;
 
 function toggleWifi (value) {
@@ -53,13 +52,8 @@ function toggleWifi (value) {
       'Mobile is not defined'
     ));
   }
-  if (platform.isIOS) {
-    return Promise.reject(new Error(
-      'Mobile(\'setWifiRadioState\') is not implemented on ios'
-    ));
-  }
   return new Promise(function (resolve, reject) {
-    Mobile('setWifiRadioState').callNative(value, function (error) {
+    Mobile.toggleWiFi(value, function (error) {
       if (error) {
         reject(error);
       } else {
@@ -67,48 +61,52 @@ function toggleWifi (value) {
       }
     });
   });
-};
+}
 module.exports.toggleWifi = toggleWifi;
 
 var ThaliMobile;
-var ensureNetwork = function (type, toggle, value) {
+var ensureNetwork = function (type, toggle, value, customCheck) {
   if (!ThaliMobile) {
     ThaliMobile = require('thali/NextGeneration/thaliMobile');
   }
+
   var valueString = value? 'on' : 'off';
+  function check (networkStatus) {
+    return (
+      networkStatus[type] === valueString &&
+      (customCheck? customCheck(networkStatus) : true)
+    );
+  }
 
   return ThaliMobile.getNetworkStatus()
   .then(function (networkStatus) {
-    if (networkStatus[type] !== valueString) {
+    if (!check(networkStatus)) {
 
       // We will wait until network status will reach required 'value'.
       // We need to start ThaliMobile to receive 'networkChanged' event.
-      // We can't use Mobile('networkChanged').registerToNative here because it can replace existing listener.
-      var promise;
+      // We can't use Mobile('networkChanged').registerToNative here because it
+      // can replace existing listener.
       var isStarted = ThaliMobile.isStarted();
-      if (isStarted) {
-        promise = Promise.resolve();
-      } else {
-        promise = ThaliMobile.start(express.Router());
-      }
-
-      return promise.then(function () {
-        return new Promise(function (resolve) {
-          function networkChangedHandler (networkStatus) {
-            if (networkStatus[type] === valueString) {
-              ThaliMobile.emitter.removeListener('networkChanged', networkChangedHandler);
-              resolve();
-            } else {
-              logger.warn(
-                'we are %s %s network, but it don\'t want to obey',
-                value? 'enabling' : 'disabling', type
-              );
+      return (ThaliMobile.isStarted() ? Promise.resolve() :
+          ThaliMobile.start(express.Router()))
+        .then(function () {
+          return new Promise(function (resolve) {
+            function networkChangedHandler (networkStatus) {
+              if (check(networkStatus)) {
+                ThaliMobile.emitter.removeListener('networkChanged',
+                  networkChangedHandler);
+                resolve();
+              } else {
+                logger.warn(
+                  'we are %s %s network, but it don\'t want to obey',
+                  value? 'enabling' : 'disabling', type
+                );
+              }
             }
-          }
-          ThaliMobile.emitter.on('networkChanged', networkChangedHandler);
-          toggle(value);
-        });
-      })
+            ThaliMobile.emitter.on('networkChanged', networkChangedHandler);
+            toggle(value);
+          });
+        })
 
       .then(function () {
         if (!isStarted) {
@@ -118,19 +116,25 @@ var ensureNetwork = function (type, toggle, value) {
       });
     }
   });
-}
+};
 
 module.exports.ensureWifi = function (value) {
-  return ensureNetwork('wifi', toggleWifi, value);
-}
+  return ensureNetwork('wifi', toggleWifi, value, function (networkStatus) {
+    var isConnected = (
+      networkStatus.bssidName != null &&
+      networkStatus.ssidName != null
+    );
+    return value === isConnected;
+  });
+};
 module.exports.ensureBluetooth = function (value) {
   return ensureNetwork('bluetooth', toggleBluetooth, value);
-}
+};
 
 module.exports.validateBSSID = function (value) {
   // Both 'c1:5b:05:5a:41:1e' and 'c1-5b-05-5a-41-1e' are valid.
   return /([0-9a-f]{2}[:-]|$){6}/i.test(value);
-}
+};
 
 /**
  * Turn Bluetooth and Wifi either on or off.
@@ -138,7 +142,7 @@ module.exports.validateBSSID = function (value) {
  * environment, the network changes will be simulated (i.e., doesn't affect
  * the network status of the host machine).
  * @param {boolean} on Pass true to turn radios on and false to turn them off
- * @returns {Promise<?Error>}
+ * @returns {Promise<?Error>} Result of operation
  */
 module.exports.toggleRadios = function (on) {
   logger.info('Toggling radios to: %s', on);
@@ -160,7 +164,8 @@ var myNameCallback = null;
 /**
  * Set the name given used by this device. The name is
  * retrievable via a function exposed to the Cordova side.
- * @param {string} name
+ * @param {string} name Device name
+ * @returns {null} Returns null
  */
 module.exports.setName = function (name) {
   myName = name;
@@ -169,16 +174,18 @@ module.exports.setName = function (name) {
   } else {
     logger.warn('myNameCallback not set!');
   }
+  return null;
 };
 
 /**
  * Get the name of this device.
+ * @returns {string} Name of device
  */
 module.exports.getName = function () {
   return myName;
 };
 
-if (platform.isMobile) {
+if (platform._isRealMobile) {
   Mobile('setMyNameCallback').registerAsync(function (callback) {
     myNameCallback = callback;
     // If the name is already set, pass it to the callback
@@ -198,7 +205,7 @@ if (platform.isMobile) {
  */
 var tmpObject = null;
 function tmpDirectory () {
-  if (platform.isMobile) {
+  if (platform._isRealMobile) {
     return os.tmpdir();
   }
 
@@ -217,49 +224,68 @@ module.exports.tmpDirectory = tmpDirectory;
  * device has the hardware capabilities required.
  * On Android, checks the BLE multiple advertisement feature and elsewhere
  * always resolves with true.
+ * @returns {Promise<boolean>}
  */
 module.exports.hasRequiredHardware = function () {
+  if (!platform._isRealAndroid) {
+    return Promise.resolve(true);
+  }
+
   return new Promise(function (resolve) {
-    if (platform.isAndroid) {
-      var checkBleMultipleAdvertisementSupport = function () {
-        Mobile('isBleMultipleAdvertisementSupported').callNative(
-          function (error, result) {
-            if (error) {
-              logger.warn('BLE multiple advertisement error: ' + error);
-              resolve(false);
-              return;
+    function checkBleMultipleAdvertisementSupport () {
+      Mobile('isBleMultipleAdvertisementSupported')
+        .callNative(function (error, result) {
+          if (error) {
+            logger.warn('BLE multiple advertisement error: \'%s\'', String(error));
+            return resolve(false);
+          }
+          switch (result) {
+            case 'Not resolved': {
+              logger.info('BLE multiple advertisement support not yet resolved');
+              setTimeout(checkBleMultipleAdvertisementSupport, 5000);
+              break;
             }
-            switch (result) {
-              case 'Not resolved': {
-                logger.info(
-                  'BLE multiple advertisement support not yet resolved'
-                );
-                setTimeout(checkBleMultipleAdvertisementSupport, 5000);
-                break;
-              }
-              case 'Supported': {
-                logger.info('BLE multiple advertisement supported');
-                resolve(true);
-                break;
-              }
-              case 'Not supported': {
-                logger.info('BLE multiple advertisement not supported');
-                resolve(false);
-                break;
-              }
-              default: {
-                logger.warn('BLE multiple advertisement issue: ' + result);
-                resolve(false);
-              }
+            case 'Supported': {
+              logger.info('BLE multiple advertisement supported');
+              return resolve(true);
+            }
+            case 'Not supported': {
+              logger.info('BLE multiple advertisement not supported');
+              return resolve(false);
+            }
+            default: {
+              logger.warn('BLE multiple advertisement issue: \'%s\'', result);
+              return resolve(false);
             }
           }
-        );
-      };
-      checkBleMultipleAdvertisementSupport();
-    } else {
-      resolve(true);
+        }
+      );
     }
+    checkBleMultipleAdvertisementSupport();
   });
+};
+
+module.exports.enableRequiredHardware = function () {
+  if (!ThaliMobile) {
+    ThaliMobile = require('thali/NextGeneration/thaliMobile');
+  }
+  return ThaliMobile.getNetworkStatus()
+    .then(function (networkStatus) {
+      var promises = [];
+      if (networkStatus.wifi === 'off') {
+        promises.push(toggleWifi(true));
+      }
+      if (networkStatus.bluetooth === 'off') {
+        promises.push(toggleBluetooth(true));
+      }
+      return Promise.all(promises);
+    })
+    .then(function () {
+      return true;
+    })
+    .catch(function () {
+      return false;
+    });
 };
 
 module.exports.returnsValidNetworkStatus = function () {
@@ -290,7 +316,7 @@ module.exports.returnsValidNetworkStatus = function () {
 
 module.exports.getOSVersion = function () {
   return new Promise(function (resolve) {
-    if (!platform.isMobile) {
+    if (!platform._isRealMobile) {
       return resolve('dummy');
     }
     Mobile('getOSVersion').callNative(function (version) {
@@ -345,7 +371,7 @@ function createResponseBody(response) {
   return new Promise(function (resolve, reject) {
     var responseBody = '';
     response.on('data', function (data) {
-      logger.debug('Got response data')
+      logger.debug('Got response data');
       responseBody += data;
     });
     response.on('end', function () {
@@ -459,13 +485,20 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
                                                 selectedPeerId) {
   // We don't load thaliMobileNativeWrapper until after the tests have started
   // running so we pick up the right version of mobile
-  var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
+  var thaliMobileNativeWrapper =
+    require('thali/NextGeneration/thaliMobileNativeWrapper');
   return new Promise(function (resolve, reject) {
     var retryCount = 0;
-    var MAX_TIME_TO_WAIT_IN_MILLISECONDS = 1000 * 30 * 2;
+    var MAX_TIME_TO_WAIT_IN_MILLISECONDS = 1000 * 60;
+    var GET_PORT_TIMEOUT = 1000 * 3;
     var exitCalled = false;
     var peerID = selectedPeerId;
     var getRequestPromise = null;
+    var cancelGetPortTimeout = null;
+
+    var timeoutId = setTimeout(function () {
+      exitCall(null, new Error('Timer expired'));
+    }, MAX_TIME_TO_WAIT_IN_MILLISECONDS);
 
     function exitCall(success, failure) {
       if (exitCalled) {
@@ -473,6 +506,7 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
       }
       exitCalled = true;
       clearTimeout(timeoutId);
+      clearTimeout(cancelGetPortTimeout);
       thaliMobileNativeWrapper.emitter
         .removeListener('nonTCPPeerAvailabilityChangedEvent',
           nonTCPAvailableHandler);
@@ -483,15 +517,11 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
         });
     }
 
-    var timeoutId = setTimeout(function () {
-      exitCall(null, new Error('Timer expired'));
-    }, MAX_TIME_TO_WAIT_IN_MILLISECONDS);
-
-    function tryAgain(portNumber, err) {
+    function tryAgain(portNumber) {
       ++retryCount;
       logger.warn('Retry count for getSamePeerWithRetry is ' + retryCount);
-      getRequestPromise =
-        module.exports.get('127.0.0.1', portNumber, path, pskIdentity, pskKey);
+      getRequestPromise = module.exports.get('127.0.0.1',
+                          portNumber, path, pskIdentity, pskKey);
       getRequestPromise
         .then(function (result) {
           exitCall(result);
@@ -502,31 +532,11 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
         });
     }
 
-    function nonTCPAvailableHandler(record) {
-      // Ignore peer unavailable events
-      if (record.portNumber === null) {
-        if (peerID && record.peerIdentifier === peerID) {
-          logger.warn('We got a peer unavailable notification for a ' +
-            'peer we are looking for.');
-        }
-        return;
-      }
-
-      if (peerID && record.peerIdentifier !== peerID) {
-        return;
-      }
-
-      logger.debug('We got a peer ' + JSON.stringify(record));
-
-      if (!peerID) {
-        peerID = record.peerIdentifier;
-        return tryAgain(record.portNumber);
-      }
-
+    function callTryAgain(portNumber) {
 
       // We have a predefined peerID
       if (!getRequestPromise) {
-        return tryAgain(record.portNumber);
+        return tryAgain(portNumber);
       }
 
       getRequestPromise
@@ -537,11 +547,58 @@ module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
           // unlikely
         })
         .catch(function (err) {
-          return tryAgain(record.portNumber, err);
+          return tryAgain(portNumber, err);
         });
     }
 
-    thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
+    function getPort(record) {
+      return new Promise(function (resolve) {
+        if (platform.isIOS) {
+          thaliMobileNativeWrapper._multiConnect(record.peerIdentifier)
+          .then(function (port) {
+            resolve(port);
+          })
+          .catch(function () {
+            cancelGetPortTimeout = setTimeout(function () {
+              resolve(getPort(record));
+            }, GET_PORT_TIMEOUT);
+          });
+        } else {
+          resolve(record.portNumber);
+        }
+      });
+
+    }
+
+    function nonTCPAvailableHandler(record) {
+      // Ignore peer unavailable events
+      if (!record.peerAvailable) {
+        return;
+      }
+
+      if (peerID && record.peerIdentifier === peerID) {
+        logger.warn('We got a peer unavailable notification for a ' +
+          'peer we are looking for.');
+      }
+
+      if (peerID && record.peerIdentifier !== peerID) {
+        return;
+      }
+
+      logger.debug('We got a peer ' + JSON.stringify(record));
+
+      if (!peerID) {
+        peerID = record.peerIdentifier;
+      }
+
+      getPort(record)
+      .then(function (port) {
+        callTryAgain(port);
+      });
+    }
+
+    thaliMobileNativeWrapper.emitter.on(
+      'nonTCPPeerAvailabilityChangedEvent',
       nonTCPAvailableHandler);
   });
 };
@@ -555,7 +612,9 @@ module.exports.validateCombinedResult = function (combinedResult) {
   return Promise.resolve();
 };
 
-var MAX_FAILURE = 10;
+var MAX_FAILURE  = 10;
+var RETRY_DELAY  = 10000;
+var TEST_TIMEOUT = 5 * 60 * 1000;
 
 function turnParticipantsIntoBufferArray (t, devicePublicKey) {
   var publicKeys = [];
@@ -603,89 +662,105 @@ module.exports.runTestOnAllParticipants = function (
   devicePublicKey,
   testToRun
 ) {
+  var notificationHandler;
   var publicKeys = turnParticipantsIntoBufferArray(t, devicePublicKey);
+
+  var participantCount = publicKeys.reduce(
+    function (participantCount, participantPublicKey) {
+      participantCount[participantPublicKey] = 0;
+      return participantCount;
+    }, {}
+  );
+
+  var participantTask = publicKeys.reduce(
+    function (participantTask, participantPublicKey) {
+      participantTask[participantPublicKey] = Promise.resolve();
+      return participantTask;
+    }, {}
+  );
 
   return new Promise(function (resolve, reject) {
     var completed = false;
-    // Each participant is recorded via their public key
-    // If the value is -1 then they are done
-    // If the value is 0 then no test has completed
-    // If the value is greater than 0 then that is how many failures there have
-    // been.
+    // Each participant is recorded via their public key.
+    // If the value is -1 then they are done.
+    // If the value is 0 then no test has completed.
+    // If the value is greater than 0 then
+    // that is how many failures there have been.
 
-    var participantCount = publicKeys.reduce(function (participantCount,
-                                                       participantPublicKey) {
-      participantCount[participantPublicKey] = 0;
-      return participantCount;
-    }, {});
-
-    var participantTask = publicKeys.reduce(function (participantTask,
-                                                      participantPublicKey) {
-      participantTask[participantPublicKey] = Promise.resolve();
-      return participantTask;
-    }, {});
-
-    function success(publicKey) {
+    function success(notificationForUs) {
       if (completed) {
         return;
       }
 
+      var publicKey = notificationForUs.keyId;
       participantCount[publicKey] = -1;
 
       var hasParticipant = Object.keys(participantCount)
-      .some(function (participantKey) {
-        return participantCount[participantKey] !== -1;
-      });
+        .some(function (participantKey) {
+          return participantCount[participantKey] !== -1;
+        });
       if (hasParticipant) {
         return;
       }
 
       completed = true;
-      clearTimeout(timerCancel);
       resolve();
     }
 
-    function fail(publicKey, error) {
-      logger.error('Got an err - ', error.toString());
+    function fail(notificationForUs, error) {
+      var publicKey = notificationForUs.keyId;
       var count = participantCount[publicKey];
       if (completed || count === -1) {
-        return;
+        logger.warn('error ignored: \'%s\' ', String(error));
+        return Promise.resolve();
       }
+
       count ++;
       participantCount[publicKey] = count;
+
       if (count >= MAX_FAILURE) {
         completed = true;
-        clearTimeout(timerCancel);
+
+        logger.error('got error: \'%s\' ', String(error));
         reject(error);
+        return Promise.resolve(error);
       }
+
+      logger.warn('error ignored: \'%s\' ', String(error));
+      return Promise.delay(RETRY_DELAY)
+        .then(function () {
+          logger.warn('retry for notification: \'%s\'', JSON.stringify(notificationForUs));
+          return createTask(notificationForUs);
+        });
     }
 
-    var timerCancel = setTimeout(function () {
-      reject(new Error('Test timed out'));
-    }, 5 * 60 * 1000);
+    function createTask(notificationForUs) {
+      if (completed) {
+        return Promise.resolve();
+      }
 
+      return testToRun(notificationForUs)
+      .then(function () {
+        success(notificationForUs);
+      })
+      .catch(function (error) {
+        return fail(notificationForUs, error);
+      });
+    }
+
+    notificationHandler = function(notificationForUs) {
+      if (completed) {
+        return;
+      }
+
+      var publicKey = notificationForUs.keyId;
+      participantTask[publicKey].cancel();
+      participantTask[publicKey] = createTask(notificationForUs);
+    };
     thaliNotificationClient.on(
       thaliNotificationClient.Events.PeerAdvertisesDataForUs,
-      function (notificationForUs) {
-        if (completed) {
-          return;
-        }
-        participantTask[notificationForUs.keyId]
-        .then(function () {
-          if (!completed) {
-            var task = testToRun(notificationForUs)
-            .then(function () {
-              success(notificationForUs.keyId);
-            })
-            .catch(function (error) {
-              fail(notificationForUs.keyId, error);
-              return Promise.resolve(error);
-            });
-            participantTask[notificationForUs.keyId] = task;
-            return task;
-          }
-        });
-      });
+      notificationHandler
+    );
 
     thaliNotificationClient.start(publicKeys);
     return module.exports.startServerInfrastructure(
@@ -694,29 +769,17 @@ module.exports.runTestOnAllParticipants = function (
     .catch(function (err) {
       reject(err);
     });
-  });
-};
-
-// We doesn't want our test to run infinite time.
-// We will replace t.end with custom exit function.
-module.exports.testTimeout = function (t, timeout, callback) {
-  var timer = setTimeout(function () {
-    t.fail('test timeout');
-    t.end();
-  }, timeout);
-
-  var oldEnd = t.end;
-  t.end = function () {
-    // Restoring original t.end.
-    t.end = oldEnd;
-
-    if (typeof callback === 'function') {
-      callback();
-    }
-
-    clearTimeout(timer);
-    return oldEnd.apply(this, arguments);
-  };
+  })
+    .timeout(TEST_TIMEOUT)
+    .finally(function () {
+      thaliNotificationClient.removeListener(
+        thaliNotificationClient.Events.PeerAdvertisesDataForUs,
+        notificationHandler
+      );
+      publicKeys.forEach(function (publicKey) {
+        participantTask[publicKey].cancel();
+      });
+    });
 };
 
 module.exports.checkArgs = function (t, spy, description, args) {
@@ -733,7 +796,7 @@ module.exports.checkArgs = function (t, spy, description, args) {
       arg.description + '\' as ' + (index + 1) + '-st argument';
     t.ok(arg.compare(currentArgs[index]), argDescription);
   });
-}
+};
 
 
 // -- pouchdb --
@@ -818,4 +881,55 @@ module.exports.setUpServer = function (testBody, appConfig) {
     }
   );
   return testCloseAllServer;
+};
+
+/**
+ * Stubs `dns.lookup` function such a way, that attempt to connect to
+ * `unresolvableDomain` fails immediately.
+ *
+ * TODO: update implementation to allow multiple domains to be unresolvable
+ *
+ * @param {string} unresolvableDomain
+ */
+module.exports.makeDomainUnresolvable = function (unresolvableDomain) {
+  var dns = require('dns');
+  if (dns.__originalLookup) {
+    throw new Error('makeDomainUnresolvable can\'t be called twice without ' +
+      'calling restoreUnresolvableDomains');
+  }
+  dns.__originalLookup = dns.lookup;
+  dns.lookup = function (domain, family_, callback_) {
+    var family = family_,
+      callback = callback_;
+    // parse arguments
+    if (arguments.length === 2) {
+      callback = family;
+    }
+    if (domain === unresolvableDomain) {
+      var syscall = 'getaddrinfo';
+      var errorno = 'ENOTFOUND';
+      var e = new Error(syscall + ' ' + errorno);
+      e.errno = e.code = errorno;
+      e.syscall = syscall;
+      setImmediate(callback, e);
+    } else {
+      return dns.__originalLookup.apply(dns, arguments);
+    }
+  };
+};
+
+module.exports.restoreUnresolvableDomains = function () {
+  var dns = require('dns');
+  if (dns.__originalLookup) {
+    dns.lookup = dns.__originalLookup;
+    delete dns.__originalLookup;
+  }
+};
+
+module.exports.skipOnIOS = function () {
+  return platform.isIOS;
+};
+
+module.exports.skipOnAndroid = function () {
+  return platform.isAndroid;
 };

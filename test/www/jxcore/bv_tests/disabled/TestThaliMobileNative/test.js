@@ -46,7 +46,6 @@ var test = tape({
   }
 });
 
-var TEST_TIMEOUT = 1 * 60 * 1000;
 var CONNECT_TIMEOUT = 3 * 1000;
 var CONNECT_RETRY_TIMEOUT = 3.5 * 1000;
 var CONNECT_RETRIES = 10;
@@ -54,11 +53,6 @@ var CONNECT_RETRIES = 10;
 test('Simple test with single round', function (t) {
   var serverQuitSignal = new QuitSignal();
   var clientQuitSignal = new QuitSignal();
-
-  testUtils.testTimeout(t, TEST_TIMEOUT, function () {
-    // serverQuitSignal.raise();
-    clientQuitSignal.raise();
-  });
 
   var serverRound = new ServerRound(t, 0, serverQuitSignal, {
     connectTimeout: CONNECT_TIMEOUT
@@ -98,11 +92,6 @@ test('Simple test with single round', function (t) {
 test('Complex test with two rounds', function (t) {
   var serverQuitSignal = new QuitSignal();
   var clientQuitSignal = new QuitSignal();
-
-  testUtils.testTimeout(t, TEST_TIMEOUT, function () {
-    // serverQuitSignal.raise();
-    clientQuitSignal.raise();
-  });
 
   var serverRound = new ServerRound(t, 0, serverQuitSignal, {
     connectTimeout: CONNECT_TIMEOUT

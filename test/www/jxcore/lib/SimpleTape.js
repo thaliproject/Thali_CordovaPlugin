@@ -7,7 +7,6 @@ var inherits = util.inherits;
 var objectAssign = require('object-assign');
 var tape         = require('tape-catch');
 var assert       = require('assert');
-var uuid         = require('node-uuid');
 var EventEmitter = require('events').EventEmitter;
 
 var asserts = require('./utils/asserts');
@@ -58,7 +57,7 @@ SimpleThaliTape.prototype.defaults = {
   setupTimeout:     1 * 60 * 1000,
   testTimeout:      10 * 60 * 1000,
   teardownTimeout:  1 * 60 * 1000
-}
+};
 
 SimpleThaliTape.states = {
   created: 'created',
@@ -101,7 +100,7 @@ SimpleThaliTape.prototype.addTest = function (name, canBeSkipped, fun) {
   });
 
   return this._handler;
-}
+};
 
 SimpleThaliTape.prototype._processResult = function (tape, test, timeout) {
   var self = this;
@@ -109,7 +108,7 @@ SimpleThaliTape.prototype._processResult = function (tape, test, timeout) {
   tape.sync = function () {
     // noop
     return Promise.resolve();
-  }
+  };
 
   var resultHandler;
   var endHandler;
@@ -123,7 +122,7 @@ SimpleThaliTape.prototype._processResult = function (tape, test, timeout) {
       if (!result.ok) {
         success = false;
       }
-    }
+    };
     tape.on('result', resultHandler);
     tape.removeListener('result', self._unexpectedResult);
 
@@ -143,7 +142,7 @@ SimpleThaliTape.prototype._processResult = function (tape, test, timeout) {
         logger.error(error);
         reject(new Error(error));
       }
-    }
+    };
     tape.once('end', endHandler);
   })
     .timeout(
@@ -158,7 +157,7 @@ SimpleThaliTape.prototype._processResult = function (tape, test, timeout) {
         tape.removeListener('end', endHandler);
       }
     });
-}
+};
 
 SimpleThaliTape.prototype._runTest = function (test) {
   var self = this;
@@ -215,7 +214,7 @@ SimpleThaliTape.prototype._runTest = function (test) {
         );
       }
     });
-}
+};
 
 SimpleThaliTape.prototype._begin = function () {
   var self = this;
@@ -277,7 +276,7 @@ SimpleThaliTape.prototype._begin = function () {
     results: results,
     promise: promise
   };
-}
+};
 
 SimpleThaliTape.prototype.unexpectedResult = function (result) {
   var error;
@@ -291,18 +290,19 @@ SimpleThaliTape.prototype.unexpectedResult = function (result) {
     String(error), error ? error.stack : null
   );
   this.emit('unexpected_error', error);
-}
+};
 
 // We will run 'begin' on all 'SimpleThaliTape' instances.
 SimpleThaliTape.instances = [];
 
 SimpleThaliTape.prototype._resolveInstance = function () {
   SimpleThaliTape.instances.push(this);
-}
+};
 
-// Note that version, hasRequiredHardware and nativeUTFailed fields are not used and are added
-// here for consistency with CoordinatedTape
-SimpleThaliTape.begin = function (platform, version, hasRequiredHardware, nativeUTFailed) {
+// Note that version, hasRequiredHardware and nativeUTFailed fields are not used
+// and are added here for consistency with CoordinatedTape
+SimpleThaliTape.begin = function (platform, version, hasRequiredHardware,
+                                  nativeUTFailed) {
   var thaliTapes = SimpleThaliTape.instances;
   SimpleThaliTape.instances = [];
 
@@ -317,11 +317,12 @@ SimpleThaliTape.begin = function (platform, version, hasRequiredHardware, native
           var error = result.error;
           logger.info(
             '***TEST_LOGGER result: failed - %s, error: \'%s\', stack: \'%s\'',
-            result.name, String(error), error? error.stack: ''
+            result.name, String(error), error ? error.stack : ''
           );
           lastFailedResult = result;
         } else {
-          logger.info('***TEST_LOGGER result: %s - %s', result.text, result.name);
+          logger.info('***TEST_LOGGER result: %s - %s', result.text,
+            result.name);
         }
       });
 
@@ -344,6 +345,6 @@ SimpleThaliTape.begin = function (platform, version, hasRequiredHardware, native
   )
     .then(resolveResults)
     .catch(resolveResults);
-}
+};
 
 module.exports = SimpleThaliTape;

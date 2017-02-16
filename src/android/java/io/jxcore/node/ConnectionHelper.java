@@ -9,6 +9,8 @@ import android.bluetooth.le.AdvertiseSettings;
 import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.os.CountDownTimer;
+import android.system.ErrnoException;
+import android.system.OsConstants;
 import android.util.Log;
 
 import org.thaliproject.p2p.btconnectorlib.ConnectionManager;
@@ -48,6 +50,7 @@ public class ConnectionHelper
     private final ConnectionModel mConnectionModel;
     private final ConnectionManager mConnectionManager;
     private final DiscoveryManager mDiscoveryManager;
+    private final SurroundingStateObserver surroundingStateObserver;
     private final DiscoveryManagerSettings mDiscoveryManagerSettings;
     private final ConnectivityMonitor mConnectivityMonitor;
     private final StartStopOperationHandler mStartStopOperationHandler;
@@ -62,7 +65,7 @@ public class ConnectionHelper
     /**
      * Constructor.
      */
-    public ConnectionHelper() {
+    public ConnectionHelper(SurroundingStateObserver stateObserver) {
         mContext = jxcore.activity.getBaseContext();
 
         mThreadUncaughtExceptionHandler = new Thread.UncaughtExceptionHandler() {
@@ -75,6 +78,8 @@ public class ConnectionHelper
                 // See http://developer.android.com/reference/java/lang/Thread.UncaughtExceptionHandler.html
             }
         };
+
+        surroundingStateObserver = stateObserver;
 
         mConnectionModel = new ConnectionModel();
 
@@ -96,7 +101,7 @@ public class ConnectionHelper
             Log.e(TAG, "Constructor: Bluetooth LE discovery mode is not supported");
         }
 
-        mConnectivityMonitor = new ConnectivityMonitor(mDiscoveryManager);
+        mConnectivityMonitor = new ConnectivityMonitor(mDiscoveryManager, surroundingStateObserver);
 
         mStartStopOperationHandler = new StartStopOperationHandler(mConnectionManager, mDiscoveryManager);
 
@@ -104,6 +109,12 @@ public class ConnectionHelper
         // See the documentation in TestHelper.java for more information.
         /*mTestHelper = new TestHelper(this);
         mTestHelper.startTest(TestHelper.TestType.REPETITIVE_CONNECT_AND_DISCONNECT);*/
+    }
+
+    void listenToConnectivityEvents(){
+        if (!mConnectivityMonitor.start()){
+            Log.e(TAG, "start: Failed to start monitoring the connectivity");
+        }
     }
 
     /**
@@ -231,7 +242,7 @@ public class ConnectionHelper
      */
     public synchronized boolean disconnectOutgoingConnection(final String peerId) {
         Log.d(TAG, "disconnectOutgoingConnection: Trying to close connection to peer with ID " + peerId);
-        boolean success = mConnectionModel.closeAndRemoveOutgoingConnectionThread(peerId);
+        boolean success = closeAndRemoveOutgoingThread(peerId);
 
         if (success) {
             Log.i(TAG, "disconnectOutgoingConnection: Successfully disconnected (peer ID: " + peerId);
@@ -307,7 +318,7 @@ public class ConnectionHelper
 
         if (selectedDevice == null) {
             Log.w(TAG, "connect: The peer to connect to is not amongst the discovered peers, but trying anyway...");
-            selectedDevice = new PeerProperties(PeerProperties.NO_PEER_NAME_STRING, bluetoothMacAddress);
+            selectedDevice = new PeerProperties(bluetoothMacAddress);
         }
 
         if (!BluetoothAdapter.checkBluetoothAddress(selectedDevice.getBluetoothMacAddress())) {
@@ -486,7 +497,7 @@ public class ConnectionHelper
                     + isDiscovering + ", is advertising: " + isAdvertising);
 
                 mStartStopOperationHandler.processCurrentOperationStatus();
-                JXcoreExtension.notifyDiscoveryAdvertisingStateUpdateNonTcp(isDiscovering, isAdvertising);
+                surroundingStateObserver.notifyDiscoveryAdvertisingStateUpdateNonTcp(isDiscovering, isAdvertising);
                 mNotifyDiscoveryAdvertisingStateUpdateNonTcp.cancel();
                 mNotifyDiscoveryAdvertisingStateUpdateNonTcp = null;
             }
@@ -505,7 +516,7 @@ public class ConnectionHelper
             + ", device name: '" + peerProperties.getDeviceName()
             + "', device address: '" + peerProperties.getDeviceAddress() + "'");
 
-        JXcoreExtension.notifyPeerAvailabilityChanged(peerProperties, true);
+        surroundingStateObserver.notifyPeerAvailabilityChanged(peerProperties, true);
     }
 
     /**
@@ -519,7 +530,7 @@ public class ConnectionHelper
             + ", device name: '" + peerProperties.getDeviceName()
             + "', device address: '" + peerProperties.getDeviceAddress() + "'");
 
-        JXcoreExtension.notifyPeerAvailabilityChanged(peerProperties, true);
+        surroundingStateObserver.notifyPeerAvailabilityChanged(peerProperties, true);
     }
 
     /**
@@ -535,7 +546,7 @@ public class ConnectionHelper
             // If we are still connected, the peer can't certainly be lost, add it back
             mDiscoveryManager.getPeerModel().addOrUpdateDiscoveredPeer(peerProperties);
         } else {
-            JXcoreExtension.notifyPeerAvailabilityChanged(peerProperties, false);
+            surroundingStateObserver.notifyPeerAvailabilityChanged(peerProperties, false);
         }
     }
 
@@ -571,6 +582,9 @@ public class ConnectionHelper
         try {
             newOutgoingSocketThread = new OutgoingSocketThread(bluetoothSocket, new ConnectionData(peerProperties, false),
                 new SocketThreadBase.Listener() {
+
+                    private static final String NO_AVAILABLE_PORTS = "No available TCP ports";
+
                     @Override
                     public void onListeningForIncomingConnections(int portNumber) {
                         Log.i(TAG, "onListeningForIncomingConnections: Outgoing connection is using port "
@@ -601,7 +615,7 @@ public class ConnectionHelper
                             + who.getPeerProperties().toString() + " done, closing connection...");
 
                         final String peerId = who.getPeerProperties().getId();
-                        mConnectionModel.closeAndRemoveOutgoingConnectionThread(peerId);
+                        closeAndRemoveOutgoingThread(peerId);
                     }
 
                     @Override
@@ -611,7 +625,26 @@ public class ConnectionHelper
                             + " disconnected: " + errorMessage);
 
                         final String peerId = who.getPeerProperties().getId();
-                        mConnectionModel.closeAndRemoveOutgoingConnectionThread(peerId);
+                        closeAndRemoveOutgoingThread(peerId);
+                    }
+
+                    @Override
+                    public void onDisconnected(SocketThreadBase who, Exception exception) {
+                        Log.w(TAG, "onDisconnected: Outgoing connection, peer "
+                            + who.getPeerProperties().toString()
+                            + " disconnected: " + exception.getMessage());
+                        //No available port
+                        if (exception.getCause() instanceof ErrnoException
+                            && ((ErrnoException) exception.getCause()).errno == OsConstants.EMFILE) {
+                            processErrnoException(who);
+                        } else {
+                            onDisconnected(who, exception.getMessage());
+                        }
+                    }
+
+                    private void processErrnoException(SocketThreadBase who) {
+                        callback.callOnConnectCallback(NO_AVAILABLE_PORTS, null);
+                        closeAndRemoveOutgoingThread(who.getPeerProperties().getId());
                     }
 
                     @Override
@@ -667,6 +700,10 @@ public class ConnectionHelper
         }
     }
 
+    private boolean closeAndRemoveOutgoingThread(String peerId) {
+        return mConnectionModel.closeAndRemoveOutgoingConnectionThread(peerId);
+    }
+
     /**
      * Constructs the thread around the new incoming connection and sets the callbacks.
      *
@@ -714,7 +751,8 @@ public class ConnectionHelper
                         if (!closed) {
                             throw new RuntimeException("Trying to close nonexistent incoming connection");
                         }
-                        JXcoreExtension.notifyIncomingConnectionToPortNumberFailed(incomingSocketThread.getTcpPortNumber());
+                        surroundingStateObserver.notifyIncomingConnectionToPortNumberFailed(
+                            incomingSocketThread.getTcpPortNumber());
                     }
 
                     @Override
@@ -724,6 +762,15 @@ public class ConnectionHelper
 
                         final IncomingSocketThread incomingSocketThread = (IncomingSocketThread) who;
                         mConnectionModel.closeAndRemoveIncomingConnectionThread(incomingSocketThread.getId());
+                    }
+
+                    @Override
+                    public void onDisconnected(SocketThreadBase who, Exception exception) {
+                        // It will be never called in current implementation of IncomingSocketThread
+                        // Default implementation without eating of the exceptions for some future cases
+                        if (exception != null) {
+                            onDisconnected(who, exception.getMessage());
+                        }
                     }
                 });
         } catch (IOException e) {

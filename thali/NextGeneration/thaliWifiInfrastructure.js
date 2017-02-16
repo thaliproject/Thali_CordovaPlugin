@@ -2,20 +2,23 @@
 
 var EventEmitter = require('events').EventEmitter;
 var inherits = require('util').inherits;
+var https = require('https');
+var url = require('url');
+
+var Promise = require('lie');
 var nodessdp = require('node-ssdp');
 var ip = require('ip');
 var uuid = require('uuid');
-var url = require('url');
 var express = require('express');
 var validations = require('../validations');
 var thaliConfig = require('./thaliConfig');
-var ThaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
+var thaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
 var logger = require('../ThaliLogger')('thaliWifiInfrastructure');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
-var https = require('https');
-
-var Promise = require('lie');
 var PromiseQueue = require('./promiseQueue');
+var USN = require('./utils/usn');
+var platform = require('./utils/platform');
+
 var promiseQueue = new PromiseQueue();
 
 var promiseResultSuccessOrFailure = function (promise) {
@@ -46,6 +49,7 @@ var promiseResultSuccessOrFailure = function (promise) {
  * times in a row without causing a state change.
  */
 
+
 /**
  * This creates an object to manage a WiFi instance. During production we will
  * have exactly one instance running but for testing purposes it's very useful
@@ -62,8 +66,10 @@ var promiseResultSuccessOrFailure = function (promise) {
  */
 function ThaliWifiInfrastructure () {
   EventEmitter.call(this);
-  this.usn = null;
-  this.previousUsn = null;
+  this.peer = null;
+  // Store previously used own peerIdentifiers so ssdp client can ignore some
+  // delayed ssdp messages after our server has changed uuid part of usn
+  this._ownPeerIdentifiersHistory = [];
   // Can be used in tests to override the port
   // advertised in SSDP messages.
   this.advertisedPortOverride = null;
@@ -84,13 +90,20 @@ inherits(ThaliWifiInfrastructure, EventEmitter);
 
 ThaliWifiInfrastructure.prototype._init = function () {
   var serverOptions = {
+    ssdpIp: thaliConfig.SSDP_IP,
     adInterval: thaliConfig.SSDP_ADVERTISEMENT_INTERVAL,
-    udn: thaliConfig.SSDP_NT
+    udn: thaliConfig.SSDP_NT,
+    thaliLogger: require('../ThaliLogger')('nodeSSDPServerLogger')
   };
   this._server = new nodessdp.Server(serverOptions);
   this._setLocation();
 
-  this._client = new nodessdp.Client();
+  var clientOptions = {
+    ssdpIp: thaliConfig.SSDP_IP,
+    thaliLogger: require('../ThaliLogger')('nodeSSDPClientLogger')
+  }
+
+  this._client = new nodessdp.Client(clientOptions);
 
   this._client.on('advertise-alive', function (data) {
     this._handleMessage(data, true);
@@ -179,16 +192,13 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
   }
 
   var usn = data.USN;
+  var peer = null;
   try {
-    validations.ensureNonNullOrEmptyString(usn);
+    peer = USN.parse(usn);
   } catch (error) {
-    logger.warn('Received an invalid USN value: %s', data.USN);
+    logger.warn(error.message);
     return false;
   }
-
-  var peer = {
-    peerIdentifier: usn
-  };
 
   // We expect location only in alive messages.
   if (available === true) {
@@ -215,12 +225,17 @@ ThaliWifiInfrastructure.prototype._handleMessage = function (data, available) {
 // Function used to filter out SSDP messages that are not
 // relevant for Thali.
 ThaliWifiInfrastructure.prototype._shouldBeIgnored = function (data) {
-  // First check if the data contains the Thali-specific NT.
-  if (data.NT === thaliConfig.SSDP_NT) {
-    // Filtering out messages from ourselves.
-    return !!(data.USN === this.usn || data.USN === this.previousUsn);
+  var isUnknownNt = (data.NT !== thaliConfig.SSDP_NT);
+  return isUnknownNt || this._isOwnMessage(data);
+};
+
+ThaliWifiInfrastructure.prototype._isOwnMessage = function (data) {
+  try {
+    var peerIdentifier = USN.parse(data.USN).peerIdentifier;
+    return (this._ownPeerIdentifiersHistory.indexOf(peerIdentifier) !== -1);
+  } catch (err) {
+    return false;
   }
-  return true;
 };
 
 ThaliWifiInfrastructure.prototype._rejectPerWifiState = function (reject) {
@@ -250,7 +265,6 @@ ThaliWifiInfrastructure.prototype._updateStatus = function () {
   });
 };
 
-// jscs:disable jsDoc
 /**
  * This method MUST be called before any other method here other than
  * registering for events on the emitter. This method only registers the router
@@ -272,7 +286,6 @@ ThaliWifiInfrastructure.prototype._updateStatus = function () {
  * @param {module:thaliMobileNativeWrapper~pskIdToSecret} pskIdToSecret
  * @returns {Promise<?Error>}
  */
-// jscs:enable jsDoc
 ThaliWifiInfrastructure.prototype.start = function (router, pskIdToSecret) {
   var self = this;
   return promiseQueue.enqueue(function (resolve, reject) {
@@ -280,9 +293,9 @@ ThaliWifiInfrastructure.prototype.start = function (router, pskIdToSecret) {
       return reject(new Error('Call Stop!'));
     }
     self.pskIdToSecret = pskIdToSecret;
-    ThaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
+    thaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
                                           self._networkChangedHandler);
-    ThaliMobileNativeWrapper.getNonTCPNetworkStatus()
+    thaliMobileNativeWrapper.getNonTCPNetworkStatus()
     .then(function (networkStatus) {
       if (self.states.networkState === null) {
         // Only assign the network state received here if it
@@ -322,7 +335,7 @@ ThaliWifiInfrastructure.prototype.stop = function () {
     })
     .then(function () {
       self.states = self._getInitialStates();
-      ThaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
+      thaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
         self._networkChangedHandler);
       return resolve();
     })
@@ -333,13 +346,17 @@ ThaliWifiInfrastructure.prototype.stop = function () {
   });
 };
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * This will start the local Wi-Fi Infrastructure Mode discovery mechanism
  * (currently SSDP). Calling this method will trigger {@link
  * event:wifiPeerAvailabilityChanged} to fire. This method only causes SSDP
  * queries to be fired and cause us to listen to other service's SSDP:alive and
  * SSDP:byebye messages. It doesn't advertise the service itself.
+ *
+ * If this method is called on the Android platform then the
+ * {@link external:"Mobile('lockAndroidWifiMulticast')".callNative} method
+ * MUST be called.
  *
  * This method is idempotent so multiple consecutive calls without an
  * intervening call to stop will not cause a state change.
@@ -353,7 +370,7 @@ ThaliWifiInfrastructure.prototype.stop = function () {
  *
  * @returns {Promise<?Error>}
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 ThaliWifiInfrastructure.prototype.startListeningForAdvertisements =
 function () {
   var self = this;
@@ -371,6 +388,15 @@ function () {
       self._client.start(function () {
         self.states.listening.current = true;
         self._updateStatus();
+        if (platform.isAndroid) {
+          return thaliMobileNativeWrapper.lockAndroidWifiMulticast()
+            .then(function () {
+              resolve();
+            })
+            .catch(function (err) {
+              reject(err);
+            });
+        }
         return resolve();
       });
     } else {
@@ -385,6 +411,10 @@ function () {
  * event:wifiPeerAvailabilityChanged} from firing. That is, we will not issue
  * any further SSDP queries nor will we listen for other service's SSDP:alive or
  * SSDP:byebye messages.
+ *
+ * If this method is called on the Android platform then the {@link
+ * external:"Mobile('unlockAndroidWifiMulticast')".callNative} method MUST be
+ * called.
  *
  * Note that this method does not affect any existing TCP connections. Not
  * that we could really do anything with them since they are handled directly by
@@ -407,13 +437,22 @@ function (skipPromiseQueue, changeTarget) {
   if (changeTarget) {
     self.states.listening.target = false;
   }
-  var action = function (resolve) {
+  var action = function (resolve, reject) {
     if (!self.states.listening.current) {
       return resolve();
     }
     self._client.stop(function () {
       self.states.listening.current = false;
       self._updateStatus();
+      if (platform.isAndroid) {
+        return thaliMobileNativeWrapper.unlockAndroidWifiMulticast()
+          .then(function () {
+            resolve();
+          })
+          .catch(function (err) {
+            reject(err);
+          });
+      }
       return resolve();
     });
   };
@@ -424,7 +463,7 @@ function (skipPromiseQueue, changeTarget) {
   }
 };
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * This method will start advertising the peer's presence over the local Wi-Fi
  * Infrastructure Mode discovery mechanism (currently SSDP). When creating the
@@ -437,22 +476,23 @@ function (skipPromiseQueue, changeTarget) {
  * It should be fine. But it's important to find out so that other apps can't
  * block us.
  *
- * Also note that the implementation of
- * SSDP MUST recognize advertisements from its own instance and ignore them.
- * However it is possible to have multiple independent instances of
- * ThaliWiFiInfrastructure on the same device and we MUST process advertisements
- * from other instances of ThaliWifiInfrastructure on the same device.
+ * Also note that the implementation of SSDP MUST recognize advertisements from
+ * its own instance and ignore them. However it is possible to have multiple
+ * independent instances of ThaliWiFiInfrastructure on the same device and we
+ * MUST process advertisements from other instances of ThaliWifiInfrastructure
+ * on the same device.
  *
- * This method will also cause the Express app passed in to be hosted in a
- * HTTP server configured with the device's local IP. In other words, the
- * externally available HTTP server is not actually started and made externally
- * available until this method is called. This is different than {@link
+ * This method will also cause the Express app passed in to be hosted in a HTTP
+ * server configured with the device's local IP. In other words, the externally
+ * available HTTP server is not actually started and made externally available
+ * until this method is called. This is different than {@link
  * module:thaliMobileNative} where the server is started on 127.0.0.1 as soon as
- * {@link module:thaliMobileNative.start} is called but isn't made externally
- * available over the non-TCP transport until the equivalent of this method is
- * called. If the device switches access points (e.g. the BSSID changes) or if
- * WiFi is lost then the server will be shut down. It is up to the caller to
- * catch the networkChanged event and to call start advertising again.
+ * {@link module:thaliMobileNativeWrapper.start} is called but isn't made
+ * externally available over the non-TCP transport until the equivalent of this
+ * method is called. If the device switches access points (e.g. the BSSID
+ * changes) or if WiFi is lost then the server will be shut down. It is up to
+ * the caller to catch the networkChanged event and to call start advertising
+ * again.
  *
  * __OPEN ISSUE:__ If we have a properly configured multiple AP network then
  * all the APs will have different BSSID values but identical SSID values and
@@ -487,7 +527,7 @@ function (skipPromiseQueue, changeTarget) {
  *
  * @returns {Promise<?Error>}
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 ThaliWifiInfrastructure.prototype.startUpdateAdvertisingAndListening =
 function () {
   var self = this;
@@ -501,12 +541,10 @@ function () {
 
     self.states.advertising.target = true;
 
-    // Store previous USN value so that we can filter byebye messages
-    // from the previously used USN.
-    self.previousUsn = self.usn;
-    // Generate a new USN value to flag that something has changed
-    // in this peer.
-    self.usn = 'urn:uuid:' + uuid.v4();
+
+    self._updateOwnPeer();
+
+    var usn = USN.stringify(self.peer);
 
     if (self.states.networkState.wifi !== 'on') {
       return self._rejectPerWifiState(reject);
@@ -517,7 +555,7 @@ function () {
       // so that a byebye is issued for the old USN and and alive
       // message for the new one.
       self._server.stop(function () {
-        self._server.setUSN(self.usn);
+        self._server.setUSN(usn);
         self._server.start(function () {
           return resolve();
         });
@@ -548,7 +586,7 @@ function () {
         self.routerServerPort = self.routerServer.address().port;
         logger.debug('listening', self.routerServerPort);
 
-        self._server.setUSN(self.usn);
+        self._server.setUSN(usn);
         // We need to update the location string, because the port
         // may have changed when we re-start the router server.
         self._setLocation();
@@ -577,6 +615,25 @@ function () {
       self.routerServer.on('error', startErrorListener);
     }
   });
+};
+
+ThaliWifiInfrastructure.prototype._updateOwnPeer = function () {
+  if (!this.peer) {
+    this.peer = {
+      peerIdentifier: uuid.v4(),
+      generation: 0
+    };
+
+    // Update own peers history
+    var history = this._ownPeerIdentifiersHistory;
+    history.push(this.peer.peerIdentifier);
+    if (history.length > thaliConfig.SSDP_OWN_PEERS_HISTORY_SIZE) {
+      var overflow = history.length - thaliConfig.SSDP_OWN_PEERS_HISTORY_SIZE;
+      history.splice(0, overflow);
+    }
+  } else {
+    this.peer.generation++;
+  }
 };
 
 /**
@@ -609,6 +666,7 @@ function (skipPromiseQueue, changeTarget) {
       return resolve();
     }
     self._server.stop(function () {
+      self.peer = null;
       self.routerServer.closeAll(function () {
         // The port needs to be reset, because
         // otherwise there is no guarantee that
@@ -663,7 +721,7 @@ function (skipPromiseQueue, changeTarget) {
  * to the peer
  */
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * For the definition of this event please see {@link
  * module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateEvent}
@@ -687,7 +745,7 @@ function (skipPromiseQueue, changeTarget) {
  * @type {Object}
  * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 
 /**
  * [NOT IMPLEMENTED]
@@ -712,7 +770,7 @@ function (skipPromiseQueue, changeTarget) {
  */
 
 ThaliWifiInfrastructure.prototype.getNetworkStatus = function () {
-  return ThaliMobileNativeWrapper.getNonTCPNetworkStatus();
-}
+  return thaliMobileNativeWrapper.getNonTCPNetworkStatus();
+};
 
 module.exports = ThaliWifiInfrastructure;

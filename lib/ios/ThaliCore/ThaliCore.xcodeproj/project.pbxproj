@@ -1,0 +1,1020 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1952BBA41DF6C9810016B9C8 /* BluetoothHardwareControlObserver.m in Sources */ = {isa = PBXBuildFile; fileRef = 1952BBA31DF6C9810016B9C8 /* BluetoothHardwareControlObserver.m */; };
+		1C148D141DA3B16C00E0E1AC /* TCPServerMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C148D131DA3B16C00E0E1AC /* TCPServerMock.swift */; };
+		1C148D161DA3B17500E0E1AC /* TCPClientMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C148D151DA3B17500E0E1AC /* TCPClientMock.swift */; };
+		1C148DDA1DA55D4900E0E1AC /* Dictionary+KeyForValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C148DD91DA55D4900E0E1AC /* Dictionary+KeyForValue.swift */; };
+		1C148DDB1DA55D4900E0E1AC /* Dictionary+KeyForValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C148DD91DA55D4900E0E1AC /* Dictionary+KeyForValue.swift */; };
+		1C17AE391DA79DBE00763619 /* BrowserRelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C17AE381DA79DBE00763619 /* BrowserRelayTests.swift */; };
+		1C17AE3B1DA79F6400763619 /* AdvertiserRelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C17AE3A1DA79F6400763619 /* AdvertiserRelayTests.swift */; };
+		1C3367201D703EE900143BCF /* NetworkReachability.h in Headers */ = {isa = PBXBuildFile; fileRef = 1C33671E1D703EE900143BCF /* NetworkReachability.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1C3367211D703EE900143BCF /* NetworkReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = 1C33671F1D703EE900143BCF /* NetworkReachability.m */; };
+		1C3367221D70407B00143BCF /* NetworkReachability.h in Headers */ = {isa = PBXBuildFile; fileRef = 1C33671E1D703EE900143BCF /* NetworkReachability.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1C3367231D70407E00143BCF /* NetworkReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = 1C33671F1D703EE900143BCF /* NetworkReachability.m */; };
+		1C38DDD41D74153900418F15 /* BluetoothHardwareControlManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1C38DDD11D74153900418F15 /* BluetoothHardwareControlManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1C38DDD51D74153900418F15 /* BluetoothHardwareControlManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1C38DDD21D74153900418F15 /* BluetoothHardwareControlManager.m */; };
+		1C38DDD61D74153900418F15 /* BluetoothHardwareControlObserver.h in Headers */ = {isa = PBXBuildFile; fileRef = 1C38DDD31D74153900418F15 /* BluetoothHardwareControlObserver.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1C40E5F81DA24B0A00DA369E /* MCSessionMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD3475D1DA192B3006F1126 /* MCSessionMock.swift */; };
+		1C6D713B1DAF9BC800802569 /* RelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEBB4041D9BD4AA00B229C9 /* RelayTests.swift */; };
+		1C6D713C1DAF9BCB00802569 /* AdvertiserRelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C17AE3A1DA79F6400763619 /* AdvertiserRelayTests.swift */; };
+		1C6D713D1DAF9BCD00802569 /* BrowserRelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C17AE381DA79DBE00763619 /* BrowserRelayTests.swift */; };
+		1C6D713E1DAF9BCF00802569 /* VirtualSocketTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEBB4021D9BD37A00B229C9 /* VirtualSocketTests.swift */; };
+		1C6D713F1DAF9BD200802569 /* TCPClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD347571DA048BF006F1126 /* TCPClientTests.swift */; };
+		1C6D71401DAF9BD400802569 /* TCPListenerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD3474F1D9F7EBC006F1126 /* TCPListenerTests.swift */; };
+		1C6D71411DAF9BDB00802569 /* StringRandomTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD347541D9FEED9006F1126 /* StringRandomTests.swift */; };
+		1C6D71421DAFBBD100802569 /* TCPClientMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C148D151DA3B17500E0E1AC /* TCPClientMock.swift */; };
+		1C6D71431DAFBBDC00802569 /* TCPServerMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C148D131DA3B16C00E0E1AC /* TCPServerMock.swift */; };
+		1C8776E81DC0F2E0004CF9BD /* NSRunLoop+NSStreamEventsThread.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8776E71DC0F2E0004CF9BD /* NSRunLoop+NSStreamEventsThread.swift */; };
+		1C8776EA1DC0F324004CF9BD /* NSStreamEventsThread.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8776E91DC0F324004CF9BD /* NSStreamEventsThread.swift */; };
+		1C8776EB1DC0F324004CF9BD /* NSStreamEventsThread.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8776E91DC0F324004CF9BD /* NSStreamEventsThread.swift */; };
+		1C8776EC1DC0F32A004CF9BD /* NSRunLoop+NSStreamEventsThread.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8776E71DC0F2E0004CF9BD /* NSRunLoop+NSStreamEventsThread.swift */; };
+		1CB9B4211D7063C700C59CCF /* BluetoothManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1CB9B4201D7063C700C59CCF /* BluetoothManager.h */; };
+		1CD4C0AF1DA68E7B005FFC3B /* AdvertiserRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CD4C0AE1DA68E7B005FFC3B /* AdvertiserRelay.swift */; };
+		1CD4C0B01DA68E7B005FFC3B /* AdvertiserRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CD4C0AE1DA68E7B005FFC3B /* AdvertiserRelay.swift */; };
+		1CD4C0B21DA68E86005FFC3B /* BrowserRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CD4C0B11DA68E86005FFC3B /* BrowserRelay.swift */; };
+		1CD4C0B31DA68E86005FFC3B /* BrowserRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CD4C0B11DA68E86005FFC3B /* BrowserRelay.swift */; };
+		1CEBB3F01D997A8600B229C9 /* GCDAsyncSocket.h in Headers */ = {isa = PBXBuildFile; fileRef = 1CEBB3EE1D997A8600B229C9 /* GCDAsyncSocket.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1CEBB3F11D997A8600B229C9 /* GCDAsyncSocket.h in Headers */ = {isa = PBXBuildFile; fileRef = 1CEBB3EE1D997A8600B229C9 /* GCDAsyncSocket.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1CEBB3F21D997A8600B229C9 /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = 1CEBB3EF1D997A8600B229C9 /* GCDAsyncSocket.m */; };
+		1CEBB3F31D997A8600B229C9 /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = 1CEBB3EF1D997A8600B229C9 /* GCDAsyncSocket.m */; };
+		1CEBB3FA1D997BF700B229C9 /* TCPListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEBB3F91D997BF700B229C9 /* TCPListener.swift */; };
+		1CEBB3FB1D997BF700B229C9 /* TCPListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEBB3F91D997BF700B229C9 /* TCPListener.swift */; };
+		1CEBB3FD1D997CB200B229C9 /* VirtualSocket.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEBB3FC1D997CB200B229C9 /* VirtualSocket.swift */; };
+		1CEBB3FE1D997CB200B229C9 /* VirtualSocket.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEBB3FC1D997CB200B229C9 /* VirtualSocket.swift */; };
+		1CEBB4001D997CF500B229C9 /* PeerAvailability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEBB3FF1D997CF500B229C9 /* PeerAvailability.swift */; };
+		1CEBB4011D997CF500B229C9 /* PeerAvailability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEBB3FF1D997CF500B229C9 /* PeerAvailability.swift */; };
+		1CEBB4031D9BD37A00B229C9 /* VirtualSocketTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEBB4021D9BD37A00B229C9 /* VirtualSocketTests.swift */; };
+		1CEBB4051D9BD4AA00B229C9 /* RelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEBB4041D9BD4AA00B229C9 /* RelayTests.swift */; };
+		1CEBB4071D9BF68D00B229C9 /* ThaliCoreError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEBB4061D9BF68D00B229C9 /* ThaliCoreError.swift */; };
+		1CEBB4081D9BF6A100B229C9 /* ThaliCoreError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CEBB4061D9BF68D00B229C9 /* ThaliCoreError.swift */; };
+		34FD7D891D9BA1EA006593B9 /* SimpleTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34FD7D881D9BA1EA006593B9 /* SimpleTestCase.swift */; };
+		3AD347501D9F7EBC006F1126 /* TCPListenerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD3474F1D9F7EBC006F1126 /* TCPListenerTests.swift */; };
+		3AD347521D9FB556006F1126 /* TCPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD347511D9FB556006F1126 /* TCPClient.swift */; };
+		3AD347531D9FB556006F1126 /* TCPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD347511D9FB556006F1126 /* TCPClient.swift */; };
+		3AD347551D9FEED9006F1126 /* StringRandomTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD347541D9FEED9006F1126 /* StringRandomTests.swift */; };
+		3AD347561D9FEF78006F1126 /* String+Random.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD3AE924922CE56CFB805 /* String+Random.swift */; };
+		3AD347581DA048BF006F1126 /* TCPClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD347571DA048BF006F1126 /* TCPClientTests.swift */; };
+		3AD3475E1DA192B3006F1126 /* MCSessionMock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD3475D1DA192B3006F1126 /* MCSessionMock.swift */; };
+		CCA571C01D4787A900FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA571BF1D4787A900FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		CCA571C71D4787A900FBEC41 /* ThaliCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */; };
+		CCA573021D4B9E5300FBEC41 /* ThaliCore.h in Headers */ = {isa = PBXBuildFile; fileRef = CCA572FB1D4B9E5300FBEC41 /* ThaliCore.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		CCA573131D4BA04B00FBEC41 /* TestRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */; };
+		D377C5021D6D9C1600916A7B /* VirtualSocketBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD76EB1071AB28B6EB247 /* VirtualSocketBuilder.swift */; };
+		D3E699F81D798F93005D5315 /* Atomic.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD84F3454375EE4974B67 /* Atomic.swift */; };
+		FAADD04D8930DF3297562D09 /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD342AF116FCE3B46A03D /* Session.swift */; };
+		FAADD102266797342438FB50 /* Atomic.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD84F3454375EE4974B67 /* Atomic.swift */; };
+		FAADD13A66AFF1807FF00499 /* SessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD57055CF4F1A5AD0AD24 /* SessionTests.swift */; };
+		FAADD14FB68CA0A056A2EFAF /* AtomicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD6CB4BF01ED0E26C1EC9 /* AtomicTests.swift */; };
+		FAADD16070404F0C249AF956 /* VirtualSocketBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD76EB1071AB28B6EB247 /* VirtualSocketBuilder.swift */; };
+		FAADD1AB186104B5A38603FB /* BrowserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD57929D78BB60E848B53 /* BrowserTests.swift */; };
+		FAADD1BED4E04EEC9EE07240 /* BrowserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDB98375EC846FE1C16D9 /* BrowserManagerTests.swift */; };
+		FAADD2472EF20C245A535EB0 /* AdvertiserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD64B361C528BC5BC198A /* AdvertiserManagerTests.swift */; };
+		FAADD340E8E13B0AFDBBAA2B /* String+Random.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD3AE924922CE56CFB805 /* String+Random.swift */; };
+		FAADD352919F859B6CF8942E /* Peer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7A741ABA2A94876C58F /* Peer.swift */; };
+		FAADD354F497378B5DAECDE8 /* MultipeerConnectHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDDCB1247115F2BC3A45D /* MultipeerConnectHelper.swift */; };
+		FAADD36CCBFA97A7B25AF416 /* Peer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7A741ABA2A94876C58F /* Peer.swift */; };
+		FAADD38EEA68209A678157F2 /* AdvertiserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD8FC3B9A78AE2C9EDEE0 /* AdvertiserTests.swift */; };
+		FAADD406A1112A5C23054C51 /* BrowserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDB98375EC846FE1C16D9 /* BrowserManagerTests.swift */; };
+		FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */; };
+		FAADD461157D4DA6740A7BF6 /* PeerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDCAEBC4F0F06B69A8A8B /* PeerTests.swift */; };
+		FAADD49298025B4A03860D3A /* String+Random.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD3AE924922CE56CFB805 /* String+Random.swift */; };
+		FAADD49592809F2012ED7B29 /* ApplicationStateNotificationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */; };
+		FAADD55D9AC06A841FAF8A47 /* AdvertiserManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD64B361C528BC5BC198A /* AdvertiserManagerTests.swift */; };
+		FAADD5D92ED104DEF558A3A7 /* MultipeerConnectHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDDCB1247115F2BC3A45D /* MultipeerConnectHelper.swift */; };
+		FAADD5FE7712039E773BC6E5 /* AdvertiserManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD0E89072AC745F4CB0AB /* AdvertiserManager.swift */; };
+		FAADD601541D22571D092A0D /* BrowserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD57929D78BB60E848B53 /* BrowserTests.swift */; };
+		FAADD6ED0224218F394D9DAB /* BrowserManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7119C663364132D5C36 /* BrowserManager.swift */; };
+		FAADD705CAB9E45559605B8F /* Browser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD0A063AF85E1634DB500 /* Browser.swift */; };
+		FAADD7417CEB0C20CC94F301 /* AppStateNotificationsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7C5A6317351DA1CAAFC /* AppStateNotificationsManagerTests.swift */; };
+		FAADD7B9451F32511828885E /* Browser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD0A063AF85E1634DB500 /* Browser.swift */; };
+		FAADD7FFE1EE91F294513ADA /* AdvertiserManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD0E89072AC745F4CB0AB /* AdvertiserManager.swift */; };
+		FAADDA5FCF7F856DF4224B68 /* Advertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */; };
+		FAADDB1A4C19C000CBA8C6A5 /* PeerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADDCAEBC4F0F06B69A8A8B /* PeerTests.swift */; };
+		FAADDB54D721687FF55B684C /* SessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD57055CF4F1A5AD0AD24 /* SessionTests.swift */; };
+		FAADDB5F680C576D4D34638B /* Advertiser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */; };
+		FAADDC4F91EB0C57EF22ADEC /* VirtualSocketBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD0580945C0E2E31264FF /* VirtualSocketBuilderTests.swift */; };
+		FAADDC6966AEA24BCD0B2BE1 /* AdvertiserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD8FC3B9A78AE2C9EDEE0 /* AdvertiserTests.swift */; };
+		FAADDD566FA7D3F34C6C4581 /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD342AF116FCE3B46A03D /* Session.swift */; };
+		FAADDD757A0B11B3F905425B /* AtomicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD6CB4BF01ED0E26C1EC9 /* AtomicTests.swift */; };
+		FAADDDA8FB9D6E557F49081B /* BrowserManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7119C663364132D5C36 /* BrowserManager.swift */; };
+		FAADDE5C74D69D3967DAF82A /* VirtualSocketBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD0580945C0E2E31264FF /* VirtualSocketBuilderTests.swift */; };
+		FAADDF5D58899C80605344FB /* AppStateNotificationsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADD7C5A6317351DA1CAAFC /* AppStateNotificationsManagerTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		CCA571C81D4787A900FBEC41 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CCA571B31D4787A900FBEC41 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CCA571BB1D4787A900FBEC41;
+			remoteInfo = ThaliCore;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		1952BBA31DF6C9810016B9C8 /* BluetoothHardwareControlObserver.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = BluetoothHardwareControlObserver.m; path = Utils/HardwareControl/Bluetooth/BluetoothHardwareControlObserver.m; sourceTree = "<group>"; };
+		1C148D131DA3B16C00E0E1AC /* TCPServerMock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TCPServerMock.swift; sourceTree = "<group>"; };
+		1C148D151DA3B17500E0E1AC /* TCPClientMock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TCPClientMock.swift; sourceTree = "<group>"; };
+		1C148DD91DA55D4900E0E1AC /* Dictionary+KeyForValue.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "Dictionary+KeyForValue.swift"; sourceTree = "<group>"; };
+		1C17AE381DA79DBE00763619 /* BrowserRelayTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = BrowserRelayTests.swift; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
+		1C17AE3A1DA79F6400763619 /* AdvertiserRelayTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = AdvertiserRelayTests.swift; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
+		1C33671E1D703EE900143BCF /* NetworkReachability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NetworkReachability.h; path = Utils/NetworkReachability/NetworkReachability.h; sourceTree = "<group>"; };
+		1C33671F1D703EE900143BCF /* NetworkReachability.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = NetworkReachability.m; path = Utils/NetworkReachability/NetworkReachability.m; sourceTree = "<group>"; };
+		1C38DDD11D74153900418F15 /* BluetoothHardwareControlManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BluetoothHardwareControlManager.h; path = Utils/HardwareControl/Bluetooth/BluetoothHardwareControlManager.h; sourceTree = "<group>"; };
+		1C38DDD21D74153900418F15 /* BluetoothHardwareControlManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = BluetoothHardwareControlManager.m; path = Utils/HardwareControl/Bluetooth/BluetoothHardwareControlManager.m; sourceTree = "<group>"; };
+		1C38DDD31D74153900418F15 /* BluetoothHardwareControlObserver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BluetoothHardwareControlObserver.h; path = Utils/HardwareControl/Bluetooth/BluetoothHardwareControlObserver.h; sourceTree = "<group>"; };
+		1C5E18BD1D780D5400518DB8 /* BluetoothHardwareControlObserver.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BluetoothHardwareControlObserver.m; sourceTree = "<group>"; };
+		1C8776E71DC0F2E0004CF9BD /* NSRunLoop+NSStreamEventsThread.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "NSRunLoop+NSStreamEventsThread.swift"; sourceTree = "<group>"; };
+		1C8776E91DC0F324004CF9BD /* NSStreamEventsThread.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NSStreamEventsThread.swift; sourceTree = "<group>"; };
+		1CB9B4201D7063C700C59CCF /* BluetoothManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BluetoothManager.h; path = Utils/HardwareControl/Bluetooth/PrivateAPI/BluetoothManager.h; sourceTree = "<group>"; };
+		1CD4C0AE1DA68E7B005FFC3B /* AdvertiserRelay.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdvertiserRelay.swift; sourceTree = "<group>"; };
+		1CD4C0B11DA68E86005FFC3B /* BrowserRelay.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BrowserRelay.swift; sourceTree = "<group>"; };
+		1CEBB3EE1D997A8600B229C9 /* GCDAsyncSocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GCDAsyncSocket.h; path = GCDAsyncSocket/GCDAsyncSocket.h; sourceTree = "<group>"; };
+		1CEBB3EF1D997A8600B229C9 /* GCDAsyncSocket.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GCDAsyncSocket.m; path = GCDAsyncSocket/GCDAsyncSocket.m; sourceTree = "<group>"; };
+		1CEBB3F91D997BF700B229C9 /* TCPListener.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TCPListener.swift; sourceTree = "<group>"; };
+		1CEBB3FC1D997CB200B229C9 /* VirtualSocket.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VirtualSocket.swift; sourceTree = "<group>"; };
+		1CEBB3FF1D997CF500B229C9 /* PeerAvailability.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerAvailability.swift; sourceTree = "<group>"; };
+		1CEBB4021D9BD37A00B229C9 /* VirtualSocketTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VirtualSocketTests.swift; sourceTree = "<group>"; };
+		1CEBB4041D9BD4AA00B229C9 /* RelayTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RelayTests.swift; sourceTree = "<group>"; };
+		1CEBB4061D9BF68D00B229C9 /* ThaliCoreError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThaliCoreError.swift; sourceTree = "<group>"; };
+		34FD7D881D9BA1EA006593B9 /* SimpleTestCase.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimpleTestCase.swift; sourceTree = "<group>"; };
+		3AD3474F1D9F7EBC006F1126 /* TCPListenerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TCPListenerTests.swift; sourceTree = "<group>"; };
+		3AD347511D9FB556006F1126 /* TCPClient.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TCPClient.swift; sourceTree = "<group>"; };
+		3AD347541D9FEED9006F1126 /* StringRandomTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StringRandomTests.swift; sourceTree = "<group>"; };
+		3AD347571DA048BF006F1126 /* TCPClientTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TCPClientTests.swift; sourceTree = "<group>"; };
+		3AD3475D1DA192B3006F1126 /* MCSessionMock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = MCSessionMock.swift; path = Mocks/MCSessionMock.swift; sourceTree = "<group>"; };
+		CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ThaliCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		CCA571BF1D4787A900FBEC41 /* ThaliCore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ThaliCore.h; sourceTree = "<group>"; };
+		CCA571C61D4787A900FBEC41 /* ThaliCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ThaliCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CCA571D71D47883100FBEC41 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		CCA572511D478C1000FBEC41 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		CCA572921D4A327E00FBEC41 /* ThaliCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ThaliCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		CCA572EB1D4B6E9600FBEC41 /* Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Bridging-Header.h"; sourceTree = "<group>"; };
+		CCA572FB1D4B9E5300FBEC41 /* ThaliCore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThaliCore.h; sourceTree = "<group>"; };
+		CCA573071D4B9F1B00FBEC41 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestRunner.swift; sourceTree = "<group>"; };
+		FAADD0580945C0E2E31264FF /* VirtualSocketBuilderTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VirtualSocketBuilderTests.swift; sourceTree = "<group>"; };
+		FAADD0A063AF85E1634DB500 /* Browser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Browser.swift; sourceTree = "<group>"; };
+		FAADD0E89072AC745F4CB0AB /* AdvertiserManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdvertiserManager.swift; sourceTree = "<group>"; wrapsLines = 0; };
+		FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Advertiser.swift; sourceTree = "<group>"; };
+		FAADD342AF116FCE3B46A03D /* Session.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
+		FAADD3AE924922CE56CFB805 /* String+Random.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "String+Random.swift"; sourceTree = "<group>"; };
+		FAADD57055CF4F1A5AD0AD24 /* SessionTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SessionTests.swift; sourceTree = "<group>"; };
+		FAADD57929D78BB60E848B53 /* BrowserTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = BrowserTests.swift; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
+		FAADD64B361C528BC5BC198A /* AdvertiserManagerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = AdvertiserManagerTests.swift; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
+		FAADD6CB4BF01ED0E26C1EC9 /* AtomicTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AtomicTests.swift; sourceTree = "<group>"; };
+		FAADD7119C663364132D5C36 /* BrowserManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BrowserManager.swift; sourceTree = "<group>"; };
+		FAADD76EB1071AB28B6EB247 /* VirtualSocketBuilder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VirtualSocketBuilder.swift; sourceTree = "<group>"; };
+		FAADD7A741ABA2A94876C58F /* Peer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Peer.swift; sourceTree = "<group>"; };
+		FAADD7C5A6317351DA1CAAFC /* AppStateNotificationsManagerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppStateNotificationsManagerTests.swift; sourceTree = "<group>"; };
+		FAADD84F3454375EE4974B67 /* Atomic.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = Atomic.swift; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
+		FAADD8FC3B9A78AE2C9EDEE0 /* AdvertiserTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = AdvertiserTests.swift; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
+		FAADDB98375EC846FE1C16D9 /* BrowserManagerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; lineEnding = 0; path = BrowserManagerTests.swift; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
+		FAADDCAEBC4F0F06B69A8A8B /* PeerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerTests.swift; sourceTree = "<group>"; };
+		FAADDDCB1247115F2BC3A45D /* MultipeerConnectHelper.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultipeerConnectHelper.swift; sourceTree = "<group>"; };
+		FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationStateNotificationsManager.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		CCA571B81D4787A900FBEC41 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CCA571C31D4787A900FBEC41 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CCA571C71D4787A900FBEC41 /* ThaliCore.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CCA5728E1D4A327E00FBEC41 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1C3367191D703BAC00143BCF /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				1C33671A1D703C0300143BCF /* NetworkReachability */,
+			);
+			name = Utils;
+			sourceTree = "<group>";
+		};
+		1C33671A1D703C0300143BCF /* NetworkReachability */ = {
+			isa = PBXGroup;
+			children = (
+				1C33671E1D703EE900143BCF /* NetworkReachability.h */,
+				1C33671F1D703EE900143BCF /* NetworkReachability.m */,
+			);
+			name = NetworkReachability;
+			sourceTree = "<group>";
+		};
+		1CB9B4101D70636F00C59CCF /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				1CB9B4111D70637200C59CCF /* HardwareControl */,
+			);
+			name = Utils;
+			sourceTree = "<group>";
+		};
+		1CB9B4111D70637200C59CCF /* HardwareControl */ = {
+			isa = PBXGroup;
+			children = (
+				1CB9B4121D70637800C59CCF /* Bluetooth */,
+			);
+			name = HardwareControl;
+			sourceTree = "<group>";
+		};
+		1CB9B4121D70637800C59CCF /* Bluetooth */ = {
+			isa = PBXGroup;
+			children = (
+				1C38DDD11D74153900418F15 /* BluetoothHardwareControlManager.h */,
+				1C38DDD21D74153900418F15 /* BluetoothHardwareControlManager.m */,
+				1C38DDD31D74153900418F15 /* BluetoothHardwareControlObserver.h */,
+				1952BBA31DF6C9810016B9C8 /* BluetoothHardwareControlObserver.m */,
+				1CB9B4131D70637C00C59CCF /* PrivateAPI */,
+			);
+			name = Bluetooth;
+			sourceTree = "<group>";
+		};
+		1CB9B4131D70637C00C59CCF /* PrivateAPI */ = {
+			isa = PBXGroup;
+			children = (
+				1CB9B4201D7063C700C59CCF /* BluetoothManager.h */,
+			);
+			name = PrivateAPI;
+			sourceTree = "<group>";
+		};
+		1CEBB3ED1D9979F700B229C9 /* GCDAsyncSocket */ = {
+			isa = PBXGroup;
+			children = (
+				1CEBB3EE1D997A8600B229C9 /* GCDAsyncSocket.h */,
+				1CEBB3EF1D997A8600B229C9 /* GCDAsyncSocket.m */,
+			);
+			name = GCDAsyncSocket;
+			sourceTree = "<group>";
+		};
+		3AD347591DA145D7006F1126 /* Mocks */ = {
+			isa = PBXGroup;
+			children = (
+				3AD3475D1DA192B3006F1126 /* MCSessionMock.swift */,
+				1C148D131DA3B16C00E0E1AC /* TCPServerMock.swift */,
+				1C148D151DA3B17500E0E1AC /* TCPClientMock.swift */,
+			);
+			name = Mocks;
+			sourceTree = "<group>";
+		};
+		CCA571B21D4787A900FBEC41 = {
+			isa = PBXGroup;
+			children = (
+				CCA571BE1D4787A900FBEC41 /* ThaliCore */,
+				CCA571CA1D4787A900FBEC41 /* ThaliCoreTests */,
+				CCA572F71D4B9E5300FBEC41 /* ThaliCoreCITests */,
+				CCA571BD1D4787A900FBEC41 /* Products */,
+			);
+			indentWidth = 2;
+			sourceTree = "<group>";
+			tabWidth = 2;
+		};
+		CCA571BD1D4787A900FBEC41 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */,
+				CCA571C61D4787A900FBEC41 /* ThaliCoreTests.xctest */,
+				CCA572921D4A327E00FBEC41 /* ThaliCore.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		CCA571BE1D4787A900FBEC41 /* ThaliCore */ = {
+			isa = PBXGroup;
+			children = (
+				1C3367191D703BAC00143BCF /* Utils */,
+				CCA571DC1D47883C00FBEC41 /* Core */,
+				CCA571E51D47883C00FBEC41 /* MultipeerConnectivity */,
+				FAADD1C6BE43B5292357C72D /* SocketConnection */,
+				CCA571D61D47883100FBEC41 /* SupportingFiles */,
+				CCA571BF1D4787A900FBEC41 /* ThaliCore.h */,
+			);
+			path = ThaliCore;
+			sourceTree = "<group>";
+		};
+		CCA571CA1D4787A900FBEC41 /* ThaliCoreTests */ = {
+			isa = PBXGroup;
+			children = (
+				34FD7D881D9BA1EA006593B9 /* SimpleTestCase.swift */,
+				CCA572EB1D4B6E9600FBEC41 /* Bridging-Header.h */,
+				CCA572501D478C1000FBEC41 /* SupportingFiles */,
+				FAADD8520DBCFFFE29307976 /* CoreTests */,
+				FAADDAF9BA4090C205CCEA1E /* MultipeerConnectivityTests */,
+				FAADDDC73D63421239CA08F1 /* SocketConnectionTests */,
+				FAADD063EF49729916D9EF14 /* Utils */,
+			);
+			path = ThaliCoreTests;
+			sourceTree = "<group>";
+		};
+		CCA571D61D47883100FBEC41 /* SupportingFiles */ = {
+			isa = PBXGroup;
+			children = (
+				CCA571D71D47883100FBEC41 /* Info.plist */,
+			);
+			name = SupportingFiles;
+			path = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		CCA571DC1D47883C00FBEC41 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				1CEBB4061D9BF68D00B229C9 /* ThaliCoreError.swift */,
+				FAADDF9BC6783F19BBA3A918 /* ApplicationStateNotificationsManager.swift */,
+				FAADD7A741ABA2A94876C58F /* Peer.swift */,
+				1CEBB3FF1D997CF500B229C9 /* PeerAvailability.swift */,
+				FAADD84F3454375EE4974B67 /* Atomic.swift */,
+				1C148DD91DA55D4900E0E1AC /* Dictionary+KeyForValue.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		CCA571E51D47883C00FBEC41 /* MultipeerConnectivity */ = {
+			isa = PBXGroup;
+			children = (
+				FAADD1EC912A5A83B7AC0C53 /* Advertiser.swift */,
+				FAADD0A063AF85E1634DB500 /* Browser.swift */,
+				FAADD0E89072AC745F4CB0AB /* AdvertiserManager.swift */,
+				FAADD7119C663364132D5C36 /* BrowserManager.swift */,
+			);
+			path = MultipeerConnectivity;
+			sourceTree = "<group>";
+		};
+		CCA572501D478C1000FBEC41 /* SupportingFiles */ = {
+			isa = PBXGroup;
+			children = (
+				CCA572511D478C1000FBEC41 /* Info.plist */,
+			);
+			name = SupportingFiles;
+			path = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		CCA572F71D4B9E5300FBEC41 /* ThaliCoreCITests */ = {
+			isa = PBXGroup;
+			children = (
+				1CB9B4101D70636F00C59CCF /* Utils */,
+				CCA573091D4BA04B00FBEC41 /* Core */,
+				CCA5730C1D4BA04B00FBEC41 /* TestRunner */,
+				CCA573061D4B9F1B00FBEC41 /* Supporting Files */,
+				CCA572FB1D4B9E5300FBEC41 /* ThaliCore.h */,
+			);
+			path = ThaliCoreCITests;
+			sourceTree = "<group>";
+		};
+		CCA573061D4B9F1B00FBEC41 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				CCA573071D4B9F1B00FBEC41 /* Info.plist */,
+			);
+			path = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		CCA573091D4BA04B00FBEC41 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		CCA5730C1D4BA04B00FBEC41 /* TestRunner */ = {
+			isa = PBXGroup;
+			children = (
+				CCA5730E1D4BA04B00FBEC41 /* TestRunner.swift */,
+			);
+			path = TestRunner;
+			sourceTree = "<group>";
+		};
+		FAADD063EF49729916D9EF14 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				FAADDDCB1247115F2BC3A45D /* MultipeerConnectHelper.swift */,
+				FAADD3AE924922CE56CFB805 /* String+Random.swift */,
+				3AD347541D9FEED9006F1126 /* StringRandomTests.swift */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+		FAADD1C6BE43B5292357C72D /* SocketConnection */ = {
+			isa = PBXGroup;
+			children = (
+				1CEBB3ED1D9979F700B229C9 /* GCDAsyncSocket */,
+				FAADD342AF116FCE3B46A03D /* Session.swift */,
+				FAADD76EB1071AB28B6EB247 /* VirtualSocketBuilder.swift */,
+				1CD4C0AE1DA68E7B005FFC3B /* AdvertiserRelay.swift */,
+				1CD4C0B11DA68E86005FFC3B /* BrowserRelay.swift */,
+				3AD347511D9FB556006F1126 /* TCPClient.swift */,
+				1CEBB3F91D997BF700B229C9 /* TCPListener.swift */,
+				1CEBB3FC1D997CB200B229C9 /* VirtualSocket.swift */,
+				1C8776E91DC0F324004CF9BD /* NSStreamEventsThread.swift */,
+				1C8776E71DC0F2E0004CF9BD /* NSRunLoop+NSStreamEventsThread.swift */,
+			);
+			path = SocketConnection;
+			sourceTree = "<group>";
+		};
+		FAADD8520DBCFFFE29307976 /* CoreTests */ = {
+			isa = PBXGroup;
+			children = (
+				FAADD6CB4BF01ED0E26C1EC9 /* AtomicTests.swift */,
+				FAADDCAEBC4F0F06B69A8A8B /* PeerTests.swift */,
+				FAADD7C5A6317351DA1CAAFC /* AppStateNotificationsManagerTests.swift */,
+			);
+			path = CoreTests;
+			sourceTree = "<group>";
+		};
+		FAADDAF9BA4090C205CCEA1E /* MultipeerConnectivityTests */ = {
+			isa = PBXGroup;
+			children = (
+				FAADD8FC3B9A78AE2C9EDEE0 /* AdvertiserTests.swift */,
+				FAADD57929D78BB60E848B53 /* BrowserTests.swift */,
+				FAADD64B361C528BC5BC198A /* AdvertiserManagerTests.swift */,
+				FAADDB98375EC846FE1C16D9 /* BrowserManagerTests.swift */,
+			);
+			path = MultipeerConnectivityTests;
+			sourceTree = "<group>";
+		};
+		FAADDDC73D63421239CA08F1 /* SocketConnectionTests */ = {
+			isa = PBXGroup;
+			children = (
+				3AD347591DA145D7006F1126 /* Mocks */,
+				FAADD57055CF4F1A5AD0AD24 /* SessionTests.swift */,
+				FAADD0580945C0E2E31264FF /* VirtualSocketBuilderTests.swift */,
+				1CEBB4041D9BD4AA00B229C9 /* RelayTests.swift */,
+				1C17AE3A1DA79F6400763619 /* AdvertiserRelayTests.swift */,
+				1C17AE381DA79DBE00763619 /* BrowserRelayTests.swift */,
+				1CEBB4021D9BD37A00B229C9 /* VirtualSocketTests.swift */,
+				3AD3474F1D9F7EBC006F1126 /* TCPListenerTests.swift */,
+				3AD347571DA048BF006F1126 /* TCPClientTests.swift */,
+			);
+			path = SocketConnectionTests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		CCA571B91D4787A900FBEC41 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1C3367201D703EE900143BCF /* NetworkReachability.h in Headers */,
+				CCA571C01D4787A900FBEC41 /* ThaliCore.h in Headers */,
+				1CEBB3F01D997A8600B229C9 /* GCDAsyncSocket.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CCA5728F1D4A327E00FBEC41 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1C38DDD61D74153900418F15 /* BluetoothHardwareControlObserver.h in Headers */,
+				1C3367221D70407B00143BCF /* NetworkReachability.h in Headers */,
+				1C38DDD41D74153900418F15 /* BluetoothHardwareControlManager.h in Headers */,
+				CCA573021D4B9E5300FBEC41 /* ThaliCore.h in Headers */,
+				1CB9B4211D7063C700C59CCF /* BluetoothManager.h in Headers */,
+				1CEBB3F11D997A8600B229C9 /* GCDAsyncSocket.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		CCA571BB1D4787A900FBEC41 /* ThaliCore */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CCA571D01D4787A900FBEC41 /* Build configuration list for PBXNativeTarget "ThaliCore" */;
+			buildPhases = (
+				CCA571B71D4787A900FBEC41 /* Sources */,
+				CCA571B81D4787A900FBEC41 /* Frameworks */,
+				CCA571B91D4787A900FBEC41 /* Headers */,
+				CCA571BA1D4787A900FBEC41 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ThaliCore;
+			productName = ThaliCore;
+			productReference = CCA571BC1D4787A900FBEC41 /* ThaliCore.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		CCA571C51D4787A900FBEC41 /* ThaliCoreTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CCA571D31D4787A900FBEC41 /* Build configuration list for PBXNativeTarget "ThaliCoreTests" */;
+			buildPhases = (
+				CCA571C21D4787A900FBEC41 /* Sources */,
+				CCA571C31D4787A900FBEC41 /* Frameworks */,
+				CCA571C41D4787A900FBEC41 /* Resources */,
+				D3D308141D52128500943EED /* SwiftLint */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				CCA571C91D4787A900FBEC41 /* PBXTargetDependency */,
+			);
+			name = ThaliCoreTests;
+			productName = ThaliCoreTests;
+			productReference = CCA571C61D4787A900FBEC41 /* ThaliCoreTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		CCA572911D4A327E00FBEC41 /* ThaliCoreCITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CCA572971D4A327E00FBEC41 /* Build configuration list for PBXNativeTarget "ThaliCoreCITests" */;
+			buildPhases = (
+				CCA5728D1D4A327E00FBEC41 /* Sources */,
+				CCA5728E1D4A327E00FBEC41 /* Frameworks */,
+				CCA5728F1D4A327E00FBEC41 /* Headers */,
+				CCA572901D4A327E00FBEC41 /* Resources */,
+				CCA5729C1D4A32E100FBEC41 /* SwiftLint */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ThaliCoreCITests;
+			productName = ThaliCoreWithTests;
+			productReference = CCA572921D4A327E00FBEC41 /* ThaliCore.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		CCA571B31D4787A900FBEC41 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 0730;
+				LastUpgradeCheck = 0730;
+				ORGANIZATIONNAME = Thali;
+				TargetAttributes = {
+					CCA571BB1D4787A900FBEC41 = {
+						CreatedOnToolsVersion = 7.3.1;
+					};
+					CCA571C51D4787A900FBEC41 = {
+						CreatedOnToolsVersion = 7.3.1;
+					};
+					CCA572911D4A327E00FBEC41 = {
+						CreatedOnToolsVersion = 7.3.1;
+					};
+				};
+			};
+			buildConfigurationList = CCA571B61D4787A900FBEC41 /* Build configuration list for PBXProject "ThaliCore" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = CCA571B21D4787A900FBEC41;
+			productRefGroup = CCA571BD1D4787A900FBEC41 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				CCA571BB1D4787A900FBEC41 /* ThaliCore */,
+				CCA572911D4A327E00FBEC41 /* ThaliCoreCITests */,
+				CCA571C51D4787A900FBEC41 /* ThaliCoreTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		CCA571BA1D4787A900FBEC41 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CCA571C41D4787A900FBEC41 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CCA572901D4A327E00FBEC41 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		CCA5729C1D4A32E100FBEC41 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n    swiftlint\nelse\n    echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi";
+		};
+		D3D308141D52128500943EED /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\nswiftlint\nelse\necho \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		CCA571B71D4787A900FBEC41 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FAADDB5F680C576D4D34638B /* Advertiser.swift in Sources */,
+				1CEBB3F21D997A8600B229C9 /* GCDAsyncSocket.m in Sources */,
+				FAADD49592809F2012ED7B29 /* ApplicationStateNotificationsManager.swift in Sources */,
+				1C8776E81DC0F2E0004CF9BD /* NSRunLoop+NSStreamEventsThread.swift in Sources */,
+				3AD347521D9FB556006F1126 /* TCPClient.swift in Sources */,
+				FAADD7B9451F32511828885E /* Browser.swift in Sources */,
+				1C148DDA1DA55D4900E0E1AC /* Dictionary+KeyForValue.swift in Sources */,
+				1CD4C0AF1DA68E7B005FFC3B /* AdvertiserRelay.swift in Sources */,
+				FAADD352919F859B6CF8942E /* Peer.swift in Sources */,
+				1CEBB3FA1D997BF700B229C9 /* TCPListener.swift in Sources */,
+				FAADD5FE7712039E773BC6E5 /* AdvertiserManager.swift in Sources */,
+				FAADDDA8FB9D6E557F49081B /* BrowserManager.swift in Sources */,
+				3AD347561D9FEF78006F1126 /* String+Random.swift in Sources */,
+				1C8776EA1DC0F324004CF9BD /* NSStreamEventsThread.swift in Sources */,
+				FAADD04D8930DF3297562D09 /* Session.swift in Sources */,
+				1CD4C0B21DA68E86005FFC3B /* BrowserRelay.swift in Sources */,
+				FAADD16070404F0C249AF956 /* VirtualSocketBuilder.swift in Sources */,
+				1CEBB4001D997CF500B229C9 /* PeerAvailability.swift in Sources */,
+				D3E699F81D798F93005D5315 /* Atomic.swift in Sources */,
+				1CEBB3FD1D997CB200B229C9 /* VirtualSocket.swift in Sources */,
+				1C3367211D703EE900143BCF /* NetworkReachability.m in Sources */,
+				1CEBB4071D9BF68D00B229C9 /* ThaliCoreError.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CCA571C21D4787A900FBEC41 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1C17AE391DA79DBE00763619 /* BrowserRelayTests.swift in Sources */,
+				1CEBB4031D9BD37A00B229C9 /* VirtualSocketTests.swift in Sources */,
+				1CEBB4051D9BD4AA00B229C9 /* RelayTests.swift in Sources */,
+				FAADDD757A0B11B3F905425B /* AtomicTests.swift in Sources */,
+				3AD347581DA048BF006F1126 /* TCPClientTests.swift in Sources */,
+				FAADD461157D4DA6740A7BF6 /* PeerTests.swift in Sources */,
+				3AD347501D9F7EBC006F1126 /* TCPListenerTests.swift in Sources */,
+				FAADDF5D58899C80605344FB /* AppStateNotificationsManagerTests.swift in Sources */,
+				FAADD406A1112A5C23054C51 /* BrowserManagerTests.swift in Sources */,
+				FAADD1AB186104B5A38603FB /* BrowserTests.swift in Sources */,
+				1C17AE3B1DA79F6400763619 /* AdvertiserRelayTests.swift in Sources */,
+				FAADDC6966AEA24BCD0B2BE1 /* AdvertiserTests.swift in Sources */,
+				1C148D141DA3B16C00E0E1AC /* TCPServerMock.swift in Sources */,
+				FAADD55D9AC06A841FAF8A47 /* AdvertiserManagerTests.swift in Sources */,
+				FAADDE5C74D69D3967DAF82A /* VirtualSocketBuilderTests.swift in Sources */,
+				3AD3475E1DA192B3006F1126 /* MCSessionMock.swift in Sources */,
+				FAADDB54D721687FF55B684C /* SessionTests.swift in Sources */,
+				FAADD354F497378B5DAECDE8 /* MultipeerConnectHelper.swift in Sources */,
+				3AD347551D9FEED9006F1126 /* StringRandomTests.swift in Sources */,
+				FAADD340E8E13B0AFDBBAA2B /* String+Random.swift in Sources */,
+				1C148D161DA3B17500E0E1AC /* TCPClientMock.swift in Sources */,
+				34FD7D891D9BA1EA006593B9 /* SimpleTestCase.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CCA5728D1D4A327E00FBEC41 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CCA573131D4BA04B00FBEC41 /* TestRunner.swift in Sources */,
+				D377C5021D6D9C1600916A7B /* VirtualSocketBuilder.swift in Sources */,
+				FAADDA5FCF7F856DF4224B68 /* Advertiser.swift in Sources */,
+				1C8776EC1DC0F32A004CF9BD /* NSRunLoop+NSStreamEventsThread.swift in Sources */,
+				FAADD705CAB9E45559605B8F /* Browser.swift in Sources */,
+				1C38DDD51D74153900418F15 /* BluetoothHardwareControlManager.m in Sources */,
+				FAADD430F6A5902FD5595B47 /* ApplicationStateNotificationsManager.swift in Sources */,
+				FAADD36CCBFA97A7B25AF416 /* Peer.swift in Sources */,
+				FAADD7FFE1EE91F294513ADA /* AdvertiserManager.swift in Sources */,
+				FAADD6ED0224218F394D9DAB /* BrowserManager.swift in Sources */,
+				FAADDD566FA7D3F34C6C4581 /* Session.swift in Sources */,
+				1C6D71421DAFBBD100802569 /* TCPClientMock.swift in Sources */,
+				1CEBB3F31D997A8600B229C9 /* GCDAsyncSocket.m in Sources */,
+				3AD347531D9FB556006F1126 /* TCPClient.swift in Sources */,
+				1C40E5F81DA24B0A00DA369E /* MCSessionMock.swift in Sources */,
+				1CD4C0B31DA68E86005FFC3B /* BrowserRelay.swift in Sources */,
+				FAADD102266797342438FB50 /* Atomic.swift in Sources */,
+				1C6D713D1DAF9BCD00802569 /* BrowserRelayTests.swift in Sources */,
+				1C148DDB1DA55D4900E0E1AC /* Dictionary+KeyForValue.swift in Sources */,
+				1C6D713E1DAF9BCF00802569 /* VirtualSocketTests.swift in Sources */,
+				1C6D713F1DAF9BD200802569 /* TCPClientTests.swift in Sources */,
+				1CD4C0B01DA68E7B005FFC3B /* AdvertiserRelay.swift in Sources */,
+				1C3367231D70407E00143BCF /* NetworkReachability.m in Sources */,
+				FAADD14FB68CA0A056A2EFAF /* AtomicTests.swift in Sources */,
+				FAADDB1A4C19C000CBA8C6A5 /* PeerTests.swift in Sources */,
+				1952BBA41DF6C9810016B9C8 /* BluetoothHardwareControlObserver.m in Sources */,
+				FAADD7417CEB0C20CC94F301 /* AppStateNotificationsManagerTests.swift in Sources */,
+				1C6D71431DAFBBDC00802569 /* TCPServerMock.swift in Sources */,
+				1C6D71401DAF9BD400802569 /* TCPListenerTests.swift in Sources */,
+				1C6D713B1DAF9BC800802569 /* RelayTests.swift in Sources */,
+				1C6D71411DAF9BDB00802569 /* StringRandomTests.swift in Sources */,
+				FAADD1BED4E04EEC9EE07240 /* BrowserManagerTests.swift in Sources */,
+				FAADD601541D22571D092A0D /* BrowserTests.swift in Sources */,
+				1CEBB3FB1D997BF700B229C9 /* TCPListener.swift in Sources */,
+				1C6D713C1DAF9BCB00802569 /* AdvertiserRelayTests.swift in Sources */,
+				FAADD38EEA68209A678157F2 /* AdvertiserTests.swift in Sources */,
+				1C8776EB1DC0F324004CF9BD /* NSStreamEventsThread.swift in Sources */,
+				FAADD2472EF20C245A535EB0 /* AdvertiserManagerTests.swift in Sources */,
+				1CEBB4011D997CF500B229C9 /* PeerAvailability.swift in Sources */,
+				FAADDC4F91EB0C57EF22ADEC /* VirtualSocketBuilderTests.swift in Sources */,
+				FAADD13A66AFF1807FF00499 /* SessionTests.swift in Sources */,
+				FAADD5D92ED104DEF558A3A7 /* MultipeerConnectHelper.swift in Sources */,
+				FAADD49298025B4A03860D3A /* String+Random.swift in Sources */,
+				1CEBB4081D9BF6A100B229C9 /* ThaliCoreError.swift in Sources */,
+				1CEBB3FE1D997CB200B229C9 /* VirtualSocket.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		CCA571C91D4787A900FBEC41 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CCA571BB1D4787A900FBEC41 /* ThaliCore */;
+			targetProxy = CCA571C81D4787A900FBEC41 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		CCA571CE1D4787A900FBEC41 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGNING_REQUIRED = NO;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		CCA571CF1D4787A900FBEC41 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGNING_REQUIRED = NO;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		CCA571D11D4787A900FBEC41 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = "ThaliCore/Supporting Files/Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = org.thali.ThaliCore;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		CCA571D21D4787A900FBEC41 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = "ThaliCore/Supporting Files/Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = org.thali.ThaliCore;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+		CCA571D41D4787A900FBEC41 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = "ThaliCoreTests/Supporting Files/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = org.thali.ThaliCoreTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "ThaliCoreTests/Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		CCA571D51D4787A900FBEC41 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = "ThaliCoreTests/Supporting Files/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = org.thali.ThaliCoreTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "ThaliCoreTests/Bridging-Header.h";
+			};
+			name = Release;
+		};
+		CCA572981D4A327E00FBEC41 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_BITCODE = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PLATFORM_DIR)/Developer/Library/Frameworks",
+				);
+				INFOPLIST_FILE = "$(SRCROOT)/ThaliCoreCITests/Supporting Files/Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = org.thali.ThaliCoreCITests;
+				PRODUCT_NAME = ThaliCore;
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		CCA572991D4A327E00FBEC41 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_BITCODE = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PLATFORM_DIR)/Developer/Library/Frameworks",
+				);
+				INFOPLIST_FILE = "$(SRCROOT)/ThaliCoreCITests/Supporting Files/Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = org.thali.ThaliCoreCITests;
+				PRODUCT_NAME = ThaliCore;
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		CCA571B61D4787A900FBEC41 /* Build configuration list for PBXProject "ThaliCore" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CCA571CE1D4787A900FBEC41 /* Debug */,
+				CCA571CF1D4787A900FBEC41 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CCA571D01D4787A900FBEC41 /* Build configuration list for PBXNativeTarget "ThaliCore" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CCA571D11D4787A900FBEC41 /* Debug */,
+				CCA571D21D4787A900FBEC41 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CCA571D31D4787A900FBEC41 /* Build configuration list for PBXNativeTarget "ThaliCoreTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CCA571D41D4787A900FBEC41 /* Debug */,
+				CCA571D51D4787A900FBEC41 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CCA572971D4A327E00FBEC41 /* Build configuration list for PBXNativeTarget "ThaliCoreCITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CCA572981D4A327E00FBEC41 /* Debug */,
+				CCA572991D4A327E00FBEC41 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = CCA571B31D4787A900FBEC41 /* Project object */;
+}

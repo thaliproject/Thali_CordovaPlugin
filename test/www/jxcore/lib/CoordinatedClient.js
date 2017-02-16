@@ -4,11 +4,13 @@ var util     = require('util');
 var format   = util.format;
 var inherits = util.inherits;
 
+var path           = require('path');
 var objectAssign   = require('object-assign');
 var uuidValidate   = require('uuid-validate');
 var assert         = require('assert');
 var tape           = require('tape-catch');
 var SocketIOClient = require('socket.io-client');
+var stacky         = require('stacky');
 var EventEmitter   = require('events').EventEmitter;
 
 var asserts = require('./utils/asserts');
@@ -20,7 +22,6 @@ var serverAddress = require('../server-address');
 var logger = require('./testLogger')('CoordinatedClient');
 
 var DEFAULT_SERVER_PORT = Number(process.env.COORDINATED_PORT) || 3000;
-
 
 function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware,
                            nativeUTFailed) {
@@ -74,10 +75,10 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware,
     serverUrl,
     {
       reconnection: true,
-      reconnectionAttempts: 15,
-      reconnectionDelay: 200,
-      reconnectionDelayMax: 1000,
-      randomizationFactor: 0,
+      reconnectionAttempts: 100,
+      reconnectionDelay:    2000,
+      reconnectionDelayMax: 10000,
+      randomizationFactor:  0,
 
       transports: ['websocket'],
       rejectUnauthorized: null
@@ -101,15 +102,16 @@ CoordinatedClient.prototype._bind = function () {
   this._io
     .on  ('connect',           this._connect.bind(this))
     .on  ('connect_timeout',   logger.debug.bind(logger))
-    .on  ('connect_error',     this._connectionError.bind(this))
+    .on  ('connect_error',     this._error.bind(this, 'connect_error'))
     .on  ('reconnect',         this._reconnect.bind(this))
-    .on  ('reconnect_error',   this._connectionError.bind(this))
-    .on  ('reconnect_failed',  this._error.bind(this))
+    .on  ('reconnect_error',   this._error.bind(this, 'reconnect_error'))
+    .on  ('reconnect_failed',  this._error.bind(this, 'reconnect_failed'))
     .once('schedule',          this._schedule.bind(this))
     .on  ('discard',           this._discard.bind(this))
     .on  ('disqualify',        this._disqualify.bind(this))
     .on  ('disconnect',        this._disconnect.bind(this))
-    .on  ('error',             this._error.bind(this))
+    .on  ('error',             this._error.bind(this, 'error'))
+    .on  ('customError',       this._customError.bind(this))
     .once('complete',          this._complete.bind(this));
 };
 
@@ -184,7 +186,6 @@ CoordinatedClient.prototype._schedule = function (data) {
 
     if (lastFailedResult) {
       logger.error('failed to run unit tests, platformName: \'%s\'', self._platform);
-      self._failed(lastFailedResult.error);
     } else {
       logger.debug('all unit tests succeeded, platformName: \'%s\'', self._platform);
     }
@@ -274,28 +275,39 @@ CoordinatedClient.prototype._disqualify = function (data) {
 CoordinatedClient.prototype._disconnect = function () {
   if (this._state === CoordinatedClient.states.completed) {
     logger.debug('test client disconnected');
-    this._succeed();
+    if (this._lastCustomError) {
+      this._failed(this._lastCustomError);
+    } else {
+      this._succeed();
+    }
   } else {
     // Just log the error since socket.io will try to reconnect.
     logger.debug('device disconnected from the test server');
   }
 };
 
-CoordinatedClient.prototype._error = function (error) {
-  var stack = error ? error.stack : null;
-  logger.error(
-    'unexpected error: \'%s\', stack: \'%s\'',
-    String(error), stack
-  );
-  this._failed(error);
+CoordinatedClient.prototype._customError = function (data) {
+  this._emit('customError_confirmed', data);
+  this._lastCustomError = new Error(data.content);
+
+  // We are waiting for 'complete' event.
 };
 
-CoordinatedClient.prototype._connectionError = function (error) {
+CoordinatedClient.prototype._error = function (reason, error) {
   var stack = error ? error.stack : null;
   var description = error ? error.description : null;
+
+  if (error && error.type === 'TransportError') {
+    logger.warn(
+      '%s error ignored for reconnect: \'%s\', description: \'%s\', stack: \'%s\'',
+      reason, String(error), description, stack
+    );
+    return;
+  }
+
   logger.error(
-    'connection error: \'%s\', description: \'%s\', stack: \'%s\'',
-    String(error), description, stack
+    '%s error: \'%s\', description: \'%s\', stack: \'%s\'',
+    reason, String(error), description, stack
   );
   this._failed(error);
 };
@@ -376,12 +388,12 @@ CoordinatedClient.prototype._runEvent = function (event, test) {
         .catch(reject);
     });
   });
-}
+};
 
 CoordinatedClient.prototype._skipEvent = function (tape, test, event, timeout) {
   var self = this;
 
-  return this._runEvent(event, test)
+  return self._runEvent(event, test)
     .then(function () {
       return new Promise(function (resolve, reject) {
         tape.once('end', function () {
@@ -396,13 +408,13 @@ CoordinatedClient.prototype._skipEvent = function (tape, test, event, timeout) {
       timeout,
       format('timeout exceed while skipping test: \'%s\'', test.name)
     );
-}
+};
 
 CoordinatedClient.prototype._processEvent = function (tape, test, event, fun,
                                                       timeout) {
   var self = this;
 
-  return this._runEvent(event, test)
+  return self._runEvent(event, test)
     .then(function (parsedData) {
       // Only for testing purposes.
       if (parsedData) {
@@ -441,16 +453,17 @@ CoordinatedClient.prototype._processEvent = function (tape, test, event, fun,
             },
             test.options
           )
-            .then(function () {
-              if (success) {
-                resolve(parsedData);
-              } else {
-                var error = format('test failed, name: \'%s\'', test.name);
-                logger.error(error);
-                reject(new Error(error));
-              }
-            })
-            .catch(reject);
+          .then(function () {
+            if (success) {
+              resolve(parsedData);
+            } else {
+              var error = format('test failed, name: \'%s\'', test.name);
+              logger.error(error);
+              reject(new Error(error));
+            }
+            return null;
+          })
+          .catch(reject);
         };
         tape.once('end', endHandler);
 
@@ -469,23 +482,25 @@ CoordinatedClient.prototype._processEvent = function (tape, test, event, fun,
       timeout,
       format('timeout exceed while processing test: \'%s\'', test.name)
     );
-}
+};
 
 CoordinatedClient.prototype._sync = function (tape, test, timeout) {
   var self = this;
 
   // returns something like 'at file:lineNumber'.
   function getCaller (level) {
-    var traces = (new Error()).stack.split('\n');
+    var traces = stacky.parse(new Error().stack);
     assert(
       traces.length > level,
       format('stack should have a least %d lines', level + 1)
     );
-    return traces[level].trim();
+    var trace    = traces[level];
+    var location = path.relative(__dirname, trace.location);
+    return location + ":" + trace.line + ":" + trace.column;
   }
-  var callerId = getCaller(3);
+  var callerId = getCaller(2);
 
-  return this._emit('sync', callerId, test.options)
+  return self._emit('sync', callerId, test.options)
     .then(function () {
       return self._runEvent('syncFinished', test);
     })
@@ -493,7 +508,7 @@ CoordinatedClient.prototype._sync = function (tape, test, timeout) {
       timeout,
       format('timeout exceed while syncing test: \'%s\'', test.name)
     );
-}
+};
 
 CoordinatedClient.prototype._scheduleTest = function (test) {
   var self = this;
@@ -524,7 +539,8 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
           if (canBeSkipped) {
             logger.debug('test was skipped, name: \'%s\'', test.name);
             skipped = true;
-            return self._skipEvent(tape, test, 'run_' + test.name, test.options.testTimeout);
+            return self._skipEvent(tape, test, 'run_' + test.name,
+              test.options.testTimeout);
           } else {
             return self._processEvent(tape, test, 'run_' + test.name, test.fun,
               test.options.testTimeout);
@@ -534,22 +550,23 @@ CoordinatedClient.prototype._scheduleTest = function (test) {
     });
 
     tape('teardown', function (tape) {
-      tape.sync = self._sync.bind(self, tape, test, test.options.teardownTimeout);
+      tape.sync = self._sync.bind(self, tape, test,
+        test.options.teardownTimeout);
 
-      self._processEvent(tape, test, 'teardown_' + test.name, test.options.teardown,
-        test.options.teardownTimeout)
+      self._processEvent(tape, test, 'teardown_' + test.name,
+        test.options.teardown, test.options.teardownTimeout)
         // We should exit after test teardown.
         .then(resolve)
         .catch(reject);
     });
   })
-    .then(function () {
-      if (skipped) {
-        return Promise.reject(
-          new Error('skipped')
-        );
-      }
-    });
+  .then(function () {
+    if (skipped) {
+      return Promise.reject(
+        new Error('skipped')
+      );
+    }
+  });
 };
 
 // We should remove prefix (uuid.v4) from data.

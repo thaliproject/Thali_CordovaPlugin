@@ -1,5 +1,6 @@
 'use strict';
 
+var path   = require('path');
 var util   = require('util');
 var format = util.format;
 
@@ -15,11 +16,16 @@ var endsWith = require('end-with');
 
 require('./process');
 
-var THALI_DIRECTORY = './thaliDontCheckIn';
+var IOS_BUILD_PATH = 'platforms/ios';
+var ANDROID_BUILD_PATH = 'platforms/android';
 
+// js files require more specific paths to ignore intermediate/build files from
+// previous builds
+var IOS_WWW_PATH = 'platform/ios/www';
+var ANDROID_WWW_PATH = 'platforms/android/assets/www';
 
 // We want to find the first path that ends with 'name'.
-function findFirstFile (name) {
+function findFirstFile (name, rootDir) {
   return new Promise(function (resolve, reject) {
     var resultPath;
 
@@ -33,7 +39,7 @@ function findFirstFile (name) {
       }
     }
 
-    var finder = findit(THALI_DIRECTORY)
+    var finder = findit(rootDir)
     .on('file', function (path) {
       // We can receive here 'path': 'a/b/my-file', 'a/b/bad-my-file',
       //  'my-file', 'bad-my-file'.
@@ -49,13 +55,13 @@ function findFirstFile (name) {
     .on('stop', end)
     .on('end', end);
   })
-  .catch(function (error) {
-    console.error(
-      'finder failed, error: \'%s\', stack: \'%s\'',
-      error.toString(), error.stack
-    );
-    return Promise.reject(error);
-  });
+    .catch(function (error) {
+      console.error(
+        'finder failed, error: \'%s\', stack: \'%s\'',
+        error.toString(), error.stack
+      );
+      return Promise.reject(error);
+    });
 }
 
 function replaceContent(path, content, replacements) {
@@ -98,10 +104,9 @@ function replaceContent(path, content, replacements) {
 // We want to replace multiple 'strings' in file.
 // 'replacements' will be an array:
 // [{ pattern: /pattern/, value: 'replacement' }]
-function replaceStringsInFile(name, replacements) {
-  return findFirstFile(name)
+function replaceStringsInFile(name, rootDir, replacements) {
+  return findFirstFile(name, rootDir)
   .then(function (path) {
-
     return fs.readFileAsync(path, 'utf8')
     .then(function (content) {
       return replaceContent(path, content, replacements);
@@ -127,7 +132,7 @@ function replaceStringsInFile(name, replacements) {
 // So we have to use:
 //   'abc'.replace(/(a)(b)(c)/, '$1q$3')
 
-function replaceThaliConfig () {
+function replaceThaliConfig (rootDir) {
   // example: 'SSDP_NT: process.env.SSDP_NT || 'http://www.thaliproject.org/ssdp','
   // or: SSDP_NT: 'http://www.thaliproject.org/ssdp',
   // We want to replace it with random string.
@@ -138,19 +143,19 @@ function replaceThaliConfig () {
     pattern: new RegExp(
       [
         '(',
-          'SSDP_NT', '\\s*', ':',
+        'SSDP_NT', '\\s*', ':',
         ')',
         '(',
-          '\\s*', '.*?', ',',
+        '\\s*', '.*?', ',',
         ')'
       ].join('')
     ),
     value: '$1 \'' + value + '\','
   };
-  return replaceStringsInFile('thaliConfig.js', [replacement]);
+  return replaceStringsInFile('thaliConfig.js', rootDir, [replacement]);
 }
 
-function replaceConnectionHelper () {
+function replaceConnectionHelper (rootDir) {
   var replacements = [];
 
   // Example: 'private static final String BLE_SERVICE_UUID_AS_STRING =
@@ -163,10 +168,10 @@ function replaceConnectionHelper () {
         '(',
           ['static', 'final', 'String', 'BLE_SERVICE_UUID_AS_STRING']
             .join('\\s+'),
-          '\\s*', '=', '\\s*',
+        '\\s*', '=', '\\s*',
         ')',
         '(',
-          '"', '.*?', '"',
+        '"', '.*?', '"',
         ')'
       ].join('')
     ),
@@ -187,17 +192,17 @@ function replaceConnectionHelper () {
         '\\s*', '=',
         ')',
         '(',
-          '\\s*', '.*?', ';',
+        '\\s*', '.*?', ';',
         ')'
       ].join('')
     ),
     value: '$1 ' + getRandomNumber(1100, 65534) + ';'
   });
 
-  return replaceStringsInFile('ConnectionHelper.java', replacements);
+  return replaceStringsInFile('ConnectionHelper.java', rootDir, replacements);
 }
 
-function replaceJXcoreExtension() {
+function replaceJXcoreExtension(rootDir) {
   // example:
   // 'appContext = [[AppContext alloc] initWithServiceType:@"thaliproject"];'
   // We want to replace 'thaliproject' here with random alphabetic string.
@@ -209,25 +214,41 @@ function replaceJXcoreExtension() {
     pattern: new RegExp(
       [
         '(',
-          ['initWithServiceType', ':', '@'].join('\\s*'),
+        ['initWithServiceType', ':', '@'].join('\\s*'),
         ')',
         '(',
-          '"', '.*?', '"',
+        '"', '.*?', '"',
         ')'
       ].join('')
     ),
     value: '$1"' + value + '"'
   };
-  return replaceStringsInFile('JXcoreExtension.m', [replacement]);
+  return replaceStringsInFile('JXcoreExtension.m', rootDir, [replacement]);
 }
 
-Promise.all([
-  replaceThaliConfig(),
-  replaceConnectionHelper()
-  // In our current branch 'JXcoreExtension.m' is old and we shouldn't
-  // try to replace it.
-  // replaceJXcoreExtension()
-])
-.then(function () {
-  console.info('We have replaced hardcoded ids with random values.');
-});
+module.exports = function (ctx) {
+  var actions = [];
+
+  var iosPath = path.join(ctx.opts.projectRoot, IOS_BUILD_PATH);
+  var iosWwwPath = path.join(ctx.opts.projectRoot, IOS_WWW_PATH);
+  var androidPath = path.join(ctx.opts.projectRoot, ANDROID_BUILD_PATH);
+  var androidWwwPath = path.join(ctx.opts.projectRoot, ANDROID_WWW_PATH);
+
+  if (ctx.opts.platforms.indexOf('ios') !== -1) {
+    actions.push(
+      replaceThaliConfig(iosWwwPath),
+      replaceJXcoreExtension(iosPath)
+    );
+  }
+
+  if (ctx.opts.platforms.indexOf('android') !== -1) {
+    actions.push(
+      replaceThaliConfig(androidWwwPath),
+      replaceConnectionHelper(androidPath)
+    );
+  }
+
+  return Promise.all(actions).then(function () {
+    console.info('We have replaced hardcoded ids with random values.');
+  });
+};

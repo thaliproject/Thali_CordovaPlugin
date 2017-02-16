@@ -15,8 +15,12 @@ var states = {
   started: false
 };
 
+// We have to keep track of discovered peers to make sure
+// 'listenerRecreatedAfterFailureHandler' event uses the same generation after
+// connection was recreated
+var peerGenerations = {};
+
 var gPromiseQueue = new PromiseQueue();
-var gRouterObject = null;
 var gRouterExpress = null;
 var gRouterServer = null;
 var gRouterServerPort = 0;
@@ -82,6 +86,19 @@ module.exports._isStarted = function () {
  * be calling this module.
  */
 
+/**
+ * Enum to define the types of connections
+ *
+ * @readonly
+ * @enum {string}
+ */
+var connectionTypes = {
+  MULTI_PEER_CONNECTIVITY_FRAMEWORK: 'MPCF',
+  BLUETOOTH: 'AndroidBluetooth',
+  TCP_NATIVE: 'tcp'
+};
+module.exports.connectionTypes = connectionTypes;
+
 /*
         METHODS
  */
@@ -89,11 +106,20 @@ module.exports._isStarted = function () {
 function failedConnectionHandler(failedConnection) {
   var peer = {
     peerIdentifier: failedConnection.peerIdentifier,
+    peerAvailable: false,
+    generation: failedConnection.generation,
     portNumber: null,
     recreated: failedConnection.recreated
   };
   handlePeerAvailabilityChanged(peer);
-  module.exports.emitter.emit('failedConnection', failedConnection);
+
+  var event = {
+    error: failedConnection.error,
+    peerIdentifier: failedConnection.peerIdentifier,
+    recreated: failedConnection.recreated,
+    connectionType: connectionTypes.BLUETOOTH
+  };
+  module.exports.emitter.emit('failedNativeConnection', event);
 }
 
 function routerPortConnectionFailedHandler(failedRouterPort) {
@@ -114,7 +140,7 @@ function routerPortConnectionFailedHandler(failedRouterPort) {
     return;
   }
 
-  gPromiseQueue.enqueueAtTop(stop())
+  gPromiseQueue.enqueueAtTop(stop)
     .catch(function (err) {
       return err;
     })
@@ -138,12 +164,17 @@ function listenerRecreatedAfterFailureHandler(recreateAnnouncement) {
     return;
   }
 
+  var generation = peerGenerations[recreateAnnouncement.peerIdentifier];
+
   logger.debug('listenerRecreatedAfterFailureHandler - We are emitting ' +
-    'nonTCPPeerAvailabilityChangedEvent with peerIdentifier %s and ' +
-    'portNumber %d', recreateAnnouncement.peerIdentifier,
+    'nonTCPPeerAvailabilityChangedEvent with peerIdentifier %s, ' +
+    'generation %s, and portNumber %d',
+    recreateAnnouncement.peerIdentifier, generation,
     recreateAnnouncement.portNumber);
   module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', {
     peerIdentifier: recreateAnnouncement.peerIdentifier,
+    peerAvailable: true,
+    generation: generation,
     portNumber: recreateAnnouncement.portNumber,
     recreated: true
   });
@@ -262,7 +293,6 @@ module.exports.start = function (router, pskIdToSecret) {
       logger.error('Unable to use the given router: %s', error.toString());
       return reject(new Error('Bad Router'));
     }
-    gRouterObject = router;
     var options = {
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
       pskCallback : function (id) {
@@ -277,27 +307,71 @@ module.exports.start = function (router, pskIdToSecret) {
         gRouterServerPort = gRouterServer.address().port;
         logger.debug('listening', gRouterServerPort);
 
-        stopCreateAndStartServersManager()
-          .then(function () {
-            states.started = true;
-            resolve();
-          })
-          .catch(function (err) {
-            reject(err);
-          });
+        if (platform.isAndroid) {
+          stopCreateAndStartServersManager()
+            .then(function () {
+              states.started = true;
+              resolve();
+            })
+            .catch(function (err) {
+              reject(err);
+            });
+        } else {
+          states.started = true;
+          resolve();
+        }
+
       });
     gRouterServer = makeIntoCloseAllServer(gRouterServer);
   });
 };
 
-function stop() {
-  return function (resolve, reject) {
-    if (!states.started) {
-      return resolve();
+function stop(resolve, reject) {
+  if (!states.started) {
+    return resolve();
+  }
+
+  states.started = false;
+
+  var errorDescriptions = {};
+
+  stopNative()
+  .catch(function (err) {
+    errorDescriptions = err;
+  })
+  .then(function () {
+    if (platform.isAndroid) {
+      return stopServersManager();
+    }
+  })
+  .catch(function (err) {
+    errorDescriptions.stopServersManagerError = err;
+  })
+  .then(function () {
+    var oldRouterServer = gRouterServer;
+    gRouterServer = null;
+    if (oldRouterServer) {
+      return oldRouterServer.closeAllPromise();
+    }
+  })
+  .catch(function (err) {
+    errorDescriptions.stopRouterServerError = err;
+  })
+  .then(function () {
+    if (Object.keys(errorDescriptions).length === 0) {
+      return;
     }
 
-    states.started = false;
+    var error = new Error('check errorDescriptions property');
+    error.errorDescriptions = errorDescriptions;
 
+    return Promise.reject(error);
+  })
+  .then(resolve, reject);
+}
+
+function stopNative() {
+  return new Promise(function (resolve, reject) {
     var errorDescriptions = {};
 
     Mobile('stopAdvertisingAndListening').callNative(function (error) {
@@ -308,32 +382,16 @@ function stop() {
         if (error) {
           errorDescriptions.stopListeningError = new Error(error);
         }
-        stopServersManager()
-          .catch(function (err) {
-            errorDescriptions.stopServersManagerError = err;
-          })
-          .then(function () {
-            var oldRouterServer = gRouterServer;
-            gRouterServer = null;
-            return oldRouterServer ? oldRouterServer.closeAllPromise() :
-              Promise.resolve();
-          })
-          .catch(function (err) {
-            errorDescriptions.stopRouterServerError = err;
-          })
-          .then(function () {
-            if (Object.getOwnPropertyNames(errorDescriptions).length === 0) {
-              return resolve();
-            }
 
-            var error = new Error('check errorDescriptions property');
-            error.errorDescriptions = errorDescriptions;
+        if (Object.keys(errorDescriptions).length === 0) {
+          resolve();
+        } else {
+          reject(errorDescriptions);
+        }
 
-            return reject(error);
-          });
       });
     });
-  };
+  });
 }
 
 /**
@@ -348,11 +406,12 @@ function stop() {
  *
  * @returns {Promise<?Error>}
  */
+
 module.exports.stop = function () {
-  return gPromiseQueue.enqueue(stop());
+  return gPromiseQueue.enqueue(stop);
 };
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * This method instructs the native layer to discover what other devices are
  * within range using the platform's non-TCP P2P capabilities. When a device is
@@ -376,8 +435,8 @@ module.exports.stop = function () {
  * @returns {Promise<?Error>}
  * @throws {Error}
  */
-// jscs:enable maximumLineLength
 module.exports.startListeningForAdvertisements = function () {
+/* eslint-enable max-len */
   return gPromiseQueue.enqueue(function (resolve, reject) {
     if (!states.started) {
       return reject(new Error('Call Start!'));
@@ -415,12 +474,13 @@ module.exports.stopListeningForAdvertisements = function () {
       if (error) {
         return reject(new Error(error));
       }
+      peerGenerations = {};
       resolve();
     });
   });
 };
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * This method has two separate but related functions. It's first function is to
  * begin advertising the Thali peer's presence to other peers. The second
@@ -488,14 +548,19 @@ module.exports.stopListeningForAdvertisements = function () {
  * @public
  * @returns {Promise<?Error>}
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 module.exports.startUpdateAdvertisingAndListening = function () {
   return gPromiseQueue.enqueue(function (resolve, reject) {
     if (!states.started) {
       return reject(new Error('Call Start!'));
     }
+
+    var port = platform.isAndroid ?
+      gServersManagerLocalPort :
+      gRouterServerPort;
+
     Mobile('startUpdateAdvertisingAndListening').callNative(
-      gServersManagerLocalPort,
+      port,
       function (error) {
         if (error) {
           return reject(new Error(error));
@@ -565,6 +630,8 @@ module.exports.getNonTCPNetworkStatus = function () {
   });
 };
 
+var multiConnectCounter = 0;
+
 /**
  * This calls the native multiConnect method. This code is responsible for
  * honoring the restrictions placed on calls to multiConnect. Which is that
@@ -584,11 +651,50 @@ module.exports.getNonTCPNetworkStatus = function () {
  * @private
  * @param  {string} peerIdentifier The value taken from a
  * peerAvailabilityChanged event.
- * @return {Promise<number|Error} The promise will either return an integer with
- * the localhost port to connect to or an Error object.
+ * @return {Promise<number|Error>} The promise will either return an integer
+ * with the localhost port to connect to or an Error object.
  */
 module.exports._multiConnect = function (peerIdentifier) {
-  return Promise.reject(new Error('Not yet implemented'));
+  return gPromiseQueue.enqueue(function (resolve, reject) {
+    var originalSyncValue = String(multiConnectCounter);
+    multiConnectCounter++;
+    logger.debug(
+      'Issuing multiConnect for %s (syncValue: %s)',
+      peerIdentifier, originalSyncValue
+    );
+
+    Mobile('multiConnect')
+    .callNative(peerIdentifier, originalSyncValue, function (error) {
+      if (error) {
+        logger.error(
+          'multiConnect for %s failed with %s', peerIdentifier, error
+        );
+        return reject(new Error(error));
+      }
+      logger.debug('Got multiConnect callback');
+
+      module.exports.emitter.on('_multiConnectResolved',
+        function callback (syncValue, error, portNumber) {
+          if (originalSyncValue !== syncValue) {
+            return;
+          }
+
+          module.exports.emitter.removeListener(
+            '_multiConnectResolved', callback);
+
+          if (error) {
+            reject(new Error(error));
+            if (error === 'Connection could not be established') {
+              recreatePeer(peerIdentifier);
+            }
+
+          }
+
+          resolve(portNumber);
+        }
+      );
+    });
+  });
 };
 
 // jscs:disable jsDoc
@@ -605,6 +711,9 @@ module.exports._multiConnect = function (peerIdentifier) {
  */
 // jscs:enable jsDoc
 module.exports._terminateConnection = function (incomingConnectionId) {
+  if (platform.isIOS) {
+    return Promise.reject(new Error('Not connect platform'));
+  }
   return gPromiseQueue.enqueue(function (resolve, reject) {
     gServersManager.terminateIncomingConnection(incomingConnectionId)
     .then(function () {
@@ -629,7 +738,15 @@ module.exports._terminateConnection = function (incomingConnectionId) {
  * a null result.
  */
 module.exports._disconnect = function (peerIdentifier) {
-  return Promise.reject(new Error('Not yet implemented'));
+  return gPromiseQueue.enqueue(function (resolve, reject) {
+    Mobile('disconnect').callNative(peerIdentifier, function (errorMsg) {
+      if (errorMsg) {
+        reject(new Error(errorMsg));
+      } else {
+        resolve();
+      }
+    });
+  });
 };
 
 /**
@@ -641,12 +758,21 @@ module.exports._disconnect = function (peerIdentifier) {
  *
  * @param {string} peerIdentifier The value taken from a peerAvailabilityChanged
  * event.
+ * @param {string} portNumber
  * @returns {Promise<?Error>} Unless something bad happens (in which case a
  * reject with an Error will be returned) the response will be a resolve with
  * a null result.
  */
-module.exports.disconnect = function(peerIdentifier) {
-  return Promise.reject(new Error('Not yet implemented'));
+module.exports.disconnect = function (peerIdentifier, portNumber) {
+  if (platform.isAndroid) {
+    return this._terminateListener(peerIdentifier, portNumber);
+  }
+  if (platform.isIOS) {
+    return this._disconnect(peerIdentifier);
+  }
+
+  return Promise.reject(new Error('Disconnect can not be called on ' +
+    platform.name + ' platform'));
 };
 
 /**
@@ -661,14 +787,19 @@ module.exports.disconnect = function(peerIdentifier) {
  * If called on a non-`connect` platform then a 'Not connect platform' error
  * MUST be returned.
  *
+ * @private
  * @param {string} peerIdentifier
  * @param {number} port
  * @returns {Promise<?error>}
  */
-module.exports.terminateListener = function (peerIdentifier, port) {
+module.exports._terminateListener = function (peerIdentifier, port) {
+  if (platform.isIOS) {
+    return Promise.reject(new Error('Not connect platform'));
+  }
   return gPromiseQueue.enqueue(function (resolve, reject) {
     gServersManager.terminateOutgoingConnection(peerIdentifier, port)
     .then(function () {
+      delete peerGenerations[peerIdentifier];
       resolve();
     })
     .catch(function (error) {
@@ -718,18 +849,18 @@ module.exports.killConnections = function () {
 /**
  * This method is to toggle wifi.
  *
- * @property {boolean} value If true then enable wifi, else disable it.
+ * @param {boolean} value If true then enable wifi, else disable it.
  * @returns {Promise<?Error>}
  */
-module.exports.setWifiRadioState = function (value) {
+module.exports.toggleWiFi = function (value) {
   if (platform.isIOS) {
     return Promise.reject(new Error(
-      'Mobile(\'setWifiRadioState\') is not implemented on ios'
+      'Mobile(\'toggleWiFi\') is not implemented on ios'
     ));
   }
 
   return gPromiseQueue.enqueue(function (resolve, reject) {
-    Mobile('setWifiRadioState').callNative(value, function (error) {
+    Mobile.toggleWiFi(value, function (error) {
       if (error) {
         reject(error);
       } else {
@@ -739,20 +870,50 @@ module.exports.setWifiRadioState = function (value) {
   });
 };
 
-/* EVENTS */
+/**
+ * This method takes out a wifi multicast lock on Android.
+ *
+ * @return {Promise<?Error>}
+ */
+module.exports.lockAndroidWifiMulticast = function () {
+  if (platform.isIOS) {
+    return Promise.reject(new Error(
+      'Mobile(\'lockAndroidWifiMulticast\') is not implemented on ios'));
+  }
+
+  return gPromiseQueue.enqueue(function (resolve, reject) {
+    Mobile('lockAndroidWifiMulticast').callNative(function (error) {
+      if (error) {
+        return reject(new Error(error));
+      }
+      resolve();
+    });
+  });
+};
+
 
 /**
- * Enum to define the types of connections
+ * This method removes a wifi multicast lock on Android.
  *
- * @readonly
- * @enum {string}
+ * @return {Promise<?Error>}
  */
-var connectionTypes = {
-  MULTI_PEER_CONNECTIVITY_FRAMEWORK: 'MPCF',
-  BLUETOOTH: 'AndroidBluetooth',
-  TCP_NATIVE: 'tcp'
+module.exports.unlockAndroidWifiMulticast = function () {
+  if (platform.isIOS) {
+    return Promise.reject(new Error(
+      'Mobile(\'unlockAndroidWifiMulticast\') is not implemented on ios'));
+  }
+
+  return gPromiseQueue.enqueue(function (resolve, reject) {
+    Mobile('unlockAndroidWifiMulticast').callNative(function (error) {
+      if (error) {
+        return reject(new Error(error));
+      }
+      resolve();
+    });
+  });
 };
-module.exports.connectionTypes = connectionTypes;
+
+/* EVENTS */
 
 /**
  *
@@ -808,7 +969,7 @@ module.exports.connectionTypes = connectionTypes;
  * always be null for `multiConnect`.
  */
 
-// jscs:disable maximumLineLength
+/* eslint-disable max-len */
 /**
  * This event MAY start firing as soon as either of the start methods is called.
  * Start listening for advertisements obviously looks for new peers but in some
@@ -833,9 +994,9 @@ module.exports.connectionTypes = connectionTypes;
  * @type {Object}
  * @property {nonTCPPeerAvailabilityChanged} peer
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 var peerAvailabilityChangedQueue = new PromiseQueue();
-var handlePeerAvailabilityChanged = function (peer) {
+function handlePeerAvailabilityChanged (peer) {
   logger.debug('Received peer availability changed event with ' +
     JSON.stringify(peer));
   if (!states.started) {
@@ -850,21 +1011,34 @@ var handlePeerAvailabilityChanged = function (peer) {
       // for that?
       var event = {
         peerIdentifier: peer.peerIdentifier,
+        peerAvailable: false,
+        generation: null,
         portNumber: null,
         recreated: peer.recreated
       };
+      if (!peer.recreated) {
+        // The whole purpose of storing peer generations is to make sure that
+        // after recreation we use the same generation. So we don't delete it
+        // during listener recreation
+        delete peerGenerations[peer.peerIdentifier];
+      }
       logger.debug('handlePeerUnavailable - Emitting %s',
         JSON.stringify(event));
       module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent', event);
       resolve();
     };
     if (peer.peerAvailable) {
-      gServersManager.createPeerListener(peer.peerIdentifier)
+      getPeerPort(peer)
       .then(function (portNumber) {
         var peerAvailabilityChangedEvent = {
           peerIdentifier: peer.peerIdentifier,
-          portNumber: portNumber
+          peerAvailable: true,
+          generation: peer.generation,
+          portNumber: portNumber,
+          recreated: peer.recreated
         };
+        peerGenerations[peer.peerIdentifier] = peer.generation;
+
         logger.debug('handlePeerAvailabilityChanged - Emitting %s',
           JSON.stringify(peerAvailabilityChangedEvent));
         module.exports.emitter.emit('nonTCPPeerAvailabilityChangedEvent',
@@ -883,11 +1057,40 @@ var handlePeerAvailabilityChanged = function (peer) {
       handlePeerUnavailable();
     }
   });
-};
+}
 
 module.exports._handlePeerAvailabilityChanged = handlePeerAvailabilityChanged;
 
-// jscs:disable maximumLineLength
+function getPeerPort(peer) {
+  return gServersManager ?
+    gServersManager.createPeerListener(peer.peerIdentifier) :
+    Promise.resolve(null);
+}
+
+function recreatePeer(peerIdentifier) {
+  var peerUnavailable = {
+    peerIdentifier: peerIdentifier,
+    peerAvailable: false,
+    portNumber: null,
+    recreated: true
+  };
+
+  handlePeerAvailabilityChanged(peerUnavailable);
+
+  var generation = peerGenerations[peerIdentifier];
+
+  var peerAvailable = {
+    peerIdentifier: peerIdentifier,
+    peerAvailable: true,
+    generation: generation,
+    portNumber: null,
+    recreated: true
+  };
+
+  handlePeerAvailabilityChanged(peerAvailable);
+}
+
+/* eslint-disable max-len */
 /**
  * This is used whenever discovery or advertising starts or stops. Since it's
  * possible for these to be stopped (in particular) due to events outside of
@@ -904,7 +1107,7 @@ module.exports._handlePeerAvailabilityChanged = handlePeerAvailabilityChanged;
  * @type {Object}
  * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
  */
-// jscs:enable maximumLineLength
+/* eslint-enable max-len */
 
 /**
  * Provides a notification when the network's state changes as well as when our
@@ -1025,6 +1228,20 @@ module.exports._registerToNative = function () {
     }
   );
 
+
+  registerToNative('multiConnectResolved',
+    function (syncValue, error, portNumber) {
+      logger.debug('multiConnectResolved: %s', JSON.stringify({
+        syncValue: syncValue,
+        error: error,
+        portNumber: portNumber,
+      }));
+      module.exports.emitter.emit(
+        '_multiConnectResolved',
+        syncValue, error, portNumber);
+    }
+  );
+
   registerToNative('networkChanged', function (networkChangedValue) {
     logger.debug('networkChanged: %s', JSON.stringify(networkChangedValue));
     // The value needs to be assigned here to gNonTcpNetworkStatus
@@ -1034,9 +1251,27 @@ module.exports._registerToNative = function () {
     module.exports.emitter.emit('networkChangedNonTCP', gNonTcpNetworkStatus);
   });
 
+  registerToNative('multiConnectConnectionFailure',
+    function (failedConnection) {
+      module.exports.emitter.emit(
+        '_multiConnectConnectionFailure',
+        failedConnection);
+      var event = {
+        error: failedConnection.error,
+        peerIdentifier: failedConnection.peerIdentifier,
+        connectionType: connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK
+      };
+      module.exports.emitter.emit('failedNativeConnection', event);
+      if (failedConnection.error) {
+        recreatePeer(failedConnection.peerIdentifier);
+      }
+    }
+  );
+
   registerToNative('incomingConnectionToPortNumberFailed',
     function (portNumber) {
-      logger.info('incomingConnectionToPortNumberFailed: %s', JSON.stringify(portNumber));
+      logger.info('incomingConnectionToPortNumberFailed: %s',
+        JSON.stringify(portNumber));
 
       if (!states.started) {
         logger.info('got incomingConnectionToPortNumberFailed while not in ' +
@@ -1044,15 +1279,19 @@ module.exports._registerToNative = function () {
         return;
       }
 
-      if (gServersManagerLocalPort !== portNumber) {
+      var originalPortNumber = platform.isAndroid ?
+                               gServersManagerLocalPort :
+                               gRouterServerPort;
+
+      if (originalPortNumber !== portNumber) {
         logger.info('got incomingConnectionToPortNumberFailed for port ' +
-          portNumber + ' but we are listening on ' + gServersManagerLocalPort);
+          portNumber + ' but we are listening on ' + originalPortNumber);
         return;
       }
 
       // Enqueue the restart to prevent other calls being handled
       // while the restart is ongoing.
-      gPromiseQueue.enqueueAtTop(stop())
+      gPromiseQueue.enqueueAtTop(stop)
         .catch(function (err) {
           return err;
         })

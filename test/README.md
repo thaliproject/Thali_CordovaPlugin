@@ -51,10 +51,10 @@ In terms of operating system we assume you are running on macOS. In theory we ca
 run successfully on Linux or Windows but we really don't test there very often
 so things are likely to break.
 
-From there you need to install in macOS a fairly large mountain of software. For
-now you can see the list [here](https://github.com/thaliproject/Thali_CordovaPlugin/blob/1df36b74ee93f1ece85579857ed90a0e05a0cdd1/thali/install/validateBuildEnvironment.js#L16).
-You need to install the listed software at the listed version. Two of the entries
-are about Sinopia. Details on that is in the next section.
+From there you need to install in macOS a fairly large mountain of software. We
+ have a script, validateBuildEnvironment.js, that checks for all the required
+ software. You need to install all that software at the listed version for the
+ build to work. Two of the entries are about Sinopia. Details on that is in the next section.
 
 ### Running your own NPM registry
 From time to time we run into bugs in PouchDB and Express-PouchDB that we can't
@@ -97,6 +97,32 @@ running on a Mac with all the right tools.
 coordination server. Obviously edit the device counts passed on the command line to reflect the actual test
 environment.
 6. Deploy and run the tests on your two Android or two iPhone devices.
+
+#### Hints on making native testing a bit easier
+
+If you are manually running native tests it's usually because you are debugging something. Typically you are going to want to disable
+all tests but those that you actually want to run. Below we outline ways to quickly disable various tests.
+
+Note that the changes below should be made in ThaliTest NOT in Thali_CordovaPlugin. You don't want to check in these changes.
+
+We have tests that are written in Java and are run from app.js via a command to Mobile('executeNativeTests'). These tests typically
+ take about 60 seconds to run and run every time the app starts. So if you aren't debugging those tests then you really want to
+ disable them. The easiest way to do that is to replace 'platform._isRealMobile' with false.
+
+Next up you have to make sure you are running the kind of test you want to run. In UnitTest_app.js we set global.NETWORK_TYPE. When
+running on desktop this gets overridden in all sorts of ways but not when we are on a device. So make sure the network type is what
+you intend to actually test.
+
+Then head over to ThaliTest/platform/android/assets/www/jxcore/bv_tests and either delete or move to a new folder any tests you don't
+want to run. By default we only run files that start with the name 'test' and are children of the bv_tests folder.
+
+One of the hardest tasks in debugging on Android is dealing with the logs. I've found that LogRabbit, a Mac OS program, is extremely
+useful for this. Since one is typically debugging with multiple devices it is necessary to start up multiple instances of LogRabbit.
+Chris Wilson, the developer of LogRabbit, showed how to do this, just issue the following on the command line:
+
+```
+$ /Applications/LogRabbit.app/Contents/MacOS/LogRabbit > /dev/null 2>&1 &
+```
 
 #### Testing Doze and App Standby on Android
 
@@ -161,6 +187,10 @@ $ jx npm run test-meta
 $ jx npm run test-coordinated
 ```
 
+You can change the order of the tests via `"preferredOrder"` option in
+Thali_CordovaPlugin/test/www/jxcore/config.json. Unlisted tests are sorted
+alphabetically and added to the end of the list.
+
 Some test files will also happily run stand-alone so you can run a test directly
 (e.g. `jx runTests.js bv_tests/testTests.js`)
 thus allowing you to easily run and debug individual tests.
@@ -182,7 +212,7 @@ starting the coordinated test from the command line but passing in the parameter
 it runs with the assumption that one will then run `jx UnitTest_app.js` from
 inside an IDE to debug.
 
-By default tests are running with mocked android native API and with WiFi
+By default tests are running with mocked android native API and with native
 network type. It is possible to change it via `--networkType=<wifi|both|native>`
 and `--platform=<ios|android>` parameters, for example:
 

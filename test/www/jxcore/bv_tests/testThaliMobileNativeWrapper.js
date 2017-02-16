@@ -1,6 +1,5 @@
 'use strict';
 
-// Issue #419
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
   return;
@@ -17,7 +16,8 @@ if (typeof Mobile === 'undefined') {
 }
 
 var platform = require('thali/NextGeneration/utils/platform');
-var thaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
+var thaliMobileNativeWrapper =
+  require('thali/NextGeneration/thaliMobileNativeWrapper');
 var validations = require('thali/validations');
 var tape = require('../lib/thaliTape');
 
@@ -33,6 +33,7 @@ var test = tape({
     .then(function () {
       t.equals(thaliMobileNativeWrapper._isStarted(), false,
         'must be stopped');
+      thaliMobileNativeWrapper._registerToNative();
       t.end();
     })
     .catch(function (err) {
@@ -142,8 +143,7 @@ test('error returned with bad router', function (t) {
 });
 
 var testPath = '/test';
-function trivialEndToEndTestScaffold(t, needManualNotify,
-                                     pskIdtoSecret, pskIdentity, pskKey,
+function trivialEndToEndTestScaffold(t, pskIdtoSecret, pskIdentity, pskKey,
                                      testData, callback) {
   var router = express.Router();
   router.get(testPath, function (req, res) {
@@ -151,7 +151,7 @@ function trivialEndToEndTestScaffold(t, needManualNotify,
   });
 
   var end = function (peerId, fail) {
-    callback ? callback(peerId, fail) : t.end();
+    return callback ? callback(peerId, fail) : t.end();
   };
 
   testUtils.getSamePeerWithRetry(testPath, pskIdentity, pskKey)
@@ -171,18 +171,13 @@ function trivialEndToEndTestScaffold(t, needManualNotify,
     })
     .then(function () {
       return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
-    })
-    .then(function () {
-      if (needManualNotify) {
-        Mobile.wifiPeerAvailabilityChanged('foo');
-      }
     });
 }
 
 var pskIdentity = 'I am me!';
 var pskKey = new Buffer('I am a reasonable long string');
 var testData = 'foobar';
-function trivialEndToEndTest(t, needManualNotify, callback) {
+function trivialEndToEndTest(t, callback) {
   function pskIdToSecret(id) {
     // There is a race condition where we could still get an incoming
     // request even after we think we are done with the test. This will cause
@@ -197,46 +192,100 @@ function trivialEndToEndTest(t, needManualNotify, callback) {
     return id === pskIdentity ? pskKey : null;
   }
 
-  trivialEndToEndTestScaffold(t, needManualNotify,
-    pskIdToSecret, pskIdentity, pskKey, testData, callback);
+  trivialEndToEndTestScaffold(
+    t, pskIdToSecret, pskIdentity, pskKey, testData, callback
+  );
 }
 
-function trivialBadEndToEndTest(t, needManualNotify, callback) {
-  var pskIdentity = 'Yo ho ho';
-  var pskKey = new Buffer('It really does not matter');
-  var testData = 'Not important';
-
-  function pskIdToSecret() {
-    return null;
-  }
-
-  trivialEndToEndTestScaffold(t, needManualNotify,
-    pskIdToSecret, pskIdentity, pskKey, testData, callback);
-}
-
-var connectionTester = function (port, callback) {
-  var returned = false;
-  var connection = net.createConnection(port, function () {
-    connection.destroy();
-    if (!returned) {
-      returned = true;
-      callback(true);
-    }
-  });
-  connection.on('error', function () {
-    connection.destroy();
-    if (!returned) {
-      returned = true;
-      callback(false);
-    }
+var connectionTester = function(port, reversed) {
+  return new Promise(function(resolve, reject) {
+    var connection = net.createConnection(port, function () {
+      connection.destroy();
+      if (reversed) {
+        reject(new Error('Unexpectedly successful connection'));
+      } else {
+        resolve();
+      }
+    });
+    connection.on('error', function (error) {
+      connection.destroy();
+      if (reversed) {
+        resolve();
+      } else {
+        reject(error);
+      }
+    });
   });
 };
+
+test('all services are started when we call start', function (t) {
+  var serversManagerLocalPort = 0;
+  var routerServerPort = 0;
+  var connections = [];
+  thaliMobileNativeWrapper.start(express.Router())
+  .then(function () {
+    return thaliMobileNativeWrapper.startListeningForAdvertisements();
+  })
+  .then(function () {
+    return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
+  })
+  .then(function () {
+    routerServerPort = thaliMobileNativeWrapper._getRouterServerPort();
+
+    connections.push(connectionTester(routerServerPort));
+
+    if (platform.isAndroid) {
+      serversManagerLocalPort =
+        thaliMobileNativeWrapper._getServersManagerLocalPort();
+      connections.push(connectionTester(serversManagerLocalPort));
+    }
+
+    return Promise.all(connections);
+  })
+  .then(function (connection) {
+    t.pass('all connection succeed');
+    t.end();
+  })
+  .catch(function (error) {
+    t.fail(error);
+    t.end();
+  });
+});
+
+test('TCP Servers Manager should be null when we call start on iOS',
+testUtils.skipOnAndroid,
+function (t) {
+  thaliMobileNativeWrapper.start(express.Router())
+  .then(function () {
+    return thaliMobileNativeWrapper.startListeningForAdvertisements();
+  })
+  .then(function () {
+    return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
+  })
+  .then(function () {
+    var serversManager = thaliMobileNativeWrapper._getServersManager();
+    t.equals(serversManager, null, 'TCP Servers Manager doesn\'t exists');
+    t.end();
+  })
+  .catch(function (error) {
+    t.fail(error);
+    t.end();
+  });
+});
 
 test('all services are stopped when we call stop', function (t) {
   var stopped = false;
   var serversManagerLocalPort = 0;
   var routerServerPort = 0;
-  var stopAndCheck = function () {
+  var connections = [];
+  thaliMobileNativeWrapper.start(express.Router())
+  .then(function () {
+    return thaliMobileNativeWrapper.startListeningForAdvertisements();
+  })
+  .then(function () {
+    return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
+  })
+  .then(function() {
     var discoveryStopped = false;
     var advertisingStopped = false;
     var stateChangeHandler = function (state) {
@@ -256,21 +305,27 @@ test('all services are stopped when we call stop', function (t) {
             setImmediate(doConnectTest);
             return;
           }
-          connectionTester(
-            serversManagerLocalPort,
-            function (success) {
-              t.equals(success, false,
-                'connection to servers manager should fail after stopping');
-              connectionTester(
-                routerServerPort,
-                function () {
-                  t.equals(success, false,
-                    'connection to router server should fail after stopping');
-                  t.end();
-                }
-              );
-            }
-          );
+
+          routerServerPort = thaliMobileNativeWrapper._getRouterServerPort();
+
+          connections.push(connectionTester(routerServerPort, true));
+
+          if (platform.isAndroid) {
+            serversManagerLocalPort =
+              thaliMobileNativeWrapper._getServersManagerLocalPort();
+            connections.push(connectionTester(serversManagerLocalPort, true));
+          }
+
+          Promise.all(connections)
+          .then(function (response) {
+            t.pass('connection should fail after stopping');
+            t.end();
+          })
+          .catch(function () {
+            t.fail('connection should fail after stopping');
+            t.end();
+          });
+
         };
         doConnectTest();
       }
@@ -286,34 +341,6 @@ test('all services are stopped when we call stop', function (t) {
       stopped = true;
       // stateChangeHandler above should get called
     });
-  };
-  thaliMobileNativeWrapper.start(express.Router())
-  .then(function () {
-    return thaliMobileNativeWrapper.startListeningForAdvertisements();
-  })
-  .then(function () {
-    return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
-  })
-  .then(function () {
-    serversManagerLocalPort =
-      thaliMobileNativeWrapper._getServersManagerLocalPort();
-    routerServerPort =
-      thaliMobileNativeWrapper._getRouterServerPort();
-    connectionTester(
-      serversManagerLocalPort,
-      function (success) {
-        t.equals(success, true,
-          'connection to servers manager should succeed after starting');
-        connectionTester(
-          routerServerPort,
-          function () {
-            t.equals(success, true,
-              'connection to router server should succeed after starting');
-            stopAndCheck();
-          }
-        );
-      }
-    );
   });
 });
 
@@ -340,13 +367,53 @@ var verifyCallWithArguments = function (t, callName, parameters) {
   });
 };
 
-test('make sure terminateConnection is properly hooked up', function (t) {
-  verifyCallWithArguments(t, '_terminateConnection', ['connection-id']);
-});
+test('make sure terminateConnection is properly hooked up',
+  testUtils.skipOnIOS,
+  function (t) {
+    verifyCallWithArguments(t, '_terminateConnection', ['connection-id']);
+  }
+);
 
-test('make sure terminateListener is properly hooked up', function (t) {
-  verifyCallWithArguments(t, 'terminateListener', ['peer-id', 8080]);
-});
+test('make sure terminateConnection is return error if we get called on iOS',
+  testUtils.skipOnAndroid,
+  function (t) {
+    var error = 'Not connect platform';
+
+    thaliMobileNativeWrapper._terminateConnection()
+    .then(function() {
+      t.fail('should not succeed on iOS');
+      t.end();
+    })
+    .catch(function(err) {
+      t.equal(err.message, error, 'error description matches');
+      t.end();
+    });
+  }
+);
+
+test('make sure terminateListener is properly hooked up',
+  testUtils.skipOnIOS,
+  function (t) {
+    verifyCallWithArguments(t, '_terminateListener', ['peer-id', 8080]);
+  }
+);
+
+test('make sure terminateListener is return error if we get called on iOS',
+  testUtils.skipOnAndroid,
+  function (t) {
+    var error = 'Not connect platform';
+
+    thaliMobileNativeWrapper._terminateListener()
+    .then(function() {
+      t.fail('should not succeed on iOS');
+      t.end();
+    })
+    .catch(function(err) {
+      t.equal(err.message, error, 'error description matches');
+      t.end();
+    });
+  }
+);
 
 test('make sure we actually call kill connections properly', function (t) {
   thaliMobileNativeWrapper.killConnections()
@@ -362,7 +429,7 @@ test('make sure we actually call kill connections properly', function (t) {
     }
   })
   .catch(function (error) {
-    if (platform.isIOS) {
+    if (platform._isRealIOS) {
       t.fail('should not fail on iOS');
       t.end();
     } else {
@@ -374,6 +441,7 @@ test('make sure we actually call kill connections properly', function (t) {
 
 test('thaliMobileNativeWrapper is stopped when routerPortConnectionFailed ' +
   'is received',
+  testUtils.skipOnIOS,
   function (t) {
     thaliMobileNativeWrapper.start(express.Router())
     .then(function () {
@@ -408,20 +476,25 @@ test('thaliMobileNativeWrapper is stopped when routerPortConnectionFailed ' +
   }
 );
 
-test('We repeat failedConnection event when we get it from ' +
+test('We fire failedNativeConnection event when we get failedConnection from ' +
   'thaliTcpServersManager',
+  testUtils.skipOnIOS,
   function (t) {
     thaliMobileNativeWrapper.start(express.Router())
     .then(function () {
       var peerIdentifier = 'some-identifier';
       var errorDescription = 'Dummy Error';
       thaliMobileNativeWrapper.emitter.once(
-        'failedConnection',
+        'failedNativeConnection',
         function (failedConnection) {
           t.equals(failedConnection.peerIdentifier, peerIdentifier,
             'peerIdentifier matches');
           t.equals(failedConnection.error.message, errorDescription,
             'error description matches');
+          t.equals(
+            failedConnection.connectionType,
+            thaliMobileNativeWrapper.connectionTypes.BLUETOOTH,
+            'connection type is tcp');
           t.end();
         }
       );
@@ -436,77 +509,170 @@ test('We repeat failedConnection event when we get it from ' +
   }
 );
 
-// This test primarily exists to make sure that we can easily debug the full
-// connection life cycle from the HTTP client through thaliMobileNativeWrapper
-// down through the mux layer down to mobile and back up all the way to the
-// HTTP server we are hosting for the user. Since it is just meant for
-// debugging it is only intended to be run on a desktop. So this test really
-// needs to stay not running when we are on mobile.
-
-test('can do HTTP requests between peers without coordinator',
+test('We fire failedNativeConnection event when we get failedConnection from ' +
+  'multiConnectConnection',
   function() {
-    return platform._isRealMobile;
-  },
-  function (t) {
-    trivialEndToEndTest(t, true);
-  });
-
-test('make sure bad PSK connections fail',
-  function () {
-    // #1587
-    // return platform._isRealMobile;
-    return true;
-  },
-  function (t) {
-    //trivialBadEndtoEndTest(t, true);
-    // TODO: Re-enable and fix
-    t.ok(true, 'FIX ME, PLEASE!!!');
-    t.end();
-  });
-
-test('peer changes handled from a queue',
-  function () {
+    // this test uses mock ability to fire events from native layer and it cant
+    // work on real devices
     return platform._isRealMobile;
   },
   function (t) {
     thaliMobileNativeWrapper.start(express.Router())
-      .then(function () {
-        var peerAvailabilityHandler;
-        var peerCount = 10;
-        var getDummyPeers = function (peerAvailable) {
-          var dummyPeers = [];
-          for (var i = 1; i <= peerCount; i++) {
-            dummyPeers.push({
-              peerIdentifier: i + '',
-              peerAvailable: peerAvailable
-            });
-          }
-          return dummyPeers;
-        };
-        var endTest = function () {
-          thaliMobileNativeWrapper.emitter.removeListener(
-            'nonTCPPeerAvailabilityChangedEvent',
-            peerAvailabilityHandler);
-          Mobile.firePeerAvailabilityChanged(getDummyPeers(false));
+    .then(function () {
+      var peerIdentifier = 'some-identifier';
+      var errorDescription = 'Dummy Error';
+      thaliMobileNativeWrapper.emitter.once(
+        'failedNativeConnection',
+        function (failedConnection) {
+          t.equals(failedConnection.peerIdentifier, peerIdentifier,
+            'peerIdentifier matches');
+          t.equals(failedConnection.error, errorDescription,
+            'error description matches');
+          t.equals(
+            failedConnection.connectionType,
+            thaliMobileNativeWrapper.connectionTypes.
+              MULTI_PEER_CONNECTIVITY_FRAMEWORK,
+            'connection type is MPCF');
           t.end();
-        };
-        var previousPeerNumber = 0;
-        peerAvailabilityHandler = function (peer) {
-          var peerNumber = parseInt(peer.peerIdentifier);
-          if (peerNumber - 1 !== previousPeerNumber) {
-            t.fail('peers should be handled in order');
-            endTest();
-          }
-          previousPeerNumber = peerNumber;
-          if (peerNumber === peerCount) {
-            t.ok(true, 'peers were handled in the right order');
-            endTest();
-          }
-        };
-        thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
-          peerAvailabilityHandler);
-        Mobile.firePeerAvailabilityChanged(getDummyPeers(true));
+        }
+      );
+      Mobile.fireMultiConnectConnectionFailure({
+        peerIdentifier: peerIdentifier,
+        error: errorDescription
       });
+    });
+  }
+);
+
+test('We fire nonTCPPeerAvailabilityChangedEvent event when we get ' +
+  'failedConnection from multiConnectConnection',
+  function() {
+    return platform._isRealMobile;
+  },
+  function (t) {
+    thaliMobileNativeWrapper.start(express.Router())
+    .then(function () {
+      var peerIdentifier = 'some-identifier';
+      var callCounter = 0;
+      var errorMessage = 'Connection could not be established';
+      var peer = {
+        peerIdentifier: peerIdentifier,
+        peerAvailable: true,
+        generation: 5,
+        portNumber: null
+      };
+
+      var peerAvailabilityHandler = function (peer) {
+        ++callCounter;
+
+        switch (callCounter) {
+          case 1: {
+            t.equal(peer.peerIdentifier, peerIdentifier, 'peerIds match');
+            Mobile.fireMultiConnectConnectionFailure({
+              peerIdentifier: peerIdentifier,
+              error: errorMessage
+            });
+            return;
+          }
+          case 2: {
+            t.equal(peer.peerIdentifier, peerIdentifier, 'peerIds match');
+            t.equal(peer.peerAvailable, false, 'peer is unavailable');
+            return;
+          }
+          case 3: {
+            t.equal(peer.peerIdentifier, peerIdentifier, 'peerIds match');
+            t.equal(peer.peerAvailable, true, 'peer should be available');
+            t.equal(peer.recreated, true, 'peer is recreated');
+            return cleanUp();
+          }
+        }
+      };
+
+      var cleanUpCalled = false;
+
+      function cleanUp() {
+        if (cleanUpCalled) {
+          return;
+        }
+        cleanUpCalled = true;
+        thaliMobileNativeWrapper.emitter.removeListener(
+          'nonTCPPeerAvailabilityChangedEvent', peerAvailabilityHandler);
+        t.end();
+      }
+
+      thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
+        peerAvailabilityHandler);
+
+      thaliMobileNativeWrapper._handlePeerAvailabilityChanged(peer);
+    });
+  }
+);
+
+test('We fire nonTCPPeerAvailabilityChangedEvent event when we get ' +
+  'fail from _multiConnectResolved',
+  function (t) {
+    t.skip('NOT IMPLEMENTED');
+    t.end();
+  }
+);
+
+test('make sure bad PSK connections fail',
+function () {
+  // #1587
+  // return platform._isRealMobile;
+  return true;
+},
+function (t) {
+  // trivialBadEndtoEndTest(t, true);
+  // TODO: Re-enable and fix
+  t.ok(true, 'FIX ME, PLEASE!!!');
+  t.end();
+});
+
+test('peer changes handled from a queue',
+  function () {
+    return platform.isMobile;
+  },
+  function (t) {
+    thaliMobileNativeWrapper.start(express.Router())
+    .then(function () {
+      var peerAvailabilityHandler;
+      var peerCount = 10;
+      var getDummyPeers = function (peerAvailable) {
+        var dummyPeers = [];
+        for (var i = 1; i <= peerCount; i++) {
+          dummyPeers.push({
+            peerIdentifier: i + '',
+            peerAvailable: peerAvailable,
+            generation: 0
+          });
+        }
+        return dummyPeers;
+      };
+      var endTest = function () {
+        thaliMobileNativeWrapper.emitter.removeListener(
+          'nonTCPPeerAvailabilityChangedEvent',
+          peerAvailabilityHandler);
+        Mobile.firePeerAvailabilityChanged(getDummyPeers(false));
+        t.end();
+      };
+      var previousPeerNumber = 0;
+      peerAvailabilityHandler = function (peer) {
+        var peerNumber = parseInt(peer.peerIdentifier);
+        if (peerNumber - 1 !== previousPeerNumber) {
+          t.fail('peers should be handled in order');
+          endTest();
+        }
+        previousPeerNumber = peerNumber;
+        if (peerNumber === peerCount) {
+          t.ok(true, 'peers were handled in the right order');
+          endTest();
+        }
+      };
+      thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
+        peerAvailabilityHandler);
+      Mobile.firePeerAvailabilityChanged(getDummyPeers(true));
+    });
   });
 
 test('relaying discoveryAdvertisingStateUpdateNonTCP',
@@ -552,7 +718,10 @@ test('thaliMobileNativeWrapper is stopped when ' +
       });
     thaliMobileNativeWrapper.start(express.Router())
       .then(function () {
-        routerPort = thaliMobileNativeWrapper._getServersManagerLocalPort();
+        routerPort = platform.isAndroid ?
+                      thaliMobileNativeWrapper._getServersManagerLocalPort() :
+                      thaliMobileNativeWrapper._getRouterServerPort();
+
         return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
       })
       .then(function () {
@@ -639,13 +808,37 @@ if (!tape.coordinated) {
 }
 
 var endToEndWithStateCheck = function (t) {
-  trivialEndToEndTest(t, false, function () {
+  trivialEndToEndTest(t, function () {
     t.equals(thaliMobileNativeWrapper._isStarted(), true, 'must be started');
     t.end();
   });
 };
 
-test('can do HTTP requests between peers with coordinator', function (t) {
+test('nonTCPPeerAvailabilityChangedEvent should return null' +
+'for a portNumber on iOS',
+testUtils.skipOnAndroid,
+function (t) {
+  thaliMobileNativeWrapper.start(express.Router())
+  .then(function () {
+    return thaliMobileNativeWrapper.startListeningForAdvertisements();
+  })
+  .then(function () {
+    return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
+  })
+  .then(function () {
+    thaliMobileNativeWrapper.emitter.once('nonTCPPeerAvailabilityChangedEvent',
+    function(res) {
+      t.equals(res.portNumber, null, 'portNumber equal null');
+      t.end();
+    });
+  })
+  .catch(function (error) {
+    t.fail(error);
+    t.end();
+  });
+});
+
+test('can do HTTP requests between peers', function (t) {
   endToEndWithStateCheck(t);
 });
 
@@ -656,56 +849,68 @@ test('can still do HTTP requests between peers with coordinator', function (t) {
 // The connection cut is implemented as a separate test instead
 // of doing it in the middle of the actual test so that the
 // step gets coordinated between peers.
-test('test to coordinate connection cut', function (t) {
-  // This cuts connections on Android.
-  testUtils.toggleBluetooth(false)
-  .then(function () {
-    // This cuts connections on iOS.
-    return thaliMobileNativeWrapper.killConnections();
-  })
-  .then(function () {
-    t.end();
-  })
-  .catch(function () {
-    t.end();
+test('test to coordinate connection cut',
+  function () {
+    // This should be running on Android too but see #1600
+    return platform._isRealAndroid;
+  },
+  function (t) {
+    // This cuts connections on Android.
+    testUtils.toggleBluetooth(false)
+    .then(function () {
+      // This cuts connections on iOS.
+      return thaliMobileNativeWrapper.killConnections();
+    })
+    .then(function () {
+      t.end();
+    })
+    .catch(function () {
+      t.end();
+    });
   });
-});
 
-test('can do HTTP requests after connections are cut', function (t) {
+test('can do HTTP requests after connections are cut',
+  function () {
+    // This should be running on Android too but see #1600
+    return platform._isRealAndroid;
+  },
+  function (t) {
   // Turn Bluetooth back on so that Android can operate
   // (iOS does not require separate call to operate since
   // killConnections is more like a single-shot thing).
 
-  if (platform.isAndroid) {
-    var networkChangeHandler = function(networkChangedValue) {
-      if (networkChangedValue.bluetoothLowEnergy &&
+    if (platform.isAndroid) {
+      var networkChangeHandler = function(networkChangedValue) {
+        if (networkChangedValue.bluetoothLowEnergy &&
           networkChangedValue.bluetooth) {
-        thaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
+          thaliMobileNativeWrapper.emitter.removeListener('networkChangedNonTCP',
          networkChangeHandler);
-        endToEndWithStateCheck(t);
-      }
-    };
-    thaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
+          endToEndWithStateCheck(t);
+        }
+      };
+      thaliMobileNativeWrapper.emitter.on('networkChangedNonTCP',
       networkChangeHandler);
 
-    t.pass('Turning bluetooth on');
-    testUtils.toggleBluetooth(true);
-  } else {
-    endToEndWithStateCheck(t);
-  }
-});
+      t.pass('Turning bluetooth on');
+      testUtils.toggleBluetooth(true);
+    } else {
+      endToEndWithStateCheck(t);
+    }
+  });
 
 test('will fail bad PSK connection between peers', function (t) {
-  //trivialBadEndtoEndTest(t, true);
+  // #1587
+  // trivialBadEndtoEndTest(t, true);
   // TODO: Re-enable and fix
   t.ok(true, 'FIX ME, PLEASE!!!');
   t.end();
 });
 
 test('We provide notification when a listener dies and we recreate it',
+  testUtils.skipOnIOS,
   function (t) {
     var recreatedPort = null;
-    trivialEndToEndTest(t, false, function (peerId) {
+    trivialEndToEndTest(t, function (peerId) {
       function recreatedHandler(record) {
         t.equal(record.peerIdentifier, peerId, 'same ids');
         recreatedPort = record.portNumber;
@@ -731,7 +936,7 @@ test('We provide notification when a listener dies and we recreate it',
         // Re-enable the check below once #719 is fixed.
         // Note that due to other changes we also need to add in a test to
         // make sure we are looking at an event for the right peerID
-        /*if (!recreatedPort ||
+        /* if (!recreatedPort ||
           recreatedPort && record.portNumber !== recreatedPort) {
           logger.debug('No recreated port or port numbers do not match: '
             + record.portNumber + ' !== ' + recreatedPort);
@@ -764,3 +969,88 @@ test('We provide notification when a listener dies and we recreate it',
       }
     });
   });
+
+test('We fire nonTCPPeerAvailabilityChangedEvent with the same generation ' +
+  'and different port when listener is recreated',
+  function () {
+    // #1597
+    // FIXME: it looks like this test expects native layer to repeat
+    // peerAvailabilityChanged events but it doesn't work this way anymore
+    return true;
+    // return platform.isIOS
+  },
+  function (t) {
+    trivialEndToEndTest(t, function (peerId) {
+      var beforeRecreatePeer = null;
+      var afterRecreatePeer = null;
+      var isKilled = false;
+      var serversManager = thaliMobileNativeWrapper._getServersManager();
+      var smEmitSpy = sinon.spy(serversManager, 'emit');
+
+      function finishTest() {
+        t.ok(isKilled, 'mux must be destroyed');
+        t.ok(beforeRecreatePeer, 'peer tracked before recreating');
+        t.ok(afterRecreatePeer, 'peer tracked after recreating');
+        t.equal(typeof beforeRecreatePeer.generation, 'number');
+        t.equal(typeof afterRecreatePeer.generation, 'number');
+        t.equal(
+          beforeRecreatePeer.generation,
+          afterRecreatePeer.generation,
+          'the same generation before and after listener recreating'
+        );
+
+        var emittedRecreateEventForCurrentPeer =
+          smEmitSpy.args.some(function (callArgs) {
+            var eventName = callArgs[0];
+            var announcement = callArgs[1];
+            return (
+              eventName === 'listenerRecreatedAfterFailure' &&
+              announcement.peerIdentifier === peerId
+            );
+          });
+
+        t.ok(smEmitSpy.callCount, 'servers manager emitted at least one event');
+        t.ok(
+          emittedRecreateEventForCurrentPeer,
+          'servers manager emitted recreate event for our peer'
+        );
+
+        thaliMobileNativeWrapper.emitter.removeListener(
+          'nonTCPPeerAvailabilityChangedEvent',
+          nonTCPAvailableHandler
+        );
+        smEmitSpy.restore();
+        t.end();
+      }
+
+      function killMux() {
+        if (isKilled) {
+          return;
+        }
+        isKilled = true;
+        try {
+          serversManager._peerServers[peerId].server._mux.destroy();
+        } catch (err) {
+          t.fail('destroy failed with - ' + err);
+          finishTest();
+        }
+      }
+
+      function nonTCPAvailableHandler(peer) {
+        if (peer.peerIdentifier !== peerId || peer.portNumber === null) {
+          return;
+        }
+        if (!isKilled) {
+          beforeRecreatePeer = peer;
+          killMux();
+        } else {
+          afterRecreatePeer = peer;
+          finishTest();
+        }
+      }
+
+      thaliMobileNativeWrapper.emitter
+        .on('nonTCPPeerAvailabilityChangedEvent', nonTCPAvailableHandler);
+    });
+  }
+);

@@ -50,12 +50,12 @@ test('calling createNativeListener directly rejects', function (t) {
     .then(function () {
       return serversManager._createNativeListener();
     }).then(function () {
-    t.fail('we should have gotten an error');
-    t.end();
-  }).catch(function (err) {
-    t.equal(err.message, 'Don\'t call directly!', 'Should throw');
-    t.end();
-  });
+      t.fail('we should have gotten an error');
+      t.end();
+    }).catch(function (err) {
+      t.equal(err.message, 'Don\'t call directly!', 'Should throw');
+      t.end();
+    });
 });
 
 test('emits incomingConnectionState', function (t) {
@@ -362,9 +362,9 @@ test('native server - closing the whole server cleans everything up',
             // Still waiting for socket to close
             allDoneButSocket = true;
           }).catch(function (err) {
-          t.fail(err, 'stop failed when it should not have');
-          t.end();
-        });
+            t.fail(err, 'stop failed when it should not have');
+            t.end();
+          });
       });
       socket.on('close', function () {
         if (allDoneButSocket) {
@@ -471,8 +471,8 @@ test('native server - we can get a ton of connections and data through ' +
 
               allDoneButSocketCloses = true;
             }).catch(function (err) {
-            return shutDown('stop failed when it should not have' + err);
-          });
+              return shutDown('stop failed when it should not have' + err);
+            });
         }
       });
       socket.on('error', function (err) {
