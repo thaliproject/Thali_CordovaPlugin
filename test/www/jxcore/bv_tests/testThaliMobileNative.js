@@ -10,6 +10,7 @@ if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
 var fs = require('fs');
 var path = require('path');
 var net = require('net');
+var https = require('https');
 var randomString = require('randomstring');
 var tape = require('../lib/thaliTape');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
@@ -18,6 +19,7 @@ var assert = require('assert');
 var thaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils');
 var thaliMobileNativeWrapper =
   require('thali/NextGeneration/thaliMobileNativeWrapper');
+var thaliConfig = require('thali/NextGeneration/thaliConfig');
 
 var logger = require('../lib/testLogger')('testThaliMobileNative');
 var testText = fs.readFileSync(path.join(__dirname, '../lib/text.txt')).toString();
@@ -304,7 +306,7 @@ test('Can connect to a remote peer', function (t) {
   });
 });
 
-test.only('Can shift large amounts of data', function (t) {
+test('Can shift large amounts of data', function (t) {
   var connected = false;
 
   var sockets = {};
@@ -404,7 +406,172 @@ test.only('Can shift large amounts of data', function (t) {
   }
 
   function onConnectFailure(error, _, peer) {
-    console.log('Connection to peer %s failed: %s', peer.peerIdentifier, error);
+    console.log('Connection to peer %s failed: %s', peer.peerIdentifier, error.stack);
+  }
+
+  Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
+    peers.forEach(function (peer) {
+      if (peer.peerAvailable && !connected) {
+        thaliMobileNativeTestUtils.connectToPeer(peer)
+          .then(function (connection) {
+            onConnectSuccess(null, connection, peer);
+          })
+          .catch(function (error) {
+            onConnectFailure(error, null, peer);
+          });
+      }
+    });
+  });
+
+  echoServer.listen(0, function () {
+
+    var applicationPort = echoServer.address().port;
+
+    Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort,
+    function (err) {
+      t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+      Mobile('startListeningForAdvertisements').callNative(function (err) {
+        t.notOk(err, 'Can call startListeningForAdvertisements without error');
+      });
+    });
+  });
+});
+
+test.only('Can shift large amounts of data via https', function (t) {
+  var connected = false;
+  var pskIdentity = 'psk identity';
+  var pskKey = new Buffer('psk key');
+
+  var id = 1;
+  var echoServer = https.createServer({
+    ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+    pskCallback: function (id) {
+      console.log('Invoked server\'s pskCallback for %s', id);
+      return id === pskIdentity ? pskKey : null;
+    }
+  }, function (req, res) {
+    var sid = id++;
+    console.log('Server got %s request on %s', req.method, req.url);
+    req.on('data', function (data) {
+      console.log(
+        '============   #' + sid + ' echo   ============\n' +
+        data.toString() + '\n' +
+        '==========   #' + sid + ' echo end   =========='
+      );
+      res.write(data);
+    });
+    req.on('end', function () {
+      res.end();
+    });
+    req.on('error', function (error) {
+      logger.warn('#' + sid + ' Error on echo server socket: ' + error);
+      t.fail();
+    });
+  });
+  echoServer = makeIntoCloseAllServer(echoServer);
+  serverToBeClosed = echoServer;
+
+  var toSend = 'I am ' + tape.uuid + '\n' + testText;
+  toSend = toSend.split('\n').slice(0,6).join('\n');
+  var dataSize = toSend.length;
+
+  function shiftData(request) {
+    request.on('error', function (error) {
+      logger.warn('Error on client socket: ' + error);
+      t.fail();
+    });
+
+    var toRecv = '';
+
+    var done = false;
+
+    function validateResponseData (response) {
+      response.on('data', function (data) {
+        var remaining = dataSize - toRecv.length;
+        var textData = data.toString();
+
+        console.log(
+          'Total: %d, received: %d, remaining: %d',
+          dataSize, data.length, remaining);
+        console.log(
+          '============ chunk reply ============\n' +
+          data.toString() + '\n' +
+          '========== chunk reply end =========='
+        );
+
+        if (remaining >= textData.length) {
+          toRecv += textData;
+          data = data.slice(0, 0);
+        }
+        else {
+          toRecv += data.toString('utf8', 0, remaining);
+          data = data.slice(remaining);
+          console.log(
+            'Data overflow (%d bytes):\n%s',
+            data.length, data.toString()
+          );
+        }
+
+        if (toRecv.length === dataSize) {
+          if (!done) {
+            done = true;
+            t.ok(toSend === toRecv, 'received should match sent forward');
+          }
+          if (data.length) {
+            t.fail('received unexpected data');
+          }
+        }
+      });
+
+      response.on('end', function () {
+        t.ok(done, 'should receive all data before end event');
+        t.end();
+      });
+
+      response.on('error', function (error) {
+        t.fail('response error: ' + err.message + '\n' + error.stack);
+        t.end();
+      });
+    }
+
+    request.on('response', validateResponseData);
+
+    console.log(
+      '============  send data  ============\n' +
+      toSend + '\n' +
+      '==========  send data end  =========='
+    );
+    request.end(toSend);
+  }
+
+  function onConnectSuccess(err, connection, peer) {
+    var client = null;
+    if (connected) {
+      console.log('Already connected. Ignore peer %s', peer.peerIdentifier);
+      return;
+    }
+    connected = true;
+    // We're happy here if we make a connection to anyone
+    logger.info('Connection info: ' + JSON.stringify(connection));
+
+    client = https.request({
+      hostname: '127.0.0.1',
+      port: connection.listeningPort,
+      path: '/test',
+      method: 'POST',
+      agent: new https.Agent({
+        rejectUnauthorized: false,
+        maxSockets: 8,
+        ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+        pskIdentity: pskIdentity,
+        pskKey: pskKey
+      }),
+    });
+    shiftData(client);
+  }
+
+  function onConnectFailure(error, _, peer) {
+    console.log('Connection to peer %s failed: %s', peer.peerIdentifier, error.stack);
   }
 
   Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
