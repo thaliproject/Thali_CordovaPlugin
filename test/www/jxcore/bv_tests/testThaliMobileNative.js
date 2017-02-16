@@ -344,6 +344,7 @@ test.only('Can shift large amounts of data', function (t) {
     var done = false;
     sock.on('data', function (data) {
       var remaining = dataSize - toRecv.length;
+      var textData = data.toString();
 
       console.log(
         'Total: %d, received: %d, remaining: %d',
@@ -354,8 +355,8 @@ test.only('Can shift large amounts of data', function (t) {
         '========== chunk reply end =========='
       );
 
-      if (remaining >= data.length) {
-        toRecv += data.toString();
+      if (remaining >= textData.length) {
+        toRecv += textData;
         data = data.slice(0, 0);
       }
       else {
