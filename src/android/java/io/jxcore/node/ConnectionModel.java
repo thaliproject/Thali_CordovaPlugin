@@ -146,7 +146,7 @@ public class ConnectionModel {
      * @param incomingSocketThread An incoming (connection) socket thread instance to add.
      * @return True, if the thread was successfully added to the collection. False otherwise.
      */
-    public synchronized boolean addConnectionThread(IncomingSocketThread incomingSocketThread) {
+    public boolean addConnectionThread(IncomingSocketThread incomingSocketThread) {
         return mIncomingSocketThreads.add(incomingSocketThread);
     }
 
@@ -156,7 +156,7 @@ public class ConnectionModel {
      * @param outgoingSocketThread An outgoing (connection) socket thread instance to add.
      * @return True, if the thread was successfully added to the collection. False otherwise.
      */
-    public synchronized boolean addConnectionThread(OutgoingSocketThread outgoingSocketThread) {
+    public boolean addConnectionThread(OutgoingSocketThread outgoingSocketThread) {
         return mOutgoingSocketThreads.add(outgoingSocketThread);
     }
 
