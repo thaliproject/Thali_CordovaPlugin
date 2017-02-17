@@ -674,21 +674,22 @@ public class ConnectionHelper
         }
 
         if (newOutgoingSocketThread != null) {
-            if (mConnectionModel.addConnectionThread(newOutgoingSocketThread)) {
+            if (!mConnectionModel.contains(newOutgoingSocketThread)){
                 lowerBleDiscoveryPowerAndStartResetTimer();
 
                 newOutgoingSocketThread.setUncaughtExceptionHandler(mThreadUncaughtExceptionHandler);
                 newOutgoingSocketThread.setPeerProperties(peerProperties);
-
+                mConnectionModel.addConnectionThread(newOutgoingSocketThread);
                 newOutgoingSocketThread.start();
 
                 Log.i(TAG, "onConnected: Outgoing socket thread, for peer "
-                    + peerProperties + ", created successfully");
+                        + peerProperties + ", created successfully");
 
                 // Use the system decided port the next time, if we're not already using
                 ConnectionManagerSettings.getInstance(mContext).setInsecureRfcommSocketPortNumber(
-                    ConnectionManagerSettings.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT);
+                        ConnectionManagerSettings.SYSTEM_DECIDED_INSECURE_RFCOMM_SOCKET_PORT);
             } else {
+                Log.e(TAG, "addConnectionThread: A matching thread for outgoing connection already exists");
                 try {
                     bluetoothSocket.close();
                 } catch (IOException e) {
@@ -786,18 +787,19 @@ public class ConnectionHelper
         }
 
         if (newIncomingSocketThread != null) {
-            if (mConnectionModel.addConnectionThread(newIncomingSocketThread)) {
+            if (!mConnectionModel.contains(newIncomingSocketThread)){
                 lowerBleDiscoveryPowerAndStartResetTimer();
 
                 newIncomingSocketThread.setUncaughtExceptionHandler(mThreadUncaughtExceptionHandler);
                 newIncomingSocketThread.setPeerProperties(peerProperties);
                 newIncomingSocketThread.setTcpPortNumber(mServerPortNumber);
-
+                mConnectionModel.addConnectionThread(newIncomingSocketThread);
                 newIncomingSocketThread.start();
 
                 Log.i(TAG, "onConnected: Incoming socket thread, for peer "
-                    + peerProperties + ", created successfully");
+                        + peerProperties + ", created successfully");
             } else {
+                Log.e(TAG, "addConnectionThread: A matching thread for incoming connection already exists");
                 try {
                     bluetoothSocket.close();
                 } catch (IOException e) {
