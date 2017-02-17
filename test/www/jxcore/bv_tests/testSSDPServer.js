@@ -137,7 +137,8 @@ test(
       clientStopStub.reset();
       return new Promise(function (resolve) {
         changeBssid(newBssid);
-        setImmediate(function () {
+        // TODO: #1805
+        setTimeout(function () {
           t.equal(serverStartStub.callCount, 1, 'server start called once');
           t.equal(serverStopStub.callCount, 1, 'server stop called once');
           t.equal(clientStartStub.callCount, 1, 'client start called once');
@@ -147,7 +148,7 @@ test(
           t.ok(clientStopStub.calledBefore(clientStartStub),
             'client stop called before start');
           resolve();
-        });
+        }, 200);
       });
     }
 
@@ -202,13 +203,14 @@ test(
     function testBssidChangeReaction (newBssid) {
       return new Promise(function (resolve) {
         changeBssid(newBssid);
-        setImmediate(function () {
+        // TODO: #1805
+        setTimeout(function () {
           t.equal(serverStartStub.callCount, 0, 'server start never called');
           t.equal(serverStopStub.callCount, 0, 'server stop never called');
           t.equal(clientStartStub.callCount, 0, 'client start never called');
           t.equal(clientStopStub.callCount, 0, 'client start never called');
           resolve();
-        });
+        }, 200);
       });
     }
 
