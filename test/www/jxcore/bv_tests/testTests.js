@@ -46,6 +46,27 @@ test('can pass data in setup', function (t) {
   t.end();
 });
 
+test('can exchange data', function (t) {
+  var data = { uuid: tape.uuid, someValue: 4 };
+  tape.exchange('uuid', data, function (err, response) {
+    t.equal(err, null, 'completed without error');
+    var responseKeys = Object.keys(response);
+    var participantUuids = t.participants.map(function (p) {
+      return p.uuid;
+    });
+    responseKeys.sort();
+    participantUuids.sort();
+    t.deepEqual(responseKeys, participantUuids,
+      'got exchange response with every participants data');
+    responseKeys.forEach(function (key) {
+      t.equal(response[key].uuid, key, 'every participant sent its own uuid');
+      t.equal(response[key].someValue, 4,
+        'every participant sent correct someValue');
+    });
+    t.end();
+  });
+});
+
 if (!platform.isMobile) {
   test('can continue after disconnect from server', function (t) {
     // Android phone like to do huge amount of reconnects.

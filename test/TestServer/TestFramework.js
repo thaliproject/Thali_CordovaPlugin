@@ -7,6 +7,7 @@ var format   = util.format;
 var objectAssign = require('object-assign');
 var assert       = require('assert');
 var EventEmitter = require('events').EventEmitter;
+var map          = require('lodash.map');
 
 var asserts = require('./utils/asserts.js');
 var logger  = require('./utils/ThaliLogger')('TestFramework');
@@ -240,11 +241,8 @@ TestFramework.prototype.resolveStarted = function () {
 };
 
 TestFramework.prototype.resolveCompleted = function () {
-  var self = this;
-
-  var states = Object.keys(this.platforms)
-  .map(function (platformName) {
-    return self.platforms[platformName].state;
+  var states = map(this.platforms, function (platform) {
+    return platform.state;
   });
 
   var isCompleted = states.every(function (state) {

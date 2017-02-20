@@ -4,7 +4,7 @@ var config = {
     "ios" : {
       "startTimeout": 3000,
     },
-    "android" : { 
+    "android" : {
       "startTimeout": 3000
     }
   },

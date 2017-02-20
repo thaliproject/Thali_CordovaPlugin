@@ -3,12 +3,14 @@
   "version": "0.0.1",
   "description": "Thali Test Server App - to be run under CI",
   "dependencies": {
+    "bluebird": "3.4.6",
     "express": "4.13.3",
     "fs-extra-promise": "0.2.0",
-    "bluebird": "3.4.6",
-    "socket.io": "1.4.8",
-    "winston": "2.2.0",
+    "lodash.foreach": "4.5.0",
+    "lodash.map": "4.6.0",
+    "node-uuid": "1.4.7",
     "object-assign": "4.1.0",
-    "node-uuid": "1.4.7"
+    "socket.io": "1.4.8",
+    "winston": "2.2.0"
   }
 }

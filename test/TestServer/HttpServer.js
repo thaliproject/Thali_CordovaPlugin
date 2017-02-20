@@ -2,11 +2,13 @@
 
 var util     = require('util');
 var inherits = util.inherits;
+var format   = util.format;
 
 var http         = require('http');
 var socketIO     = require('socket.io');
 var objectAssign = require('object-assign');
 var EventEmitter = require('events').EventEmitter;
+var forEach      = require('lodash.foreach');
 
 var asserts = require('./utils/asserts');
 var logger  = require('./utils/ThaliLogger')('HttpServer');
@@ -26,6 +28,8 @@ function Server (options) {
   server.listen(this._options.port, function () {
     logger.info('listening on *:' + self._options.port);
   });
+
+  this._exchanges = {};
 
   this._bind();
 }
@@ -60,7 +64,8 @@ Server.prototype._connect = function (socket) {
   socket
   .on('disconnect', this._disconnect.bind(this, socket))
   .on('error',      this._error.bind(this, socket))
-  .on('present',    this._present.bind(this, socket));
+  .on('present',    this._present.bind(this, socket))
+  .on('exchange',   this._exchange.bind(this, socket));
 };
 
 Server.prototype._disconnect = function (socket, reason) {
@@ -81,6 +86,7 @@ Server.prototype._error = function (socket, error) {
 Server.prototype._present = function (socket, deviceInfo) {
   var device = new TestDevice(socket, deviceInfo);
   socket.deviceName = device.name;
+  socket.deviceUuid = device.uuid;
 
   logger.debug(
     'device presented, name: \'%s\', uuid: \'%s\', platformName: \'%s\', ' +
@@ -90,6 +96,43 @@ Server.prototype._present = function (socket, deviceInfo) {
   );
 
   this.emit('present', device);
+};
+
+Server.prototype._exchange = function (socket, exchangeId, data, callback) {
+  asserts.isString(exchangeId);
+  asserts.isFunction(callback);
+
+  if (!this._exchanges[exchangeId]) {
+    logger.debug('Start data exchange "%s"', exchangeId);
+    this._exchanges[exchangeId] = {
+      data: {},
+      callbacks: {}
+    };
+  }
+
+  var exchange = this._exchanges[exchangeId];
+  if (exchange.data[socket.deviceUuid]) {
+    var errMessage = format(
+      'Exchange "%s" has been already requested from this device', exchangeId
+    );
+    logger.debug('Data exchange "%s" is failed for %s device',
+      exchangeId, socket.deviceUuid);
+    callback(errMessage);
+    return;
+  }
+
+  exchange.data[socket.deviceUuid] = data;
+  exchange.callbacks[socket.deviceUuid] = callback;
+
+  var socketsNumber = Object.keys(this._io.sockets.connected).length;
+  var exchangeRequestsNumber = Object.keys(exchange.data).length;
+  if (exchangeRequestsNumber === socketsNumber) {
+    forEach(exchange.callbacks, function (callback) {
+      callback(null, exchange.data);
+    });
+    logger.debug('Data exchange "%s" is complete', exchangeId);
+    delete this._exchanges[exchangeId];
+  }
 };
 
 Server.prototype._exit = function () {

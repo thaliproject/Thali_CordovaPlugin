@@ -4,11 +4,11 @@ var config = {
     "ios" : {
       "startTimeout": 120000
     },
-    "android" : { 
+    "android" : {
       "startTimeout": 120000
     }
   },
-  
+
   testConfig : [
     {
       "name": "testFindPeers.js",
@@ -30,7 +30,7 @@ var config = {
       "conReTryTimeout": 5000,
       "conReTryCount": 5
     }
-  ] 
+  ]
 };
 
 module.exports = config;

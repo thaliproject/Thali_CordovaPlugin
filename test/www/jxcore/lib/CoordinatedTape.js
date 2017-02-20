@@ -80,6 +80,18 @@ CoordinatedThaliTape.begin = function (platform, version, hasRequiredHardware,
   // Only used for testing purposes.
   CoordinatedThaliTape._testServer = _testClient._io;
 
+  CoordinatedThaliTape.exchange = function (id, data, callback) {
+    logger.debug('exchange (%s) data: %s', id, JSON.stringify(data));
+    _testClient._io.emit('exchange', id, data, function (err, data) {
+      if (err) {
+        logger.error('exchange (%s) failed: %s', id, err);
+        return callback(new Error(err));
+      }
+      logger.debug('exchange (%s) completed', id);
+      callback(null, data);
+    });
+  };
+
   return new Promise(function (resolve, reject) {
     _testClient.once('finished', function (error) {
       if (error) {

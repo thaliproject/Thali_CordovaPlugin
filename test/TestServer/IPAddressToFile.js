@@ -4,6 +4,7 @@ var fs = require('fs-extra-promise');
 var os = require('os');
 var path = require('path');
 
+var forEach = require('lodash.foreach');
 var Promise = require('./utils/Promise');
 
 
@@ -27,24 +28,24 @@ module.exports = function (addressOverride) {
   var networkInterfaces = os.networkInterfaces();
 
   var ipv4address= null;
-  Object.keys(networkInterfaces).forEach(function (interfaceName) {
-    networkInterfaces[interfaceName].forEach(function (iface) {
-      if ('IPv4' !== iface.family || iface.internal !== false) {
+  forEach(networkInterfaces, function (addresses, interfaceName) {
+    addresses.forEach(function (addressInfo) {
+      if ('IPv4' !== addressInfo.family || addressInfo.internal !== false) {
           // skip over internal (i.e. 127.0.0.1) and non-ipv4 addresses
         return;
       }
 
-        // We prefer interfaces called Wi-Fi but if we can't find one then we
-        // will take the first IPv4 address we can find that is not internal.
-        // The assumption is that the non-Wi-Fi address is connected to a router
-        // that is connected to Wi-Fi.
+      // We prefer interfaces called Wi-Fi but if we can't find one then we
+      // will take the first IPv4 address we can find that is not internal.
+      // The assumption is that the non-Wi-Fi address is connected to a router
+      // that is connected to Wi-Fi.
       if (interfaceName.indexOf('Wi-Fi') > -1){
           // this interface has only one ipv4 address
-        ipv4address = iface.address;
+        ipv4address = addressInfo.address;
       }
 
       if (!ipv4address) {
-        ipv4address = iface.address;
+        ipv4address = addressInfo.address;
       }
     });
   });

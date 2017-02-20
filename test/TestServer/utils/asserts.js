@@ -70,7 +70,7 @@ module.exports.arrayEquals = function(a1, a2) {
     arrayEquals(a1, a2),
     format('equals arrays expected, received array 1: \'%s\', array 2: \'%s\'', a1, a2)
   );
-}
+};
 
 function isObject(value) {
   return exists(value) && typeof value === 'object';
@@ -98,7 +98,7 @@ module.exports.equals = function (value1, value2) {
     value1 === value2,
     format('equals values expected, received value 1: \'%s\', value 2: \'%s\'', value1, value2)
   );
-}
+};
 
 function isFunction(fun) {
   return exists(fun) && typeof fun === 'function';

@@ -496,7 +496,7 @@ CoordinatedClient.prototype._sync = function (tape, test, timeout) {
     );
     var trace    = traces[level];
     var location = path.relative(__dirname, trace.location);
-    return location + ":" + trace.line + ":" + trace.column;
+    return location + ':' + trace.line + ':' + trace.column;
   }
   var callerId = getCaller(2);
 

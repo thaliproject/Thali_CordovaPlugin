@@ -82,11 +82,13 @@ var testsToRun = argv._[0] || 'bv_tests';
 var testsPath = path.join(__dirname, testsToRun);
 testLoader.load(testsPath, config.preferredOrder);
 
-testUtils.hasRequiredHardware()
-  .then(function (hasRequiredHardware) {
+// On Android Bluetooth must be enabled first to determine if it supports
+// BLE multiple advertisement
+testUtils.enableRequiredHardware()
+  .then(function (enableRequiredHardware) {
 
-    return testUtils.enableRequiredHardware()
-      .then(function (enableRequiredHardware) {
+    return testUtils.hasRequiredHardware()
+      .then(function (hasRequiredHardware) {
 
         return testUtils.getOSVersion()
           .then(function (version) {
