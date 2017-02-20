@@ -13,9 +13,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class ConnectionModel {
     private static final String TAG = ConnectionModel.class.getName();
-    private final CopyOnWriteArrayList<IncomingSocketThread> mIncomingSocketThreads = new CopyOnWriteArrayList<>();
-    private final CopyOnWriteArrayList<OutgoingSocketThread> mOutgoingSocketThreads = new CopyOnWriteArrayList<>();
-    private final HashMap<String, JXcoreThaliCallback> mOutgoingConnectionCallbacks = new HashMap<>();
+    private final CopyOnWriteArrayList<IncomingSocketThread> mIncomingSocketThreads = new CopyOnWriteArrayList<IncomingSocketThread>();
+    private final CopyOnWriteArrayList<OutgoingSocketThread> mOutgoingSocketThreads = new CopyOnWriteArrayList<OutgoingSocketThread>();
+    private final HashMap<String, JXcoreThaliCallback> mOutgoingConnectionCallbacks = new HashMap<String, JXcoreThaliCallback>();
 
     /**
      * Constructor.
