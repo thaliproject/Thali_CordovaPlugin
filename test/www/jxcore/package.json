@@ -36,7 +36,7 @@
     "minimist": "1.2.0",
     "multiplex": "6.7.0",
     "nock": "2.12.0",
-    "node-ssdp": "https://github.com/thaliproject/node-ssdp.git#caf1a75aa54fb47a9e51b72bf4c902c366536cbd",
+    "node-ssdp": "https://github.com/thaliproject/node-ssdp.git#3a5909e201aee401f48965e378eb2ff0e2f9e027",
     "node-uuid": "1.4.7",
     "object-assign": "4.1.0",
     "pouchdb": "6.1.1",

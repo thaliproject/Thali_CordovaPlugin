@@ -13,7 +13,7 @@
     "lie": "3.1.0",
     "long": "3.0.3",
     "multiplex": "6.7.0",
-    "node-ssdp": "https://github.com/thaliproject/node-ssdp.git#8feabedb80d054d354ea1fc6bd55045df65fd18f",
+    "node-ssdp": "https://github.com/thaliproject/node-ssdp.git#3a5909e201aee401f48965e378eb2ff0e2f9e027",
     "object-assign": "4.1.0",
     "pouchdb-adapter-leveldb-core": "6.1.1",
     "request": "2.64.0",

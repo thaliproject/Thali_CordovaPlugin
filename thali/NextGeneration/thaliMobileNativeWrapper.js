@@ -15,6 +15,12 @@ var states = {
   started: false
 };
 
+var targetStates = {
+  started: false,
+  advertising: false,
+  listening: false
+};
+
 // We have to keep track of discovered peers to make sure
 // 'listenerRecreatedAfterFailureHandler' event uses the same generation after
 // connection was recreated
@@ -47,6 +53,10 @@ module.exports._setServersManager = function (serversManager) {
 
 module.exports._isStarted = function () {
   return states.started;
+};
+
+module.exports._getPromiseQueue = function () {
+  return gPromiseQueue;
 };
 
 // Turns off a warning that would otherwise go off on Mobile
@@ -282,6 +292,7 @@ function stopCreateAndStartServersManager() {
  */
 // jscs:enable jsDoc
 module.exports.start = function (router, pskIdToSecret) {
+  targetStates.started = true;
   return gPromiseQueue.enqueue(function (resolve, reject) {
     if (states.started) {
       return reject(new Error('Call Stop!'));
@@ -408,6 +419,9 @@ function stopNative() {
  */
 
 module.exports.stop = function () {
+  targetStates.started = false;
+  targetStates.listening = false;
+  targetStates.advertising = false;
   return gPromiseQueue.enqueue(stop);
 };
 
@@ -437,6 +451,7 @@ module.exports.stop = function () {
  */
 module.exports.startListeningForAdvertisements = function () {
 /* eslint-enable max-len */
+  targetStates.listening = true;
   return gPromiseQueue.enqueue(function (resolve, reject) {
     if (!states.started) {
       return reject(new Error('Call Start!'));
@@ -469,6 +484,7 @@ module.exports.startListeningForAdvertisements = function () {
  * @returns {Promise<?Error>}
  */
 module.exports.stopListeningForAdvertisements = function () {
+  targetStates.listening = false;
   return gPromiseQueue.enqueue(function (resolve, reject) {
     Mobile('stopListeningForAdvertisements').callNative(function (error) {
       if (error) {
@@ -550,6 +566,7 @@ module.exports.stopListeningForAdvertisements = function () {
  */
 /* eslint-enable max-len */
 module.exports.startUpdateAdvertisingAndListening = function () {
+  targetStates.advertising = true;
   return gPromiseQueue.enqueue(function (resolve, reject) {
     if (!states.started) {
       return reject(new Error('Call Start!'));
@@ -589,6 +606,7 @@ module.exports.startUpdateAdvertisingAndListening = function () {
  * @returns {Promise<?Error>}
  */
 module.exports.stopAdvertisingAndListening = function () {
+  targetStates.advertising = false;
   return gPromiseQueue.enqueue(function (resolve, reject) {
     Mobile('stopAdvertisingAndListening').callNative(function (error) {
       if (error) {
@@ -1061,6 +1079,40 @@ function handlePeerAvailabilityChanged (peer) {
 
 module.exports._handlePeerAvailabilityChanged = handlePeerAvailabilityChanged;
 
+function handleNetworkChanges (newStatus) {
+  var oldStatus = gNonTcpNetworkStatus;
+
+  var someRadioEnabled = oldStatus ?
+    ['wifi', 'bluetooth', 'bluetoothLowEnergy'].some(function (radio) {
+      return (newStatus[radio] === 'on' && oldStatus[radio] !== 'on');
+    }) :
+    true;
+
+  if (!someRadioEnabled) {
+    return;
+  }
+
+  // At least some radio was enabled so try to start whatever can be potentially
+  // started as soon as possible.
+
+  if (targetStates.started) {
+    if (targetStates.listening) {
+      module.exports.startListeningForAdvertisements()
+        .catch(function (error) {
+          logger.warn('Failed startListeningForAdvertisements with error ' +
+            error.message);
+        });
+    }
+    if (targetStates.advertising) {
+      module.exports.startUpdateAdvertisingAndListening()
+        .catch(function (error) {
+          logger.warn('Failed startUpdateAdvertisingAndListening with error ' +
+            error.message);
+        });
+    }
+  }
+}
+
 function getPeerPort(peer) {
   return gServersManager ?
     gServersManager.createPeerListener(peer.peerIdentifier) :
@@ -1247,6 +1299,7 @@ module.exports._registerToNative = function () {
     // The value needs to be assigned here to gNonTcpNetworkStatus
     // so that {@link module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}
     // can return it.
+    handleNetworkChanges(networkChangedValue);
     gNonTcpNetworkStatus = networkChangedValue;
     module.exports.emitter.emit('networkChangedNonTCP', gNonTcpNetworkStatus);
   });

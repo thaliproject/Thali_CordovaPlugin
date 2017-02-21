@@ -56,4 +56,17 @@ USN.stringify = function (peer) {
   return USN._prefix + peer.peerIdentifier + ':' + peer.generation;
 };
 
+/**
+ * @param {string} usn
+ * @param {*} errorValue - this value will be returned if usn is invalid
+ * @returns {UsnPeer|*}
+ */
+USN.tryParse = function (usn, errorValue) {
+  try {
+    return USN.parse(usn);
+  } catch (error) {
+    return errorValue;
+  }
+};
+
 module.exports = USN;

@@ -846,6 +846,72 @@ test('can still do HTTP requests between peers with coordinator', function (t) {
   endToEndWithStateCheck(t);
 });
 
+test('calls correct starts when network changes',
+  testUtils.skipOnIOS, // uses toggleBluetooth
+  function (t) {
+    var listeningSpy =
+      sinon.spy(thaliMobileNativeWrapper, 'startListeningForAdvertisements');
+    var advertisingSpy =
+      sinon.spy(thaliMobileNativeWrapper, 'startUpdateAdvertisingAndListening');
+
+    return thaliMobileNativeWrapper.start(express.Router())
+      .then(function () {
+        return testUtils.ensureBluetooth(false);
+      })
+      .then(function () {
+        var validateStartResult = function (promise) {
+          return promise
+            .then(function () {
+              t.fail('Should fail');
+            })
+            .catch(function (error) { // eslint-disable-line
+              // TODO: enable when (if) #1767 is fixed
+              // t.equals(error.message, 'Radio Turned Off',
+              //   'specific error expected');
+            });
+        };
+        var listen = validateStartResult(
+          thaliMobileNativeWrapper.startListeningForAdvertisements()
+        );
+        var advertise = validateStartResult(
+          thaliMobileNativeWrapper.startUpdateAdvertisingAndListening()
+        );
+        return Promise.all([ listen, advertise ]);
+      })
+      .then(function () {
+        listeningSpy.reset();
+        advertisingSpy.reset();
+        return testUtils.ensureBluetooth(true);
+      })
+      .then(function () {
+        return thaliMobileNativeWrapper._getPromiseQueue().enqueue(
+          function (resolve) {
+            t.ok(
+              listeningSpy.calledOnce,
+              'startListeningForAdvertisements should have been called once'
+            );
+            t.ok(
+              advertisingSpy.calledOnce,
+              'startUpdateAdvertisingAndListening should have been called once'
+            );
+            resolve();
+          }
+        );
+      })
+      .catch(function (err) {
+        t.fail(err.message + '. ' + err.stack);
+      })
+      .then(function () {
+        return thaliMobileNativeWrapper.stop();
+      })
+      .then(function () {
+        listeningSpy.restore();
+        advertisingSpy.restore();
+        t.end();
+      });
+  }
+);
+
 // The connection cut is implemented as a separate test instead
 // of doing it in the middle of the actual test so that the
 // step gets coordinated between peers.
