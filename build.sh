@@ -7,6 +7,7 @@
 ### END - JXcore Test Server   --------
 
 echo ""
+echo ""
 echo "start build.sh"
 
 SCRIPT_PATH="$(cd "$(dirname "$0")"; pwd -P)"
