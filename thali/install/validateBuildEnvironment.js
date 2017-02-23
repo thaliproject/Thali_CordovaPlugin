@@ -15,7 +15,7 @@ const versions =
 {
   xcode: '7.3.1',
   xcodeCommandLineTools: ' ',
-  macOS: '10.12.2',
+  macOS: '10.12.3',
   node: '6.9.1',
   npm: '3.10.8',
   brew: '1.1.',
