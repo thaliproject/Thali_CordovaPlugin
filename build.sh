@@ -6,7 +6,7 @@
 ### Make sure multiple calls to this script file compiles the application file
 ### END - JXcore Test Server   --------
 
-echo ""
+echo "triggering build"
 echo ""
 echo "start build.sh"
 
