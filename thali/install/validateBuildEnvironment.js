@@ -13,7 +13,7 @@ const assert = require('assert');
 
 const versions =
 {
-  xcode: '7.3.1',
+  xcode: '8.2.1',
   xcodeCommandLineTools: ' ',
   macOS: '10.12.3',
   node: '6.9.1',
@@ -33,7 +33,8 @@ const versions =
   cordova: '6.4.0',
   java: '1.8.0_102',
   git: '2.10.0',
-  swiftlint: '0.13.0',
+  swiftlint: '0.16.1',
+  carthage: '0.19.1',
   sinopiaNode: ' ',
   sinopiaJxCore: ' '
 };
@@ -202,6 +203,12 @@ const commandsAndResults =
   swiftlint: {
     platform: ['darwin'],
     versionCheck: 'swiftlint version',
+    versionValidate:
+      (result, version) => boolToPromise(version === result.trim())
+  },
+  carthage: {
+    platform: ['darwin'],
+    versionCheck: 'carthage version',
     versionValidate:
       (result, version) => boolToPromise(version === result.trim())
   },
