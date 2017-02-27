@@ -161,7 +161,7 @@ ThaliPeerPoolOneAtATime.prototype._bluetoothReplicationAction = null;
  * Runs the replication action and if it fails for a reason other than a
  * timeout and if the peer is still available (meaning the connection has not
  * been lost) then we will retry the replication.
- * @param replicationAction
+ * @param {module:thaliPeerAction~PeerAction} replicationAction
  * @returns {Promise.<null>}
  * @private
  */
@@ -235,7 +235,7 @@ ThaliPeerPoolOneAtATime.prototype._bluetoothEnqueue = function (peerAction) {
       peerAction.getActionType());
     logger.error(error.message);
     peerAction.kill();
-    return error;
+    throw error;
   }
 
   self._bluetoothSerialPromiseQueue.enqueue(function (resolve) {
@@ -273,37 +273,32 @@ ThaliPeerPoolOneAtATime.prototype._bluetoothEnqueue = function (peerAction) {
 ThaliPeerPoolOneAtATime.prototype.enqueue = function (peerAction) {
   if (this._stopped) {
     peerAction.kill();
-    return new Error(ThaliPeerPoolOneAtATime.ERRORS.ENQUEUE_WHEN_STOPPED);
+    throw new Error(ThaliPeerPoolOneAtATime.ERRORS.ENQUEUE_WHEN_STOPPED);
   }
-  var result =
-    ThaliPeerPoolOneAtATime.super_.prototype.enqueue.apply(this, arguments);
+  ThaliPeerPoolOneAtATime.super_.prototype.enqueue.apply(this, arguments);
 
-  if (result) {
-    return result;
-  }
-
-  switch(peerAction.getConnectionType()) {
+  switch (peerAction.getConnectionType()) {
     // MPCF is here because right now master doesn't really know how to set
     // the mock type to anything but Android
     case thaliMobileNativeWrapper.connectionTypes
       .MULTI_PEER_CONNECTIVITY_FRAMEWORK:
     case thaliMobileNativeWrapper.connectionTypes.BLUETOOTH: {
-      result = this._bluetoothEnqueue(peerAction);
+      this._bluetoothEnqueue(peerAction);
       break;
     }
     case thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE: {
-      result = this._wifiEnqueue(peerAction);
+      this._wifiEnqueue(peerAction);
       break;
     }
     default: {
       peerAction.kill();
-      result = new Error('Got unrecognized connection type: ' +
+      throw new Error('Got unrecognized connection type: ' +
         peerAction.getConnectionType());
       break;
     }
   }
 
-  return result instanceof Error ? result : null;
+  return null;
 };
 
 ThaliPeerPoolOneAtATime.prototype.start = function () {
@@ -318,6 +313,7 @@ ThaliPeerPoolOneAtATime.prototype.start = function () {
  * kill any actions that this pool has started that haven't already been
  * killed. It will also return errors if any further attempts are made
  * to enqueue.
+ * @return {Promise}
  */
 ThaliPeerPoolOneAtATime.prototype.stop = function () {
   logger.debug('Stop was called');
