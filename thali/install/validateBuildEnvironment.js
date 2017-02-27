@@ -101,7 +101,7 @@ const commandsAndResults =
       (result, version) => boolToPromise(version === result.trim())
   },
   carthage: {
-    versionCheck: 'swiftlint version',
+    versionCheck: 'carthage version',
     versionValidate:
       (result, version) => boolToPromise(version === result.trim())
   },
