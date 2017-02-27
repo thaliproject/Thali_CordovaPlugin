@@ -177,7 +177,6 @@ class AppContextTests: XCTestCase {
       ("test_esonValue", testJsonValue),
       ("test_listeningAdvertisingUpdateOnStartAdvertising", testListeningAdvertisingUpdateOnStartAdvertising),
       ("test_listeningAdvertisingUpdateOnStartListening", testListeningAdvertisingUpdateOnStartListening),
-      ("test_startAdvertisingAndListeningInvokePeerAvailabilityChangedForDifferentContexts", testStartAdvertisingAndListeningInvokePeerAvailabilityChangedForDifferentContexts),
       ("test_peerAvailabilityConversion", testPeerAvailabilityConversion),
       ("test_disconnectErrors", testDisconnectErrors),
       ("test_connectReturnValueCorrect", testConnectReturnValueCorrect),

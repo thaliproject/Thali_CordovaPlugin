@@ -9,9 +9,9 @@
 
 import Foundation
 
-extension NSRunLoop {
+extension RunLoop {
 
-    class func myRunLoop() -> NSRunLoop {
+    class func myRunLoop() -> RunLoop {
         return NSStreamEventsThread.sharedInstance.runLoop
     }
 }

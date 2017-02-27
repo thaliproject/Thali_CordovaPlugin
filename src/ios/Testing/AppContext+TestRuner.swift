@@ -13,6 +13,7 @@ import ThaliCore
 import ThaliCoreCITests
 
 extension AppContext: TestRunnerProtocol {
+
   func runNativeTests() -> String {
     let rootTestSuite = XCTestSuite(name: "All tests")
 

@@ -9,45 +9,42 @@
 
 import Foundation
 
-class NSStreamEventsThread: NSThread {
+class NSStreamEventsThread: Thread {
 
-    private let runLoopReadyGroup: dispatch_group_t
-    private var _runLoop: NSRunLoop
-    internal var runLoop: NSRunLoop {
+    private let runLoopReadyGroup: DispatchGroup
+    private var _runLoop: RunLoop
+    internal var runLoop: RunLoop {
         get {
-            dispatch_group_wait(runLoopReadyGroup, DISPATCH_TIME_FOREVER)
+            runLoopReadyGroup.wait(timeout: DispatchTime.distantFuture)
             return _runLoop
         }
     }
 
-    class var sharedInstance: NSStreamEventsThread {
+    static var sharedInstance: NSStreamEventsThread {
 
         struct Static {
 
             static var instance: NSStreamEventsThread? = nil
             static var thread: NSStreamEventsThread? = nil
-            static var onceToken: dispatch_once_t = 0
         }
 
-        dispatch_once(&Static.onceToken) {
-            Static.thread = NSStreamEventsThread()
-            Static.thread?.name = "com.thaliproject.NSStreamEventsThread"
-            Static.thread?.start()
-        }
+        Static.thread = NSStreamEventsThread()
+        Static.thread?.name = "com.thaliproject.NSStreamEventsThread"
+        Static.thread?.start()
 
-        return Static.thread!
+        return  Static.thread!
     }
 
     override init() {
-        _runLoop = NSRunLoop()
-        runLoopReadyGroup = dispatch_group_create()
-        dispatch_group_enter(runLoopReadyGroup)
+        _runLoop = RunLoop()
+        runLoopReadyGroup = DispatchGroup()
+        runLoopReadyGroup.enter()
     }
 
     override func main() {
         autoreleasepool {
-            _runLoop = NSRunLoop.currentRunLoop()
-            dispatch_group_leave(runLoopReadyGroup)
+            _runLoop = RunLoop.current
+            runLoopReadyGroup.leave()
 
             // Prevent runloop from spinning
             var sourceCtx = CFRunLoopSourceContext(version: 0,
@@ -62,9 +59,9 @@ class NSStreamEventsThread: NSThread {
                                                    perform: nil)
 
             let source = CFRunLoopSourceCreate(nil, 0, &sourceCtx)
-            CFRunLoopAddSource(CFRunLoopGetCurrent(), source, kCFRunLoopDefaultMode)
+            CFRunLoopAddSource(CFRunLoopGetCurrent(), source, CFRunLoopMode.defaultMode)
 
-            while _runLoop.runMode(NSDefaultRunLoopMode, beforeDate: NSDate.distantFuture()) {}
+            while _runLoop.run(mode: RunLoopMode.defaultRunLoopMode, before: NSDate.distantFuture) {}
         }
     }
 }

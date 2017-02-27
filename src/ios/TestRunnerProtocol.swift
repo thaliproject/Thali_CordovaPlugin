@@ -9,5 +9,6 @@
 
 @objc
 protocol TestRunnerProtocol {
+
   func runNativeTests() -> String
 }
