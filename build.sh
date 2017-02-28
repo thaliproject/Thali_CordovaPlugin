@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-### START - JXcore Test Server --------.........................
+### START - JXcore Test Server --------..........................
 ### Testing environment prepares separate packages for each node.
 ### Package builder calls this script with each node's IP address
 ### Make sure multiple calls to this script file compiles the application file
