@@ -221,7 +221,7 @@ test('#ThaliPeerPoolDefault - stop', function (t) {
       function () {
         testThaliPeerPoolDefault.enqueue(testAction3);
       },
-      ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED,
+      new RegExp(ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED),
       'enqueue is not available when stopped'
     );
 
