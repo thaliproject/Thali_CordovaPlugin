@@ -16,7 +16,7 @@ const versions =
   xcode: '8.2.1',
   xcodeCommandLineTools: ' ',
   macOS: '10.12.3',
-  carthage: '0.19.1',
+  carthage: '0.20.0',
   node: '6.9.1',
   npm: '3.10.8',
   brew: '1.1.',
