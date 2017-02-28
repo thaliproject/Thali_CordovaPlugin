@@ -446,6 +446,37 @@ test('Resolves an action locally', function (t) {
   notificationClient._peerAvailabilityChanged(globals.TCPEvent);
 });
 
+test('Ignores errors thrown by peerPool.enqueue', function (t) {
+  var getPeerHostInfoStub = stubGetPeerHostInfo();
+  var peerPool = {
+    enqueue: function () {
+      throw new Error('oops');
+    }
+  };
+
+  var notificationClient =
+    new ThaliNotificationClient(peerPool,
+      globals.sourceKeyExchangeObject, function () {});
+
+  notificationClient.start([]);
+
+  var TCPEvent = {
+    peerIdentifier: 'id3212',
+    peerAvailable: true,
+    newAddressPort: true,
+    generation: 0,
+    connectionType: ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
+  };
+
+  t.doesNotThrow(function () {
+    notificationClient._peerAvailabilityChanged(TCPEvent);
+  });
+
+  notificationClient.stop();
+  getPeerHostInfoStub.restore();
+  t.end();
+});
+
 test('Resolves an action locally using ThaliPeerPoolDefault', function (t) {
 
   // Scenario:
