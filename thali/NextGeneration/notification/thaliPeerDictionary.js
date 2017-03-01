@@ -15,41 +15,86 @@ var ThaliNotificationAction = require('./thaliNotificationAction.js');
 
 
 /**
+ * @typedef {Object} NotificationActionEntry
+ * @property {module:ThaliNotificationClient~ThaliNotificationAction} notificationAction
+ * @property {number} entryNumber
+ */
+
+
+/**
  * @classdesc An entry to be put into the peerDictionary.
  *
  * @public
  * @constructor
  */
 function NotificationPeerDictionaryEntry() {
-  this.notificationAction = null;
+  // TODO: this class should not be exposed. All entries must be associated with
+  // some peer dictionary because generations map uses entryCounter to set
+  // entryNumber.
+
+  /**
+   * Marks this peer as 'bad' one. Notification client marks peer 'bad' when
+   * it sent invalid beacons that client couldn't parse.
+   *
+   * @public
+   * @type {boolean}
+   */
+  this.badPeer = false;
+
+  /**
+   * The waiting timeout object is used when the peer notification action is
+   * failed and it is waiting to be enqueued again.
+   *
+   * @public
+   * @type {?timeoutObject}
+   */
   this.waitingTimeout = null;
+
+  /**
+   * The retry number. Notification client increments this after each retry and
+   * uses it to limit the total number of action retries.
+   *
+   * @public
+   * @type {number}
+   */
   this.retryCounter = 0;
+
+  /**
+   * The latest AND highest peer generation number added to the dictionary.
+   *
+   * @public
+   * @type {number?}
+   */
+  this.generationCounter = null;
+
+  /**
+   * Maps peer generations to the corresponding notification actions
+   * @private
+   * @type {Object.<string, NotificationActionEntry>}
+   */
+  this.generations = {};
 }
 
 /**
- * The notification action (if any) associated with the peer.
- *
  * @public
- * @type {?module:thaliNotificationAction~NotificationAction}
+ * @param {number} generation
+ * @param {module:thaliNotificationClient~ThaliNotificationAction} notificationAction
  */
-NotificationPeerDictionaryEntry.prototype.notificationAction = null;
+NotificationPeerDictionaryEntry.prototype.addGeneration =
+function (generation, notificationAction) {
+  // TODO: notificationAction is already associated with the peer generation.
+  // Maybe we should change "generations" to "actions" and store just actions?
+  // addGeneration(generation, notificationAction) and
+  // deleteGeneration(generation) will become addAction(notificationAction) and
+  // deleteAction(notificationAction).
+  assert(notificationAction.getPeerGeneration() === generation,
+    'notification action belongs to the correct peer generation');
+  assert(generation > this.generationCounter, 'generation increases');
 
-/**
- * The waiting timeout object is used when the peer is in WAITING
- * state before enqueuing a new request.
- *
- * @public
- * @type {?timeoutObject}
- */
-NotificationPeerDictionaryEntry.prototype.waitingTimeout = null;
-
-/**
- * The retry number.
- *
- * @public
- * @type {number}
- */
-NotificationPeerDictionaryEntry.prototype.retryCounter = null;
+  this.generations[generation] = {
+    notificationAction: notificationAction
+  };
+};
 
 module.exports.NotificationPeerDictionaryEntry =
   NotificationPeerDictionaryEntry;
@@ -304,6 +349,9 @@ PeerDictionary.prototype._removeOldestIfOverflow = function () {
     };
   };
 
+
+  // TODO: review this order, e.g. we probably should remove entries without
+  // generations first, also we should somehow handle 'bad' peers
   var oldestPeer =
     // First search for the oldest failed entry (with retry timeout)
     search(function (entry) {

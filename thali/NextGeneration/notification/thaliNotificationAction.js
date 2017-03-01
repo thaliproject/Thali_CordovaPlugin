@@ -132,6 +132,15 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
         self.getConnectionType()
       )
       .catch(function (error) {
+        // TODO (chapko): BAD_PEER resolution means that further notifications
+        // from this peer will be ignored. I don't think this is how it is
+        // supposed to work when `getPeerHostInfo` fails. For example native
+        // multiConnect method failed on iOS and it could be a transient
+        // problem.
+        //
+        // It probably doesn't matter for now, iOS sends new
+        // peerAvailabilityChanged event in case of failure. But once #1527 is
+        // implemented it will become a real issue.
         self._complete(ThaliNotificationAction.ActionResolution.BAD_PEER);
         return Promise.reject(error);
       });
