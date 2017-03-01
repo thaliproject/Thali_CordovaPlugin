@@ -42,12 +42,11 @@ module.exports.peerState = {
  * @public
  * @param {module:thaliPeerDictionary.peerState} peerState The
  * state of the peer.
- * @param {module:thaliNotificationAction~NotificationAction} notificationAction
  * @constructor
  */
-function NotificationPeerDictionaryEntry(peerState, notificationAction) {
+function NotificationPeerDictionaryEntry(peerState) {
   this.peerState = peerState;
-  this.notificationAction = notificationAction;
+  this.notificationAction = null;
   this.waitingTimeout = null;
   this.retryCounter = 0;
 }

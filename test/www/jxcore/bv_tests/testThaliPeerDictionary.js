@@ -52,8 +52,8 @@ function createEntry(peer, state) {
 
   act._nameTag = tagName;
 
-  var newEntry = new PeerDictionary.NotificationPeerDictionaryEntry(
-    state, act );
+  var newEntry = new PeerDictionary.NotificationPeerDictionaryEntry(state);
+  newEntry.notificationAction = act;
 
   newEntry._nameTag = tagName;
 
