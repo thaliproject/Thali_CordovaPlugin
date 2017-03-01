@@ -282,8 +282,6 @@ test('Received beacons with no values for us', function (t) {
             generation: globals.TCPEvent.generation
           });
           t.ok(entry, 'entry exists');
-          t.equal(entry.peerState, ThaliPeerDictionary.peerState.RESOLVED,
-            'entry is resolved');
           notificationClient.stop();
           finalizeTest();
         });
@@ -343,8 +341,6 @@ test('Notification action killed with a superseded', function (t) {
         });
         t.equal(action.getActionState(), PeerAction.actionState.KILLED,
           'Action should be KILLED');
-        t.equal(entry.peerState, PeerDictionary.peerState.RESOLVED,
-          'Peer state should be RESOLVED');
         peerPoolInterface.enqueue.restore();
 
         notificationClient.removeListener(
@@ -633,11 +629,6 @@ test('Action fails because of a bad hostname.', function (t) {
         peerIdentifier: 'id123',
         generation: 0
       });
-      t.equals(
-        entry.peerState,
-        ThaliPeerDictionary.peerState.RESOLVED,
-        'correct final peer state'
-      );
     }
     enqueueStub.restore();
     getPeerHostInfoStub.restore();
@@ -764,8 +755,6 @@ test('notificationClient does not retry action with BAD_PEER resolution',
         });
         t.equal(err.message, getPeerHostInfoErrorMessage,
           'failed with expected error');
-        t.equal(peerEntry.peerState, PeerDictionary.peerState.RESOLVED,
-          'peer state should be RESOLVED');
       })
       .then(function () {
         sandbox.restore();

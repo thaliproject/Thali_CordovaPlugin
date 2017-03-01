@@ -217,8 +217,7 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
       return;
     }
 
-    var peerEntry = new PeerDictionary.NotificationPeerDictionaryEntry(
-      PeerDictionary.peerState.CONTROLLED_BY_POOL);
+    var peerEntry = new PeerDictionary.NotificationPeerDictionaryEntry();
 
     self._createNotificationAction(peerEntry, {
       peerIdentifier: peerStatus.peerIdentifier,
@@ -283,8 +282,6 @@ ThaliNotificationClient.prototype._retryNotificationAction = function (action) {
   var entry = this.peerDictionary.get(peer);
 
   assert(entry, 'entry exists');
-  assert(entry.peerState === PeerDictionary.peerState.WAITING,
-    'peer state is WAITING');
 
   peer.connectionType = action.getConnectionType();
   this._createNotificationAction(entry, peer);
@@ -326,9 +323,6 @@ ThaliNotificationClient.prototype._onActionResolved =
     switch (resolution) {
       case ThaliNotificationAction.ActionResolution
         .BEACONS_RETRIEVED_AND_PARSED: {
-          entry.peerState = PeerDictionary.peerState.RESOLVED;
-          this.peerDictionary.addUpdateEntry(peer, entry);
-
           if (!beaconDetails) {
           // This peerId has nothing for us, if that changes then the peer
           // will generate a new peerId so we can safely ignore this peerId
@@ -359,7 +353,15 @@ ThaliNotificationClient.prototype._onActionResolved =
               peer.peerIdentifier
             );
 
+
           this.emit(this.Events.PeerAdvertisesDataForUs, peerAdvertises);
+
+          // We have to check that peerDictionary still exist because
+          // PeerAdvertisesDataForUs event listeners can synchronously stop
+          // notification client.
+          if (this.peerDictionary) {
+            this.peerDictionary.removeAllPeerEntries(peer.peerIdentifier);
+          }
 
           break;
         }
@@ -373,7 +375,6 @@ ThaliNotificationClient.prototype._onActionResolved =
         // Alternatively this is also used when we have decided to discard
         // this action in favor of one for the same peer with a newer PeerID
         // and so we don't want to retry the action.
-        entry.peerState = PeerDictionary.peerState.RESOLVED;
         this.peerDictionary.addUpdateEntry(peer, entry);
         break;
       }
@@ -395,14 +396,12 @@ ThaliNotificationClient.prototype._onActionResolved =
             Math.floor(Math.random() * 101);
 
           entry.retryCounter++;
-          entry.peerState = PeerDictionary.peerState.WAITING;
           entry.waitingTimeout = setTimeout(
             this._retryNotificationAction.bind(this, action),
             timeOut);
         } else {
           // Gives up after all the timeouts from the RETRY_TIMEOUTS array
           // has been spent.
-          entry.peerState = PeerDictionary.peerState.RESOLVED;
         }
         this.peerDictionary.addUpdateEntry(peer, entry);
         break;

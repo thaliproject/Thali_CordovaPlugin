@@ -13,51 +13,18 @@ var ThaliNotificationAction = require('./thaliNotificationAction.js');
  * a defined order if we get too many of them.
  */
 
-/**
- * Enum to record the state of trying to get the notification beacons for the
- * associated peerIdentifier
- *
- * @public
- * @readonly
- * @enum {string}
- */
-module.exports.peerState = {
-  /** The notification beacons for this peerID have been successfully
-   * retrieved.
-   */
-  RESOLVED: 'resolved',
-  /** The notification action is under the control of the peer pool so we have
-   * to check the notification action to find out its current state.
-   */
-  CONTROLLED_BY_POOL: 'controlledByPool',
-  /** A request to get the notification beacons for this peer failed and we
-   * are now waiting before enqueuing a new request.
-   */
-  WAITING: 'waiting'
-};
 
 /**
  * @classdesc An entry to be put into the peerDictionary.
  *
  * @public
- * @param {module:thaliPeerDictionary.peerState} peerState The
- * state of the peer.
  * @constructor
  */
-function NotificationPeerDictionaryEntry(peerState) {
-  this.peerState = peerState;
+function NotificationPeerDictionaryEntry() {
   this.notificationAction = null;
   this.waitingTimeout = null;
   this.retryCounter = 0;
 }
-
-/**
- * The current state of the peer
- *
- * @public
- * @type {module:thaliPeerDictionary.peerState}
- */
-NotificationPeerDictionaryEntry.prototype.peerState = null;
 
 /**
  * The notification action (if any) associated with the peer.
@@ -314,21 +281,23 @@ PeerDictionary.prototype._removeOldestIfOverflow = function () {
     return;
   }
 
-  var search = function (state) {
+  var search = function (filterFn) {
     var smallestEntryNumber = self._entryCounter;
     var oldestEntryObject = null;
 
     self._values().filter(function (entryObject) {
-      return entryObject.entry.peerState === state;
+      return filterFn(entryObject.entry);
     }).forEach(function (entryObject) {
       if (entryObject.entryNumber < smallestEntryNumber) {
         oldestEntryObject = entryObject;
         smallestEntryNumber = entryObject.entryNumber;
       }
     });
+
     if (!oldestEntryObject) {
       return null;
     }
+
     return {
       peerIdentifier: oldestEntryObject.peerIdentifier,
       generation: oldestEntryObject.generation
@@ -336,16 +305,19 @@ PeerDictionary.prototype._removeOldestIfOverflow = function () {
   };
 
   var oldestPeer =
-    // First search for the oldest RESOLVED entry
-    search(exports.peerState.RESOLVED) ||
-    // Next search for the oldest WAITING entry
-    search(exports.peerState.WAITING) ||
-    // As a last search for the oldest CONTROLLED_BY_POOL entry
-    search(exports.peerState.CONTROLLED_BY_POOL);
+    // First search for the oldest failed entry (with retry timeout)
+    search(function (entry) {
+      return entry.waitingTimeout !== null;
+    }) ||
+    // then search all other entries
+    search(function (entry) {
+      return entry.waitingTimeout === null;
+    });
 
-  if (oldestPeer) {
-    this.remove(oldestPeer);
-  }
+  // if it does not exists then either MAXSIZE is 0 or there is something wrong
+  // with entryNumber field
+  assert(oldestPeer, 'oldest peer should exists');
+  this.remove(oldestPeer);
 };
 
 module.exports.PeerDictionary = PeerDictionary;
