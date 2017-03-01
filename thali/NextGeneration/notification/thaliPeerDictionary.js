@@ -120,10 +120,10 @@ PeerDictionary.MAXSIZE = 100;
  * and it is removed.
  *
  * @public
- * @param {Object} peer
- * @param {string} peer.peerIdentifier
- * @param {number} peer.generation
- * @param {module:thaliPeerDictionary~NotificationPeerDictionaryEntry} entry
+ * @param {Object} newPeer
+ * @param {string} newPeer.peerIdentifier
+ * @param {number} newPeer.generation
+ * @param {module:thaliPeerDictionary~NotificationPeerDictionaryEntry} newEntry
  * Entry to be added.
   */
 PeerDictionary.prototype.addUpdateEntry =
@@ -142,7 +142,7 @@ PeerDictionary.prototype.addUpdateEntry =
         // peer will be updated.
         newPeerWillBeAdded = false;
 
-        if (oldPeer.entry != newEntry) {
+        if (oldPeer.entry !== newEntry) {
           this._removeEntry(oldPeer.entry);
         }
       }
@@ -205,7 +205,7 @@ PeerDictionary.prototype._removeEntry = function (entry) {
     );
     entry.notificationAction.kill();
   }
-}
+};
 
 PeerDictionary.prototype.removeAllPeerEntries = function (peerIdentifier) {
   var peerEntries = this._dictionary[peerIdentifier];

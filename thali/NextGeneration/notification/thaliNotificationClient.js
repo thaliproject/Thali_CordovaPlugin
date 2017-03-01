@@ -147,19 +147,12 @@ ThaliNotificationClient.prototype.peerDictionary = null;
  */
 ThaliNotificationClient.prototype.start =
   function (publicKeysToListen) {
-    var self = this;
-
     assert(Array.isArray(publicKeysToListen),
       ThaliNotificationClient.Errors.PUBLIC_KEYS_TO_LISTEN_NOT_ARRAY);
 
-    this._publicKeysToListen = [];
-    this._publicKeysToListenHashes = [];
     this._publicKeysToListen = publicKeysToListen;
-
-    publicKeysToListen.forEach(function (pubKy) {
-      self._publicKeysToListenHashes.push(
-        NotificationBeacons.createPublicKeyHash(pubKy));
-    });
+    this._publicKeysToListenHashes =
+      publicKeysToListen.map(NotificationBeacons.createPublicKeyHash);
 
     if (!this._isStarted()) {
       ThaliMobile.emitter.on('peerAvailabilityChanged',
