@@ -177,7 +177,6 @@
  * layer will then relay to the remote peer.
  */
 
-/* eslint-disable max-len */
 /**
  * This is the callback used by {@link external:"Mobile('connect')".callNative}.
  *
@@ -196,13 +195,11 @@
  * they can do). Rather than fix it we are just sticking this odd behavior
  * into the spec. Sorry. :(
  */
-/* eslint-enable max-len */
 
 /**
  * @external "Mobile('connect')"
  */
 
-/* eslint-disable max-len */
 /**
  * On platforms that support `connect`, this method tells the native layer to
  * establish a non-TCP/IP connection to the identified peer and to then create a
@@ -276,14 +273,12 @@
  * error or the 127.0.0.1 port to connect to in order to get a connection to the
  * remote peer
  */
-/* eslint-enable max-len */
 
 /**
  * @external "Mobile('multiConnect')"
  * @public
  */
 
-/* eslint-disable max-len */
 /**
  * Platforms that support `multiConnect` are able to bridge from a non-TCP
  * transport to a native TCP listener that can accept arbitrary numbers of
@@ -352,7 +347,6 @@
  * be returned with the value "Platform does not support multiConnect". Any
  * other errors will be returned in the {@link multiConnectResolved} callback.
  */
-/* eslint-enable max-len */
 
 /**
  * @external "Mobile('disconnect')"
@@ -474,7 +468,6 @@
  * @external "Mobile('multiConnectResolved')"
  */
 
-/* eslint-disable max-len */
 /**
  * If the MCSession could not be formed then error MUST NOT be null and MUST
  * contain a description of the problem while port MUST be null. If the
@@ -499,7 +492,6 @@
  * @property {?string} error
  * @property {?number} listeningPort
  */
-/* eslint-enable max-len */
 
 /**
  * Every call to `multiConnect` MUST produced exactly one callback of this type.
@@ -523,7 +515,6 @@
  * @property {string} error
  */
 
-/* eslint-disable max-len */
 /**
  * Fires the multiConnectConnectionFailureCallback if a multiConnect connection
  * fails. This failure can include a failure induced by a call to `disconnect`.
@@ -537,7 +528,6 @@
  * @function external:"Mobile(`multiConnectConnectionFailure`)".registerToNative
  * @param {module:thaliMobileNative~multiConnectConnectionFailureCallback} callback
  */
-/* eslint-enable max-len */
 
 /**
  * This object defines peerAvailabilityChanged information about a single peer.
@@ -617,7 +607,6 @@
  * @external "Mobile('discoveryAdvertisingStateUpdateNonTCP')"
  */
 
-/* eslint-disable max-len */
 /**
  * This is the callback used by
  * {@link external:"Mobile('discoveryAdvertisingStateUpdateNonTCP')".registerToNative}
@@ -626,9 +615,7 @@
  * @callback discoveryAdvertisingStateUpdateNonTCPCallback
  * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
  */
-/* eslint-enable max-len */
 
-/* eslint-disable max-len */
 /**
  * Please see the definition of
  * {@link module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateNonTCPEvent}
@@ -637,7 +624,6 @@
  * @function external:"Mobile('discoveryAdvertisingStateUpdateNonTCP')".registerToNative
  * @param {module:thaliMobileNative~discoveryAdvertisingStateUpdateNonTCPCallback} callback
  */
-/* eslint-enable max-len */
 
 /* jshint -W098 */
 /**
@@ -725,7 +711,6 @@ module.exports.radioState = {
  * @external "Mobile('incomingConnectionToPortNumberFailed')"
  */
 
-/* eslint-disable max-len */
 /**
  * This is the callback used by
  * {@link external:"Mobile('incomingConnectionToPortNumberFailed')".registerToNative}
@@ -735,9 +720,7 @@ module.exports.radioState = {
  * @property {number} portNumber The 127.0.0.1 port that the TCP/IP bridge tried
  * to connect to.
  */
-/* eslint-enable max-len */
 
-/* eslint-disable max-len */
 /**
  * Please see the definition of
  * {@link module:thaliMobileNativeWrapper.incomingConnectionToPortNumberFailed}.
@@ -756,4 +739,3 @@ module.exports.radioState = {
  * @function external:"Mobile('incomingConnectionToPortNumberFailed')".registerToNative
  * @param {module:thaliMobileNative~incomingConnectionToPortNumberFailedCallback} callback
  */
-/* eslint-enable max-len */

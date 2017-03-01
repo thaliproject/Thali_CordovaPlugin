@@ -14,7 +14,6 @@ var Utils = require('../utils/common.js');
 
 /** @module thaliReplicationPeerAction */
 
-/* eslint-disable max-len */
 /**
  * @classdesc Manages replicating information with a peer we have discovered
  * via notifications.
@@ -37,7 +36,6 @@ function ThaliReplicationPeerAction(peerAdvertisesDataForUs,
                                     PouchDB,
                                     dbName,
                                     ourPublicKey) {
-/* eslint-enable max-len */
   assert(ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS * 1000 -
     ThaliReplicationPeerAction.PUSH_LAST_SYNC_UPDATE_MILLISECONDS >
     1000, 'Need at least a seconds worth of clearance to make sure ' +
@@ -135,7 +133,6 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
   self._refreshTimerManager.start();
 };
 
-/* eslint-disable max-len */
 /**
  * When start is called we will start a replication with the remote peer using
  * the settings specified below. We will need to create the URL using the
@@ -179,13 +176,13 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
  * This is important for the thread pool to know. See the errors defined on
  * {@link module:thaliPeerAction~PeerAction.start}.
  *
- * change - If we don't see any changes on the replication for {@link
- * module:thaliReplicationPeerAction~ThaliReplicatonPeerAction.MAX_IDLE_PERIOD_SECONDS}
+ * change - If we don't see any changes on the replication for
+ * {@link module:thaliReplicationPeerAction~ThaliReplicatonPeerAction.MAX_IDLE_PERIOD_SECONDS}
  * seconds then we will end the replication. The output from this event also
  * provides us with the current last_seq we have synch'd from the remote peer.
  * Per http://thaliproject.org/ReplicationAcrossDiscoveryProtocol/ we need to
- * update the remote `_Local/<peer ID>` document every {@link
- * module:thaliReplicationPeerAction~ThaliReplicationPeerAction.PUSH_LAST_SYNC_UPDATE_MILLISECONDS}
+ * update the remote `_Local/<peer ID>` document every
+ * {@link module:thaliReplicationPeerAction~ThaliReplicationPeerAction.PUSH_LAST_SYNC_UPDATE_MILLISECONDS}
  *
  * Make sure to keep the cancel object returned by the replicate call. Well
  * need it for kill.
@@ -196,7 +193,6 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
  * @returns {Promise<?Error>}
  */
 ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
-/* eslint-enable max-len */
   var self = this;
   this._completed = false;
 

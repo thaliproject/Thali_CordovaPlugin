@@ -46,7 +46,6 @@ function PeerAdvertisesDataForUs (keyId, pskIdentifyField,
   this.peerId = peerId;
 }
 
-/* eslint-disable max-len */
 /**
  * @classdesc Creates a class that can register to receive the {@link
  * module:thaliMobile.event:peerAvailabilityChanged} event. It will listen for
@@ -70,7 +69,6 @@ function PeerAdvertisesDataForUs (keyId, pskIdentifyField,
  * @throws {Error} ecdhForLocalDevice cannot be null
  */
 function ThaliNotificationClient(thaliPeerPoolInterface, ecdhForLocalDevice) {
-  /* eslint-enable max-len */
   EventEmitter.call(this);
   var self = this;
 

@@ -425,7 +425,6 @@ module.exports.stop = function () {
   return gPromiseQueue.enqueue(stop);
 };
 
-/* eslint-disable max-len */
 /**
  * This method instructs the native layer to discover what other devices are
  * within range using the platform's non-TCP P2P capabilities. When a device is
@@ -450,7 +449,6 @@ module.exports.stop = function () {
  * @throws {Error}
  */
 module.exports.startListeningForAdvertisements = function () {
-/* eslint-enable max-len */
   targetStates.listening = true;
   return gPromiseQueue.enqueue(function (resolve, reject) {
     if (!states.started) {
@@ -496,7 +494,6 @@ module.exports.stopListeningForAdvertisements = function () {
   });
 };
 
-/* eslint-disable max-len */
 /**
  * This method has two separate but related functions. It's first function is to
  * begin advertising the Thali peer's presence to other peers. The second
@@ -564,7 +561,6 @@ module.exports.stopListeningForAdvertisements = function () {
  * @public
  * @returns {Promise<?Error>}
  */
-/* eslint-enable max-len */
 module.exports.startUpdateAdvertisingAndListening = function () {
   targetStates.advertising = true;
   return gPromiseQueue.enqueue(function (resolve, reject) {
@@ -987,7 +983,6 @@ module.exports.unlockAndroidWifiMulticast = function () {
  * always be null for `multiConnect`.
  */
 
-/* eslint-disable max-len */
 /**
  * This event MAY start firing as soon as either of the start methods is called.
  * Start listening for advertisements obviously looks for new peers but in some
@@ -1012,7 +1007,7 @@ module.exports.unlockAndroidWifiMulticast = function () {
  * @type {Object}
  * @property {nonTCPPeerAvailabilityChanged} peer
  */
-/* eslint-enable max-len */
+
 var peerAvailabilityChangedQueue = new PromiseQueue();
 function handlePeerAvailabilityChanged (peer) {
   logger.debug('Received peer availability changed event with ' +
@@ -1142,7 +1137,6 @@ function recreatePeer(peerIdentifier) {
   handlePeerAvailabilityChanged(peerAvailable);
 }
 
-/* eslint-disable max-len */
 /**
  * This is used whenever discovery or advertising starts or stops. Since it's
  * possible for these to be stopped (in particular) due to events outside of
@@ -1159,7 +1153,6 @@ function recreatePeer(peerIdentifier) {
  * @type {Object}
  * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
  */
-/* eslint-enable max-len */
 
 /**
  * Provides a notification when the network's state changes as well as when our
