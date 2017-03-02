@@ -1,14 +1,15 @@
 //
-//  Thali CordovaPlugin
 //  AppContextTests.swift
+//  Thali
 //
 //  Copyright (C) Microsoft. All rights reserved.
 //  Licensed under the MIT license.
 //  See LICENSE.txt file in the project root for full license information.
 //
 
+import SwiftXCTest
 import ThaliCore
-import XCTest
+import ThaliCoreCITests
 import UIKit
 
 // MARK: - Random string generator
@@ -164,6 +165,25 @@ class AppContextDelegateMock: NSObject, AppContextDelegate {
 
 // MARK: - Test cases
 class AppContextTests: XCTestCase {
+
+  static var allTests = {
+    return [
+      ("test_willEnterBackground", testWillEnterBackground),
+      ("test_didEnterForeground", testDidEnterForeground),
+      ("test_didRegisterToNative", testDidRegisterToNative),
+      ("test_getIOSVersion", testGetIOSVersion),
+      ("test_thaliCoreErrors", testThaliCoreErrors),
+      ("test_errorDescription", testErrorDescription),
+      ("test_esonValue", testJsonValue),
+      ("test_listeningAdvertisingUpdateOnStartAdvertising", testListeningAdvertisingUpdateOnStartAdvertising),
+      ("test_listeningAdvertisingUpdateOnStartListening", testListeningAdvertisingUpdateOnStartListening),
+      ("test_startAdvertisingAndListeningInvokePeerAvailabilityChangedForDifferentContexts",
+        testStartAdvertisingAndListeningInvokePeerAvailabilityChangedForDifferentContexts),
+      ("test_peerAvailabilityConversion", testPeerAvailabilityConversion),
+      ("test_disconnectErrors", testDisconnectErrors),
+      ("test_connectReturnValueCorrect", testConnectReturnValueCorrect),
+    ]
+  }()
 
   var context: AppContext! = nil
 

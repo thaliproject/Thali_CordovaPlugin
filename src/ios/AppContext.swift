@@ -1,6 +1,6 @@
 //
-//  Thali CordovaPlugin
 //  AppContext.swift
+//  Thali
 //
 //  Copyright (C) Microsoft. All rights reserved.
 //  Licensed under the MIT license.
@@ -385,15 +385,6 @@ extension PeerAvailability {
   public func connect(_ parameters: [AnyObject]) -> String {
     return jsonValue([JSONKey.err.rawValue : AppContextError.connectNotSupported.description])
   }
-
-  #if TEST
-  func executeNativeTests() -> String {
-    let runner = TestRunner.`default`
-    runner.runTest()
-    return runner.resultDescription ?? ""
-  }
-  #endif
-
 }
 
 // MARK: CBCentralManagerDelegate
