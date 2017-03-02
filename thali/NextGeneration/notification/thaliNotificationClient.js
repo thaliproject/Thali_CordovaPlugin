@@ -272,8 +272,7 @@ ThaliNotificationClient.prototype._createNotificationAction =
       this._thaliPeerPoolInterface.enqueue(action);
       this.peerDictionary.addUpdateEntry(peer, peerEntry);
     } catch (error) {
-      logger.warn('_createAndEnqueueAction: failed to enqueue an item: %s',
-        error.message);
+      this.emit('error', error);
     }
   };
 

@@ -1,8 +1,11 @@
 'use strict';
 
+var assert = require('assert');
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
+
 var ThaliNotificationClient = require('../notification/thaliNotificationClient');
 var logger = require('../../ThaliLogger')('thaliPullReplicationFromNotification');
-var assert = require('assert');
 var PeerAction = require('../thaliPeerPool/thaliPeerAction');
 var ThaliReplicationPeerAction = require('./thaliReplicationPeerAction');
 
@@ -56,6 +59,8 @@ function ThaliPullReplicationFromNotification(PouchDB,
                                               dbName,
                                               thaliPeerPoolInterface,
                                               ecdhForLocalDevice) {
+  EventEmitter.call(this);
+
   assert(PouchDB, 'Must have PouchDB');
   assert(dbName, 'Must have dbName');
   assert(thaliPeerPoolInterface, 'Must have thaliPeerPoolInterface');
@@ -72,6 +77,8 @@ function ThaliPullReplicationFromNotification(PouchDB,
 
   this.state = ThaliPullReplicationFromNotification.STATES.CREATED;
 }
+
+inherits(ThaliPullReplicationFromNotification, EventEmitter);
 
 /**
  * This is a list of states for ThaliPullReplicationFromNotification.
@@ -137,10 +144,10 @@ ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
     this._peerDictionary[key] = newAction;
     this._bindRemoveActionFromPeerDictionary(newAction, key);
 
-    var enqueueError = this._thaliPeerPoolInterface.enqueue(newAction);
-    if (enqueueError) {
-      logger.warn('_peerAdvertisesDataForUsHandler: failed to enqueue an item: %s',
-        enqueueError.message);
+    try {
+      this._thaliPeerPoolInterface.enqueue(newAction);
+    } catch (error) {
+      this.emit('error', error);
     }
   };
 

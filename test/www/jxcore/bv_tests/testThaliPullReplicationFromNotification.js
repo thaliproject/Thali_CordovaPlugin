@@ -53,10 +53,6 @@ var test = tape({
 });
 
 test('Make sure peerDictionaryKey is reasonable', function (t) {
-  var thaliPullReplicationFromNotification =
-    new ThaliPullReplicationFromNotification(LevelDownPouchDB,
-      testUtils.getRandomPouchDBName(), {}, devicePublicPrivateKey);
-
   var key1 =
     ThaliPullReplicationFromNotification._getPeerDictionaryKey({
       connectionType: 'foo',
@@ -242,6 +238,37 @@ test('Make sure stop works', function (t) {
   });
 });
 
+test('Emits error event when peerPool.enqueue throws', function (t) {
+  t.timeoutAfter(20);
+
+  var peerPool = {
+    enqueue: function () {
+      throw new Error('oops');
+    }
+  };
+
+  var thaliPullReplicationFromNotification =
+    new ThaliPullReplicationFromNotification(
+      LevelDownPouchDB,
+      testUtils.getRandomPouchDBName(),
+      peerPool,
+      devicePublicPrivateKey
+    );
+
+  thaliPullReplicationFromNotification.once('error', function (error) {
+    t.equal(error.message, 'oops', 'Correct error');
+    thaliPullReplicationFromNotification.stop();
+    t.end();
+  });
+
+  // simulate event receiving to trigger action enqueueing
+  thaliPullReplicationFromNotification._peerAdvertisesDataForUsHandler({
+    connectionType: 'x',
+    keyId: 'y',
+    portNumber: 9999
+  });
+});
+
 function matchEntryInDictionary(t, thaliPullReplicationFromNotification, fakeAd,
                                 spyAction) {
   var actionKey =
@@ -333,13 +360,12 @@ test('Simple peer event', function (t) {
   }
   inherits(MockThaliReplicationPeerAction, ThaliReplicationPeerAction);
 
-  var ProxiesPullReplication = proxyquire.noCallThru()
-    .load(
-      'thali/NextGeneration/replication/thaliPullReplicationFromNotification',
-      {
-        './thaliReplicationPeerAction': MockThaliReplicationPeerAction
-      }
-    );
+  var ProxiesPullReplication = proxyquire.noCallThru().load(
+    'thali/NextGeneration/replication/thaliPullReplicationFromNotification',
+    {
+      './thaliReplicationPeerAction': MockThaliReplicationPeerAction
+    }
+  );
 
   var thaliPullReplicationFromNotification =
     new ProxiesPullReplication(LevelDownPouchDB, fakeDbName, fakePool,
@@ -364,8 +390,8 @@ test('Simple peer event', function (t) {
   listener(fakeAd);
   var firstAction = peerActions[0];
   checkPeerCreation(t, 1,
-    thaliPullReplicationFromNotification, fakePool.enqueue.getCall(0), firstAction,
-    fakeAd, fakeDbName);
+    thaliPullReplicationFromNotification, fakePool.enqueue.getCall(0),
+    firstAction, fakeAd, fakeDbName);
 
   // Start second action just to make sure it gets added
   var fakeAd2 = {

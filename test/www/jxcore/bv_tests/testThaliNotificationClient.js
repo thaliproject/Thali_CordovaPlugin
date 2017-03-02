@@ -446,7 +446,12 @@ test('Resolves an action locally', function (t) {
   notificationClient._peerAvailabilityChanged(globals.TCPEvent);
 });
 
-test('Ignores errors thrown by peerPool.enqueue', function (t) {
+test('Emits error event when peerPool.enqueue throws', function (t) {
+
+  // This test should get error event almost instantly. We don't need to wait
+  // default several minutes timeout
+  t.timeoutAfter(20);
+
   var getPeerHostInfoStub = stubGetPeerHostInfo();
   var peerPool = {
     enqueue: function () {
@@ -468,13 +473,16 @@ test('Ignores errors thrown by peerPool.enqueue', function (t) {
     connectionType: ThaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
   };
 
-  t.doesNotThrow(function () {
-    notificationClient._peerAvailabilityChanged(TCPEvent);
+  notificationClient.once('error', function (error) {
+    t.equal(error.message, 'oops', 'Correct error');
+    notificationClient.stop();
+    getPeerHostInfoStub.restore();
+    t.end();
   });
 
-  notificationClient.stop();
-  getPeerHostInfoStub.restore();
-  t.end();
+  // trigger error
+  notificationClient._peerAvailabilityChanged(TCPEvent);
+
 });
 
 test('Resolves an action locally using ThaliPeerPoolDefault', function (t) {
