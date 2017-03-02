@@ -77,6 +77,7 @@ function ThaliNotificationClient(thaliPeerPoolInterface, ecdhForLocalDevice) {
   assert(ecdhForLocalDevice,
     ThaliNotificationClient.Errors.EDCH_FOR_LOCAL_DEVICE_NOT_NULL);
 
+  this._isStarted = false;
   this.peerDictionary = null;
   this._thaliPeerPoolInterface = thaliPeerPoolInterface;
   this._ecdhForLocalDevice = ecdhForLocalDevice;
@@ -154,7 +155,6 @@ ThaliNotificationClient.prototype.start =
 
     this._publicKeysToListen = [];
     this._publicKeysToListenHashes = [];
-
     this._publicKeysToListen = publicKeysToListen;
 
     publicKeysToListen.forEach(function (pubKy) {
@@ -162,11 +162,12 @@ ThaliNotificationClient.prototype.start =
         NotificationBeacons.createPublicKeyHash(pubKy));
     });
 
-    if (!this.peerDictionary) {
+    if (!this._isStarted) {
       ThaliMobile.emitter.on('peerAvailabilityChanged',
         this._boundListener);
     }
     this.peerDictionary = new PeerDictionary.PeerDictionary();
+    this._isStarted = true;
   };
 
 /**
@@ -178,7 +179,9 @@ ThaliNotificationClient.prototype.start =
  * @public
  */
 ThaliNotificationClient.prototype.stop = function () {
-  if (this.peerDictionary) {
+  if (this._isStarted) {
+    this._isStarted = false;
+    assert(this.peerDictionary, 'peer dictionary exists');
     ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
       this._boundListener);
 
@@ -210,11 +213,7 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
   function (peerStatus) {
     var self = this;
 
-    if (!this.peerDictionary) {
-      logger.warn('no dictionary');
-      return;
-    }
-
+    assert(self.peerDictionary, 'peer dictionary exists');
     assert(peerStatus, 'peerStatus must not be null or undefined');
     assert(peerStatus.peerIdentifier, 'peerIdentifier must be set');
     assert(peerStatus.connectionType, 'connectionType must be set');
@@ -264,13 +263,11 @@ ThaliNotificationClient.prototype._createNotificationAction =
 
     peerEntry.notificationAction = action;
 
-    var enqueueError = this._thaliPeerPoolInterface.enqueue(action);
-
-    if (!enqueueError) {
+    try {
+      this._thaliPeerPoolInterface.enqueue(action);
       this.peerDictionary.addUpdateEntry(peer, peerEntry);
-    } else {
-      logger.warn('_createAndEnqueueAction: failed to enqueue an item: %s',
-        enqueueError.message);
+    } catch (error) {
+      this.emit('error', error);
     }
   };
 

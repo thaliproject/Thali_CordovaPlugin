@@ -136,10 +136,10 @@ ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
     this._peerDictionary[key] = newAction;
     this._bindRemoveActionFromPeerDictionary(newAction, key);
 
-    var enqueueError = this._thaliPeerPoolInterface.enqueue(newAction);
-    if (enqueueError) {
-      logger.warn('_peerAdvertisesDataForUsHandler: failed to enqueue an item: %s',
-        enqueueError.message);
+    try {
+      this._thaliPeerPoolInterface.enqueue(newAction);
+    } catch (error) {
+      this.emit('error', error);
     }
   };
 
@@ -248,6 +248,8 @@ ThaliPullReplicationFromNotification.prototype.stop = function () {
     'ThaliPullReplicationFromNotification state should be \'STARTED\' for stop'
   );
   self.state = ThaliPullReplicationFromNotification.STATES.STOPPED;
+
+  self._thaliPeerPoolInterface.stop();
 
   self._thaliNotificationClient.removeListener(
     self._thaliNotificationClient.Events.PeerAdvertisesDataForUs,

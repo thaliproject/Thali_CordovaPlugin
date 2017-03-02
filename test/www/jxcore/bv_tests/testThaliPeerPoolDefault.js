@@ -216,9 +216,12 @@ test('#ThaliPeerPoolDefault - stop', function (t) {
     var testAction3 = new TestPeerAction(
       peerIdentifier, connectionType, actionType, t
     );
-    var error = testThaliPeerPoolDefault.enqueue(testAction3);
-    t.equal(
-      error.message, ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED,
+
+    t.throws(
+      function () {
+        testThaliPeerPoolDefault.enqueue(testAction3);
+      },
+      new RegExp(ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED),
       'enqueue is not available when stopped'
     );
 
@@ -241,5 +244,5 @@ test('#ThaliPeerPoolDefault - stop', function (t) {
     );
 
     t.end();
-  })
+  });
 });
