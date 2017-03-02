@@ -12,17 +12,17 @@ import ThaliCore
 class TCPClientMock: NSObject {
 
   // MARK: - Private state
-  private let tcpClient: GCDAsyncSocket
-  private let socketQueue = dispatch_queue_create(
-    "org.thaliproject.TCPClientMock.GCDAsyncSocket.delegateQueue",
-    DISPATCH_QUEUE_CONCURRENT
+  fileprivate let tcpClient: GCDAsyncSocket
+  fileprivate let socketQueue = DispatchQueue(
+    label: "org.thaliproject.TCPClientMock.GCDAsyncSocket.delegateQueue",
+    attributes: DispatchQueue.Attributes.concurrent
   )
-  private var didReadDataHandler: (NSData) -> Void
-  private var didConnectHandler: () -> Void
-  private var didDisconnectHandler: () -> Void
+  fileprivate var didReadDataHandler: (Data) -> Void
+  fileprivate var didConnectHandler: () -> Void
+  fileprivate var didDisconnectHandler: () -> Void
 
   // MARK: - Initialization
-  init(didReadData: (NSData) -> Void, didConnect: () -> Void, didDisconnect: () -> Void) {
+  init(didReadData: @escaping (Data) -> Void, didConnect: @escaping () -> Void, didDisconnect: @escaping () -> Void) {
     tcpClient = GCDAsyncSocket()
     didReadDataHandler = didReadData
     didConnectHandler = didConnect
@@ -33,9 +33,9 @@ class TCPClientMock: NSObject {
   }
 
   // MARK: - Internal methods
-  func connectToLocalHost(on port: UInt16, errorHandler: (ErrorType) -> Void) {
+  func connectToLocalHost(on port: UInt16, errorHandler: (Error) -> Void) {
     do {
-      try tcpClient.connectToHost("127.0.0.1", onPort: port)
+      try tcpClient.connect(toHost: "127.0.0.1", onPort: port)
     } catch let error {
       errorHandler(error)
     }
@@ -45,35 +45,35 @@ class TCPClientMock: NSObject {
     tcpClient.disconnect()
   }
 
-  func send(message: String) {
-    let messageData = message.dataUsingEncoding(NSUTF8StringEncoding)
-    tcpClient.writeData(messageData!, withTimeout: -1, tag: 0)
+  func send(_ message: String) {
+    let messageData = message.data(using: String.Encoding.utf8)
+    tcpClient.write(messageData!, withTimeout: -1, tag: 0)
   }
 
-  func sendRandomMessage(length length: Int) {
+  func sendRandomMessage(length: Int) {
     let randomMessage = String.random(length: length) + "/r/n"
-    let messageData = randomMessage.dataUsingEncoding(NSUTF8StringEncoding)
-    tcpClient.writeData(messageData!, withTimeout: -1, tag: 0)
+    let messageData = randomMessage.data(using: String.Encoding.utf8)
+    tcpClient.write(messageData!, withTimeout: -1, tag: 0)
   }
 }
 
 // MARK: - GCDAsyncSocketDelegate
 extension TCPClientMock: GCDAsyncSocketDelegate {
 
-  func socketDidDisconnect(sock: GCDAsyncSocket, withError err: NSError?) {
+  func socketDidDisconnect(_ sock: GCDAsyncSocket, withError err: NSError?) {
     didDisconnectHandler()
   }
 
-  func socket(sock: GCDAsyncSocket, didConnectToHost host: String, port: UInt16) {
-    sock.readDataWithTimeout(-1, tag: 0)
+  func socket(_ sock: GCDAsyncSocket, didConnectToHost host: String, port: UInt16) {
+    sock.readData(withTimeout: -1, tag: 0)
     didConnectHandler()
   }
 
-  func socket(sock: GCDAsyncSocket, didWriteDataWithTag tag: Int) {}
+  func socket(_ sock: GCDAsyncSocket, didWriteDataWithTag tag: Int) {}
 
-  func socket(sock: GCDAsyncSocket, didReadData data: NSData, withTag tag: Int) {
+  func socket(_ sock: GCDAsyncSocket, didRead data: Data, withTag tag: Int) {
     didReadDataHandler(data)
   }
 
-  func socketDidCloseReadStream(sock: GCDAsyncSocket) {}
+  func socketDidCloseReadStream(_ sock: GCDAsyncSocket) {}
 }

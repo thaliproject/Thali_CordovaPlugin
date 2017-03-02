@@ -18,8 +18,8 @@ class VirtualSocketBuilderTests: XCTestCase {
   var mcSessionMock: MCSessionMock!
   var nonTCPSession: Session!
 
-  let streamReceivedTimeout: NSTimeInterval = 5.0
-  let connectionErrorTimeout: NSTimeInterval = 10.0
+  let streamReceivedTimeout: TimeInterval = 5.0
+  let connectionErrorTimeout: TimeInterval = 10.0
 
   // MARK: - Setup & Teardown
   override func setUp() {
@@ -42,7 +42,7 @@ class VirtualSocketBuilderTests: XCTestCase {
   // MARK: - Tests
   func testAdvertiserSocketBuilderCreatesVirtualSocket() {
     // Expectations
-    let virtualSocketCreated = expectationWithDescription("Virtual socket is created")
+    let virtualSocketCreated = expectation(description: "Virtual socket is created")
 
     // Given
     let socketBuilder = AdvertiserVirtualSocketBuilder(with: nonTCPSession) {
@@ -51,12 +51,12 @@ class VirtualSocketBuilderTests: XCTestCase {
       virtualSocketCreated.fulfill()
     }
 
-    let emptyData = NSData(bytes: nil, length: 0)
-    let emptyInputStream = NSInputStream(data: emptyData)
-    let randomlyGeneratedStreamName = NSUUID().UUIDString
+    let emptyData = Data(bytes: UnsafePointer<UInt8>(nil), count: 0)
+    let emptyInputStream = InputStream(data: emptyData)
+    let randomlyGeneratedStreamName = UUID().uuidString
 
     mcSessionMock.delegate?.session(mcSessionMock,
-                                    didReceiveStream: emptyInputStream,
+                                    didReceive: emptyInputStream,
                                     withName: randomlyGeneratedStreamName,
                                     fromPeer: mcPeerID)
 
@@ -65,18 +65,18 @@ class VirtualSocketBuilderTests: XCTestCase {
                                       inputStreamName: randomlyGeneratedStreamName)
 
     // Then
-    waitForExpectationsWithTimeout(streamReceivedTimeout, handler: nil)
+    waitForExpectations(timeout: streamReceivedTimeout, handler: nil)
   }
 
   func testConnectionTimeoutErrorWhenBrowserSocketBuilderTimeout() {
     // Expectations
     let gotConnectionTimeoutErrorReturned =
-      expectationWithDescription("Got .ConnectionTimeout error")
+      expectation(description: "Got .ConnectionTimeout error")
 
     // Given
     let socketBuilder =
       BrowserVirtualSocketBuilder(with: nonTCPSession,
-                                  streamName: NSUUID().UUIDString,
+                                  streamName: UUID().uuidString,
                                   streamReceivedBackTimeout: streamReceivedTimeout)
     // When
     socketBuilder.startBuilding {
@@ -95,18 +95,18 @@ class VirtualSocketBuilderTests: XCTestCase {
     }
 
     // Then
-    waitForExpectationsWithTimeout(connectionErrorTimeout, handler: nil)
+    waitForExpectations(timeout: connectionErrorTimeout, handler: nil)
   }
 
   func testConnectionFailedErrorWhenBrowserSocketBuilderCantStartStream() {
     // Expectations
-    let gotConnectionFailedErrorReturned = expectationWithDescription("Got .ConnectionFailed error")
+    let gotConnectionFailedErrorReturned = expectation(description: "Got .ConnectionFailed error")
 
     // Given
     mcSessionMock.errorOnStartStream = true
     let socketBuilder =
       BrowserVirtualSocketBuilder(with: nonTCPSession,
-                                  streamName: NSUUID().UUIDString,
+                                  streamName: UUID().uuidString,
                                   streamReceivedBackTimeout: streamReceivedTimeout)
 
     // When
@@ -126,7 +126,7 @@ class VirtualSocketBuilderTests: XCTestCase {
     }
 
     // Then
-    waitForExpectationsWithTimeout(streamReceivedTimeout, handler: {
+    waitForExpectations(timeout: streamReceivedTimeout, handler: {
       error in
     })
   }

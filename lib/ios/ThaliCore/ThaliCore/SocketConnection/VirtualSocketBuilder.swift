@@ -17,17 +17,17 @@ class VirtualSocketBuilder {
   /**
    Represents non-TCP/IP session.
    */
-  private let nonTCPsession: Session
+  fileprivate let nonTCPsession: Session
 
   /**
    Represents object that provides write-only stream functionality.
    */
-  private var outputStream: NSOutputStream?
+  fileprivate var outputStream: OutputStream?
 
   /**
    Represents object that provides read-only stream functionality.
    */
-  private var inputStream: NSInputStream?
+  fileprivate var inputStream: InputStream?
 
   // MARK: - Initialization
 
@@ -58,14 +58,14 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
 
    Both *inputStream* and *outputStream* have the same *streamName*.
    */
-  internal private(set) var streamName: String
+  internal fileprivate(set) var streamName: String
 
   // MARK: - Private state
 
   /**
    Timeout to receive *inputStream* back.
    */
-  private let streamReceivedBackTimeout: NSTimeInterval
+  fileprivate let streamReceivedBackTimeout: TimeInterval
 
   /**
    Called when creation of VirtualSocket is completed.
@@ -75,12 +75,12 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
    If we're passing `ErrorType` then something went wrong and `VirtualSocket` should be nil.
    Otherwise `ErrorType` should be nil.
    */
-  private var completion: ((VirtualSocket?, ErrorType?) -> Void)?
+  fileprivate var completion: ((VirtualSocket?, Error?) -> Void)?
 
   /**
    Bool flag indicates if we received *inputStream*.
    */
-  private var streamReceivedBack = Atomic(false)
+  fileprivate var streamReceivedBack = Atomic(false)
 
   // MARK: - Initialization
 
@@ -100,7 +100,7 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
    - returns:
      An initialized `BrowserVirtualSocketBuilder` object.
    */
-  init(with nonTCPsession: Session, streamName: String, streamReceivedBackTimeout: NSTimeInterval) {
+  init(with nonTCPsession: Session, streamName: String, streamReceivedBackTimeout: TimeInterval) {
     self.streamName = streamName
     self.streamReceivedBackTimeout = streamReceivedBackTimeout
     super.init(with: nonTCPsession)
@@ -116,18 +116,15 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
      - completion:
        Called when `VirtualSocket` object is ready or error occured.
    */
-  func startBuilding(with completion: (VirtualSocket?, ErrorType?) -> Void) {
+  func startBuilding(with completion: @escaping (VirtualSocket?, Error?) -> Void) {
     self.completion = completion
 
     do {
       let outputStream = try nonTCPsession.startOutputStream(with: streamName)
       self.outputStream = outputStream
 
-      let streamReceivedBackTimeout = dispatch_time(
-        DISPATCH_TIME_NOW,
-        Int64(self.streamReceivedBackTimeout * Double(NSEC_PER_SEC))
-      )
-      dispatch_after(streamReceivedBackTimeout, dispatch_get_main_queue()) {
+      let streamReceivedBackTimeout = DispatchTime.now() + Double(Int64(self.streamReceivedBackTimeout * Double(NSEC_PER_SEC))) / Double(NSEC_PER_SEC)
+      DispatchQueue.main.asyncAfter(deadline: streamReceivedBackTimeout) {
         [weak self] in
         guard let strongSelf = self else { return }
 
@@ -150,7 +147,7 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
      - inputStream:
        *inputStream* object.
    */
-  func completeVirtualSocket(with inputStream: NSInputStream) {
+  func completeVirtualSocket(with inputStream: InputStream) {
 
     streamReceivedBack.modify { $0 = true }
 
@@ -181,7 +178,7 @@ final class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
    If we're passing `ErrorType` then something went wrong and `VirtualSocket` should be nil.
    Otherwise `ErrorType` should be nil.
    */
-  private var completion: (VirtualSocket?, ErrorType?) -> Void
+  fileprivate var completion: (VirtualSocket?, Error?) -> Void
 
   // MARK: - Initialization
 
@@ -198,7 +195,7 @@ final class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
    - returns:
      An initialized `AdvertiserVirtualSocketBuilder` object.
    */
-  required init(with nonTCPsession: Session, completion: ((VirtualSocket?, ErrorType?) -> Void)) {
+  required init(with nonTCPsession: Session, completion: @escaping ((VirtualSocket?, Error?) -> Void)) {
     self.completion = completion
     super.init(with: nonTCPsession)
   }
@@ -219,7 +216,7 @@ final class AdvertiserVirtualSocketBuilder: VirtualSocketBuilder {
      - inputStreamName:
        Name of *inputStream*. It will be used to start new *outputStream*.
    */
-  func createVirtualSocket(with inputStream: NSInputStream, inputStreamName: String) {
+  func createVirtualSocket(with inputStream: InputStream, inputStreamName: String) {
     do {
       let outputStream = try nonTCPsession.startOutputStream(with: inputStreamName)
       let virtualNonTCPSocket = VirtualSocket(with: inputStream, outputStream: outputStream)

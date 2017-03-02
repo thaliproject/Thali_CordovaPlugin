@@ -23,7 +23,7 @@ public struct Peer: Hashable {
   /**
    An integer which counts changes in the peer's database.
    */
-  public private(set) var generation: Int
+  public fileprivate(set) var generation: Int
 
   /**
    Hash value from *stringValue* which represents uuid and generation.
@@ -45,12 +45,12 @@ public struct Peer: Hashable {
   /**
    Symbol that is used to separate *uuid* and *generation* in *stringValue*.
    */
-  private static let separator: Character = ":"
+  fileprivate static let separator: Character = ":"
 
   // MARK: - Public methods
 
   public init() {
-    uuid = NSUUID().UUIDString
+    uuid = UUID().uuidString
     generation = 0
   }
 
@@ -71,7 +71,7 @@ public struct Peer: Hashable {
    - returns: An initialized `Peer` object.
    */
   public init(uuidIdentifier: String, generation: Int) throws {
-    guard let _ = NSUUID(UUIDString: uuidIdentifier) else {
+    guard let _ = UUID(uuidString: uuidIdentifier) else {
       throw ThaliCoreError.IllegalPeerID
     }
     self.uuid = uuidIdentifier
@@ -100,13 +100,13 @@ public struct Peer: Hashable {
     guard peerParts.count == 2 else {
       throw ThaliCoreError.IllegalPeerID
     }
-    guard let uuid = NSUUID(UUIDString: peerParts[0]) else {
+    guard let uuid = UUID(uuidString: peerParts[0]) else {
       throw ThaliCoreError.IllegalPeerID
     }
     guard let generation = Int(peerParts[1], radix: 16) else {
       throw ThaliCoreError.IllegalPeerID
     }
-    self.uuid = uuid.UUIDString
+    self.uuid = uuid.uuidString
     self.generation = generation
   }
 
@@ -140,5 +140,5 @@ extension MCPeerID {
 
 // MARK: - Overloading equivalence (==) operator
 public func == (lhs: Peer, rhs: Peer) -> Bool {
-  return lhs.stringValue.compare(rhs.stringValue, options: .LiteralSearch) == .OrderedSame
+  return lhs.stringValue.compare(rhs.stringValue, options: .literal) == .orderedSame
 }

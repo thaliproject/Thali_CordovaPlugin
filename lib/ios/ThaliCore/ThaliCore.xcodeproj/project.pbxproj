@@ -564,6 +564,7 @@
 					};
 					CCA572911D4A327E00FBEC41 = {
 						CreatedOnToolsVersion = 7.3.1;
+						LastSwiftMigration = 0820;
 					};
 				};
 			};
@@ -936,6 +937,7 @@
 				PRODUCT_NAME = ThaliCore;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Debug;
 		};
@@ -959,6 +961,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = org.thali.ThaliCoreCITests;
 				PRODUCT_NAME = ThaliCore;
 				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 3.0;
 			};
 			name = Release;
 		};

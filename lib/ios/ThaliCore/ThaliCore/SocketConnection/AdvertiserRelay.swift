@@ -14,13 +14,13 @@ final class AdvertiserRelay {
   internal var virtualSocketsAmount: Int {
     return virtualSockets.value.count
   }
-  internal private(set) var clientPort: UInt16
+  internal fileprivate(set) var clientPort: UInt16
 
   // MARK: - Private state
-  private var tcpClient: TCPClient!
-  private var nonTCPsession: Session
-  private var virtualSocketsBuilders: Atomic<[String: AdvertiserVirtualSocketBuilder]>
-  private var virtualSockets: Atomic<[GCDAsyncSocket: VirtualSocket]>
+  fileprivate var tcpClient: TCPClient!
+  fileprivate var nonTCPsession: Session
+  fileprivate var virtualSocketsBuilders: Atomic<[String: AdvertiserVirtualSocketBuilder]>
+  fileprivate var virtualSockets: Atomic<[GCDAsyncSocket: VirtualSocket]>
 
   // MARK: - Initialization
   init(with session: Session, on port: UInt16) {
@@ -42,18 +42,18 @@ final class AdvertiserRelay {
   }
 
   // MARK: - Private handlers
-  private func didReadDataFromStreamHandler(virtualSocket: VirtualSocket, data: NSData) {
+  fileprivate func didReadDataFromStreamHandler(_ virtualSocket: VirtualSocket, data: Data) {
     guard let socket = virtualSockets.value.key(for: virtualSocket) else {
       virtualSocket.closeStreams()
       return
     }
 
-    let noTimeout: NSTimeInterval = -1
+    let noTimeout: TimeInterval = -1
     let defaultDataTag = 0
-    socket.writeData(data, withTimeout: noTimeout, tag: defaultDataTag)
+    socket.write(data, withTimeout: noTimeout, tag: defaultDataTag)
   }
 
-  private func sessionDidReceiveInputStreamHandler(inputStream: NSInputStream,
+  fileprivate func sessionDidReceiveInputStreamHandler(_ inputStream: InputStream,
                                                    inputStreamName: String) {
     createVirtualSocket(with: inputStream, inputStreamName: inputStreamName) {
       [weak self] virtualSocket, error in
@@ -87,9 +87,9 @@ final class AdvertiserRelay {
     }
   }
 
-  private func createVirtualSocket(with inputStream: NSInputStream,
+  fileprivate func createVirtualSocket(with inputStream: InputStream,
                                         inputStreamName: String,
-                                        completion: ((VirtualSocket?, ErrorType?) -> Void)) {
+                                        completion: @escaping ((VirtualSocket?, Error?) -> Void)) {
     let virtualSockBuilder = AdvertiserVirtualSocketBuilder(with: nonTCPsession) {
       virtualSocket, error in
       completion(virtualSocket, error)
@@ -98,20 +98,20 @@ final class AdvertiserRelay {
     virtualSockBuilder.createVirtualSocket(with: inputStream, inputStreamName: inputStreamName)
   }
 
-  private func didOpenVirtualSocketHandler(virtualSocket: VirtualSocket) {
+  fileprivate func didOpenVirtualSocketHandler(_ virtualSocket: VirtualSocket) {
 
   }
 
-  private func didCloseVirtualSocketHandler(virtualSocket: VirtualSocket) {
+  fileprivate func didCloseVirtualSocketHandler(_ virtualSocket: VirtualSocket) {
     virtualSockets.modify {
       if let socket = $0.key(for: virtualSocket) {
         socket.disconnect()
-        $0.removeValueForKey(socket)
+        $0.removeValue(forKey: socket)
       }
     }
   }
 
-  private func didReadDataHandler(socket: GCDAsyncSocket, data: NSData) {
+  fileprivate func didReadDataHandler(_ socket: GCDAsyncSocket, data: Data) {
     virtualSockets.withValue {
       let virtualSocket = $0[socket]
       virtualSocket?.writeDataToOutputStream(data)
@@ -119,11 +119,11 @@ final class AdvertiserRelay {
   }
 
   // TODO: add unit test (issue #1358)
-  private func didDisconnectHandler(socket: GCDAsyncSocket) {
+  fileprivate func didDisconnectHandler(_ socket: GCDAsyncSocket) {
     virtualSockets.modify {
       let virtualSocket = $0[socket]
       virtualSocket?.closeStreams()
-      $0.removeValueForKey(socket)
+      $0.removeValue(forKey: socket)
     }
   }
 }

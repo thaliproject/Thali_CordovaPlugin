@@ -30,7 +30,7 @@
 
 final class PosixThreadMutex: NSLocking {
 
-  private var mutex = pthread_mutex_t()
+  fileprivate var mutex = pthread_mutex_t()
 
   init() {
     let result = pthread_mutex_init(&mutex, nil)
@@ -54,8 +54,8 @@ final class PosixThreadMutex: NSLocking {
 }
 
 public final class Atomic<Value> {
-  private let lock: PosixThreadMutex
-  private var _value: Value
+  fileprivate let lock: PosixThreadMutex
+  fileprivate var _value: Value
 
   public var value: Value {
     return withValue { $0 }

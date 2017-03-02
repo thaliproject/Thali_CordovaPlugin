@@ -19,15 +19,15 @@ final class BrowserRelay {
   }
 
   // MARK: - Private state
-  private var tcpListener: TCPListener!
-  private var nonTCPsession: Session
-  private var virtualSocketBuilders: Atomic<[String: BrowserVirtualSocketBuilder]>
-  private var virtualSockets: Atomic<[GCDAsyncSocket: VirtualSocket]>
-  private let createVirtualSocketTimeout: NSTimeInterval
-  private let maxVirtualSocketsCount = 16
+  fileprivate var tcpListener: TCPListener!
+  fileprivate var nonTCPsession: Session
+  fileprivate var virtualSocketBuilders: Atomic<[String: BrowserVirtualSocketBuilder]>
+  fileprivate var virtualSockets: Atomic<[GCDAsyncSocket: VirtualSocket]>
+  fileprivate let createVirtualSocketTimeout: TimeInterval
+  fileprivate let maxVirtualSocketsCount = 16
 
   // MARK: - Initialization
-  init(with session: Session, createVirtualSocketTimeout: NSTimeInterval) {
+  init(with session: Session, createVirtualSocketTimeout: TimeInterval) {
     self.nonTCPsession = session
     self.createVirtualSocketTimeout = createVirtualSocketTimeout
     self.virtualSockets = Atomic([:])
@@ -39,7 +39,7 @@ final class BrowserRelay {
   }
 
   // MARK: - Internal methods
-  func openRelay(with completion: (port: UInt16?, error: ErrorType?) -> Void) {
+  func openRelay(with completion: @escaping (_ port: UInt16?, _ error: Error?) -> Void) {
     let anyAvailablePort: UInt16 = 0
     tcpListener.startListeningForConnections(on: anyAvailablePort,
                                              connectionAccepted: didAcceptConnectionHandler) {
@@ -57,7 +57,7 @@ final class BrowserRelay {
   }
 
   // MARK: - Private handlers
-  private func sessionDidReceiveInputStreamHandler(inputStream: NSInputStream,
+  fileprivate func sessionDidReceiveInputStreamHandler(_ inputStream: InputStream,
                                                    inputStreamName: String) {
     if let builder = virtualSocketBuilders.value[inputStreamName] {
       builder.completeVirtualSocket(with: inputStream)
@@ -66,17 +66,17 @@ final class BrowserRelay {
     }
   }
 
-  private func didReadDataFromStreamHandler(on virtualSocket: VirtualSocket, data: NSData) {
+  fileprivate func didReadDataFromStreamHandler(on virtualSocket: VirtualSocket, data: Data) {
     virtualSockets.withValue {
       if let socket = $0.key(for: virtualSocket) {
-        let noTimeout: NSTimeInterval = -1
+        let noTimeout: TimeInterval = -1
         let defaultDataTag = 0
-        socket.writeData(data, withTimeout: noTimeout, tag: defaultDataTag)
+        socket.write(data, withTimeout: noTimeout, tag: defaultDataTag)
       }
     }
   }
 
-  private func didAcceptConnectionHandler(socket: GCDAsyncSocket) {
+  fileprivate func didAcceptConnectionHandler(_ socket: GCDAsyncSocket) {
     createVirtualSocket {
       [weak self] virtualSocket, error in
       guard let strongSelf = self else { return }
@@ -103,7 +103,7 @@ final class BrowserRelay {
     }
   }
 
-  private func didReadDataFromSocketHandler(socket: GCDAsyncSocket, data: NSData) {
+  fileprivate func didReadDataFromSocketHandler(_ socket: GCDAsyncSocket, data: Data) {
     guard let virtualSocket = virtualSockets.value[socket] else {
       socket.disconnect()
       return
@@ -112,44 +112,44 @@ final class BrowserRelay {
     virtualSocket.writeDataToOutputStream(data)
   }
 
-  private func didCloseVirtualSocketHandler(virtualSocket: VirtualSocket) {
+  fileprivate func didCloseVirtualSocketHandler(_ virtualSocket: VirtualSocket) {
     virtualSockets.modify {
       if let socket = $0.key(for: virtualSocket) {
         socket.disconnect()
-        $0.removeValueForKey(socket)
+        $0.removeValue(forKey: socket)
       }
     }
   }
 
-  private func didSocketDisconnectHandler(socket: GCDAsyncSocket) {
+  fileprivate func didSocketDisconnectHandler(_ socket: GCDAsyncSocket) {
     self.virtualSockets.modify {
       let virtualSocket = $0[socket]
       virtualSocket?.closeStreams()
-      $0.removeValueForKey(socket)
+      $0.removeValue(forKey: socket)
     }
   }
 
-  private func didStopListeningForConnections() {
+  fileprivate func didStopListeningForConnections() {
     disconnectNonTCPSession()
   }
 
-  private func didInputStreamOpenedHandler(virtualSocket: VirtualSocket) {
+  fileprivate func didInputStreamOpenedHandler(_ virtualSocket: VirtualSocket) {
     guard let socket = virtualSockets.value.key(for: virtualSocket) else {
       virtualSocket.closeStreams()
       return
     }
-    socket.readDataWithTimeout(-1, tag: 1)
+    socket.readData(withTimeout: -1, tag: 1)
   }
 
   // MARK: - Private methods
-  private func createVirtualSocket(with completion: ((VirtualSocket?, ErrorType?) -> Void)) {
+  fileprivate func createVirtualSocket(with completion: @escaping ((VirtualSocket?, Error?) -> Void)) {
 
     guard virtualSockets.value.count <= maxVirtualSocketsCount else {
       completion(nil, ThaliCoreError.ConnectionFailed)
       return
     }
 
-    let newStreamName = NSUUID().UUIDString
+    let newStreamName = UUID().uuidString
     let virtualSocketBuilder = BrowserVirtualSocketBuilder(
       with: nonTCPsession,
       streamName: newStreamName,
@@ -163,7 +163,7 @@ final class BrowserRelay {
       virtualSocket, error in
 
       self.virtualSocketBuilders.modify {
-        $0.removeValueForKey(newStreamName)
+        $0.removeValue(forKey: newStreamName)
       }
 
       completion(virtualSocket, error)
