@@ -128,7 +128,7 @@ TestFramework.prototype.addDevice = function (device) {
       device.name
     );
     device.disqualify('Native unit tests failed');
-    deviceDisqualified = true;
+    // deviceDisqualified = true;
   }
   // We can require less devices.
   if (deviceDisqualified) {
