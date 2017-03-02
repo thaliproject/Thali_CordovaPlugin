@@ -179,7 +179,7 @@ class SessionTests: XCTestCase {
       didReceiveInputStreamHandlerInvoked?.fulfill()
     }
 
-    let emptyData = Data(bytes: UnsafePointer<UInt8>(nil), count: 0)
+    let emptyData = Data(bytes: [], count: 0)
     let randomlyGeneratedStreamName = UUID().uuidString
 
     // When

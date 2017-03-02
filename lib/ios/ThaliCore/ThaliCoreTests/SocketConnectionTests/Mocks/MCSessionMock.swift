@@ -22,6 +22,6 @@ class MCSessionMock: MCSession {
       throw NSError(domain: "org.thaliproject.test", code: 42, userInfo: nil)
     }
 
-    return OutputStream(toBuffer: nil, capacity: 0)
+    return OutputStream(toBuffer: UnsafeMutablePointer.allocate(capacity: 0), capacity: 0)
   }
 }

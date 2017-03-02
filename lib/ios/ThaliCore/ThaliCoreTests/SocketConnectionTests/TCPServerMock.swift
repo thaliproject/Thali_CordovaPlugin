@@ -16,7 +16,10 @@ class TCPServerMock: NSObject {
 
   static fileprivate let delegateQueueName =
     "org.thaliproject.TCPServerMock.GCDAsyncSocket.delegateQueue"
-  fileprivate let delegateQueue = DispatchQueue(label: delegateQueueName, attributes: DispatchQueue.Attributes.concurrent)
+  fileprivate let delegateQueue = DispatchQueue(
+                                    label: delegateQueueName,
+                                    attributes: DispatchQueue.Attributes.concurrent
+                                  )
 
   fileprivate var didAcceptConnectionHandler: () -> Void
   fileprivate var didReadDataHandler: (GCDAsyncSocket, Data) -> Void

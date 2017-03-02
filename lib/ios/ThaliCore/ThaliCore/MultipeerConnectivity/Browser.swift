@@ -144,8 +144,8 @@ final class Browser: NSObject {
    - returns: Session object that manages MCSession between peers
    */
   func inviteToConnect(_ peer: Peer,
-                       sessionConnected: () -> Void,
-                       sessionNotConnected: () -> Void) throws -> Session {
+                       sessionConnected: @escaping () -> Void,
+                       sessionNotConnected: @escaping () -> Void) throws -> Session {
 
     let mcSession = MCSession(peer: browser.myPeerID,
                               securityIdentity: nil,

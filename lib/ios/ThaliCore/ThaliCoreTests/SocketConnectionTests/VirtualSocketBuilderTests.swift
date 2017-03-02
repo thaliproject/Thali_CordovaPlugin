@@ -51,7 +51,7 @@ class VirtualSocketBuilderTests: XCTestCase {
       virtualSocketCreated.fulfill()
     }
 
-    let emptyData = Data(bytes: UnsafePointer<UInt8>(nil), count: 0)
+    let emptyData = Data(bytes: [], count: 0)
     let emptyInputStream = InputStream(data: emptyData)
     let randomlyGeneratedStreamName = UUID().uuidString
 

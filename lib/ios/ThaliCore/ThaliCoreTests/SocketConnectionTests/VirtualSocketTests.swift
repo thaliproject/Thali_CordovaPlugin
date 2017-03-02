@@ -46,7 +46,7 @@ class VirtualSocketTests: XCTestCase {
     do {
       let ouputStream = try nonTCPSession.startOutputStream(with: "test")
 
-      let emptyData = Data(bytes: UnsafePointer<UInt8>(nil), count: 0)
+      let emptyData = Data(bytes: [], count: 0)
       let inputStream = InputStream(data: emptyData)
 
       // When
@@ -64,7 +64,7 @@ class VirtualSocketTests: XCTestCase {
     do {
       let ouputStream = try nonTCPSession.startOutputStream(with: "test")
 
-      let emptyData = Data(bytes: UnsafePointer<UInt8>(nil), count: 0)
+      let emptyData = Data(bytes: [], count: 0)
       let inputStream = InputStream(data: emptyData)
 
       let virtualSocket = VirtualSocket(with: inputStream, outputStream: ouputStream)
@@ -84,7 +84,7 @@ class VirtualSocketTests: XCTestCase {
     do {
       let ouputStream = try nonTCPSession.startOutputStream(with: "test")
 
-      let emptyData = Data(bytes: UnsafePointer<UInt8>(nil), count: 0)
+      let emptyData = Data(bytes: [], count: 0)
       let inputStream = InputStream(data: emptyData)
 
       let virtualSocket = VirtualSocket(with: inputStream, outputStream: ouputStream)
@@ -107,7 +107,7 @@ class VirtualSocketTests: XCTestCase {
     do {
       let ouputStream = try nonTCPSession.startOutputStream(with: "test")
 
-      let emptyData = Data(bytes: UnsafePointer<UInt8>(nil), count: 0)
+      let emptyData = Data(bytes: [], count: 0)
       let inputStream = InputStream(data: emptyData)
 
       let virtualSocket = VirtualSocket(with: inputStream, outputStream: ouputStream)
@@ -130,7 +130,7 @@ class VirtualSocketTests: XCTestCase {
     do {
       let ouputStream = try nonTCPSession.startOutputStream(with: "test")
 
-      let emptyData = Data(bytes: UnsafePointer<UInt8>(nil), count: 0)
+      let emptyData = Data(bytes: [], count: 0)
       let inputStream = InputStream(data: emptyData)
 
       let virtualSocket = VirtualSocket(with: inputStream, outputStream: ouputStream)

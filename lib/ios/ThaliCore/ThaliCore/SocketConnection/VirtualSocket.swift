@@ -105,7 +105,7 @@ class VirtualSocket: NSObject {
 
     let bytesReaded = self.inputStream.read(&buffer, maxLength: maxReadBufferLength)
     if bytesReaded >= 0 {
-      let data = Data(bytes: UnsafePointer<UInt8>(&buffer), count: bytesReaded)
+      let data = Data(bytes: buffer, count: bytesReaded)
       didReadDataFromStreamHandler?(self, data)
     } else {
       closeStreams()

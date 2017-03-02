@@ -123,7 +123,9 @@ final class BrowserVirtualSocketBuilder: VirtualSocketBuilder {
       let outputStream = try nonTCPsession.startOutputStream(with: streamName)
       self.outputStream = outputStream
 
-      let streamReceivedBackTimeout = DispatchTime.now() + Double(Int64(self.streamReceivedBackTimeout * Double(NSEC_PER_SEC))) / Double(NSEC_PER_SEC)
+      let streamReceivedBackTimeout =
+        DispatchTime.now() +
+        Double(Int64(self.streamReceivedBackTimeout * Double(NSEC_PER_SEC))) / Double(NSEC_PER_SEC)
       DispatchQueue.main.asyncAfter(deadline: streamReceivedBackTimeout) {
         [weak self] in
         guard let strongSelf = self else { return }

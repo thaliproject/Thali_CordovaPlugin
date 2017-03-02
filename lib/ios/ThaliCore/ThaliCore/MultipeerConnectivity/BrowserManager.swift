@@ -90,7 +90,7 @@ public final class BrowserManager {
      - errorHandler:
        Called when advertisement fails.
    */
-  public func startListeningForAdvertisements(_ errorHandler: (Error) -> Void) {
+  public func startListeningForAdvertisements(_ errorHandler: @escaping (Error) -> Void) {
     if currentBrowser != nil { return }
 
     let browser = Browser(serviceType: serviceType,
@@ -164,9 +164,7 @@ public final class BrowserManager {
                                         let relay = strongSelf.activeRelays.value[peerIdentifier]
                                         relay?.openRelay {
                                           port, error in
-                                          completion(syncValue: syncValue,
-                                                     error: error,
-                                                     port: port)
+                                          completion(syncValue, error, port)
                                         }
                                       },
                                       sessionNotConnected: {

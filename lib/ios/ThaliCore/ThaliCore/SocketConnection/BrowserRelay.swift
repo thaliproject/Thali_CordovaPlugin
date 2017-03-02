@@ -44,7 +44,7 @@ final class BrowserRelay {
     tcpListener.startListeningForConnections(on: anyAvailablePort,
                                              connectionAccepted: didAcceptConnectionHandler) {
       port, error in
-      completion(port: port, error: error)
+      completion(port, error)
     }
   }
 

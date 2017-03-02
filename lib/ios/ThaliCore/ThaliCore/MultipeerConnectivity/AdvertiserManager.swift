@@ -93,7 +93,7 @@ public final class AdvertiserManager {
        Called when startUpdateAdvertisingAndListening fails.
    */
   public func startUpdateAdvertisingAndListening(onPort port: UInt16,
-                                                 errorHandler: (Error) -> Void) {
+                                                 errorHandler: @escaping (Error) -> Void) {
     if let currentAdvertiser = currentAdvertiser {
       disposeOfAdvertiserAfterTimeoutToFinishInvites(currentAdvertiser)
     }
@@ -179,7 +179,9 @@ public final class AdvertiserManager {
   fileprivate func disposeOfAdvertiserAfterTimeoutToFinishInvites(
     _ advertiserToBeDisposedOf: Advertiser) {
 
-    let disposeTimeout = DispatchTime.now() + Double(Int64(self.disposeTimeout * Double(NSEC_PER_SEC))) / Double(NSEC_PER_SEC)
+    let disposeTimeout =
+      DispatchTime.now() +
+      Double(Int64(self.disposeTimeout * Double(NSEC_PER_SEC))) / Double(NSEC_PER_SEC)
 
     DispatchQueue.main.asyncAfter(deadline: disposeTimeout) {
       [weak self,
