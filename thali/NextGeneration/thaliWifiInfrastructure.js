@@ -586,7 +586,6 @@ WifiAdvertiser.prototype.getAdvertisedPeerIdentifiers = function () {
  * to the peer
  */
 
-/* eslint-disable max-len */
 /**
  * For the definition of this event please see {@link
  * module:thaliMobileNativeWrapper~discoveryAdvertisingStateUpdateEvent}
@@ -610,7 +609,6 @@ WifiAdvertiser.prototype.getAdvertisedPeerIdentifiers = function () {
  * @type {Object}
  * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
  */
-/* eslint-enable max-len */
 
 /**
  * [NOT IMPLEMENTED]
