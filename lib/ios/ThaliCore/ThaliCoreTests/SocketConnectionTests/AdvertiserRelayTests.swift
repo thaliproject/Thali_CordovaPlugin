@@ -29,12 +29,12 @@ class AdvertiserRelayTests: XCTestCase {
   // MARK: - Setup & Teardown
   override func setUp() {
     super.setUp()
-    randomlyGeneratedServiceType = String.randomValidServiceType(length: 7)
+    randomlyGeneratedServiceType = String.randomValidServiceType(7)
 
     let crlf = "\r\n"
     let fullMessageLength = 10 * 1024
     let plainMessageLength = fullMessageLength - crlf.characters.count
-    randomMessage = String.random(length: plainMessageLength) + crlf
+    randomMessage = String.random(plainMessageLength) + crlf
 
     advertiserManager = AdvertiserManager(serviceType: randomlyGeneratedServiceType,
                                           disposeAdvertiserTimeout: disposeTimeout)

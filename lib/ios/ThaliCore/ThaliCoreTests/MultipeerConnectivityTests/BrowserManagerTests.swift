@@ -26,7 +26,7 @@ class BrowserManagerTests: XCTestCase {
   // MARK: - Setup & Teardown
   override func setUp() {
     super.setUp()
-    serviceType = String.randomValidServiceType(length: 7)
+    serviceType = String.randomValidServiceType(7)
     advertiserManager = AdvertiserManager(serviceType: serviceType,
                                           disposeAdvertiserTimeout: disposeTimeout)
 

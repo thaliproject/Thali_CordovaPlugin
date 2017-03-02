@@ -27,7 +27,7 @@ class TCPListenerTests: XCTestCase {
   override func setUp() {
     super.setUp()
     let fullMessageLength = 1 * 1024
-    randomMessage = String.random(length: fullMessageLength)
+    randomMessage = String.random(fullMessageLength)
   }
 
   override func tearDown() {

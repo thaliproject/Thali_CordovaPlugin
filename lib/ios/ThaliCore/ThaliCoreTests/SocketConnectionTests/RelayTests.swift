@@ -35,9 +35,9 @@ class RelayTests: XCTestCase {
   // MARK: - Setup & Teardown
   override func setUp() {
     super.setUp()
-    randomGeneratedServiceType = String.randomValidServiceType(length: 7)
-    mcPeerID = MCPeerID(displayName: String.random(length: 5))
-    mcSessionMock = MCSessionMock(peer: MCPeerID(displayName: String.random(length: 5)))
+    randomGeneratedServiceType = String.randomValidServiceType(7)
+    mcPeerID = MCPeerID(displayName: String.random(5))
+    mcSessionMock = MCSessionMock(peer: MCPeerID(displayName: String.random(5)))
     nonTCPSession = Session(session: mcSessionMock,
                             identifier: mcPeerID,
                             connected: {},
@@ -46,7 +46,7 @@ class RelayTests: XCTestCase {
     let crlf = "\r\n"
     let fullMessageLength = 1 * 1024
     let plainMessageLength = fullMessageLength - crlf.characters.count
-    randomMessage = String.random(length: plainMessageLength) + crlf
+    randomMessage = String.random(plainMessageLength) + crlf
 
   }
 

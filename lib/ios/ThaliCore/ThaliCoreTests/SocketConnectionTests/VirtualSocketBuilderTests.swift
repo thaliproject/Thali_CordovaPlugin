@@ -24,8 +24,8 @@ class VirtualSocketBuilderTests: XCTestCase {
   // MARK: - Setup & Teardown
   override func setUp() {
     super.setUp()
-    mcPeerID = MCPeerID(displayName: String.random(length: 5))
-    mcSessionMock = MCSessionMock(peer: MCPeerID(displayName: String.random(length: 5)))
+    mcPeerID = MCPeerID(displayName: String.random(5))
+    mcSessionMock = MCSessionMock(peer: MCPeerID(displayName: String.random(5)))
     nonTCPSession = Session(session: mcSessionMock,
                             identifier: mcPeerID,
                             connected: {},

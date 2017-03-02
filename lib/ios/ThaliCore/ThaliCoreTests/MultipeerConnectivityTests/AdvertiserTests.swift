@@ -21,7 +21,7 @@ class AdvertiserTests: XCTestCase {
   // MARK: - Setup & Teardown
   override func setUp() {
     super.setUp()
-    randomlyGeneratedServiceType = String.randomValidServiceType(length: 7)
+    randomlyGeneratedServiceType = String.randomValidServiceType(7)
     randomlyGeneratedPeer = Peer()
   }
 
@@ -45,7 +45,7 @@ class AdvertiserTests: XCTestCase {
 
   func testAdvertiserReturnsNilWhenEmptyServiceType() {
     // Given
-    let emptyServiceType = String.randomValidServiceType(length: 0)
+    let emptyServiceType = String.randomValidServiceType(0)
 
     // When
     let advertiser = Advertiser(peer: randomlyGeneratedPeer,

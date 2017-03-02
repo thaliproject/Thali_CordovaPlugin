@@ -103,7 +103,7 @@ class TCPClientTests: XCTestCase {
     // When
     // Mock server sends some data to TCP client
     dataReadHandler = expectation(description: "dataReadHandler invoked")
-    serverMock.sendRandomMessage(length: 100)
+    serverMock.sendRandomMessage(100)
 
     // Then
     waitForExpectations(timeout: readDataTimeout) {

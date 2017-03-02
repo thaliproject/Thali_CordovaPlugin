@@ -26,7 +26,7 @@ class BrowserTests: XCTestCase {
   // MARK: - Setup & Teardown
   override func setUp() {
     super.setUp()
-    randomlyGeneratedServiceType = String.randomValidServiceType(length: 7)
+    randomlyGeneratedServiceType = String.randomValidServiceType(7)
     randomlyGeneratedPeer = Peer()
     randomlyGeneratedPeerID = MCPeerID(displayName: randomlyGeneratedPeer.stringValue)
     mcBrowser = MCNearbyServiceBrowser(peer: randomlyGeneratedPeerID,

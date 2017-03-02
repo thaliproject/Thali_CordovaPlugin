@@ -26,8 +26,8 @@ class SessionTests: XCTestCase {
   // MARK: - Setup & Teardown
   override func setUp() {
     super.setUp()
-    peerID = MCPeerID(displayName: String.random(length: 5))
-    mcSession = MCSessionMock(peer: MCPeerID(displayName: String.random(length: 5)))
+    peerID = MCPeerID(displayName: String.random(5))
+    mcSession = MCSessionMock(peer: MCPeerID(displayName: String.random(5)))
   }
 
   override func tearDown() {

@@ -79,7 +79,7 @@ class TCPServerMock: NSObject {
   func sendRandomMessage(_ length: Int) {
     guard length > 0 else { return }
 
-    let randomMessage = String.random(length: length)
+    let randomMessage = String.random(length)
     let messageData = randomMessage.data(using: String.Encoding.utf8)
 
     activeConnections.withValue {

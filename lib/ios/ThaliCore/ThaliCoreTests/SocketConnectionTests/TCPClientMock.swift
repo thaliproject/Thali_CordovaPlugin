@@ -51,7 +51,7 @@ class TCPClientMock: NSObject {
   }
 
   func sendRandomMessage(_ length: Int) {
-    let randomMessage = String.random(length: length) + "/r/n"
+    let randomMessage = String.random(length) + "/r/n"
     let messageData = randomMessage.data(using: String.Encoding.utf8)
     tcpClient.write(messageData!, withTimeout: -1, tag: 0)
   }

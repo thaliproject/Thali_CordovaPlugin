@@ -13,7 +13,7 @@ import XCTest
 func createMPCFPeers(with browsingCompletion: @escaping (PeerAvailability) -> Void)
                      -> (AdvertiserManager, BrowserManager) {
 
-    let serviceType = String.randomValidServiceType(length: 7)
+    let serviceType = String.randomValidServiceType(7)
 
     let browserManager = BrowserManager(serviceType: serviceType,
                                         inputStreamReceiveTimeout: 5,
