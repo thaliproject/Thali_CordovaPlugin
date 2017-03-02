@@ -22,7 +22,7 @@ extension String {
    - returns:
      Randomly generated string.
    */
-  static func random(length: Int) -> String {
+  static func random(_ length: Int) -> String {
     let letters: String = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUWXYZ"
     var randomString = ""
 
@@ -63,7 +63,7 @@ extension String {
 // MARK: - Manipulating service type in Bonjour format
 extension String {
 
-  static func randomValidServiceType(length: Int) -> String {
+  static func randomValidServiceType(_ length: Int) -> String {
     let asciiLetters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUWXYZ"
     let digits = "0123456789"
     let hyphen = "-"

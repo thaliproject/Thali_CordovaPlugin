@@ -76,7 +76,7 @@ class TCPServerMock: NSObject {
      - length:
        Length of random message.
    */
-  func sendRandomMessage(length: Int) {
+  func sendRandomMessage(_ length: Int) {
     guard length > 0 else { return }
 
     let randomMessage = String.random(length: length)

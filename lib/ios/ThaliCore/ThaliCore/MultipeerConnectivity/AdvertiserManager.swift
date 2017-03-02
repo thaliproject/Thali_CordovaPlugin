@@ -124,7 +124,7 @@ public final class AdvertiserManager {
                                 })
 
     guard let newAdvertiser = advertiser else {
-      errorHandler(ThaliCoreError.ConnectionFailed as! Error)
+      errorHandler(ThaliCoreError.ConnectionFailed as Error)
       return
     }
 

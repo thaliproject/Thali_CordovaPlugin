@@ -98,7 +98,7 @@ public final class BrowserManager {
                           lostPeer: handleLost)
 
     guard let newBrowser = browser else {
-      errorHandler(ThaliCoreError.ConnectionFailed as! Error)
+      errorHandler(ThaliCoreError.ConnectionFailed as Error)
       return
     }
 
