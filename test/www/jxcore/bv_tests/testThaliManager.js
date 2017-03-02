@@ -59,15 +59,8 @@ function Mocks(t) {
   this.MobileStartLA = sinon.spy(
     this.ThaliMobile, 'startListeningForAdvertisements'
   );
-  this.MobileStopLA = sinon.spy(
-    this.ThaliMobile, 'stopListeningForAdvertisements'
-  );
-
   this.MobileStartUAA = sinon.spy(
     this.ThaliMobile, 'startUpdateAdvertisingAndListening'
-  );
-  this.MobileStopUAA = sinon.spy(
-    this.ThaliMobile, 'stopAdvertisingAndListening'
   );
 
   this.Notification = sinon.spy(
@@ -116,10 +109,8 @@ Mocks.prototype.resetStartStop = function() {
   this.MobileStop.reset();
 
   this.MobileStartLA.reset();
-  this.MobileStopLA.reset();
 
   this.MobileStartUAA.reset();
-  this.MobileStopUAA.reset();
 
   this.NotificationStart.reset();
   this.NotificationStop.reset();
@@ -144,8 +135,6 @@ Mocks.prototype.checkStart = function(partnerKeys, networkType) {
 };
 Mocks.prototype.checkStop = function() {
   this.checkMobileStop();
-  this.checkMobileStopLA();
-  this.checkMobileStopUAA();
   this.checkNotificationStop();
   this.checkReplicationStop();
 };
@@ -352,20 +341,6 @@ Mocks.prototype.checkMobileStartUAA = function() {
 Mocks.prototype.checkMobileStop = function() {
   testUtils.checkArgs(
     this.t, this.MobileStop, 'ThaliMobile.stop', []
-  );
-};
-Mocks.prototype.checkMobileStopLA = function() {
-  testUtils.checkArgs(
-    this.t, this.MobileStopLA,
-    'ThaliMobile.stopListeningForAdvertisements',
-    []
-  );
-};
-Mocks.prototype.checkMobileStopUAA = function() {
-  testUtils.checkArgs(
-    this.t, this.MobileStopUAA,
-    'ThaliMobile.stopAdvertisingAndListening',
-    []
   );
 };
 
