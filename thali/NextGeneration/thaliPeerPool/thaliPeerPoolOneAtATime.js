@@ -131,8 +131,7 @@ ThaliPeerPoolOneAtATime.prototype._wifiEnqueue = function (peerAction) {
     }
   }
 
-  var originalKill = peerAction.kill;
-  peerAction.kill = function () {
+  peerAction.on('killed', function () {
     var count = self._wifiReplicationCount[peerId];
     switch (count) {
       case 1: {
@@ -147,8 +146,7 @@ ThaliPeerPoolOneAtATime.prototype._wifiEnqueue = function (peerAction) {
         logger.error('Count had to be 1 or 2 - ' + count);
       }
     }
-    return originalKill.apply(this, arguments);
-  };
+  });
 
   self._replicateThroughProblems(peerAction)
     .then(function () {

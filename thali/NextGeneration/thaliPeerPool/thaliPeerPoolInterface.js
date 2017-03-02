@@ -83,38 +83,20 @@ ThaliPeerPoolInterface.prototype.enqueue = function (peerAction) {
   if (this._inQueue[peerActionId]) {
     throw new Error(ThaliPeerPoolInterface.ERRORS.OBJECT_ALREADY_ENQUEUED);
   }
-
   this._inQueue[peerActionId] = peerAction;
 
-  // TODO implement _TODO_ mentioned in 'ThaliPullReplicationFromNotification'
-  // We can use here:
-  // peerAction.once('killed', this._onPeerActionKilled.bind(this, peerAction));
-
-  // This is a workaround for 'once'.
-  var self = this;
-  var originalKill = peerAction.kill;
-  peerAction.kill = function () {
-    self._onPeerActionKilled(peerAction);
-    peerAction.kill = originalKill;
-    return originalKill.apply(this, arguments);
-  };
+  // Remove peer action from the queue if it become 'killed'.
+  peerAction.once('killed', function () {
+    assert(
+      this._inQueue[peerActionId] === peerAction,
+      'peerAction shouldn\'t escape the queue without going through kill'
+    );
+    delete this._inQueue[peerActionId];
+  }.bind(this));
 
   return null;
 };
 
-/**
- * Remove peer action from the queue if it become 'killed'.
- * @private
- * @param {module:thaliPeerAction~PeerAction} peerAction
- */
-ThaliPeerPoolInterface.prototype._onPeerActionKilled = function (peerAction) {
-  var peerActionId = peerAction.getId();
-  assert(
-    this._inQueue[peerActionId] === peerAction,
-    'peerAction shouldn\'t escape the queue without going through kill'
-  );
-  delete this._inQueue[peerActionId];
-};
 
 /**
  * Error messages.

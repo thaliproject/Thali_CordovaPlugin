@@ -91,6 +91,7 @@ ThaliPullReplicationFromNotification.STATES = {
  * Both 'connectionType' and 'keyId' wont have '-' symbol.
  * @param {Object} peerAdvertisesData
  * @private
+ * @return {string}
  */
 ThaliPullReplicationFromNotification._getPeerDictionaryKey =
   function (peerAdvertisesData) {
@@ -102,7 +103,7 @@ ThaliPullReplicationFromNotification._getPeerDictionaryKey =
  * We are going to create a replication action based on this data.
  * We should make a single action from multiple data
  * with the same 'connectionType' and 'keyId'.
- * @param {Object} peerAction
+ * @param {Object} peerAdvertisesData
  * @private
  */
 ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
@@ -144,32 +145,24 @@ ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
   };
 
 /**
+ * Store action in the _peerDictionary and listen to the killed and started
+ * events.
+ *
  * Action should be deleted from 'peerDictionary' (by special 'key')
  * on first starting or killed event.
  * @private
+ * @param {module:thaliPeerAction~PeerAction} action
+ * @param {string} key
  */
 ThaliPullReplicationFromNotification.prototype.
-  _bindRemoveActionFromPeerDictionary =
-  function (action, key) {
+  _bindRemoveActionFromPeerDictionary = function (action, key) {
     var self = this;
 
     // TODO Investigate whether EventEmitter with action will provide a memory
     // leak.
-    // TODO Add EventEmitter to the peer action class.
-    // TODO Extend EventEmitter with 'onceAny' method.
-    // For example here we can use:
-    // action.onceAny(['beforeStart', 'afterEnd'], function () {
-    //   assert(...);
-    //   delete self._peerDictionary[key];
-    // });
-
-    var removed = false;
-    function removeHandler () {
-      if (removed) {
-        return;
-      }
-      removed = true;
-
+    function removeFromDictionary () {
+      action.removeListener('started', removeFromDictionary);
+      action.removeListener('killed', removeFromDictionary);
       assert(
         self._peerDictionary[key], 'The entry should exist because this is ' +
         'the only place that can remove it'
@@ -177,19 +170,8 @@ ThaliPullReplicationFromNotification.prototype.
       delete self._peerDictionary[key];
     }
 
-    // This is a workaround for 'onceAny'.
-    var originalStart = action.start;
-    action.start = function () {
-      removeHandler();
-      action.start = originalStart;
-      return originalStart.apply(this, arguments);
-    };
-    var originalKill = action.kill;
-    action.kill = function () {
-      removeHandler();
-      action.kill = originalKill;
-      return originalKill.apply(this, arguments);
-    };
+    action.on('started', removeFromDictionary);
+    action.on('killed', removeFromDictionary);
   };
 
 /**
