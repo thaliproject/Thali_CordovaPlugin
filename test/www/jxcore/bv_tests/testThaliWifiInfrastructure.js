@@ -826,3 +826,23 @@ function (t) {
   });
   testUtils.toggleWifi(false);
 });
+
+test('SSDP server should not restart after Wifi Client changed generation',
+  function (t) {
+    var advertisingEndSpy =
+      sinon.spy(wifiInfrastructure.advertiser, 'stop');
+    wifiInfrastructure.startListeningForAdvertisements()
+      .then(function () {
+        return wifiInfrastructure.startUpdateAdvertisingAndListening();
+      })
+      .then(function () {
+        t.equals(advertisingEndSpy.callCount, 0, 'SDDP server does not restart');
+      })
+      .catch(function (err) {
+        t.fail(err);
+      })
+      .then(function () {
+        t.end();
+      });
+  }
+);

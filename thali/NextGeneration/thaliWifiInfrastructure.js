@@ -364,16 +364,12 @@ WifiAdvertiser.prototype.update = enqueued(function () {
     return Promise.reject(new Error('Call Start!'));
   }
 
-  // We need to restart the server so that a byebye is issued for the old USN
-  // and alive message for the new one.
-  return self._server.stopAsync()
-    .then(function () {
-      self.peer.generation++;
-      return self._startPeerAdvertising(self.peer);
-    })
-    .catch(function (error) {
-      return self._errorStop(error);
-    });
+  // We need to change USN every time a WifiClient changed generation
+  self.peer.generation++; 
+  var usn = USN.stringify(self.peer);
+  self._server.setUSN(usn);
+
+  return Promise.resolve();
 });
 
 /**
