@@ -34,7 +34,7 @@ const versions =
   java: '1.8.0_102',
   git: '2.10.0',
   swiftlint: '0.16.1',
-  carthage: '0.19.1',
+  carthage: '0.20.0',
   sinopiaNode: ' ',
   sinopiaJxCore: ' '
 };
