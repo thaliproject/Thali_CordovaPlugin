@@ -33,7 +33,8 @@ const versions =
   cordova: '6.4.0',
   java: '1.8.0_102',
   git: '2.10.0',
-  swiftlint: '0.13.0',
+  swiftlint: '0.16.1',
+  carthage: '0.20.0'
   sinopiaNode: ' ',
   sinopiaJxCore: ' '
 };
@@ -202,6 +203,11 @@ const commandsAndResults =
   swiftlint: {
     platform: ['darwin'],
     versionCheck: 'swiftlint version',
+    versionValidate:
+      (result, version) => boolToPromise(version === result.trim())
+  },
+  carthage: {
+    versionCheck: 'carthage version',
     versionValidate:
       (result, version) => boolToPromise(version === result.trim())
   },
