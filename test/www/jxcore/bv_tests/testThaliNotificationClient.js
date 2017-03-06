@@ -323,55 +323,6 @@ test('Received beacons with no values for us', function (t) {
   notificationClient._peerAvailabilityChanged(globals.TCPEvent);
 });
 
-test('Notification action killed with a superseded', function (t) {
-  var notificationClient =
-    new ThaliNotificationClient(globals.peerPoolInterface,
-      globals.targetDeviceKeyExchangeObjects[0]);
-
-  var peerPoolInterface = globals.peerPoolInterface;
-  var enqueue = function (action) {
-    setImmediate(function () {
-      action.killSuperseded();
-      // Give the system a chance to fire any promises or events in case the
-      // logic isn't working right.
-      setImmediate(function () {
-        var entry = notificationClient.peerDictionary.get({
-          peerIdentifier: action.getPeerIdentifier(),
-          generation: action.getPeerGeneration(),
-        });
-        t.equal(action.getActionState(), PeerAction.actionState.KILLED,
-          'Action should be KILLED');
-        peerPoolInterface.enqueue.restore();
-
-        notificationClient.removeListener(
-          notificationClient.Events.PeerAdvertisesDataForUs,
-          notificationHandler
-        );
-        t.end();
-      });
-    });
-    return null;
-  };
-
-  sinon.stub(globals.peerPoolInterface, 'enqueue', enqueue);
-
-  var bogusPublicKey =
-    crypto.createECDH(thaliConfig.BEACON_CURVE).generateKeys();
-
-  notificationClient.start([bogusPublicKey]);
-
-  notificationClient.on(
-    notificationClient.Events.PeerAdvertisesDataForUs,
-    notificationHandler
-  );
-  function notificationHandler() {
-    t.fail('We should not have gotten a PeerAdvertisesDataForUs event!');
-  }
-
-  // New peer with TCP connection
-  notificationClient._peerAvailabilityChanged(globals.TCPEvent);
-});
-
 test('Resolves an action locally', function (t) {
 
   // Scenario:

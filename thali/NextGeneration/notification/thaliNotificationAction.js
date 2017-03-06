@@ -201,19 +201,6 @@ ThaliNotificationAction.prototype.kill = function () {
 };
 
 /**
- * Used primarily by peer pool managers who have decided to kill this
- * notification action for a particular peerID on a particular connection
- * type in favor of a newer one.
- *
- * @public
- */
-ThaliNotificationAction.prototype.killSuperseded = function () {
-  ThaliNotificationAction.super_.prototype.kill.call(this);
-  this._complete(
-    ThaliNotificationAction.ActionResolution.KILLED_SUPERSEDED);
-};
-
-/**
  * This synchronous function returns a connection information.
  *
  * @public
@@ -365,11 +352,6 @@ ThaliNotificationAction.ActionResolution = {
    * The action was killed before it completed.
    */
   KILLED: 'killed',
-  /**
-   * The action was killed because it has been superseded by another
-   * notification action and no further work on this action should occur.
-   */
-  KILLED_SUPERSEDED: 'killedSuperseded'
 };
 
 ThaliNotificationAction.Events = {

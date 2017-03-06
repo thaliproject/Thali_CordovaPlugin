@@ -366,7 +366,6 @@ ThaliNotificationClient.prototype._onActionResolved =
           break;
         }
       case ThaliNotificationAction.ActionResolution.BEACONS_RETRIEVED_BUT_BAD:
-      case ThaliNotificationAction.ActionResolution.KILLED_SUPERSEDED:
       case ThaliNotificationAction.ActionResolution.BAD_PEER: {
         // This indicates a malfunctioning peer. We need to assume they are
         // bad all up and mark their entry as RESOLVED without taking any
