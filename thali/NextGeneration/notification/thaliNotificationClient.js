@@ -210,20 +210,34 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
     assert('generation' in peerStatus, 'generation must be set');
 
     if (!peerStatus.peerAvailable) {
-      logger.warn('peer is not available');
+      logger.debug('peer is not available');
       // Remove the old peer if it exists.
-
-      this.peerDictionary.removeAllPeerEntries(peerStatus.peerIdentifier);
+      this.peerDictionary.removePeerEntry(peerStatus.peerIdentifier);
       return;
     }
 
-    var peerEntry = new PeerDictionary.NotificationPeerDictionaryEntry();
+    var peerEntry = this.peerDictionary.getPeerEntry(peerStatus.peerIdentifier);
 
-    self._createNotificationAction(peerEntry, {
-      peerIdentifier: peerStatus.peerIdentifier,
-      generation: peerStatus.generation,
-      connectionType: peerStatus.connectionType,
-    });
+    if (peerEntry && peerEntry.badPeer) {
+      logger.warn('Ignoring peerAvailabilityChanged event from "bad peer"');
+      return;
+    }
+
+    var action = new ThaliNotificationAction(
+      peerStatus,
+      this._ecdhForLocalDevice,
+      this._addressBookCallback
+    );
+
+    action.eventEmitter.on(ThaliNotificationAction.Events.Resolved,
+      this._onActionResolved.bind(this));
+
+    try {
+      this._thaliPeerPoolInterface.enqueue(action);
+      this.peerDictionary.addPeerAction(peerStatus, action, false);
+    } catch (error) {
+      this.emit('error', error);
+    }
   };
 
 /**
@@ -233,40 +247,6 @@ ThaliNotificationClient.prototype._peerAvailabilityChanged =
 ThaliNotificationClient.prototype._isStarted = function () {
   return Boolean(this.peerDictionary);
 };
-
-/**
- * This function creates a new action and sets connection info into it.
- * Then it enqueues the action in the peer pool and adds the entry into
- * the dictionary.
- *
- * @private
- * @param {module:thaliPeerDictionary~NotificationPeerDictionaryEntry} peerEntry
- * @param {Object} peer
- * @param {string} peer.peerIdentifier
- * @param {number} peer.generation
- * @param {module:ThaliMobileNativeWrapper.connectionTypes} peer.connectionType
- */
-ThaliNotificationClient.prototype._createNotificationAction =
-  function (peerEntry, peer) {
-
-    var action = new ThaliNotificationAction(
-      peer,
-      this._ecdhForLocalDevice,
-      this._addressBookCallback
-    );
-
-    action.eventEmitter.on(ThaliNotificationAction.Events.Resolved,
-      this._onActionResolved.bind(this));
-
-    peerEntry.notificationAction = action;
-
-    try {
-      this._thaliPeerPoolInterface.enqueue(action);
-      this.peerDictionary.addUpdateEntry(peer, peerEntry);
-    } catch (error) {
-      this.emit('error', error);
-    }
-  };
 
 /**
  * This function recreates failed action
@@ -284,7 +264,22 @@ ThaliNotificationClient.prototype._retryNotificationAction = function (action) {
   assert(entry, 'entry exists');
 
   peer.connectionType = action.getConnectionType();
-  this._createNotificationAction(entry, peer);
+
+  var action = new ThaliNotificationAction(
+    peer,
+    this._ecdhForLocalDevice,
+    this._addressBookCallback
+  );
+
+  action.eventEmitter.on(ThaliNotificationAction.Events.Resolved,
+    this._onActionResolved.bind(this));
+
+  try {
+    this._thaliPeerPoolInterface.enqueue(action);
+    this.peerDictionary.addPeerAction(peer, action, false);
+  } catch (error) {
+    this.emit('error', error);
+  }
 };
 
 /**
@@ -315,18 +310,27 @@ ThaliNotificationClient.prototype._onActionResolved =
       generation: action.getPeerGeneration(),
     };
 
-    var entry = this.peerDictionary.get(peer);
 
+    this.peerDictionary.removePeerAction(peer);
+
+    var entry = this.peerDictionary.getPeerEntry(peer.peerIdentifier);
     if (!entry) {
       return;
     }
+
+    assert(
+      peer.generation <= entry.generationCounter,
+      'action generation is not greater than highest peer generation in the ' +
+      'peer dictionary'
+    );
+
     switch (resolution) {
       case ThaliNotificationAction.ActionResolution
         .BEACONS_RETRIEVED_AND_PARSED: {
           if (!beaconDetails) {
-          // This peerId has nothing for us, if that changes then the peer
-          // will generate a new peerId so we can safely ignore this peerId
-          // from now on.
+            // This peerId has nothing for us, if that changes then the peer
+            // will generate a new peerId so we can safely ignore this peerId
+            // from now on.
             break;
           }
 
@@ -360,7 +364,8 @@ ThaliNotificationClient.prototype._onActionResolved =
           // PeerAdvertisesDataForUs event listeners can synchronously stop
           // notification client.
           if (this.peerDictionary) {
-            this.peerDictionary.removeAllPeerEntries(peer.peerIdentifier);
+            // TODO: We probably don't need to remove entire peer entry
+            // this.peerDictionary.removePeerEntry(peer.peerIdentifier);
           }
 
           break;
@@ -374,7 +379,9 @@ ThaliNotificationClient.prototype._onActionResolved =
         // Alternatively this is also used when we have decided to discard
         // this action in favor of one for the same peer with a newer PeerID
         // and so we don't want to retry the action.
-        this.peerDictionary.addUpdateEntry(peer, entry);
+        this.peerDictionary.addUpdatePeerEntry(peer.peerIdentifier, {
+          badPeer: true
+        });
         break;
       }
       case ThaliNotificationAction.ActionResolution.HTTP_BAD_RESPONSE:
@@ -384,6 +391,25 @@ ThaliNotificationClient.prototype._onActionResolved =
         // ThaliPeerPoolInterface called kill due to resource exhaustion.
         // We will for wait time out specified in the RETRY_TIMEOUTS
         // array and try again.
+
+        // TODO: it is possible, that notification client got
+        // 2 peerAvailabilityChanged events from the ThaliMobile, enqueued
+        // 2 actions in the peer pool, and stored these action in peer
+        // dictionary. At this point peer entry's generationCounter will be
+        // equal to the generation of the second action.
+        //
+        // Then peer pool decides to start the first action. It fails. At this
+        // point notification client sees that this action is not the latest
+        // one, and it is not going to retry it. But the second one is not event
+        // started and we don't know the peer pool's policy regarding when it is
+        // going to start it and if it will start it at all. Is it something we
+        // should worry about in notification client or we are gonna just leave
+        // this as an exercise for peer pool implementors?
+
+        if (peer.generation !== entry.generationCounter) {
+          // peer dictionary contains
+          break;
+        }
 
         var maxRetries = ThaliNotificationClient.RETRY_TIMEOUTS.length;
         if (entry.retryCounter < maxRetries) {

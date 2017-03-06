@@ -7,12 +7,6 @@ var ThaliNotificationAction = require('./thaliNotificationAction.js');
 /* eslint-disable max-len */
 
 /**
- *
- * ### Changes to thaliNotificationAction.ActionResolution
- *
- * - [ ] Remove KILLED_SUPERSEDED and all related methods, calls on other
- *   objects.
- *
  * ### Changes to thaliNotificationClient._peerAvailabilityChanged
  *
  * - [ ] Call removeEntry rather than removeAllPeerEntries
@@ -150,6 +144,9 @@ PeerDictionary.prototype.addUpdatePeerEntry = function (peerIdentifier, data) {
       // clear old timeout before overwriting
       clearTimeout(peerEntry.waitingTimeout);
     }
+    // TODO: if peer becomes bad we probably should kill all the actions
+    // associated with it, clear waiting timeout and remove all generation
+    // entries
     objectAssign(peerEntry, entryData);
   } else {
     // Sometimes we need to just create entry with default properties.
@@ -160,27 +157,37 @@ PeerDictionary.prototype.addUpdatePeerEntry = function (peerIdentifier, data) {
   }
 };
 
-PeerDictionary.prototype.addPeerAction = function (peer, notificationAction) {
+PeerDictionary.prototype.addPeerAction =
+function (peer, notificationAction, isRetry) {
+  assert(notificationAction, 'notificationAction exists');
+  assert.equal(notificationAction.getPeerGeneration(), peer.generation,
+    'notifcationAction belongs to the peer');
+
   // Create peer entry if it does not exist yet
   this.addUpdatePeerEntry(peer.peerIdentifier);
   var peerEntry = this._dictionary[peer.peerIdentifier];
+
+  if (isRetry) {
+    assert(peer.generation === peerEntry.generationCounter,
+      'generation MUST be the highest one');
+  } else {
+    assert(peer.generation > peerEntry.generationCounter,
+      'generation MUST increase');
+  }
 
   if (peerEntry.waitingTimeout) {
     clearTimeout(peerEntry.waitingTimeout);
     peerEntry.waitingTimeout = null;
   }
 
-  assert(notificationAction, 'notificationAction exists');
-  assert.equal(notificationAction.getPeerGeneration(), peer.generation,
-    'notifcationAction belongs to the peer');
-
   peerEntry.generations[peer.generation] =
     this._createGenerationEntry(notificationAction);
 
-  // TODO: this won't work with retry actions
-  assert(peer.generation > peerEntry.generationCounter,
-    'generation MUST increase');
   peerEntry.generationCounter = peer.generation;
+
+  if (!isRetry) {
+    this._removeOldestIfOverflow();
+  }
 };
 
 PeerDictionary.prototype._createPeerEntry = function () {
