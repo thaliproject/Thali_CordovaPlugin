@@ -4,7 +4,51 @@ var assert = require('assert');
 var objectAssign = require('object-assign');
 var ThaliNotificationAction = require('./thaliNotificationAction.js');
 
-/** @module thaliPeerDictionary */
+/* eslint-disable max-len */
+
+/**
+ *
+ * ### Changes to thaliNotificationAction.ActionResolution
+ *
+ * - [ ] Remove KILLED_SUPERSEDED and all related methods, calls on other
+ *   objects.
+ *
+ * ### Changes to thaliNotificationClient._peerAvailabilityChanged
+ *
+ * - [ ] Call removeEntry rather than removeAllPeerEntries
+ * - [ ] Call this.peerDictionary.getEntry(). If an entry exists and if badPeer
+ *   is marked true then return without taking further action.
+ *
+ * ### changes to thaliNotificationClient._createNotificationAction
+ *
+ * - [ ] We MUST use addGeneration() on the entry from peerDictionary rather
+ *   than manually setting values like notificationAction.
+ *
+ * ### Changes to thaliNotificationClient._onActionResolved
+ *
+ * - [ ] Make sure that regardless of the resolution we always call
+ *   peerDictionary.removeGeneration so we clean up after ourselves. Once
+ *   a generation's action gets to this point we don't need to track it in the
+ *   dictionary anymore.
+ * - [ ] We need to call getGenerationEntry at the top, not get
+ * - [x] If we get BEACONS_RETRIEVED_AND_PARSED then remove the addUpdateEntry
+ *   call. At the end remove the entry.
+ * - [ ] Remove KILLED_SUPERSEDED
+ * - [ ] If we get BEACONS_RETRIEVED_BUT_BAD or BAD_PEER then we need to call
+ *   peerDictionary.getEntry() and set .badPeer to true and remove the entry.
+ * - [ ] If we get HTTP_BAD_RESPONSE, NETWORK_PROBLEM or KILLED then we have to
+ *   check to see if this._peerDictionary.getEntry's generationCounter is
+ *   greater than the action.getPeerGeneration() value. If it is then just
+ *   remove the entry and we are done. If it less than assert. If it is equal
+ *   then we need to use the try logic. Note that the retry logic is now on the
+ *   root entry where retryCounter and waitingTimeout are set. So we really
+ *   don't need the addUpdateEntry. We can just use getEntry() and change the
+ *   properties directly.
+ *
+ * @module thaliPeerDictionary
+ */
+
+/* eslint-enable max-len */
 
 /**
  * @file
@@ -16,7 +60,7 @@ var ThaliNotificationAction = require('./thaliNotificationAction.js');
 
 /**
  * @public
- * @typedef {Object} PeerDictionaryEntry
+ * @typedef {Object} PeerEntry
  * @property {boolean} badPeer Marks this peer as 'bad' one. Notification client
  * marks peer 'bad' when it sent invalid beacons that client couldn't parse.
  * @property {?timeoutObject} waitingTimeout The waiting timeout object is used
@@ -27,72 +71,15 @@ var ThaliNotificationAction = require('./thaliNotificationAction.js');
  * action retries.
  * @property {number?} generationCounter The latest AND highest peer generation
  * number added to the dictionary.
- * @property {module:ThaliNotificationClient~ThaliNotificationAction} notificationAction
- * Notification action associated with this peer generation
  */
-
-/**
- * Entry that contains data associated with specific generation of some peer
- *
- * @private
- * @typedef {Object} GenerationPeerEntry
- * @property {module:ThaliNotificationClient~ThaliNotificationAction} notificationAction
- * @property {number} entryNumber
- */
-
-/**
- * @classdesc An internal representation of entry to be put into the
- * peerDictionary. Contains data associated with some peer
- *
- * @private
- * @constructor
- */
-function PeerEntry() {
-  // TODO: this class should not be exposed. All entries must be associated with
-  // some peer dictionary because generations map uses entryCounter to set
-  // entryNumber.
-
-  /** @type {boolean} */
-  this.badPeer = false;
-
-  /** @type {?timeoutObject} */
-  this.waitingTimeout = null;
-
-  /** @type {number} */
-  this.retryCounter = 0;
-
-  /** @type {number?} */
-  this.generationCounter = null;
-
-  /**
-   * Maps peer generations to the corresponding notification actions
-   * @private
-   * @type {Object.<string, GenerationPeerEntry>}
-   */
-  this.generations = Object.create(null);
-}
 
 /**
  * @public
- * @param {number} generation
- * @param {module:thaliNotificationClient~ThaliNotificationAction} notificationAction
+ * @typedef {Object} GenerationEntry
+ * @property {module:ThaliNotificationClient~ThaliNotificationAction} notificationAction
+ * Notification action associated with this peer generation
+ * @property {number} entryNumber
  */
-PeerEntry.prototype.addGeneration =
-function (generation, notificationAction) {
-  // TODO: notificationAction is already associated with the peer generation.
-  // Maybe we should change "generations" to "actions" and store just actions?
-  // addGeneration(generation, notificationAction) and
-  // deleteGeneration(generation) will become addAction(notificationAction) and
-  // deleteAction(notificationAction).
-  assert(notificationAction.getPeerGeneration() === generation,
-    'notification action belongs to the correct peer generation');
-  assert(generation > this.generationCounter, 'generation increases');
-
-  this.generations[generation] = {
-    notificationAction: notificationAction
-  };
-};
-
 
 /**
  * @classdesc This class manages a dictionary of discovered peers. It manages
@@ -117,6 +104,19 @@ function PeerDictionary() {
  */
 PeerDictionary.MAXSIZE = 100;
 
+
+/**
+ * Array of PeerEntry properties that can be changed via
+ * {@link module:thaliPeerDictionary~PeerDictionary#addUpdatePeerEntry|addUpdatePeerEntry}
+ *
+ * @public
+ * @default
+ * @type {string[]}
+ */
+PeerDictionary.entryWritableProperties =
+  ['badPeer', 'waitingTimeout', 'retryCounter'];
+
+
 /**
  * Adds the entry if the peerId isn't yet in the table otherwise updates the
  * existing entry. If the new entry will increase the size of the dictionary
@@ -127,132 +127,129 @@ PeerDictionary.MAXSIZE = 100;
  * and it is removed.
  *
  * @public
- * @param {Object} peer
- * @param {string} peer.peerIdentifier
- * @param {number} peer.generation
- * @param {module:thaliPeerDictionary~PeerDictionaryEntry} entry
- * Entry to be added.
-  */
-PeerDictionary.prototype.addUpdateEntry = function (peer, entry) {
-  var peerIdentifier = peer.peerIdentifier;
-  assert(peerIdentifier, 'peer.peerIdentifier must be set');
-
-  var generation = peer.generation;
-  assert(typeof generation === 'number', 'peer.generation must be a number');
-
-  var peerProperties = ['badPeer', 'waitingTimeout', 'retryCounter'];
-
-  var peerEntryData = peek(entry, peerProperties);
-  var notificationAction = entry.notificationAction;
+ * @param {string} peerIdentifier
+ * @param {Object} [data]
+ * @param {boolean} [data.badPeer]
+ * @param {timers.Timer?} [data.waitingTimeout]
+ * @param {number} [data.retryCounter]
+ */
+PeerDictionary.prototype.addUpdatePeerEntry = function (peerIdentifier, data) {
+  assert(peerIdentifier, 'peerIdentifier exists');
 
   var peerEntry = this._dictionary[peerIdentifier];
-  if (!peerEntry) {
-    peerEntry = new PeerEntry();
+  var entryExists = Boolean(peerEntry);
+  if (!entryExists) {
+    peerEntry = this._createPeerEntry();
     this._dictionary[peerIdentifier] = peerEntry;
   }
-  objectAssign(peerEntry, peerEntryData);
 
-  var generationEntry = peerEntry.generations[generation];
-  if (generationEntry) {
-    if (!notificationAction) {
-      throw new Error('New peer entry must have notification action.');
+
+  if (data) {
+    var entryData = peek(data, PeerDictionary.entryWritableProperties);
+    if (peerEntry.waitingTimeout && entryData.waitingTimeout) {
+      // clear old timeout before overwriting
+      clearTimeout(peerEntry.waitingTimeout);
     }
-    generationEntry = {
-      notificationAction: null,
-      entryNumber: this._entryCounter++,
-    };
-    peerEntry.generations[generation] = generationEntry;
+    objectAssign(peerEntry, entryData);
+  } else {
+    // Sometimes we need to just create entry with default properties.
   }
 
-  if (generationEntry.notificationAction) {
-    generationEntry.notificationAction.kill();
-  }
-
-
-  var newPeerWillBeAdded = true;
-  var peerEntries = this._dictionary[peerIdentifier];
-  if (peerEntries) {
-    var oldPeer = peerEntries[generation];
-    if (oldPeer) {
-      // peer will be updated.
-      newPeerWillBeAdded = false;
-
-      if (oldPeer.entry !== entry) {
-        this._removeEntry(oldPeer.entry);
-      }
-    }
-  }
-
-  if (newPeerWillBeAdded) {
+  if (!entryExists) {
     this._removeOldestIfOverflow();
   }
+};
 
-  var peerEntries = this._dictionary[peerIdentifier];
-  if (!peerEntries) {
-    peerEntries = this._dictionary[peerIdentifier] = {};
+PeerDictionary.prototype.addPeerAction = function (peer, notificationAction) {
+  // Create peer entry if it does not exist yet
+  this.addUpdatePeerEntry(peer.peerIdentifier);
+  var peerEntry = this._dictionary[peer.peerIdentifier];
+
+  if (peerEntry.waitingTimeout) {
+    clearTimeout(peerEntry.waitingTimeout);
+    peerEntry.waitingTimeout = null;
   }
-  peerEntries[generation] = {
-    peerIdentifier: peerIdentifier,
-    generation:     generation,
-    entry:          entry,
-    entryNumber:    this._entryCounter++
+
+  assert(notificationAction, 'notificationAction exists');
+  assert.equal(notificationAction.getPeerGeneration(), peer.generation,
+    'notifcationAction belongs to the peer');
+
+  peerEntry.generations[peer.generation] =
+    this._createGenerationEntry(notificationAction);
+
+  // TODO: this won't work with retry actions
+  assert(peer.generation > peerEntry.generationCounter,
+    'generation MUST increase');
+  peerEntry.generationCounter = peer.generation;
+};
+
+PeerDictionary.prototype._createPeerEntry = function () {
+  return {
+    badPeer: false,
+    waitingTimeout: null,
+    retryCounter: 0,
+    generationCounter: null,
+    generations: Object.create(null),
   };
 };
 
+PeerDictionary.prototype._createGenerationEntry =
+  function (notificationAction) {
+    this._entryCounter++;
+    return {
+      notificationAction: notificationAction,
+      entryNumber: this._entryCounter,
+    };
+  };
+
 /**
- * Removes an entry which matches with the peerId.
- *
- * Errors:
- *
- * 'entry not found' - can't remove an entry because it is not
- * found.
+ * Removes a generation entry which matches with the peer.
  *
  * @public
  * @param {Object} peer
  * @param {string} peer.peerIdentifier
  * @param {number} peer.generation
  */
-PeerDictionary.prototype.remove = function (peer) {
+PeerDictionary.prototype.removePeerAction = function (peer) {
   assert(peer.peerIdentifier, 'peer.peerIdentifier must be set');
-  assert(typeof peer.generation === 'number',
+  assert.equals(typeof peer.generation, 'number',
     'peer.generation must be a number');
 
-  var entry = this.get(peer);
-  if (!entry) {
+  var peerEntry = this._dictionary[peer.peerIdentifier];
+  var generationEntry = peerEntry ?
+    peerEntry.generations[peer.generation] :
+    null;
+
+  if (!generationEntry) {
     return;
   }
-  this._removeEntry(entry);
 
-  var peerEntries = this._dictionary[peer.peerIdentifier];
-  delete peerEntries[peer.generation];
-  if (Object.keys(peerEntries).length === 0) {
-    delete this._dictionary[peer.peerIdentifier];
-  }
+  var action = generationEntry.notificationAction;
+  action.eventEmitter.removeAllListeners(
+    ThaliNotificationAction.Events.Resolved
+  );
+  action.kill();
+  delete peerEntry[peer.generation];
 };
 
-PeerDictionary.prototype._removeEntry = function (entry) {
-  if (entry.waitingTimeout) {
-    clearTimeout(entry.waitingTimeout);
-  }
-  if (entry.notificationAction) {
-    entry.notificationAction.eventEmitter.removeAllListeners(
-      ThaliNotificationAction.Events.Resolved
-    );
-    entry.notificationAction.kill();
-  }
-};
-
-PeerDictionary.prototype.removeAllPeerEntries = function (peerIdentifier) {
-  var peerEntries = this._dictionary[peerIdentifier];
-  if (!peerEntries) {
+PeerDictionary.prototype.removePeerEntry = function (peerIdentifier) {
+  var peerEntry = this._dictionary[peerIdentifier];
+  if (!peerEntry) {
     return;
   }
-  Object.keys(peerEntries).forEach(function (generation) {
-    this.remove({
+
+  Object.keys(peerEntry.generations).forEach(function (generation) {
+    this.removePeerAction({
       peerIdentifier: peerIdentifier,
       generation: Number(generation),
     });
   }, this);
+
+  if (peerEntry.waitingTimeout) {
+    clearTimeout(peerEntry.waitingTimeout);
+  }
+
+  delete this._dictionary[peerIdentifier];
 };
 
 /**
@@ -260,53 +257,48 @@ PeerDictionary.prototype.removeAllPeerEntries = function (peerIdentifier) {
  * @public
  */
 PeerDictionary.prototype.removeAll = function () {
-  var self = this;
   Object.keys(this._dictionary).forEach(function (peerIdentifier) {
-    self.removeAllPeerEntries(peerIdentifier);
-  });
+    this.removePeerEntry(peerIdentifier);
+  }, this);
 };
 
 /**
- * Checks if the entry exists in the dictionary.
+ * Returns a notification action that matches with the peerId.
  *
  * @public
  * @param {Object} peer
  * @param {string} peer.peerIdentifier
  * @param {number} peer.generation
- * @returns {boolean} Returns true if the entry exists, false otherwise.
+ * @returns {module:thaliNotificationAction~ThaliNotificationAction?}
+ * Returns a notification action that matches with the peerId. If the entry is
+ * not found returns null.
  */
-PeerDictionary.prototype.exists = function (peer) {
+PeerDictionary.prototype.getPeerAction = function (peer) {
   assert(peer.peerIdentifier, 'peer.peerIdentifier must be set');
   assert(typeof peer.generation === 'number',
     'peer.generation must be a number');
 
-  var peerEntries = this._dictionary[peer.peerIdentifier];
-  return (
-    peerEntries !== undefined &&
-    peerEntries[peer.generation] !== undefined
-  );
+  var peerEntry = this._dictionary[peer.peerIdentifier];
+  var generationEntry = peerEntry ?
+    peerEntry.generations[peer.generation] :
+    null;
+
+  return generationEntry ?
+    generationEntry.notificationAction :
+    null;
 };
 
-/**
- * Returns an entry from the dictionary which matches with the peerId.
- *
- * @public
- * @param {Object} peer
- * @param {string} peer.peerIdentifier
- * @param {number} peer.generation
- * @returns {module:thaliPeerDictionary~PeerEntry}
- * Returns an entry that matches with the peerId. If the entry is not found
- * returns null.
- */
-PeerDictionary.prototype.get = function (peer) {
-  assert(peer.peerIdentifier, 'peer.peerIdentifier must be set');
-  assert(typeof peer.generation === 'number',
-    'peer.generation must be a number');
+var peerPrivateProperties = ['generations'];
+PeerDictionary.prototype.getPeerEntry = function (peerIdentifier) {
+  assert(peerIdentifier, 'peerIdentifier exists');
 
-  var peerEntries = this._dictionary[peer.peerIdentifier];
-  var entryObject = peerEntries ? peerEntries[peer.generation] : null;
-  return entryObject ? entryObject.entry : null;
+  var peerEntry = this._dictionary[peerIdentifier];
+  if (!peerEntry) {
+    return null;
+  }
+  return omit(peerEntry, peerPrivateProperties);
 };
+
 
 /**
  * Returns the size of the dictionary.
@@ -317,7 +309,10 @@ PeerDictionary.prototype.get = function (peer) {
 PeerDictionary.prototype.size = function () {
   var dict = this._dictionary;
   return Object.keys(dict).reduce(function (total, peerIdentifier) {
-    return total + Object.keys(dict[peerIdentifier]).length;
+    var actionsCount = Object.keys(dict[peerIdentifier].generations).length;
+    // It is possible to have peer entry without any associated actions but it
+    // should still count as at least one entry;
+    return total + Math.min(actionsCount, 1);
   }, 0);
 };
 
@@ -396,11 +391,26 @@ function has(obj, prop) {
 }
 
 function peek(obj, props) {
-  var result = {}, prop;
+  var result = {};
+  var prop;
   for (var i = 0; i < props.length; i++) {
     prop = props[i];
     if (has(obj, prop)) {
       result[prop] = obj[prop];
+    }
+  }
+  return result;
+}
+
+function omit(obj, props) {
+  var result = {};
+  var keys = Object.keys(obj);
+  var key;
+
+  for (var i = 0; i < keys.length; i++) {
+    key = keys[i];
+    if (props.indexOf(key) === -1) {
+      result[key] = obj[key];
     }
   }
   return result;
