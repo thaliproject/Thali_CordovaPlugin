@@ -830,8 +830,11 @@ function (t) {
 test('SSDP server should not restart after Wifi Client changed generation',
   function (t) {
     var advertisingEndSpy =
-      sinon.spy(wifiInfrastructure.advertiser, 'stop');
+      sinon.spy(wifiInfrastructure.advertiser._server, 'stop');
     wifiInfrastructure.startListeningForAdvertisements()
+      .then(function () {
+        return wifiInfrastructure.startUpdateAdvertisingAndListening();
+      })
       .then(function () {
         return wifiInfrastructure.startUpdateAdvertisingAndListening();
       })
@@ -846,3 +849,36 @@ test('SSDP server should not restart after Wifi Client changed generation',
       });
   }
 );
+
+test('SSDP client receives correct USN after #startUpdateAdvertisingAndListening called', function (t) {
+  var testClient = new nodessdp.Client({
+    ssdpIp: thaliConfig.SSDP_IP
+  });
+
+  var ourUSN = null;
+  var aliveCalled = false;
+
+  function finishTest() {
+    testClient.stop();
+    t.equals(aliveCalled, true, 'advertise-alive fired with expected usn');
+    t.end();
+  }
+
+  testClient.on('advertise-alive', function (data) {
+    // Check for the Thali NT in case there is some other
+    // SSDP traffic in the network.
+    if (data.NT !== thaliConfig.SSDP_NT || data.USN !== ourUSN) {
+      return;
+    }
+    aliveCalled = true;
+    finishTest();
+  });
+
+  testClient.start(function () {
+    // This is the first call to the update function after which
+    // some USN value should be advertised.
+    wifiInfrastructure.startUpdateAdvertisingAndListening().then(function () {
+      ourUSN = USN.stringify(wifiInfrastructure._getCurrentPeer());
+    });
+  });
+});

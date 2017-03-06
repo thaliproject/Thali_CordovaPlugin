@@ -331,7 +331,7 @@ WifiAdvertiser.prototype.start = enqueued(function (router, pskIdToSecret) {
 
   return self._setUpExpressApp(router, pskIdToSecret)
     .then(function () {
-      return self._startPeerAdvertising(self.peer);
+      return self._setUSN(self.peer, true);
     })
     .then(function () {
       self._isAdvertising = true;
@@ -348,10 +348,12 @@ WifiAdvertiser.prototype.start = enqueued(function (router, pskIdToSecret) {
  * @param {number} peer.generation
  * @return {Promise}
  */
-WifiAdvertiser.prototype._startPeerAdvertising = function (peer) {
+WifiAdvertiser.prototype._setUSN = function (peer, startPeerAdvertising) {
   var usn = USN.stringify(peer);
   this._server.setUSN(usn);
-  return this._server.startAsync();
+  if (startPeerAdvertising) {
+    return this._server.startAsync();
+  }
 };
 
 /**
@@ -366,8 +368,7 @@ WifiAdvertiser.prototype.update = enqueued(function () {
 
   // We need to change USN every time a WifiClient changed generation
   self.peer.generation++; 
-  var usn = USN.stringify(self.peer);
-  self._server.setUSN(usn);
+  self._setUSN(self.peer, false);
 
   return Promise.resolve();
 });
