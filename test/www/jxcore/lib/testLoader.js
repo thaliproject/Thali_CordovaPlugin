@@ -51,6 +51,8 @@ function loadFile (filePath) {
 };
 
 module.exports.load = function (testsToRun, preferredOrder) {
+  loadFile("../bv_tests/testTests.js");
+  return;
   if (hasJavaScriptSuffix(testsToRun)) {
     loadFile(testsToRun);
   } else {
