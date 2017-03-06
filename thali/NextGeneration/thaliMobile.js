@@ -1186,9 +1186,7 @@ function watchForPeerAvailability (peer) {
 
   var now = Date.now();
   var unavailabilityThreshold =
-    connectionType === connectionTypes.TCP_NATIVE ?
-      thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD :
-      thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
+    thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
 
   // If the time from the latest availability advertisement doesn't
   // exceed the threshold, no need to do anything.
@@ -1208,9 +1206,7 @@ function addAvailabilityWatcherToPeerIfNotExist (peer) {
   var connectionType = peer.connectionType;
   var peerIdentifier = peer.peerIdentifier;
   var unavailabilityThreshold =
-    connectionType === connectionTypes.TCP_NATIVE ?
-    thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD :
-    thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
+    thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
 
   // No reason to check peer availability
   // more then once per unavailability threshold
@@ -1260,7 +1256,9 @@ function changeCachedPeerUnavailable (peer) {
 function changeCachedPeerAvailable (peer) {
   var cachedPeer = JSON.parse(JSON.stringify(peer));
   peerAvailabilities[peer.connectionType][peer.peerIdentifier] = cachedPeer;
-  addAvailabilityWatcherToPeerIfNotExist(cachedPeer);
+  if (peer.connectionType === connectionTypes.TCP_NATIVE) {
+    addAvailabilityWatcherToPeerIfNotExist(cachedPeer);
+  }
 }
 
 function changePeersUnavailable (connectionType) {
