@@ -1,5 +1,7 @@
 'use strict';
 
+var EventEmitter = require('events').EventEmitter;
+
 var Promise = require('lie');
 var util = require('util');
 var urlsafeBase64 = require('urlsafe-base64');
@@ -17,6 +19,20 @@ var logger = require('../../ThaliLogger')('thaliPeerAction');
 var peerActionCounter = 0;
 
 /**
+ * This event is emitted synchronously when action state is changed to STARTED.
+ *
+ * @event started
+ * @public
+ */
+
+/**
+ * This event is emitted synchronously when action state is changed to KILLED.
+ *
+ * @event killed
+ * @public
+ */
+
+/**
  * An action that has been given to the pool to manage.
  *
  * When an action is created its state MUST be CREATED.
@@ -28,6 +44,8 @@ var peerActionCounter = 0;
  * @public
  * @interface PeerAction
  * @constructor
+ * @fires event:killed
+ * @fires event:started
  * @param {string} peerIdentifier
  * @param {module:ThaliMobileNativeWrapper.connectionTypes} connectionType
  * @param {string} actionType
@@ -37,6 +55,7 @@ var peerActionCounter = 0;
 function PeerAction (peerIdentifier, connectionType, actionType, pskIdentity,
                      pskKey)
 {
+  EventEmitter.call(this);
   this._peerIdentifier = peerIdentifier;
   this._connectionType = connectionType;
   this._actionType = actionType;
@@ -46,6 +65,8 @@ function PeerAction (peerIdentifier, connectionType, actionType, pskIdentity,
   this._id = peerActionCounter;
   ++peerActionCounter;
 }
+
+util.inherits(PeerAction, EventEmitter);
 
 /**
  * Records the current state of the action.
@@ -188,12 +209,12 @@ PeerAction.prototype.getId = function () {
  * return success with null. After all, kill doesn't reflect a failure
  * of the action but a change in outside circumstances.
  */
-// jscs:disable disallowUnusedParams
 PeerAction.prototype.start = function (httpAgentPool) {
   this._httpAgentPool = httpAgentPool;
   switch (this._actionState) {
     case PeerAction.actionState.CREATED: {
       this._actionState = PeerAction.actionState.STARTED;
+      this.emit('started');
       return Promise.resolve();
     }
     case PeerAction.actionState.STARTED: {
@@ -207,7 +228,6 @@ PeerAction.prototype.start = function (httpAgentPool) {
     }
   }
 };
-// jscs:enable disallowUnusedParams
 
 /**
  * Error message returned when start called twice in a row
@@ -252,12 +272,15 @@ PeerAction.prototype.kill = function () {
     this._httpAgentPool = null;
   }
 
-  this._actionState = PeerAction.actionState.KILLED;
+  if (this._actionState !== PeerAction.actionState.KILLED) {
+    this._actionState = PeerAction.actionState.KILLED;
+    this.emit('killed');
+  }
   return null;
 };
 
 PeerAction.prototype.waitUntilKilled = function () {
   return Promise.resolve();
-}
+};
 
 module.exports = PeerAction;

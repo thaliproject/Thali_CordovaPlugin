@@ -1,8 +1,11 @@
 'use strict';
 
+var assert = require('assert');
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
+
 var ThaliNotificationClient = require('../notification/thaliNotificationClient');
 var logger = require('../../ThaliLogger')('thaliPullReplicationFromNotification');
-var assert = require('assert');
 var PeerAction = require('../thaliPeerPool/thaliPeerAction');
 var ThaliReplicationPeerAction = require('./thaliReplicationPeerAction');
 
@@ -56,6 +59,8 @@ function ThaliPullReplicationFromNotification(PouchDB,
                                               dbName,
                                               thaliPeerPoolInterface,
                                               ecdhForLocalDevice) {
+  EventEmitter.call(this);
+
   assert(PouchDB, 'Must have PouchDB');
   assert(dbName, 'Must have dbName');
   assert(thaliPeerPoolInterface, 'Must have thaliPeerPoolInterface');
@@ -72,6 +77,8 @@ function ThaliPullReplicationFromNotification(PouchDB,
 
   this.state = ThaliPullReplicationFromNotification.STATES.CREATED;
 }
+
+inherits(ThaliPullReplicationFromNotification, EventEmitter);
 
 /**
  * This is a list of states for ThaliPullReplicationFromNotification.
@@ -91,6 +98,7 @@ ThaliPullReplicationFromNotification.STATES = {
  * Both 'connectionType' and 'keyId' wont have '-' symbol.
  * @param {Object} peerAdvertisesData
  * @private
+ * @return {string}
  */
 ThaliPullReplicationFromNotification._getPeerDictionaryKey =
   function (peerAdvertisesData) {
@@ -102,7 +110,7 @@ ThaliPullReplicationFromNotification._getPeerDictionaryKey =
  * We are going to create a replication action based on this data.
  * We should make a single action from multiple data
  * with the same 'connectionType' and 'keyId'.
- * @param {Object} peerAction
+ * @param {Object} peerAdvertisesData
  * @private
  */
 ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
@@ -136,40 +144,32 @@ ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
     this._peerDictionary[key] = newAction;
     this._bindRemoveActionFromPeerDictionary(newAction, key);
 
-    var enqueueError = this._thaliPeerPoolInterface.enqueue(newAction);
-    if (enqueueError) {
-      logger.warn('_peerAdvertisesDataForUsHandler: failed to enqueue an item: %s',
-        enqueueError.message);
+    try {
+      this._thaliPeerPoolInterface.enqueue(newAction);
+    } catch (error) {
+      this.emit('error', error);
     }
   };
 
 /**
+ * Store action in the _peerDictionary and listen to the killed and started
+ * events.
+ *
  * Action should be deleted from 'peerDictionary' (by special 'key')
  * on first starting or killed event.
  * @private
+ * @param {module:thaliPeerAction~PeerAction} action
+ * @param {string} key
  */
 ThaliPullReplicationFromNotification.prototype.
-  _bindRemoveActionFromPeerDictionary =
-  function (action, key) {
+  _bindRemoveActionFromPeerDictionary = function (action, key) {
     var self = this;
 
     // TODO Investigate whether EventEmitter with action will provide a memory
     // leak.
-    // TODO Add EventEmitter to the peer action class.
-    // TODO Extend EventEmitter with 'onceAny' method.
-    // For example here we can use:
-    // action.onceAny(['beforeStart', 'afterEnd'], function () {
-    //   assert(...);
-    //   delete self._peerDictionary[key];
-    // });
-
-    var removed = false;
-    function removeHandler () {
-      if (removed) {
-        return;
-      }
-      removed = true;
-
+    function removeFromDictionary () {
+      action.removeListener('started', removeFromDictionary);
+      action.removeListener('killed', removeFromDictionary);
       assert(
         self._peerDictionary[key], 'The entry should exist because this is ' +
         'the only place that can remove it'
@@ -177,19 +177,8 @@ ThaliPullReplicationFromNotification.prototype.
       delete self._peerDictionary[key];
     }
 
-    // This is a workaround for 'onceAny'.
-    var originalStart = action.start;
-    action.start = function () {
-      removeHandler();
-      action.start = originalStart;
-      return originalStart.apply(this, arguments);
-    };
-    var originalKill = action.kill;
-    action.kill = function () {
-      removeHandler();
-      action.kill = originalKill;
-      return originalKill.apply(this, arguments);
-    };
+    action.on('started', removeFromDictionary);
+    action.on('killed', removeFromDictionary);
   };
 
 /**
