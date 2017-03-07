@@ -193,9 +193,11 @@ test('#stop should clear watchers and change peers', function (t) {
       });
     })
     .then(function () {
-      t.equal(Object.getOwnPropertyNames(
+      if (connectionType !== connectionTypes.BLUETOOTH) {
+        t.equal(Object.getOwnPropertyNames(
         ThaliMobile._peerAvailabilityWatchers[connectionType]).length, 1,
         'Watchers have one entry for our connection type');
+      }
       t.equal(Object.getOwnPropertyNames(
         ThaliMobile._peerAvailabilities[connectionType]).length, 1,
         'Peer availabilities has one entry for our connection type');
@@ -205,9 +207,11 @@ test('#stop should clear watchers and change peers', function (t) {
       Object.getOwnPropertyNames(connectionTypes)
         .forEach(function (connectionKey) {
           var connectionType = connectionTypes[connectionKey];
-          t.equal(Object.getOwnPropertyNames(
+          if (connectionType !== connectionTypes.BLUETOOTH) {
+            t.equal(Object.getOwnPropertyNames(
             ThaliMobile._peerAvailabilityWatchers[connectionType]).length,
             0, 'No watchers');
+          }
           t.equal(Object.getOwnPropertyNames(
             ThaliMobile._peerAvailabilities[connectionType]).length,
             0, 'No peers');
@@ -428,56 +432,8 @@ test('wifi peer is marked unavailable if announcements stop',
   }
 );
 
-test('native peer should be removed if no availability updates ' +
-'were received during availability timeout',
-  function (t) {
-    var originalThreshold = thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
-    // Make the threshold a bit shorter so that the test doesn't
-    // have to wait for so long.
-    thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD = 100;
-
-    t.timeoutAfter(thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD * 3);
-
-    var nativePeer = generateLowerLevelPeers().nativePeer;
-    var callCount = 0;
-
-    var availabilityHandler = function (peerStatus) {
-      if (peerStatus.peerIdentifier !== nativePeer.peerIdentifier) {
-        return;
-      }
-      callCount++;
-
-      switch (callCount) {
-        case 1:
-          t.equal(peerStatus.peerAvailable, true, 'peer is available');
-          break;
-        case 2:
-          t.equal(peerStatus.peerAvailable, false,
-            'peer is not availabel because it was too silent');
-          // restore everything
-          thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD = originalThreshold;
-          ThaliMobile.emitter
-              .removeListener('peerAvailabilityChanged', availabilityHandler);
-          t.end();
-          break;
-      }
-    };
-    ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
-
-    ThaliMobile.start(express.Router()).then(function () {
-      emitNativePeerAvailability(nativePeer);
-    });
-  }
-);
-
 test('peerAvailabilityChanged - peer added/removed to/from cache (native)',
   function (t) {
-    var timeout = Math.min(
-      thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD / 2,
-      30 * 1000
-    );
-    t.timeoutAfter(timeout);
-
     var nativePeer = generateLowerLevelPeers().nativePeer;
     var callCount = 0;
     var connectionType = getNativeConnectionType();
@@ -1084,12 +1040,6 @@ test('networkChanged - fires peerAvailabilityChanged event for native peers ' +
     // Expected result: fire peerAvailabilityChanged with native peer's id and
     // peerAvailable set to false
 
-    var timeout = Math.min(
-      thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD / 2,
-      30 * 1000
-    );
-    t.timeoutAfter(timeout);
-
     var testPeers = generateLowerLevelPeers();
     var callCount = 0;
 
@@ -1431,12 +1381,6 @@ test('newAddressPort field (BLUETOOTH)',
     return !platform.isAndroid;
   },
   function (t) {
-    var timeout = Math.min(
-      thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD / 2,
-      30 * 1000
-    );
-    t.timeoutAfter(timeout);
-
     var nativePeer = generateLowerLevelPeers().nativePeer;
     var callCount = 0;
 
@@ -2213,6 +2157,73 @@ test('does not fire duplicate events after peer listener recreation',
   }
 );
 
+test(
+  'Discovered peer should be removed if no availability updates ' +
+  'were received during availability timeout',
+  function () {
+    return !platform.isAndroid ||
+      global.NETWORK_TYPE === ThaliMobile.networkTypes.NATIVE;
+  },
+  function (t) {
+    var peerIdentifier = 'urn:uuid:' + uuid.v4();
+    var portNumber = 8080;
+    var generation = 50;
+
+    var originalThreshold = thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
+    thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD = 500;
+
+    var finalizeTest = function (error) {
+      thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD =
+        originalThreshold;
+      t.end(error);
+    };
+
+    ThaliMobile.start(express.Router())
+    .then(function () {
+      var availabilityHandler = function (peer) {
+        if (peer.peerIdentifier !== peerIdentifier) {
+          return;
+        }
+
+        ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+          availabilityHandler);
+
+        var unavailabilityHandler = function (peer) {
+          if (peer.peerIdentifier !== peerIdentifier) {
+            return;
+          }
+
+          t.notOk(peer.peerAvailable, 'Peer should not be available');
+
+          ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+            unavailabilityHandler);
+
+          finalizeTest(null);
+        };
+
+        ThaliMobile.emitter.on('peerAvailabilityChanged',
+          unavailabilityHandler);
+      };
+
+      ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
+
+      ThaliMobile._getThaliWifiInfrastructure().emit(
+        'wifiPeerAvailabilityChanged',
+        {
+          peerIdentifier: peerIdentifier,
+          peerAvailable: true,
+          generation: generation,
+          portNumber: portNumber,
+          hostAddress: '127.0.0.1'
+        }
+      );
+    })
+    .catch(function (error) {
+      finalizeTest(error);
+    });
+  }
+);
+
 if (!tape.coordinated) {
   return;
 }
@@ -2597,65 +2608,3 @@ test('test for data corruption',
     runTestFunction();
   }
  );
-
-test(
-  'Discovered peer should be removed if no availability updates ' +
-  'were received during availability timeout',
-  function (t) {
-    var peerIdentifier = 'urn:uuid:' + uuid.v4();
-    var portNumber = 8080;
-    var generation = 50;
-
-    var originalThreshold = thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
-    thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD = 500;
-
-    var finalizeTest = function (error) {
-      thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD =
-        originalThreshold;
-      t.end(error);
-    };
-
-    ThaliMobile.start(express.Router())
-    .then(function () {
-      var availabilityHandler = function (peer) {
-        if (peer.peerIdentifier !== peerIdentifier) {
-          return;
-        }
-
-        ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
-          availabilityHandler);
-
-        var unavailabilityHandler = function (peer) {
-          if (peer.peerIdentifier !== peerIdentifier) {
-            return;
-          }
-
-          t.notOk(peer.peerAvailable, 'Peer should not be available');
-
-          ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
-            unavailabilityHandler);
-
-          finalizeTest(null);
-        };
-
-        ThaliMobile.emitter.on('peerAvailabilityChanged',
-          unavailabilityHandler);
-      };
-
-      ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
-
-      ThaliMobileNativeWrapper.emitter.emit(
-        'nonTCPPeerAvailabilityChangedEvent',
-        {
-          peerIdentifier: peerIdentifier,
-          peerAvailable: true,
-          generation: generation,
-          portNumber: portNumber
-        }
-      );
-    })
-    .catch(function (error) {
-      finalizeTest(error);
-    });
-  }
-);
