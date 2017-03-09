@@ -23,9 +23,11 @@ var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils.js');
 var USN = require('thali/NextGeneration/utils/usn');
+var logger = require('thali/ThaliLogger')('testThaliWifiInfrastructure');
 
 
 var wifiInfrastructure = new ThaliWifiInfrastructure();
+var connectionTypes = ThaliMobileNativeWrapper.connectionTypes;
 
 var pskIdentity = 'I am an id!';
 var pskKey = new Buffer('And I am a secret!!!!');
@@ -714,6 +716,120 @@ test('functions are run from a queue in the right order', function (t) {
   });
 });
 
+test(
+  'Discovered peer should be removed if no availability updates ' +
+  'were received during availability timeout',
+  function () {
+    return !platform.isAndroid
+  },
+  function (t) {
+    var peerIdentifier = 'urn:uuid:' + uuid.v4();
+    var portNumber = 8080;
+    var generation = 50;
+
+    var originalThreshold = thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
+    thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD = 500;
+
+    var finalizeTest = function (error) {
+      thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD =
+        originalThreshold;
+      t.end(error);
+    };
+
+    ThaliMobile.start(express.Router())
+    .then(function () {
+      var availabilityHandler = function (peer) {
+        if (peer.peerIdentifier !== peerIdentifier) {
+          return;
+        }
+
+        ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+          availabilityHandler);
+
+        var unavailabilityHandler = function (peer) {
+          if (peer.peerIdentifier !== peerIdentifier) {
+            return;
+          }
+
+          t.notOk(peer.peerAvailable, 'Peer should not be available');
+
+          ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+            unavailabilityHandler);
+
+          finalizeTest(null);
+        };
+
+        ThaliMobile.emitter.on('peerAvailabilityChanged',
+          unavailabilityHandler);
+      };
+
+      ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
+
+      ThaliMobile._getThaliWifiInfrastructure().emit(
+        'wifiPeerAvailabilityChanged',
+        {
+          peerIdentifier: peerIdentifier,
+          peerAvailable: true,
+          generation: generation,
+          portNumber: portNumber,
+          hostAddress: '127.0.0.1'
+        }
+      );
+    })
+    .catch(function (error) {
+      finalizeTest(error);
+    });
+  }
+);
+
+test('#stop should clear watchers and change peers', function (t) {
+ var somePeerIdentifier = 'urn:uuid:' + uuid.v4();
+
+  /*var connectionType = platform.isAndroid ?
+    connectionTypes.BLUETOOTH :
+    connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK;*/
+
+  wifiInfrastructure.start(express.Router(), new Buffer('foo'))
+    .then(function () {
+      return wifiInfrastructure.startListeningForAdvertisements();
+    })
+    .then(function () {
+      return ThaliMobileNativeWrapper._handlePeerAvailabilityChanged({
+        peerIdentifier: somePeerIdentifier,
+        peerAvailable: true
+      });
+    })
+    .then(function () {
+      t.equal(Object.getOwnPropertyNames(
+        ThaliMobile._peerAvailabilityWatchers[connectionType]).length, 1,
+        'Watchers have one entry for our connection type');
+
+      t.equal(Object.getOwnPropertyNames(
+        ThaliMobile._peerAvailabilities[connectionType]).length, 1,
+        'Peer availabilities has one entry for our connection type');
+      return wifiInfrastructure.stop();
+    })
+    .then(function () {
+      Object.getOwnPropertyNames(connectionTypes)
+        .forEach(function (connectionKey) {
+          var connectionType = connectionTypes[connectionKey];
+          
+          t.equal(Object.getOwnPropertyNames(
+            ThaliMobile._peerAvailabilityWatchers[connectionType]).length,
+            0, 'No watchers');
+          
+          t.equal(Object.getOwnPropertyNames(
+            ThaliMobile._peerAvailabilities[connectionType]).length,
+            0, 'No peers');
+        });
+      t.end();
+    })
+    .catch(function (err) {
+      t.fail('Failed out with ' + err);
+      t.end();
+    });
+});
+
 // From here onwards, tests only work on mocked up desktop
 // environment where network changes can be simulated.
 if (platform._isRealMobile) {
@@ -826,3 +942,4 @@ function (t) {
   });
   testUtils.toggleWifi(false);
 });
+

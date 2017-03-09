@@ -174,56 +174,6 @@ test('#start should fail if called twice in a row', function (t) {
   });
 });
 
-test('#stop should clear watchers and change peers', function (t) {
-  var somePeerIdentifier = 'urn:uuid:' + uuid.v4();
-
-  var connectionType = platform.isAndroid ?
-    connectionTypes.BLUETOOTH :
-    connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK;
-
-  ThaliMobile.start(express.Router(), new Buffer('foo'),
-    ThaliMobile.networkTypes.NATIVE)
-    .then(function () {
-      return ThaliMobile.startListeningForAdvertisements();
-    })
-    .then(function () {
-      return ThaliMobileNativeWrapper._handlePeerAvailabilityChanged({
-        peerIdentifier: somePeerIdentifier,
-        peerAvailable: true
-      });
-    })
-    .then(function () {
-      if (connectionType !== connectionTypes.BLUETOOTH) {
-        t.equal(Object.getOwnPropertyNames(
-        ThaliMobile._peerAvailabilityWatchers[connectionType]).length, 1,
-        'Watchers have one entry for our connection type');
-      }
-      t.equal(Object.getOwnPropertyNames(
-        ThaliMobile._peerAvailabilities[connectionType]).length, 1,
-        'Peer availabilities has one entry for our connection type');
-      return ThaliMobile.stop();
-    })
-    .then(function () {
-      Object.getOwnPropertyNames(connectionTypes)
-        .forEach(function (connectionKey) {
-          var connectionType = connectionTypes[connectionKey];
-          if (connectionType !== connectionTypes.BLUETOOTH) {
-            t.equal(Object.getOwnPropertyNames(
-            ThaliMobile._peerAvailabilityWatchers[connectionType]).length,
-            0, 'No watchers');
-          }
-          t.equal(Object.getOwnPropertyNames(
-            ThaliMobile._peerAvailabilities[connectionType]).length,
-            0, 'No peers');
-        });
-      t.end();
-    })
-    .catch(function (err) {
-      t.fail('Failed out with ' + err);
-      t.end();
-    });
-});
-
 test('#start subscribes to the WiFi infrastructure events and #stop ' +
 'unsubscribes from them (in WiFi-only mode)',
   function () {
@@ -2153,73 +2103,6 @@ test('does not fire duplicate events after peer listener recreation',
     })
     .catch(function (err) {
       t.end(err || new Error('test failed'));
-    });
-  }
-);
-
-test(
-  'Discovered peer should be removed if no availability updates ' +
-  'were received during availability timeout',
-  function () {
-    return !platform.isAndroid ||
-      global.NETWORK_TYPE === ThaliMobile.networkTypes.NATIVE;
-  },
-  function (t) {
-    var peerIdentifier = 'urn:uuid:' + uuid.v4();
-    var portNumber = 8080;
-    var generation = 50;
-
-    var originalThreshold = thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
-    thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD = 500;
-
-    var finalizeTest = function (error) {
-      thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD =
-        originalThreshold;
-      t.end(error);
-    };
-
-    ThaliMobile.start(express.Router())
-    .then(function () {
-      var availabilityHandler = function (peer) {
-        if (peer.peerIdentifier !== peerIdentifier) {
-          return;
-        }
-
-        ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
-          availabilityHandler);
-
-        var unavailabilityHandler = function (peer) {
-          if (peer.peerIdentifier !== peerIdentifier) {
-            return;
-          }
-
-          t.notOk(peer.peerAvailable, 'Peer should not be available');
-
-          ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
-            unavailabilityHandler);
-
-          finalizeTest(null);
-        };
-
-        ThaliMobile.emitter.on('peerAvailabilityChanged',
-          unavailabilityHandler);
-      };
-
-      ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
-
-      ThaliMobile._getThaliWifiInfrastructure().emit(
-        'wifiPeerAvailabilityChanged',
-        {
-          peerIdentifier: peerIdentifier,
-          peerAvailable: true,
-          generation: generation,
-          portNumber: portNumber,
-          hostAddress: '127.0.0.1'
-        }
-      );
-    })
-    .catch(function (error) {
-      finalizeTest(error);
     });
   }
 );
