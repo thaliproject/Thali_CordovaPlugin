@@ -207,6 +207,7 @@ const commandsAndResults =
       (result, version) => boolToPromise(version === result.trim())
   },
   carthage: {
+    platform: ['darwin'],
     versionCheck: 'carthage version',
     versionValidate:
       (result, version) => boolToPromise(version === result.trim())
