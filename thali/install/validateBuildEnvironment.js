@@ -13,7 +13,7 @@ const assert = require('assert');
 
 const versions =
 {
-  xcode: '7.3.1',
+  xcode: '8.2.1',
   xcodeCommandLineTools: ' ',
   macOS: '10.12.3',
   node: '6.9.1',
@@ -21,7 +21,7 @@ const versions =
   brew: '1.1.',
   ruby: '2.3.0p0',
   wget: '1.18',
-  jxcore: '0.3.1.8',
+  jxcore: '0.3.1.10',
   androidHome: ' ',
   androidBuildTools: thaliConfig.thaliInstall.androidConfig.buildToolsVersion,
   androidPlatform: thaliConfig.thaliInstall.androidConfig.compileSdkVersion,
