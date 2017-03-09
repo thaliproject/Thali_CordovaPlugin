@@ -61,7 +61,7 @@ module.exports = function (context) {
   // We need to build ThaliCore.framework before embedding it into the project
 
   var thaliCoreProjectFolder = path.join(
-    context.opts.plugin.dir, 'lib', 'ios', 'Carthage', 'Checkouts', 'thali-ios');
+    context.opts.plugin.dir, 'lib', 'ios', 'ThaliCore');
   var thaliCoreOutputFolder = path.join(
     context.opts.plugin.dir, 'lib', 'ios');
   var testingInfrastructureDir = path.join(
