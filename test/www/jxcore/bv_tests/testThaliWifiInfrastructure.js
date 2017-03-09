@@ -23,6 +23,7 @@ var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils.js');
 var USN = require('thali/NextGeneration/utils/usn');
+var logger = require('thali/ThaliLogger')('testThaliWifiInfrastructure');
 
 
 var wifiInfrastructure = new ThaliWifiInfrastructure();
@@ -850,17 +851,22 @@ test('SSDP server should not restart after Wifi Client changed generation',
   }
 );
 
-test('SSDP client receives correct USN after #startUpdateAdvertisingAndListening called', function (t) {
+test('startUpdateAdvertisingAndListening does not send ssdp:byebye notifications', function (t) {
   var testClient = new nodessdp.Client({
     ssdpIp: thaliConfig.SSDP_IP
   });
 
-  var ourUSN = null;
+  var ourPeer = null;
   var aliveCalled = false;
+  var byeCalled = false;
+  var ourUSN = null;
+  var updatedUSN = null;
 
   function finishTest() {
     testClient.stop();
-    t.equals(aliveCalled, true, 'advertise-alive fired with expected usn');
+    t.equals(aliveCalled, true, 'advertise-alive fired');
+    t.equals(byeCalled, false, 'advertise-bye not fired');
+    t.equals(ourPeer.peerIdentifier, updatedUSN.peerIdentifier, 'the same peer');
     t.end();
   }
 
@@ -870,7 +876,22 @@ test('SSDP client receives correct USN after #startUpdateAdvertisingAndListening
     if (data.NT !== thaliConfig.SSDP_NT || data.USN !== ourUSN) {
       return;
     }
+
+    if (aliveCalled) {
+      updatedUSN = USN.parse(data.USN);
+      finishTest();
+    }
     aliveCalled = true;
+  });
+
+  testClient.on('advertise-bye', function (data) {
+    // Check for the Thali NT in case there is some other
+    // SSDP traffic in the network.
+    if (data.NT !== thaliConfig.SSDP_NT || data.USN !== ourUSN) {
+      return;
+    }
+    byeCalled = true;
+
     finishTest();
   });
 
@@ -878,7 +899,10 @@ test('SSDP client receives correct USN after #startUpdateAdvertisingAndListening
     // This is the first call to the update function after which
     // some USN value should be advertised.
     wifiInfrastructure.startUpdateAdvertisingAndListening().then(function () {
-      ourUSN = USN.stringify(wifiInfrastructure._getCurrentPeer());
-    });
+      ourPeer = wifiInfrastructure._getCurrentPeer();
+      wifiInfrastructure.startUpdateAdvertisingAndListening().then(function () {
+        ourUSN = USN.stringify(wifiInfrastructure._getCurrentPeer());
+      });
+    })
   });
 });
