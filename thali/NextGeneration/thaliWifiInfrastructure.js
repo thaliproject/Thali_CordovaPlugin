@@ -684,61 +684,72 @@ inherits(ThaliWifiInfrastructure, EventEmitter);
 
 ThaliWifiInfrastructure.prototype._handleNetworkChanges =
 function (networkStatus) {
-  var isWifiChanged = this._lastNetworkStatus ?
-    networkStatus.wifi !== this._lastNetworkStatus.wifi :
-    true;
+  var lastStatus = this._lastNetworkStatus;
 
-  var isBssidChanged = this._lastNetworkStatus ?
-    networkStatus.bssidName !== this._lastNetworkStatus.bssidName :
-    true;
+  /** true if device became connected to the WiFi access point */
+  var connectedToAP;
+  /** true if device is no longer connected to any WiFi access point */
+  var disconnectedFromAP;
+  /** true if device moved from one WiFi access point to another access point */
+  var changedAP;
+
+  if (lastStatus) {
+    connectedToAP =
+      (lastStatus.wifi === 'off' && networkStatus.wifi === 'on') ||
+      (lastStatus.bssidName === null && networkStatus.bssidName !== null);
+    disconnectedFromAP =
+      (lastStatus.wifi === 'on' && networkStatus.wifi === 'off') ||
+      (lastStatus.bssidName !== null && networkStatus.bssidName === null);
+    changedAP =
+      !disconnectedFromAP && !connectedToAP &&
+      lastStatus.bssidName !== networkStatus.bssidName;
+  } else {
+    connectedToAP =
+      networkStatus.wifi === 'on' && networkStatus.bssidName !== null;
+    disconnectedFromAP =
+      networkStatus.wifi === 'off' || networkStatus.bssidName === null;
+    changedAP = false;
+  }
+
+  assert((disconnectedFromAP && connectedToAP) === false,
+    'either connected or disconnected');
 
   this._lastNetworkStatus = networkStatus;
 
   // If we are stopping or the wifi state hasn't changed,
   // we are not really interested.
-  if (!this._targetState.started || (!isWifiChanged && !isBssidChanged)) {
+  var noWifiChanges = (!connectedToAP && !disconnectedFromAP && !changedAP);
+  if (!this._targetState.started || noWifiChanges) {
     return;
   }
 
   var actionResults = [];
 
-  // Handle on -> off and off -> on changes
-  if (isWifiChanged) {
-    if (networkStatus.wifi === 'on') {
-      // If the wifi state turned on, try to get into the target states
-      if (this._targetState.listening) {
-        actionResults.push(
-          muteRejection(this.startListeningForAdvertisements())
-        );
-      }
-      if (this._targetState.advertising) {
-        actionResults.push(
-          muteRejection(this.startUpdateAdvertisingAndListening())
-        );
-      }
-    } else {
-      // If wifi didn't turn on, it was turned into a state where we want
-      // to stop our actions
+  if (connectedToAP) {
+    if (this._targetState.listening) {
       actionResults.push(
-        muteRejection(
-          this._pauseAdvertisingAndListening()
-        ),
-        muteRejection(
-          this._pauseListeningForAdvertisements()
-        )
+        muteRejection(this.startListeningForAdvertisements())
+      );
+    }
+    if (this._targetState.advertising) {
+      actionResults.push(
+        muteRejection(this.startUpdateAdvertisingAndListening())
       );
     }
   }
 
-  // Handle bssid only changes. We do not care about bssid when wifi was
-  // entirely disabled, because node-ssdp server would be restarted anyway
-  if (!isWifiChanged && isBssidChanged) {
-    // Without restarting node-ssdp server just does not advertise messages and
-    // client does not receive them after connecting to another access point
-    if (this.advertiser.isAdvertising()) {
+  if (disconnectedFromAP) {
+    actionResults.push(
+      muteRejection(this._pauseAdvertisingAndListening()),
+      muteRejection(this._pauseListeningForAdvertisements())
+    );
+  }
+
+  if (changedAP) {
+    if (this._targetState.advertising) {
       actionResults.push(muteRejection(this.advertiser.restartSSDPServer()));
     }
-    if (this.listener.isListening()) {
+    if (this._targetState.listening) {
       actionResults.push(muteRejection(this.listener.restartSSDPClient()));
     }
   }
