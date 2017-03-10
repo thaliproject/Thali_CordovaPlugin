@@ -736,14 +736,14 @@ test(
       t.end(error);
     };
 
-    ThaliMobile.start(express.Router())
+    wifiInfrastructure.startListeningForAdvertisements()
     .then(function () {
       var availabilityHandler = function (peer) {
         if (peer.peerIdentifier !== peerIdentifier) {
           return;
         }
 
-        ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+        wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged',
           availabilityHandler);
 
         var unavailabilityHandler = function (peer) {
@@ -751,21 +751,21 @@ test(
             return;
           }
 
-          t.notOk(peer.peerAvailable, 'Peer should not be available');
+          t.notOk((peer.portNumber === null && peer.hostAddress === null), 'Peer should not be available');
 
-          ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+          wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged',
             unavailabilityHandler);
 
           finalizeTest(null);
         };
 
-        ThaliMobile.emitter.on('peerAvailabilityChanged',
+        wifiInfrastructure.on('wifiPeerAvailabilityChanged',
           unavailabilityHandler);
       };
 
-      ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
+      wifiInfrastructure.on('wifiPeerAvailabilityChanged', availabilityHandler);
 
-      ThaliMobile._getThaliWifiInfrastructure().emit(
+      wifiInfrastructure.listener.emit(
         'wifiPeerAvailabilityChanged',
         {
           peerIdentifier: peerIdentifier,
@@ -782,53 +782,6 @@ test(
   }
 );
 
-test('#stop should clear watchers and change peers', function (t) {
- var somePeerIdentifier = 'urn:uuid:' + uuid.v4();
-
-  /*var connectionType = platform.isAndroid ?
-    connectionTypes.BLUETOOTH :
-    connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK;*/
-
-  wifiInfrastructure.start(express.Router(), new Buffer('foo'))
-    .then(function () {
-      return wifiInfrastructure.startListeningForAdvertisements();
-    })
-    .then(function () {
-      return ThaliMobileNativeWrapper._handlePeerAvailabilityChanged({
-        peerIdentifier: somePeerIdentifier,
-        peerAvailable: true
-      });
-    })
-    .then(function () {
-      t.equal(Object.getOwnPropertyNames(
-        ThaliMobile._peerAvailabilityWatchers[connectionType]).length, 1,
-        'Watchers have one entry for our connection type');
-
-      t.equal(Object.getOwnPropertyNames(
-        ThaliMobile._peerAvailabilities[connectionType]).length, 1,
-        'Peer availabilities has one entry for our connection type');
-      return wifiInfrastructure.stop();
-    })
-    .then(function () {
-      Object.getOwnPropertyNames(connectionTypes)
-        .forEach(function (connectionKey) {
-          var connectionType = connectionTypes[connectionKey];
-          
-          t.equal(Object.getOwnPropertyNames(
-            ThaliMobile._peerAvailabilityWatchers[connectionType]).length,
-            0, 'No watchers');
-          
-          t.equal(Object.getOwnPropertyNames(
-            ThaliMobile._peerAvailabilities[connectionType]).length,
-            0, 'No peers');
-        });
-      t.end();
-    })
-    .catch(function (err) {
-      t.fail('Failed out with ' + err);
-      t.end();
-    });
-});
 
 // From here onwards, tests only work on mocked up desktop
 // environment where network changes can be simulated.

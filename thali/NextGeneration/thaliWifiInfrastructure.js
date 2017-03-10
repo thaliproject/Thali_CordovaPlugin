@@ -13,7 +13,6 @@ var uuid = require('uuid');
 var express = require('express');
 var validations = require('../validations');
 var thaliConfig = require('./thaliConfig');
-var thaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
 var logger = require('../ThaliLogger')('thaliWifiInfrastructure');
 var makeIntoCloseAllServer = require('./makeIntoCloseAllServer');
 var PromiseQueue = require('./promiseQueue');
@@ -23,6 +22,9 @@ var common = require('./utils/common');
 
 var enqueued = common.enqueuedMethod;
 var enqueuedAtTop = common.enqueuedAtTopMethod;
+
+var thaliMobileNativeWrapper = require('./thaliMobileNativeWrapper');
+//var connectionTypes = thaliMobileNativeWrapper.connectionTypes;
 
 var muteRejection = (function () {
   function returnNull () { return null; }
@@ -671,6 +673,9 @@ function ThaliWifiInfrastructure() {
   this.advertiser = advertiser;
   this.listener = listener;
 
+
+  this.peerAvailabilityWatchers = {};
+  
   this._setUpEvents();
 }
 
@@ -692,6 +697,7 @@ ThaliWifiInfrastructure.prototype._setUpEvents = function() {
   self.listener.on('stateChange', emitStateUpdate);
 
   self.listener.on('wifiPeerAvailabilityChanged', function (peer) {
+    self._hadlePeerAvailabilityWatchers(peer);
     self.emit('wifiPeerAvailabilityChanged', peer);
   });
 };
@@ -769,6 +775,108 @@ function (networkStatus) {
   });
 };
 
+ThaliWifiInfrastructure.prototype._hadlePeerAvailabilityWatchers =
+function (peer) {
+  if (peer.peerAvailable) {
+    this._addAvailabilityWatcherToPeerIfNotExist(peer);
+  } else {
+    this._removeAvailabilityWatcherFromPeerIfExists(peer);
+  }
+};
+
+ThaliWifiInfrastructure.prototype._isAvailabilityWatcherForPeerExist =
+function (peer) {
+  var peerIdentifier = peer.peerIdentifier;
+
+  return !!(this.peerAvailabilityWatchers &&
+  this.peerAvailabilityWatchers[peerIdentifier]);
+};
+
+
+ThaliWifiInfrastructure.prototype._watchForPeerAvailability = function (peer) {
+  var peerIdentifier = peer.peerIdentifier;
+  var connectionType = peer.connectionType;
+
+  var now = Date.now();
+  var unavailabilityThreshold =
+    thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
+
+  // If the time from the latest availability advertisement doesn't
+  // exceed the threshold, no need to do anything.
+  if (peer.availableSince + unavailabilityThreshold > now) {
+    return;
+  }
+
+  this._removeAvailabilityWatcherFromPeerIfExists(peer);
+  this.emit('wifiPeerAvailabilityChanged', peer);
+  //emitPeerUnavailable(peerIdentifier, connectionType);
+};
+
+
+ThaliWifiInfrastructure.prototype._addAvailabilityWatcherToPeerIfNotExist = 
+function (peer) {
+  var self = this;
+  if (this._isAvailabilityWatcherForPeerExist(peer)) {
+    return;
+  }
+
+  var peerIdentifier = peer.peerIdentifier;
+  var unavailabilityThreshold =
+    thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
+
+  this.peerAvailabilityWatchers[peerIdentifier] =
+    setInterval((self._watchForPeerAvailability).bind(self), unavailabilityThreshold, peer);
+};
+
+ThaliWifiInfrastructure.prototype._removeAvailabilityWatcherFromPeerIfExists = 
+  function (peer) {
+    if (!this._isAvailabilityWatcherForPeerExist(peer)) {
+      return;
+    }
+
+    //var connectionType = peer.connectionType;
+    var peerIdentifier = peer.peerIdentifier;
+
+    //var interval = this.peerAvailabilityWatchers[connectionType][peerIdentifier];
+    var interval = this.peerAvailabilityWatchers[peerIdentifier];
+
+    clearInterval(interval);
+    //delete this.peerAvailabilityWatchers[connectionType][peerIdentifier];
+    delete this.peerAvailabilityWatchers[peerIdentifier];
+};
+
+// ThaliWifiInfrastructure.prototype._removeAllAvailabilityWatchersFromPeersByConnectionType =
+//   function (connectionType) {
+//     var peersByConnectionType = this.peerAvailabilityWatchers[connectionType];
+
+//     Object.keys(peersByConnectionType)
+//       .forEach(function (peerIdentifier) {
+//         var assumingPeer = {
+//           peerIdentifier: peerIdentifier,
+//           connectionType: connectionType
+//         };
+
+//         removeAvailabilityWatcherFromPeerIfExists(assumingPeer);
+//       });
+// };
+
+ThaliWifiInfrastructure.prototype._removeAllAvailabilityWatchersFromPeers =
+function() {
+  var self = this;
+  //Object.keys(this.peerAvailabilityWatchers)
+    //.forEach(this._removeAllAvailabilityWatchersFromPeersByConnectionType);
+
+  Object.keys(this.peerAvailabilityWatchers)
+    .forEach(function (peerIdentifier) {
+      var assumingPeer = {
+        peerIdentifier: peerIdentifier,
+        connectionType: connectionType
+      };
+
+      self._removeAvailabilityWatcherFromPeerIfExists(assumingPeer);
+    });
+};
+
 /**
  * This method MUST be called before any other method here other than
  * registering for events on the emitter. This method only registers the router
@@ -840,6 +948,8 @@ ThaliWifiInfrastructure.prototype._enqueuedStop = enqueued(function () {
   thaliMobileNativeWrapper.emitter
     .removeListener('networkChangedNonTCP', self._networkChangedHandler);
   self._lastNetworkStatus = null;
+
+  self._removeAllAvailabilityWatchersFromPeers();
 
   return Promise.all([
     self.advertiser.stop(),
