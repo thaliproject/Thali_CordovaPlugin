@@ -846,6 +846,7 @@ test('SSDP server should not restart after Wifi Client changed generation',
         t.fail(err);
       })
       .then(function () {
+        advertisingEndSpy.restore();
         t.end();
       });
   }
@@ -883,13 +884,13 @@ test('startUpdateAdvertisingAndListening does not send ssdp:byebye notifications
       return;
     }
 
-    if (aliveCalled) {
-      updatedUSN = tempUSN;
-      finishTest();
-    } else {
+    if (!aliveCalled) {
       currentUSN = tempUSN;
       aliveCalled = true;
       wifiInfrastructure.startUpdateAdvertisingAndListening();
+    } else {
+      updatedUSN = tempUSN;
+      finishTest();
     }
     
   });
