@@ -258,7 +258,6 @@ module.exports.isStarted = function () {
 module.exports.stop = function () {
   return promiseQueue.enqueue(function (resolve) {
     resetThaliMobileState();
-    //removeAllAvailabilityWatchersFromPeers();
     Object.getOwnPropertyNames(connectionTypes)
       .forEach(function (connectionKey) {
         var connectionType = connectionTypes[connectionKey];

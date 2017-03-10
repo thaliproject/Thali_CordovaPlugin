@@ -314,74 +314,6 @@ test('can get the network status', function (t) {
   });
 });
 
-test('wifi peer is marked unavailable if announcements stop',
-  function () {
-    return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
-  },
-  function (t) {
-    // Store the original threshold so that it can be restored
-    // at the end of the test.
-    var originalThreshold = thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
-    // Make the threshold a bit shorter so that the test doesn't
-    // have to wait for so long.
-    thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD =
-      thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 2;
-    var testPeerIdentifier = uuid.v4();
-    var testServerHostAddress = randomstring.generate({
-      charset: 'hex', // to get lowercase chars for the host address
-      length: 8
-    });
-    var testServerPort = 8080;
-    var testServer = new nodessdp.Server({
-      location: 'http://' + testServerHostAddress + ':' + testServerPort,
-      ssdpIp: thaliConfig.SSDP_IP,
-      udn: thaliConfig.SSDP_NT,
-      // Make the interval 10 times longer than expected
-      // to make sure we determine the peer is gone while
-      // waiting for the advertisement.
-      adInterval: thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 10
-    });
-    testServer.setUSN(USN.stringify({
-      peerIdentifier: testPeerIdentifier,
-      generation: 0
-    }));
-
-    var spy = sinon.spy();
-    var availabilityChangedHandler = function (peer) {
-      if (peer.peerIdentifier !== testPeerIdentifier) {
-        return;
-      }
-
-      // TODO Apply changes from #904 to tests
-      spy();
-      if (spy.calledOnce) {
-        t.equal(peer.peerAvailable, true, 'peer should be available');
-      } else if (spy.calledTwice) {
-        t.equal(peer.peerAvailable, false, 'peer should become unavailable');
-
-        ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
-          availabilityChangedHandler);
-        testServer.stop(function () {
-          thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD = originalThreshold;
-          t.end();
-        });
-      }
-    };
-    ThaliMobile.emitter.on('peerAvailabilityChanged',
-      availabilityChangedHandler);
-
-    ThaliMobile.start(express.Router())
-    .then(function () {
-      return ThaliMobile.startListeningForAdvertisements();
-    })
-    .then(function () {
-      testServer.start(function () {
-        // Handler above should get called.
-      });
-    });
-  }
-);
-
 test('peerAvailabilityChanged - peer added/removed to/from cache (native)',
   function (t) {
     var nativePeer = generateLowerLevelPeers().nativePeer;
@@ -2106,6 +2038,46 @@ test('does not fire duplicate events after peer listener recreation',
     });
   }
 );
+
+test('#stop should change peers', function (t) {
+  var somePeerIdentifier = 'urn:uuid:' + uuid.v4();
+
+  var connectionType = platform.isAndroid ?
+    connectionTypes.BLUETOOTH :
+    connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK;
+
+  ThaliMobile.start(express.Router(), new Buffer('foo'),
+    ThaliMobile.networkTypes.NATIVE)
+    .then(function () {
+      return ThaliMobile.startListeningForAdvertisements();
+    })
+    .then(function () {
+      return ThaliMobileNativeWrapper._handlePeerAvailabilityChanged({
+        peerIdentifier: somePeerIdentifier,
+        peerAvailable: true
+      });
+    })
+    .then(function () {
+      t.equal(Object.getOwnPropertyNames(
+        ThaliMobile._peerAvailabilities[connectionType]).length, 1,
+        'Peer availabilities has one entry for our connection type');
+      return ThaliMobile.stop();
+    })
+    .then(function () {
+      Object.getOwnPropertyNames(connectionTypes)
+        .forEach(function (connectionKey) {
+          var connectionType = connectionTypes[connectionKey];
+          t.equal(Object.getOwnPropertyNames(
+            ThaliMobile._peerAvailabilities[connectionType]).length,
+            0, 'No peers');
+        });
+      t.end();
+    })
+    .catch(function (err) {
+      t.fail('Failed out with ' + err);
+      t.end();
+    });
+});
 
 if (!tape.coordinated) {
   return;
