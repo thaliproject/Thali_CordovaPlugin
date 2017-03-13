@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" id="ssdp-replacer-hook" version="0.0.1">
+    <name>SSDP replacer hook</name>
+    <hook type="before_compile" src="hook.js" />
+</plugin>

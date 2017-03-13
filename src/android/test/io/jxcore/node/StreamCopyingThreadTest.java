@@ -4,9 +4,11 @@ import android.content.Context;
 import android.util.Log;
 
 import org.junit.Assert;
+
 import com.test.thalitest.ThaliTestRunner;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -17,7 +19,6 @@ import org.junit.runner.Description;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -69,9 +70,9 @@ public class StreamCopyingThreadTest {
                     return false;
                 }
 
-                while (!mIsClosed && counter < ThaliTestRunner.counterLimit) {
+                while (!mIsClosed && counter < ThaliTestRunner.COUNTER_LIMIT) {
                     try {
-                        Thread.sleep(ThaliTestRunner.timeoutLimit);
+                        Thread.sleep(ThaliTestRunner.TIMEOUT_LIMIT);
                         counter++;
                         mIsClosed = fIsClosed.getBoolean(mStreamCopyingThread);
                     } catch (InterruptedException | IllegalAccessException e) {
@@ -80,7 +81,7 @@ public class StreamCopyingThreadTest {
                     }
                 }
 
-                if (counter < ThaliTestRunner.counterLimit) {
+                if (counter < ThaliTestRunner.COUNTER_LIMIT) {
                     return true;
                 } else {
                     Log.e(mTag, "StreamCopyingThread didn't close after 5s!");
@@ -113,7 +114,8 @@ public class StreamCopyingThreadTest {
         mOutputStream = new StreamCopyingThreadOutputStream(bOutputStream);
 
         mStreamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream,
-            mThreadName, new ConnectionData(new PeerProperties(), false));
+            mThreadName, new ConnectionData(new PeerProperties(PeerProperties.BLUETOOTH_MAC_ADDRESS_UNKNOWN),
+            false), true);
         mExecutor = Executors.newSingleThreadExecutor();
     }
 
@@ -135,14 +137,15 @@ public class StreamCopyingThreadTest {
         mStreamCopyingThread.setBufferSize(1024 * 8 + 1);
     }
 
+    @Ignore("https://github.com/thaliproject/Thali_CordovaPlugin/issues/1528")
     @Test
     public void testRun() throws Exception {
         mResult = "";
         bOutputStream = new ByteArrayOutputStream();
         mInputStream = new StreamCopyingThreadInputStreamInfinite(mText);
         mOutputStream = new StreamCopyingThreadOutputStreamInfinite();
-        mStreamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream,
-            mThreadName, new ConnectionData(new PeerProperties(), false));
+        mStreamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream, mThreadName,
+            new ConnectionData(new PeerProperties(PeerProperties.BLUETOOTH_MAC_ADDRESS_UNKNOWN), false), true);
 
 
         mStreamCopyingThread.start();
@@ -159,7 +162,8 @@ public class StreamCopyingThreadTest {
     public void testRunWithException() throws Exception {
         doThrowException = true;
         StreamCopyingThread streamCopyingThread = new StreamCopyingThread(mListener, mInputStream, mOutputStream,
-            mThreadName, new ConnectionData(new PeerProperties(), false));
+            mThreadName, new ConnectionData(new PeerProperties(PeerProperties.BLUETOOTH_MAC_ADDRESS_UNKNOWN),
+            false), true);
         Thread runner = new Thread(streamCopyingThread);
         runner.setName("thread test");
         runner.start();
@@ -200,7 +204,7 @@ public class StreamCopyingThreadTest {
         OutputStream outputStream = new StreamCopyingThreadOutputStream(bOutputStream);
 
         StreamCopyingThread streamCopyingThread = new StreamCopyingThread(mListener, inputStream, outputStream,
-            threadName, new ConnectionData(new PeerProperties(), false));
+            threadName, new ConnectionData(new PeerProperties(PeerProperties.BLUETOOTH_MAC_ADDRESS_UNKNOWN), false), true);
 
         Thread runner = new Thread(streamCopyingThread);
         runner.start();
@@ -234,7 +238,7 @@ public class StreamCopyingThreadTest {
             }
         }, dataSize / 2);
         StreamCopyingThread streamCopyingThread = new StreamCopyingThread(listenerMock, inputStream, outputStream,
-            threadName, new ConnectionData(new PeerProperties(), false));
+            threadName, new ConnectionData(new PeerProperties(PeerProperties.BLUETOOTH_MAC_ADDRESS_UNKNOWN), false), true);
         streamCopyingThread.setNotifyStreamCopyingProgress(true);
         Thread runner = new Thread(streamCopyingThread);
         runner.start();

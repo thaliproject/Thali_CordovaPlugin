@@ -1,9 +1,11 @@
 'use strict';
 
+var assert = require('assert');
+var EventEmitter = require('events').EventEmitter;
+var inherits = require('util').inherits;
+
 var ThaliNotificationClient = require('../notification/thaliNotificationClient');
 var logger = require('../../ThaliLogger')('thaliPullReplicationFromNotification');
-var assert = require('assert');
-var Promise = require('lie');
 var PeerAction = require('../thaliPeerPool/thaliPeerAction');
 var ThaliReplicationPeerAction = require('./thaliReplicationPeerAction');
 
@@ -57,6 +59,8 @@ function ThaliPullReplicationFromNotification(PouchDB,
                                               dbName,
                                               thaliPeerPoolInterface,
                                               ecdhForLocalDevice) {
+  EventEmitter.call(this);
+
   assert(PouchDB, 'Must have PouchDB');
   assert(dbName, 'Must have dbName');
   assert(thaliPeerPoolInterface, 'Must have thaliPeerPoolInterface');
@@ -73,6 +77,8 @@ function ThaliPullReplicationFromNotification(PouchDB,
 
   this.state = ThaliPullReplicationFromNotification.STATES.CREATED;
 }
+
+inherits(ThaliPullReplicationFromNotification, EventEmitter);
 
 /**
  * This is a list of states for ThaliPullReplicationFromNotification.
@@ -92,9 +98,10 @@ ThaliPullReplicationFromNotification.STATES = {
  * Both 'connectionType' and 'keyId' wont have '-' symbol.
  * @param {Object} peerAdvertisesData
  * @private
+ * @return {string}
  */
 ThaliPullReplicationFromNotification._getPeerDictionaryKey =
-  function(peerAdvertisesData) {
+  function (peerAdvertisesData) {
     return peerAdvertisesData.connectionType + '-' + peerAdvertisesData.keyId;
   };
 
@@ -103,12 +110,11 @@ ThaliPullReplicationFromNotification._getPeerDictionaryKey =
  * We are going to create a replication action based on this data.
  * We should make a single action from multiple data
  * with the same 'connectionType' and 'keyId'.
- * @param {Object} peerAction
+ * @param {Object} peerAdvertisesData
  * @private
  */
 ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
   function (peerAdvertisesData) {
-    var self = this;
     if (!peerAdvertisesData.portNumber) {
       logger.error(
         'We don\'t support client notification that a peer is gone, yet.'
@@ -116,7 +122,8 @@ ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
       return;
     }
 
-    var key = ThaliPullReplicationFromNotification._getPeerDictionaryKey(peerAdvertisesData);
+    var key = ThaliPullReplicationFromNotification.
+      _getPeerDictionaryKey(peerAdvertisesData);
     var existingAction = this._peerDictionary[key];
     if (existingAction) {
       assert(
@@ -137,54 +144,41 @@ ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
     this._peerDictionary[key] = newAction;
     this._bindRemoveActionFromPeerDictionary(newAction, key);
 
-    this._thaliPeerPoolInterface.enqueue(newAction);
+    try {
+      this._thaliPeerPoolInterface.enqueue(newAction);
+    } catch (error) {
+      this.emit('error', error);
+    }
   };
 
 /**
+ * Store action in the _peerDictionary and listen to the killed and started
+ * events.
+ *
  * Action should be deleted from 'peerDictionary' (by special 'key')
  * on first starting or killed event.
  * @private
+ * @param {module:thaliPeerAction~PeerAction} action
+ * @param {string} key
  */
-ThaliPullReplicationFromNotification.prototype._bindRemoveActionFromPeerDictionary =
-  function (action, key) {
+ThaliPullReplicationFromNotification.prototype.
+  _bindRemoveActionFromPeerDictionary = function (action, key) {
     var self = this;
 
-    // TODO Invesatigate whether EventEmitter with action will provide a memory leak.
-    // TODO Add EventEmitter to the peer action class.
-    // TODO Extend EventEmitter with 'onceAny' method.
-    // For example here we can use:
-    // action.onceAny(['beforeStart', 'afterEnd'], function () {
-    //   assert(...);
-    //   delete self._peerDictionary[key];
-    // });
-
-    var removed = false;
-    function removeHandler () {
-      if (removed) {
-        return;
-      }
-      removed = true;
-
+    // TODO Investigate whether EventEmitter with action will provide a memory
+    // leak.
+    function removeFromDictionary () {
+      action.removeListener('started', removeFromDictionary);
+      action.removeListener('killed', removeFromDictionary);
       assert(
-        self._peerDictionary[key],
-        'The entry should exist because this is the only place that can remove it'
+        self._peerDictionary[key], 'The entry should exist because this is ' +
+        'the only place that can remove it'
       );
       delete self._peerDictionary[key];
     }
 
-    // This is a workaround for 'onceAny'.
-    var originalStart = action.start;
-    action.start = function () {
-      removeHandler();
-      action.start = originalStart;
-      return originalStart.apply(this, arguments);
-    }
-    var originalKill = action.kill;
-    action.kill = function () {
-      removeHandler();
-      action.kill = originalKill;
-      return originalKill.apply(this, arguments);
-    }
+    action.on('started', removeFromDictionary);
+    action.on('killed', removeFromDictionary);
   };
 
 /**
@@ -223,42 +217,53 @@ ThaliPullReplicationFromNotification.prototype.start =
   };
 
 /**
- * Stops listening for new peer discovery and shuts down all replication actions.
+ * Stops listening for new peer discovery and shuts down all replication
+ * actions.
  *
  * This method is idempotent.
  * @public
  */
 ThaliPullReplicationFromNotification.prototype.stop = function () {
+  var self = this;
   // Can we stop now?
   if (
-    this.state === ThaliPullReplicationFromNotification.STATES.CREATED ||
-    this.state === ThaliPullReplicationFromNotification.STATES.STOPPED
+    self.state === ThaliPullReplicationFromNotification.STATES.CREATED ||
+    self.state === ThaliPullReplicationFromNotification.STATES.STOPPED
   ) {
     return;
   }
   assert(
-    this.state === ThaliPullReplicationFromNotification.STATES.STARTED,
+    self.state === ThaliPullReplicationFromNotification.STATES.STARTED,
     'ThaliPullReplicationFromNotification state should be \'STARTED\' for stop'
   );
-  this.state = ThaliPullReplicationFromNotification.STATES.STOPPED;
+  self.state = ThaliPullReplicationFromNotification.STATES.STOPPED;
 
-  this._thaliNotificationClient.removeListener(
-    this._thaliNotificationClient.Events.PeerAdvertisesDataForUs,
-    this._boundAdvertiser
+  self._thaliNotificationClient.removeListener(
+    self._thaliNotificationClient.Events.PeerAdvertisesDataForUs,
+    self._boundAdvertiser
   );
-  this._thaliNotificationClient.stop();
+  self._thaliNotificationClient.stop();
 
-  // '_thaliPeerPoolInterface' will kill all actions.
-  // We can just make peerDictionary empty.
-  this._peerDictionary = {};
+  Object.getOwnPropertyNames(self._peerDictionary)
+    .forEach(function (actionName) {
+    // This kill is theoretically redundant with the one that will also happen
+    // in the thaliPeerPoolInterface but having kill happen here also prevents
+    // race conditions between this and thaliPeerPoolInterface and it isn't
+    // harmful since it's always legal to kill an action multiple times.
+      self._peerDictionary[actionName].kill();
+    });
+
+  self._peerDictionary = {};
 };
 
 /**
- * This method will provide the actual state of ThaliPullReplicationFromNotification
+ * This method will provide the actual state of
+ * ThaliPullReplicationFromNotification
  * @public
+ * @returns {ThaliPullReplicationFromNotification.STATES}
  */
 ThaliPullReplicationFromNotification.prototype.getState = function () {
   return this.state;
-}
+};
 
 module.exports = ThaliPullReplicationFromNotification;

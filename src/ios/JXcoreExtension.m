@@ -61,12 +61,10 @@
 }
 
 - (void)handleCallback:(NSString *)callback error:(NSError *)error {
-    @synchronized(self) {
-        if (error == nil) {
-            [JXcore callEventCallback:callback withParams:@[[NSNull null]]];
-        } else {
-            [JXcore callEventCallback:callback withParams:@[error.localizedDescription]];
-        }
+    if (error == nil) {
+        [JXcore callEventCallback:callback withParams:@[[NSNull null]]];
+    } else {
+        [JXcore callEventCallback:callback withParams:@[error.localizedDescription]];
     }
 }
 
@@ -104,9 +102,9 @@
 
 - (void)defineMultiConnect:(AppContext *)appContext {
     [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId) {
-        NSError *error = nil;
-        [appContext multiConnectToPeer:params error:&error];
-        [self handleCallback:callbackId error:error];
+        [appContext multiConnectToPeer:params validationCompletionHandler:^(NSError *error) {
+            [self handleCallback:callbackId error:error];
+        }];
     } withName:[AppContextJSEvent multiConnect]];
 }
 
@@ -130,9 +128,7 @@
 - (void)defineGetOSVersion:(AppContext *)appContext {
     [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId) {
         NSString * const version = [appContext getIOSVersion];
-        @synchronized(self) {
-            [JXcore callEventCallback:callbackId withParams:@[version]];
-        }
+        [JXcore callEventCallback:callbackId withParams:@[version]];
     } withName:[AppContextJSEvent getOSVersion]];
 }
 
@@ -148,7 +144,7 @@
 - (void)defineConnect:(AppContext *)appContext {
     [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId) {
         [JXcore callEventCallback:callbackId withJSON:[appContext connect:params]];
-    } withName:[AppContextJSEvent disconnect]];
+    } withName:[AppContextJSEvent connect]];
 }
 
 #ifdef TEST
@@ -159,15 +155,10 @@
         if ([appContext respondsToSelector:@selector(executeNativeTests)]) {
             NSString *result = [appContext performSelector:@selector(executeNativeTests)];
 #pragma clang diagnostic pop
-
-            @synchronized(self) {
-                [JXcore callEventCallback:callbackId withJSON:result];
-            }
+            [JXcore callEventCallback:callbackId withJSON:result];
         }
         else {
-            @synchronized(self) {
-                [JXcore callEventCallback:callbackId withParams:@[@"Method not available"]];
-            }
+            [JXcore callEventCallback:callbackId withParams:@[@"Method not available"]];
         }
     } withName:[AppContextJSEvent executeNativeTests]];
 }
@@ -178,55 +169,38 @@
 @implementation JXcoreExtension(AppContextDelegate)
 
 - (void)context:(AppContext * _Nonnull)context didChangePeerAvailability:(NSString * _Nonnull)peers {
-    @synchronized(self) {
-        [JXcore callEventCallback:[AppContextJSEvent peerAvailabilityChanged]
-                         withJSON:peers];
-    }
+    [JXcore callEventCallback:[AppContextJSEvent peerAvailabilityChanged]
+                     withJSON:peers];
 }
 
 - (void)context:(AppContext * _Nonnull)context didChangeNetworkStatus:(NSString * _Nonnull)status {
-    @synchronized(self) {
-        [JXcore callEventCallback:[AppContextJSEvent networkChanged]
-                         withJSON:status];
-    }
+    [JXcore callEventCallback:[AppContextJSEvent networkChanged]
+                     withJSON:status];
 }
 
 - (void)context:(AppContext * _Nonnull)context didUpdateDiscoveryAdvertisingState:(NSString * _Nonnull)discoveryAdvertisingState {
-    @synchronized(self) {
-        [JXcore callEventCallback:[AppContextJSEvent discoveryAdvertisingStateUpdateNonTCP]
-                         withJSON:discoveryAdvertisingState];
-    }
+    [JXcore callEventCallback:[AppContextJSEvent discoveryAdvertisingStateUpdateNonTCP]
+                     withJSON:discoveryAdvertisingState];
 }
 
 - (void)context:(AppContext * _Nonnull)context didFailIncomingConnectionToPort:(uint16_t)port {
-    @synchronized(self) {
-        [JXcore callEventCallback:[AppContextJSEvent incomingConnectionToPortNumberFailed] withParams:@[@(port)]];
-    }
+    [JXcore callEventCallback:[AppContextJSEvent incomingConnectionToPortNumberFailed] withParams:@[@(port)]];
 }
 
 - (void)appWillEnterBackgroundWith:(AppContext * _Nonnull)context {
-    @synchronized(self) {
-        [JXcore callEventCallback:[AppContextJSEvent appEnteringBackground] withParams:@[]];
-    }
+    [JXcore callEventCallback:[AppContextJSEvent appEnteringBackground] withParams:@[]];
 }
 
 - (void)appDidEnterForegroundWith:(AppContext * _Nonnull)context {
-    @synchronized(self) {
-        [JXcore callEventCallback:[AppContextJSEvent appEnteredForeground] withParams:@[]];
-    }
+    [JXcore callEventCallback:[AppContextJSEvent appEnteredForeground] withParams:@[]];
 }
 
-- (void)context:(AppContext * _Nonnull)context didResolveMultiConnectWith:(NSString * _Nonnull)parameters {
-    @synchronized(self) {
-        [JXcore callEventCallback:[AppContextJSEvent multiConnectResolved] withJSON:parameters];
-    }
+- (void)context:(AppContext * _Nonnull)context didResolveMultiConnectWithSyncValue:(NSString * _Nonnull)value error:(NSObject * _Nullable)error listeningPort:(NSObject * _Nullable)listeningPort {
+    [JXcore callEventCallback:[AppContextJSEvent multiConnectResolved] withParams:@[value, error, listeningPort]];
 }
 
 - (void)context:(AppContext * _Nonnull)context didFailMultiConnectConnectionWith:(NSString * _Nonnull)parameters {
-    @synchronized(self) {
-        [JXcore callEventCallback:[AppContextJSEvent multiConnectConnectionFailure] withJSON:parameters];
-    }
-
+    [JXcore callEventCallback:[AppContextJSEvent multiConnectConnectionFailure] withJSON:parameters];
 }
 
 @end

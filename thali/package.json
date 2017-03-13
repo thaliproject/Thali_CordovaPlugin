@@ -4,24 +4,27 @@
   "description": "Thali Cordova Plugin",
   "main": "thalireplicationmanager.js",
   "dependencies": {
+    "bluebird": "3.4.6",
     "body-parser": "1.13.3",
     "express": "4.13.3",
-    "forever-agent": "0.6.1",
+    "forever-agent": "https://github.com/thaliproject/forever-agent.git#f9a92c7a1b7ce4da849beca32b0ec2aeb855e0fd",
     "ip": "1.0.1",
     "javascript-state-machine": "2.3.5",
     "lie": "3.1.0",
     "long": "3.0.3",
     "multiplex": "6.7.0",
-    "node-ssdp": "git://github.com/thaliproject/node-ssdp#fcc5d403f6cc5e667572fba059332908c3cc822e",
+    "node-ssdp": "https://github.com/thaliproject/node-ssdp.git#3a5909e201aee401f48965e378eb2ff0e2f9e027",
+    "object-assign": "4.1.0",
+    "pouchdb-adapter-leveldb-core": "6.1.1",
     "request": "2.64.0",
     "salti": "https://github.com/thaliproject/salti.git#master",
     "urlsafe-base64": "1.0.0",
     "uuid": "2.0.2",
-    "winston": "2.2.0",
-    "js-extend": "1.0.1"
+    "winston": "2.2.0"
   },
   "devDependencies": {
-    "jsdoc": "3.3.3"
+    "jsdoc": "3.3.3",
+    "eslint": "3.11.1"
   },
   "thaliInstall": {
     "thali": {
@@ -29,14 +32,19 @@
       "depotName": "Thali_CordovaPlugin",
       "branchName": "iOS"
     },
-    "btconnectorlib2": "0.3.4-alpha2",
-    "jxcore-cordova": "0.1.5",
-    "jxcore-cordova-url": "http://jxcore.azureedge.net/jxcore-cordova/0.1.5/release/io.jxcore.node.jx"
+    "androidConfig": {
+      "minSdkVersion": "21",
+      "buildToolsVersion": "25.0.2",
+      "compileSdkVersion": "android-23"
+    },
+    "btconnectorlib2": "0.3.9",
+    "jxcore-cordova": "0.1.10",
+    "jxcore-cordova-url": "http://jxcore.azureedge.net/jxcore-cordova/0.1.10/release/io.jxcore.node.jx"
   },
   "scripts": {
-    "prepublish": "jx install/prePublishThaliCordovaPlugin.js",
-    "postpublish": "jx install/postPublishThaliCordovaPlugin.js",
-    "postinstall": "jx installCordovaPlugin.js",
+    "prepublish": "node install/prePublishThaliCordovaPlugin.js",
+    "postpublish": "node install/postPublishThaliCordovaPlugin.js",
+    "postinstall": "node installCordovaPlugin.js",
     "createPublicDocs": "./node_modules/.bin/jsdoc -c conf.json .",
     "createInternalDocs": "./node_modules/.bin/jsdoc -c conf.json -p ."
   },

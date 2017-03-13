@@ -59,7 +59,7 @@ TestFramework.platformStates = {
   started:   'started',
   succeeded: 'succeeded',
   failed:    'failed'
-}
+};
 
 TestFramework.prototype._setOptions = function (options) {
   var self = this;
@@ -68,11 +68,11 @@ TestFramework.prototype._setOptions = function (options) {
   // Tells us how many devices we need.
   this._options = objectAssign({}, options);
 
-  asserts.isObject(this._options);
-  asserts.isObject(this._options.devices);
+  asserts.isObject(this._options, 'TestFramework._setOptions._options');
 
   // 'this._options.devices' is options for our required platforms.
-  asserts.isObject(this._options.devices);
+  asserts.isObject(this._options.devices,
+    'TestFramework._setOptions._options.devices');
   var requiredPlatformNames = Object.keys(this._options.devices);
   assert(
     requiredPlatformNames.length > 0,
@@ -84,7 +84,8 @@ TestFramework.prototype._setOptions = function (options) {
   });
 
   // 'minDevices' is options for all our desired platforms.
-  asserts.isObject(this._options.minDevices);
+  asserts.isObject(this._options.minDevices,
+    'TestFramework._setOptions._options.minDevices');
   var desiredPlatformNames = Object.keys(this._options.minDevices);
   desiredPlatformNames.forEach(function (desiredPlatformName) {
     asserts.isString(desiredPlatformName);
@@ -101,13 +102,13 @@ TestFramework.prototype._setOptions = function (options) {
       format('platform name: \'%s\' is required', requiredPlatformName)
     );
   });
-}
+};
 
 TestFramework.prototype.addDevice = function (device) {
   asserts.instanceOf(device, TestDevice);
 
   var platform = this.platforms[device.platformName];
-  asserts.isObject(platform);
+  asserts.isObject(platform, 'TestFramework.addDevice.platform');
 
   var devices = platform.devices;
   var deviceIndexes = platform.deviceIndexes;
@@ -144,9 +145,9 @@ TestFramework.prototype.addDevice = function (device) {
     asserts.instanceOf(device, TestDevice);
 
     logger.info(
-      'updating existing device, name: \'%s\', uuid: \'%s\', platformName: \'%s\'',
-      existingDevice.name, existingDevice.uuid, device.platformName
-    );
+      'updating existing device, name: \'%s\', uuid: \'%s\', ' +
+      'platformName: \'%s\'', existingDevice.name, existingDevice.uuid,
+      device.platformName);
 
     existingDevice.update(device);
     return;
@@ -178,7 +179,7 @@ TestFramework.prototype.startTests = function (platformName) {
   asserts.isString(platformName);
 
   var platform = this.platforms[platformName];
-  asserts.isObject(platform);
+  asserts.isObject(platform, 'TestFramework.startTests.platform');
 
   assert(
     platform.state === TestFramework.platformStates.created,
@@ -197,7 +198,8 @@ TestFramework.prototype.startTests = function (platformName) {
     assert(
       count === devices.length,
       format(
-        'we should receive %d devices for platform: \'%s\', but received %d devices instead',
+        'we should receive %d devices for platform: \'%s\', ' +
+        'but received %d devices instead',
         count, platformName, devices.length
       )
     );
@@ -222,19 +224,20 @@ TestFramework.prototype.startTests = function (platformName) {
   });
 
   this.resolveStarted();
-}
+};
 
 TestFramework.prototype.resolveStarted = function () {
   var self = this;
 
   var isStarted = Object.keys(this.platforms)
   .every(function (platformName) {
-    return self.platforms[platformName].state === TestFramework.platformStates.started;
+    return self.platforms[platformName].state ===
+      TestFramework.platformStates.started;
   });
   if (isStarted) {
     this.emit('started');
   }
-}
+};
 
 TestFramework.prototype.resolveCompleted = function () {
   var self = this;
@@ -256,6 +259,6 @@ TestFramework.prototype.resolveCompleted = function () {
     });
     this.emit('completed', results);
   }
-}
+};
 
 module.exports = TestFramework;

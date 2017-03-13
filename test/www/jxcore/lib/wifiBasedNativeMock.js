@@ -24,11 +24,17 @@ var peerProxySockets = {};
 var peerAvailabilityChangedCallback = null;
 var peerAvailabilities = {};
 
+var BSSID = 'c1:5b:05:5a:41:1e'; // 'c1-5b-05-5a-41-1e' is valid too.
+var SSID  = 'myWifi';
+
 var currentNetworkStatus = {
-  wifi: 'on',
-  bluetooth: 'on',
-  bluetoothLowEnergy: 'doNotCare',
-  cellular: 'doNotCare'
+  wifi:               'on',
+  bluetooth:          'on',
+  bluetoothLowEnergy: 'on',
+  cellular:           'on',
+
+  bssidName: BSSID,
+  ssidName:  SSID
 };
 
 var getCurrentNetworkStatus = function () {
@@ -46,6 +52,12 @@ proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
         networkStatusCalled = true;
         return Promise.resolve(getCurrentNetworkStatus());
       },
+      lockAndroidWifiMulticast: function () {
+        return Promise.resolve();
+      },
+      unlockAndroidWifiMulticast: function () {
+        return Promise.resolve();
+      },
       '@noCallThru': true
     },
     './thaliConfig': {
@@ -53,7 +65,7 @@ proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
       // that the SSDP traffic doesn't get mixed up with real
       // Thali messaging (for example, if in a desktop test,
       // the native and Wifi layers are run simultaneously).
-      SSDP_NT: 'http://www.thaliproject.org/mock'
+      SSDP_NT: (process.env.SSDP_NT || 'http://www.thaliproject.org') + '/mock'
     },
     'ip': {
       address: function () {
@@ -121,7 +133,7 @@ proxyquire('thali/NextGeneration/thaliWifiInfrastructure',
  *
  * @param {string} mobileMethodName This is the name of the method that was
  * passed in on the mobile object
- * @param {platformChoice} platform
+ * @param {module:platform.names} platform
  * @param {Object} router
  * @param {thaliWifiInfrastructure} thaliWifiInfrastructure
  * @constructor
@@ -209,7 +221,7 @@ function setUpSocketListeners(socket, socketName, pipedSocket, peerIdentifier) {
   socket.on('close', function () {
     debugLogWithId(socketName + ' closed ', peerIdentifier);
     pipedSocket.destroy();
-  })
+  });
 }
 
 function createAndStartProxyRelayServer(portNumber, peerIdentifier) {
@@ -260,12 +272,19 @@ var startListeningForAdvertisementsIsActive = false;
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 MobileCallInstance.prototype.startListeningForAdvertisements =
-  function (callback) {// jscs:ignore disallowUnusedParams
+  function (callback) {// eslint-disable-line no-unused-vars
     return CallOnce.check(this, '_startListeningForAdvertisements', arguments);
   };
 
 MobileCallInstance.prototype._startListeningForAdvertisements =
   function (callback) {
+    var btOff =
+      currentNetworkStatus.bluetooth !== 'on' ||
+      currentNetworkStatus.bluetoothLowEnergy !== 'on';
+    if (btOff) {
+      callback('Radio Turned Off');
+      return;
+    }
     this.thaliWifiInfrastructure.startListeningForAdvertisements()
     .then(function () {
       startListeningForAdvertisementsIsActive = true;
@@ -285,7 +304,7 @@ MobileCallInstance.prototype._startListeningForAdvertisements =
  * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
  */
 MobileCallInstance.prototype.stopListeningForAdvertisements =
-  function (callBack) {// jscs:ignore disallowUnusedParams
+  function (callBack) {// eslint-disable-line no-unused-vars
     return CallOnce.check(this, '_stopListeningForAdvertisements', arguments);
   };
 
@@ -345,7 +364,7 @@ var startUpdateAdvertisingAndListeningIsActive = false;
  * @param {module:thaliMobileNative~ThaliMobileCallback} callback
  */
 MobileCallInstance.prototype.startUpdateAdvertisingAndListening =
-  function (portNumber, callback) {// jscs:ignore disallowUnusedParams
+  function (portNumber, callback) {// eslint-disable-line no-unused-vars
     return CallOnce.check(this, '_startUpdateAdvertisingAndListening',
                           arguments);
   };
@@ -353,6 +372,13 @@ MobileCallInstance.prototype.startUpdateAdvertisingAndListening =
 MobileCallInstance.prototype._startUpdateAdvertisingAndListening =
 function (portNumber, callback) {
   var self = this;
+  var btOff =
+    currentNetworkStatus.bluetooth !== 'on' ||
+    currentNetworkStatus.bluetoothLowEnergy !== 'on';
+  if (btOff) {
+    callback('Radio Turned Off');
+    return;
+  }
   var doStart = function () {
     self.thaliWifiInfrastructure.startUpdateAdvertisingAndListening()
     .then(function () {
@@ -368,8 +394,9 @@ function (portNumber, callback) {
     createAndStartProxyRelayServer(portNumber, 'Incoming connection relay')
       .then(function (server) {
         incomingConnectionsServer = server;
-        self.thaliWifiInfrastructure.advertisedPortOverride =
-          incomingConnectionsServer.address().port;
+        self.thaliWifiInfrastructure._overrideAdvertisedPort(
+          incomingConnectionsServer.address().port
+        );
         doStart();
       });
   }
@@ -404,7 +431,7 @@ function closeAndDeleteOutgoingProxyServer(peerIdentifier) {
  * @param {module:thaliMobileNative~ThaliMobileCallback} callBack
  */
 MobileCallInstance.prototype.stopAdvertisingAndListening =
-  function (callBack) {// jscs:ignore disallowUnusedParams
+  function (callBack) {// eslint-disable-line no-unused-vars
     return CallOnce.check(this, '_stopAdvertisingAndListening', arguments);
   };
 
@@ -473,7 +500,7 @@ MobileCallInstance.prototype._disconnect =
     }
 
     callback(null);
-};
+  };
 
 function returnPort(peerIdentifier, callback) {
   callback(null, JSON.stringify({
@@ -560,17 +587,17 @@ MobileCallInstance.prototype._androidConnectLogic =
       peerConnections[peerIdentifier] = net.connect(peerToConnect.portNumber,
         function () {
           setTimeout(function () {
-              if (!peerProxyServers[peerIdentifier]) {
-                var error = 'Unspecified Error with Radio infrastructure';
-                return callback(error);
-              }
-              peerConnections[peerIdentifier]
+            if (!peerProxyServers[peerIdentifier]) {
+              var error = 'Unspecified Error with Radio infrastructure';
+              return callback(error);
+            }
+            peerConnections[peerIdentifier]
                 .removeListener('error', failedPeerConnectionError);
-              peerConnections[peerIdentifier]
+            peerConnections[peerIdentifier]
                 .on('error', simplePeerConnectionError);
-              returnConnectResponse(peerIdentifier, callback,
+            returnConnectResponse(peerIdentifier, callback,
                 cleanProxyServer);
-            },
+          },
             100);
         });
       peerConnections[peerIdentifier].on('end', function () {
@@ -748,6 +775,11 @@ MobileCallInstance.prototype.multiConnect =
       return callback('Platform does not support multiConnect');
     }
 
+    if (typeof syncValue !== 'string') {
+      callback('Bad parameters');
+      return;
+    }
+
     if (!uuidValidator(peerIdentifier)) {
       callback(null);
       return multiConnectResolvedCallbackHandler(syncValue, 'Illegal peerID');
@@ -797,6 +829,28 @@ MobileCallInstance.prototype.killConnections = function (callback) {
   callback('Not Supported');
 };
 
+MobileCallInstance.prototype.lockAndroidWifiMulticast =
+  function (callback) {// eslint-disable-line no-unused-vars
+    return CallOnce.check(this, '_lockAndroidWifiMulticast', arguments);
+  };
+
+
+MobileCallInstance.prototype._lockAndroidWifiMulticast =
+  function (callback) {
+    callback(null);
+  };
+
+MobileCallInstance.prototype.unlockAndroidWifiMulticast =
+  function (callback) {// eslint-disable-line no-unused-vars
+    return CallOnce.check(this, '_unlockAndroidWifiMulticast', arguments);
+  };
+
+MobileCallInstance.prototype._unlockAndroidWifiMulticast =
+  function (callback) {
+    callback(null);
+  };
+
+
 var fakeDeviceName = uuid.v4();
 /**
  * Generates a UUID that will be used as the name of the current device.
@@ -816,6 +870,7 @@ MobileCallInstance.prototype.didRegisterToNative = function (method, callback) {
   // to handle this additional step.
   setImmediate(callback);
 };
+
 
 /**
  * Handles processing callNative requests. The actual params differ based on
@@ -849,6 +904,12 @@ MobileCallInstance.prototype.callNative = function () {
     case 'killConnections': {
       return this.killConnections(arguments[0]);
     }
+    case 'lockAndroidWifiMulticast': {
+      return this.lockAndroidWifiMulticast(arguments[0]);
+    }
+    case 'unlockAndroidWifiMulticast': {
+      return this.unlockAndroidWifiMulticast(arguments[0]);
+    }
     case 'GetDeviceName': {
       return this.getDeviceName(arguments[0]);
     }
@@ -878,16 +939,23 @@ var setupListeners = function (thaliWifiInfrastructure) {
       }
 
       var peerAvailable = !!wifiPeer.hostAddress;
+      var oldPeer = peerAvailabilities[wifiPeer.peerIdentifier];
+      var isSamePeer = peerAvailable && oldPeer &&
+                       oldPeer.generation === wifiPeer.generation;
+
       if (peerAvailable) {
         peerAvailabilities[wifiPeer.peerIdentifier] = wifiPeer;
       } else {
         delete peerAvailabilities[wifiPeer.peerIdentifier];
       }
-      peerAvailabilityChangedCallback([{
-        peerIdentifier: wifiPeer.peerIdentifier,
-        peerAvailable: peerAvailable,
-        generation: wifiPeer.generation
-      }]);
+
+      if (!isSamePeer) {
+        peerAvailabilityChangedCallback([{
+          peerIdentifier: wifiPeer.peerIdentifier,
+          peerAvailable: peerAvailable,
+          generation: wifiPeer.generation
+        }]);
+      }
     }
   );
   thaliWifiInfrastructure.on(
@@ -908,9 +976,8 @@ var setupListeners = function (thaliWifiInfrastructure) {
  * SSDP:byebye or a response to one of our periodic queries we should use it to
  * create a peerAvailabilityChanged call back. In practice we don't really need
  * to batch these messages so we can just fire them as we get them. The
- * peerIdentifier is the USN from the SSDP message, peerAvailable is true or
- * false based on the SSDP response and pleaseConnect is false except for the
- * situation described above for /ConnectToMeforMock.
+ * peerIdentifier is the USN from the SSDP message, and peerAvailable is true or
+ * false based on the SSDP response.
  *
  * @param {module:thaliMobileNative~peerAvailabilityChangedCallback} callback
  */
@@ -997,32 +1064,25 @@ MobileCallInstance.prototype.multiConnectConnectionFailure =
 
 MobileCallInstance.prototype.registerToNative = function () {
   switch (this.mobileMethodName) {
-    case 'peerAvailabilityChanged':
-    {
+    case 'peerAvailabilityChanged': {
       return this.peerAvailabilityChanged(arguments[0]);
     }
-    case 'discoveryAdvertisingStateUpdateNonTCP':
-    {
+    case 'discoveryAdvertisingStateUpdateNonTCP': {
       return this.discoveryAdvertisingStateUpdateNonTCP(arguments[0]);
     }
-    case 'networkChanged':
-    {
+    case 'networkChanged': {
       return this.networkChanged(arguments[0]);
     }
-    case 'incomingConnectionToPortNumberFailed':
-    {
+    case 'incomingConnectionToPortNumberFailed': {
       return this.incomingConnectionToPortNumberFailed(arguments[0]);
     }
-    case 'multiConnectResolved':
-    {
+    case 'multiConnectResolved': {
       return this.multiConnectResolved(arguments[0]);
     }
-    case 'multiConnectConnectionFailure':
-    {
+    case 'multiConnectConnectionFailure': {
       return this.multiConnectConnectionFailure(arguments[0]);
     }
-    default:
-    {
+    default: {
       throw new Error('The supplied mobileName does not have a matching ' +
           'registerToNative method: ' + this.mobileMethodName);
     }
@@ -1036,6 +1096,15 @@ var doToggle = function (setting, property, callback) {
     return;
   }
   currentNetworkStatus[property] = newStatus;
+  if (property === 'wifi') {
+    if (setting) {
+      currentNetworkStatus.bssidName = BSSID;
+      currentNetworkStatus.ssidName  = SSID;
+    } else {
+      currentNetworkStatus.bssidName = null;
+      currentNetworkStatus.ssidName  = null;
+    }
+  }
 
   if (networkChangedCallback !== null) {
     // Record the status on this event loop to make sure
@@ -1048,15 +1117,12 @@ var doToggle = function (setting, property, callback) {
       networkChangedCallback(statusSnapshot);
     });
   }
-  setImmediate(callback);
+  return setImmediate(callback);
 };
 
 // jscs:disable jsDoc
 /**
  * This simulates turning Bluetooth on and off.
- *
- * If we are emulating Android then we MUST start with Bluetooth and WiFi
- * turned off.
  *
  * __Open Issue:__ I believe that JXCore will treat this as a NOOP if called
  * on iOS. We need to check and emulate their behavior.
@@ -1068,25 +1134,14 @@ var doToggle = function (setting, property, callback) {
 // jscs:enable jsDoc
 function toggleBluetooth () {
   return function (setting, callback) {
+    if (platform.isIOS) {
+      callback(new Error('toggleBluetooth not supported on iOS'));
+    }
     doToggle(setting, 'bluetooth', callback);
   };
 }
 
-// jscs:disable jsDoc
-/**
- * If we are on Android then then is a NOOP since we don't care (although to
- * be good little programmers we should still fire a network changed event). We
- * won't be using Wifi for discovery or connectivity in the near future.
- *
- * __Open Issue:__ I believe that JXCore will treat this as a NOOP if called
- * on iOS. We need to check and emulate their behavior.
- *
- * @param {module:platform.names} platform
- * @param {ThaliWifiInfrastructure} thaliWifiInfrastructure
- * @returns {Function}
- */
-// jscs:enable jsDoc
-function toggleWiFi() {
+function toggleWiFi () {
   return function (setting, callback) {
     doToggle(setting, 'wifi', callback);
   };
@@ -1122,7 +1177,7 @@ function fireMultiConnectResolved() {
 function fireMultiConnectConnectionFailure() {
   return function(peerIdentifier, error) {
     multiConnectConnectionFailureCallbackHandler(peerIdentifier, error);
-  }
+  };
 }
 
 // jscs:disable maximumLineLength
@@ -1144,12 +1199,11 @@ function wifiPeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
         peerIdentifier: peerIdentifier,
         hostAddress: '127.0.0.1',
         generation: generation,
-        portNumber: thaliWifiInfrastructure.advertisedPortOverride
+        portNumber: thaliWifiInfrastructure._getOverridenAdvertisedPort()
       });
   };
 }
 
-// jscs:disable jsDoc
 /**
  * To use this mock save the current global object Mobile (if it exists) and
  * replace it with this object. In general this object won't exist on the
@@ -1162,7 +1216,6 @@ function wifiPeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
  * stack. We need it here so we can add a router to simulate the iOS case where
  * we need to let the other peer know we want a connection.
  */
-// jscs:enable jsDoc
 function WifiBasedNativeMock(platformName, router) {
   assert(platformName, 'platformName must be set');
   if (!router) {
@@ -1188,13 +1241,14 @@ function WifiBasedNativeMock(platformName, router) {
     toggleBluetooth(platformName, thaliWifiInfrastructure);
 
   mobileHandler.toggleWiFi =
-    toggleWiFi(platformName, thaliWifiInfrastructure);
+    toggleWiFi(platform, thaliWifiInfrastructure);
 
   mobileHandler.firePeerAvailabilityChanged =
     firePeerAvailabilityChanged(platformName, thaliWifiInfrastructure);
 
   mobileHandler.fireIncomingConnectionToPortNumberFailed =
-    fireIncomingConnectionToPortNumberFailed(platformName, thaliWifiInfrastructure);
+    fireIncomingConnectionToPortNumberFailed(platformName,
+                                             thaliWifiInfrastructure);
 
   mobileHandler.fireDiscoveryAdvertisingStateUpdateNonTCP =
     fireDiscoveryAdvertisingStateUpdateNonTCP(platformName,
@@ -1208,6 +1262,8 @@ function WifiBasedNativeMock(platformName, router) {
 
   mobileHandler.wifiPeerAvailabilityChanged =
     wifiPeerAvailabilityChanged(platformName, thaliWifiInfrastructure);
+
+  mobileHandler._platform = platformName;
 
   return mobileHandler;
 }

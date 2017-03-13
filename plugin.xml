@@ -9,19 +9,23 @@
     <keywords>cordova,jxcore,node.js,thali</keywords>
 
     <engines>
-        <engine name="cordova-android" version=">=5.0.0" />
-        <engine name="cordova-ios" version=">=3.9.0" />
+        <engine name="cordova-android" version=">=6.0.0" />
+        <engine name="cordova-ios" version=">=4.3.1" />
         <engine name="android-sdk" version=">=23" />
     </engines>
 
     <!-- Android -->
     <platform name="android">
+      <hook type="after_plugin_install" src="thali/install/cordova-hooks/android/after_plugin_install.js" />
+
         <config-file target="AndroidManifest.xml" parent="/*">
             <uses-permission android:name="android.permission.INTERNET" />
             <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
             <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
             <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+            <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
         </config-file>
+
         <framework src="src/android/JXcore.gradle" custom="true" type="gradleReference" />
         <source-file src="src/android/java/io/jxcore/node/ConnectionData.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/ConnectionHelper.java" target-dir="src/io/jxcore/node/" />
@@ -37,6 +41,8 @@
         <source-file src="src/android/java/io/jxcore/node/StartStopOperationHandler.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/StreamCopyingThread.java" target-dir="src/io/jxcore/node/" />
         <source-file src="src/android/java/io/jxcore/node/TestHelper.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/WifiLocker.java" target-dir="src/io/jxcore/node/" />
+        <source-file src="src/android/java/io/jxcore/node/SurroundingStateObserver.java" target-dir="src/io/jxcore/node/" />
 
         <!-- ThaliPermissions -->
         <config-file target="config.xml" parent="/*">
@@ -49,17 +55,14 @@
             <clobbers target="window.ThaliPermissions" />
         </js-module>
         <source-file src="src/android/java/org/thaliproject/p2p/ThaliPermissions.java" target-dir="src/org/thaliproject/p2p/" />
-
-        <hook type="before_plugin_install" src="scripts/before_plugin_install.js" />
-        <hook type="before_compile" src="scripts/android/before_compile.js" />
     </platform>
 
     <!-- iOS -->
 
     <platform name="ios">
 
-        <hook type="before_plugin_install" src="scripts/before_plugin_install.js" />
-        <hook type="after_plugin_install" src="scripts/ios/after_plugin_install.js" />
+        <hook type="before_plugin_install" src="thali/install/cordova-hooks/ios/before_plugin_install.js" />
+        <hook type="after_plugin_install" src="thali/install/cordova-hooks/ios/after_plugin_install.js" />
 
         <config-file target="config.xml" parent="/*">
           <feature name="ThaliPlugin">
@@ -69,7 +72,6 @@
 
         <source-file src="src/ios/JXcoreExtension.m" compiler-flags="-Werror"/>
         <source-file src="src/ios/AppContext.swift" compiler-flags="-Werror"/>
-        <source-file src="src/ios/AppContextTests.swift" compiler-flags="-Werror"/>
 
     </platform>
 </plugin>

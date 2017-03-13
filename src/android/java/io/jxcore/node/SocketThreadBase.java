@@ -5,17 +5,24 @@ package io.jxcore.node;
 
 import android.bluetooth.BluetoothSocket;
 import android.util.Log;
+
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.SocketException;
+
+import android.os.Build;
 
 /**
  * The base (thread) class for outgoing and incoming socket threads.
  */
 abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Listener {
+
     public interface Listener {
+
         void onListeningForIncomingConnections(int portNumber);
 
         void onDataTransferred(int numberOfBytes);
@@ -23,17 +30,21 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
         /**
          * Called when either the sending or the receiving thread is done.
          *
-         * @param who The associated SocketThreadBase instance (this).
+         * @param who                  The associated SocketThreadBase instance (this).
          * @param threadDoneWasSending If true, the sending thread is done. If false, the receiving thread is done.
          */
         void onDone(SocketThreadBase who, boolean threadDoneWasSending);
 
         void onDisconnected(SocketThreadBase who, String errorMessage);
+
+        void onDisconnected(SocketThreadBase who, Exception exception);
+
+        void onTransferError(SocketThreadBase who, String errorMessage);
     }
 
     private static final String SENDING_THREAD_NAME = "Sender";
     private static final String RECEIVING_THREAD_NAME = "Receiver";
-    private static final int STREAM_COPYING_THREAD_BUFFER_SIZE = 1024 * 4;
+    protected static final int STREAM_COPYING_THREAD_BUFFER_SIZE = 1024 * 4;
 
     protected final BluetoothSocket mBluetoothSocket;
     protected final Listener mListener;
@@ -56,9 +67,9 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
      * @throws IOException Thrown, if either BluetoothSocket.getInputStream or BluetoothSocket.getOutputStream fails.
      */
     public SocketThreadBase(BluetoothSocket bluetoothSocket, Listener listener)
-            throws IOException {
+        throws IOException {
         this(bluetoothSocket, listener, bluetoothSocket.getInputStream(),
-                bluetoothSocket.getOutputStream());
+            bluetoothSocket.getOutputStream());
     }
 
     /**
@@ -97,8 +108,8 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
     public String getLocalHostAddressAsString() {
         Socket localCopyOfmLocalHostSocket = mLocalhostSocket;
         return localCopyOfmLocalHostSocket == null
-                || localCopyOfmLocalHostSocket.getInetAddress() == null
-                ? null : localCopyOfmLocalHostSocket.getInetAddress().toString();
+            || localCopyOfmLocalHostSocket.getInetAddress() == null
+            ? null : localCopyOfmLocalHostSocket.getInetAddress().toString();
     }
 
     /**
@@ -156,15 +167,14 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
             SocketThreadBase otherSocketThreadBase = (SocketThreadBase) other;
 
             return (otherSocketThreadBase.getPeerProperties() != null
-                    && mPeerProperties != null
-                    && otherSocketThreadBase.getPeerProperties().equals(mPeerProperties));
+                && mPeerProperties != null
+                && otherSocketThreadBase.getPeerProperties().equals(mPeerProperties));
         }
 
         return false;
     }
 
     /**
-     *
      * @param who The StreamCopyingThread that is done.
      */
     @Override
@@ -206,7 +216,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
                 // The receiving thread is the one having the Bluetooth input stream. Thus, if it fails,
                 // we know that connection was disconnected from the other end.
                 Log.e(mTag, "The receiving thread failed with error \"" + errorMessage
-                        + "\", this is likely due to peer having disconnected");
+                    + "\", this is likely due to peer having disconnected");
             } else if (who == mSendingThread) {
                 // The sending thread has the local input stream. Thus, if it fails, we are getting a
                 // local disconnect.
@@ -215,7 +225,7 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
                 Log.e(mTag, "Unidentified stream copying thread failed with error: " + errorMessage);
             }
 
-            mListener.onDisconnected(this, errorMessage);
+            mListener.onTransferError(this, errorMessage);
         }
     }
 
@@ -260,19 +270,32 @@ abstract class SocketThreadBase extends Thread implements StreamCopyingThread.Li
                 shortName = mTag;
             }
 
-            mSendingThread = new StreamCopyingThread(this, mLocalInputStream, mBluetoothOutputStream, shortName + "/" + SENDING_THREAD_NAME, connectionData);
+            mSendingThread = new StreamCopyingThread(this, mLocalInputStream, mBluetoothOutputStream,
+                shortName + "/" + SENDING_THREAD_NAME, connectionData, false);
             mSendingThread.setUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
             mSendingThread.setBufferSize(STREAM_COPYING_THREAD_BUFFER_SIZE);
             mSendingThread.setNotifyStreamCopyingProgress(true);
             mSendingThread.start();
-
-            mReceivingThread = new StreamCopyingThread(this, mBluetoothInputStream, mLocalOutputStream, shortName + "/" + RECEIVING_THREAD_NAME, connectionData);
+            mReceivingThread = new StreamCopyingThread(this, mBluetoothInputStream, mLocalOutputStream,
+                shortName + "/" + RECEIVING_THREAD_NAME, connectionData, true);
             mReceivingThread.setUncaughtExceptionHandler(this.getUncaughtExceptionHandler());
             mReceivingThread.setBufferSize(STREAM_COPYING_THREAD_BUFFER_SIZE);
             mReceivingThread.setNotifyStreamCopyingProgress(true);
             mReceivingThread.start();
 
+
             Log.i(mTag, "startStreamCopyingThreads: OK (thread ID: " + getId() + ")");
         }
+    }
+
+    protected void configureSocket() throws SocketException {
+        if (mLocalhostSocket != null) {
+            mLocalhostSocket.setKeepAlive(true);
+            mLocalhostSocket.setReuseAddress(false);
+            mLocalhostSocket.setOOBInline(false);
+            mLocalhostSocket.setSoTimeout(0);
+            mLocalhostSocket.setTcpNoDelay(true);
+        }
+
     }
 }

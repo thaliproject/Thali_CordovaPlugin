@@ -3,6 +3,7 @@
 var crypto         = require('crypto');
 var express        = require('express');
 var expressPouchDB = require('express-pouchdb');
+var ForeverAgent   = require('forever-agent');
 var Promise        = require('bluebird');
 
 var tape      = require('../lib/thaliTape');
@@ -21,7 +22,6 @@ var TestPouchDB            = testUtils.getLevelDownPouchDb();
 
 var DB_NAME            = 'repActionTest';
 var EXPIRATION_TIMEOUT = 60 * 60 * 1000;
-var TEST_TIMEOUT       = 5 * 60 * 1000;
 
 if (!tape.coordinated) {
   return;
@@ -38,10 +38,6 @@ var test = tape({
 });
 
 test('Coordinated replication action test', function (t) {
-  // BUGBUG: This is currently ignored for reasons explained
-  // in thaliReplicationPeerAction.start
-  var httpAgentPool = null;
-
   var router = express.Router();
   router.use(
     '/db',
@@ -116,6 +112,14 @@ test('Coordinated replication action test', function (t) {
             }
           });
 
+          var httpAgentPool = new ForeverAgent.SSL({
+            rejectUnauthorized: false,
+            maxSockets: 8,
+            ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+            pskIdentity: thaliReplicationPeerAction.getPskIdentity(),
+            pskKey: thaliReplicationPeerAction.getPskKey()
+          });
+
           thaliReplicationPeerAction.start(httpAgentPool)
           .catch(function (error) {
             exit(error);
@@ -130,7 +134,8 @@ test('Coordinated replication action test', function (t) {
   })
 
   .then(function () {
-    // We are simulating thaliPullReplicationFromNotification.stop() and thaliPeerPoolDefault.stop()
+    // We are simulating thaliPullReplicationFromNotification.stop() and
+    // thaliPeerPoolDefault.stop()
     thaliNotificationClient.stop();
     var promises = peerActions.map(function (peerAction) {
       peerAction.kill();
@@ -140,7 +145,8 @@ test('Coordinated replication action test', function (t) {
   })
   .then(function () {
     // https://github.com/thaliproject/Thali_CordovaPlugin/issues/1138
-    // workaround for ECONNREFUSED and ECONNRESET from 'request.js' in 'pouchdb'.
+    // workaround for ECONNREFUSED and ECONNRESET from 'request.js' in
+    // 'pouchdb'.
     return t.sync();
   })
   .then(function () {
@@ -164,8 +170,7 @@ test('Coordinated replication action test', function (t) {
   })
 
   .then(function () {
-    return Promise.resolve()
-    .timeout(TEST_TIMEOUT, 'test timeout exceeded');
+    return Promise.resolve();
   })
   .then(function () {
     t.pass('passed');

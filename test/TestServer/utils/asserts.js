@@ -75,10 +75,11 @@ module.exports.arrayEquals = function(a1, a2) {
 function isObject(value) {
   return exists(value) && typeof value === 'object';
 }
-module.exports.isObject = function (value) {
+module.exports.isObject = function (value, message) {
   assert(
     isObject(value),
-    format('object expected, received: \'%s\'', value)
+    format('object expected, received: \'%s\' \'%s\'', value,
+      message ? ('-' + message) : '')
   );
 };
 

@@ -83,6 +83,7 @@ function _finishPromise (localFn, globalResolveFn) {
  * @private
  * @param {module:promiseQueue~promiseFunction} fn
  * @param {module:promiseQueue~unshiftOrPush} unshiftOrPushFn
+ * @return {Promise<?Error>}
  */
 PromiseQueue.prototype._changeQueue = function (fn, unshiftOrPushFn) {
   var self = this;
@@ -106,7 +107,7 @@ PromiseQueue.prototype._changeQueue = function (fn, unshiftOrPushFn) {
  * it have been executed.
  *
  * @public
- * @param {module:promiseQueue~promiseFunction} fn
+ * @param {promiseFunction} fn
  * @returns {Promise} A promise that will resolve or be rejected depending
  * on the outcome of the submitted function.
  */

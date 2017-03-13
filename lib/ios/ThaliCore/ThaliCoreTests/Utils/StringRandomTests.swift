@@ -11,96 +11,98 @@ import XCTest
 
 class StringRandomTests: XCTestCase {
 
-    let serviceTypeLength = 10
+  // MARK: - State
+  let serviceTypeLength = 10
 
-    func testReturnsTrueWhenServiceTypeIsValid() {
-        for _ in 0...1000 {
-            // Given
-            let randomServiceType = String.randomValidServiceType(length: serviceTypeLength)
+  // MARK: - Tests
+  func testReturnsTrueWhenServiceTypeIsValid() {
+    for _ in 0...1000 {
+      // Given
+      let randomServiceType = String.randomValidServiceType(length: serviceTypeLength)
 
-            // When, Then
-            XCTAssertTrue(String.isValidServiceType(randomServiceType))
-        }
+      // When, Then
+      XCTAssertTrue(String.isValidServiceType(randomServiceType))
     }
+  }
 
-    func testReturnsTrueWhenServiceTypeIsThaliproject() {
-        // Given
-        let thaliProjectServiceType = "thaliproject"
+  func testReturnsTrueWhenServiceTypeIsThaliproject() {
+    // Given
+    let thaliProjectServiceType = "thaliproject"
 
-        // When, Then
-        XCTAssertTrue(String.isValidServiceType(thaliProjectServiceType))
-    }
+    // When, Then
+    XCTAssertTrue(String.isValidServiceType(thaliProjectServiceType))
+  }
 
-    func testReturnsFalseWhenServiceTypeIsEmpty() {
-        // Given
-        let invalidServiceType = String.random(length: 0)
+  func testReturnsFalseWhenServiceTypeIsEmpty() {
+    // Given
+    let invalidServiceType = String.random(length: 0)
 
-        // When, Then
-        XCTAssertFalse(String.isValidServiceType(invalidServiceType))
-    }
+    // When, Then
+    XCTAssertFalse(String.isValidServiceType(invalidServiceType))
+  }
 
-    func testReturnsFalseWhenServiceTypeCharMoreThanMax() {
-        // Given
-        let invalidServiceType = String.randomValidServiceType(length: 16)
+  func testReturnsFalseWhenServiceTypeCharMoreThanMax() {
+    // Given
+    let invalidServiceType = String.randomValidServiceType(length: 16)
 
-        // When, Then
-        XCTAssertFalse(String.isValidServiceType(invalidServiceType))
-    }
+    // When, Then
+    XCTAssertFalse(String.isValidServiceType(invalidServiceType))
+  }
 
-    func testReturnsFalseWhenServiceTypeContainsNotPermittedCharacter() {
-        // Given
-        let randomIndexInString = Int(arc4random_uniform(UInt32(serviceTypeLength)))
-        let firstPartLength = randomIndexInString
-        let secondPartLength = serviceTypeLength - randomIndexInString
-        let firstRandomlyGeneratedPart = String.randomValidServiceType(length: firstPartLength)
-        let secondRandomlyGeneratedPart = String.randomValidServiceType(length: secondPartLength)
-        let invalidServiceType = firstRandomlyGeneratedPart + "." + secondRandomlyGeneratedPart
+  func testReturnsFalseWhenServiceTypeContainsNotPermittedCharacter() {
+    // Given
+    let randomIndexInString = Int(arc4random_uniform(UInt32(serviceTypeLength)))
+    let firstPartLength = randomIndexInString
+    let secondPartLength = serviceTypeLength - randomIndexInString
+    let firstRandomlyGeneratedPart = String.randomValidServiceType(length: firstPartLength)
+    let secondRandomlyGeneratedPart = String.randomValidServiceType(length: secondPartLength)
+    let invalidServiceType = firstRandomlyGeneratedPart + "." + secondRandomlyGeneratedPart
 
-        // When, Then
-        XCTAssertFalse(String.isValidServiceType(invalidServiceType))
-    }
+    // When, Then
+    XCTAssertFalse(String.isValidServiceType(invalidServiceType))
+  }
 
-    func testReturnsFalseWhenServiceTypeDoesNotContainAsLeastOneASCIICharacter() {
-        // Given
-        let digits = "0123456789"
-        let hyphen = "-"
-        let invalidAlphabet = digits + hyphen
+  func testReturnsFalseWhenServiceTypeDoesNotContainAsLeastOneASCIICharacter() {
+    // Given
+    let digits = "0123456789"
+    let hyphen = "-"
+    let invalidAlphabet = digits + hyphen
 
-        let invalidServiceType = String.randomString(with: serviceTypeLength,
-                                                     fromAlphabet: invalidAlphabet)
+    let invalidServiceType = String.randomString(with: serviceTypeLength,
+                                                 fromAlphabet: invalidAlphabet)
 
-        // When, Then
-        XCTAssertFalse(String.isValidServiceType(invalidServiceType))
-    }
+    // When, Then
+    XCTAssertFalse(String.isValidServiceType(invalidServiceType))
+  }
 
-    func testReturnsFalseWhenServiceTypeContainsHyphenFirst() {
-        // Given
-        let randomlyGeneratedServiceType = String.randomValidServiceType(length: serviceTypeLength)
-        let invalidServiceType = "-" + randomlyGeneratedServiceType
+  func testReturnsFalseWhenServiceTypeContainsHyphenFirst() {
+    // Given
+    let randomlyGeneratedServiceType = String.randomValidServiceType(length: serviceTypeLength)
+    let invalidServiceType = "-" + randomlyGeneratedServiceType
 
-        // When, Then
-        XCTAssertFalse(String.isValidServiceType(invalidServiceType))
-    }
+    // When, Then
+    XCTAssertFalse(String.isValidServiceType(invalidServiceType))
+  }
 
-    func testReturnsFalseWhenServiceTypeContainsHyphenLast() {
-        // Given
-        let randomlyGeneratedServiceType = String.randomValidServiceType(length: serviceTypeLength)
-        let invalidServiceType = randomlyGeneratedServiceType + "-"
+  func testReturnsFalseWhenServiceTypeContainsHyphenLast() {
+    // Given
+    let randomlyGeneratedServiceType = String.randomValidServiceType(length: serviceTypeLength)
+    let invalidServiceType = randomlyGeneratedServiceType + "-"
 
-        // When, Then
-        XCTAssertFalse(String.isValidServiceType(invalidServiceType))
-    }
+    // When, Then
+    XCTAssertFalse(String.isValidServiceType(invalidServiceType))
+  }
 
-    func testReturnsFalseWhenServiceTypeContainsAdjancesHyphens() {
-        // Given
-        let randomIndexInString = Int(arc4random_uniform(UInt32(serviceTypeLength)))
-        let firstPartLength = randomIndexInString
-        let secondPartLength = serviceTypeLength - randomIndexInString
-        let firstRandomlyGeneratedPart = String.randomValidServiceType(length: firstPartLength)
-        let secondRandomlyGeneratedPart = String.randomValidServiceType(length: secondPartLength)
-        let invalidServiceType = firstRandomlyGeneratedPart + "--" + secondRandomlyGeneratedPart
+  func testReturnsFalseWhenServiceTypeContainsAdjancesHyphens() {
+    // Given
+    let randomIndexInString = Int(arc4random_uniform(UInt32(serviceTypeLength)))
+    let firstPartLength = randomIndexInString
+    let secondPartLength = serviceTypeLength - randomIndexInString
+    let firstRandomlyGeneratedPart = String.randomValidServiceType(length: firstPartLength)
+    let secondRandomlyGeneratedPart = String.randomValidServiceType(length: secondPartLength)
+    let invalidServiceType = firstRandomlyGeneratedPart + "--" + secondRandomlyGeneratedPart
 
-        // When, Then
-        XCTAssertFalse(String.isValidServiceType(invalidServiceType))
-    }
+    // When, Then
+    XCTAssertFalse(String.isValidServiceType(invalidServiceType))
+  }
 }

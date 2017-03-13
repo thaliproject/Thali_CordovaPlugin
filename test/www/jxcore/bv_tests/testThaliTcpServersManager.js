@@ -8,6 +8,7 @@ var tape = require('../lib/thaliTape');
 var ThaliTCPServersManager = require('thali/NextGeneration/mux/thaliTcpServersManager');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var Promise = require('lie');
+var proxyquire = require('proxyquire');
 
 var applicationPort = 4242;
 var serversManager = null;
@@ -79,6 +80,10 @@ test('starting twice resolves with listening port', function (t) {
 });
 
 test('terminateIncomingConnection will terminate a connection', function (t) {
+  var disconnectReceived = false;
+  var terminateResolved = false;
+  var clientClosed = false;
+
   /*
   Setup a serversManager and connect to it from a client. Then catch the
   event and call terminate and make sure the client sees its connection
@@ -113,10 +118,6 @@ test('terminateIncomingConnection will terminate a connection', function (t) {
     }
   }
 
-  var disconnectReceived = false;
-  var terminateResolved = false;
-  var clientClosed = false;
-
   applicationServer = makeIntoCloseAllServer(net.createServer())
     .listen(0, function () {
       serversManager = new ThaliTCPServersManager(this.address().port);
@@ -135,12 +136,12 @@ test('terminateIncomingConnection will terminate a connection', function (t) {
 
       applicationServer.once('error', shutDown);
       serversManager.once(serversManager.INCOMING_CONNECTION_STATE,
-        function(incomingConnectionState) {
+        function (incomingConnectionState) {
           t.equal(incomingConnectionState.state,
             serversManager.incomingConnectionState.CONNECTED,
             'we should be connected');
           serversManager.once(serversManager.INCOMING_CONNECTION_STATE,
-            function(incomingConnectionState) {
+            function (incomingConnectionState) {
               t.equal(incomingConnectionState.state,
                 serversManager.incomingConnectionState.DISCONNECTED,
                 'now we are disconnected');
@@ -164,18 +165,60 @@ test('terminateIncomingConnection will terminate a connection', function (t) {
     });
 });
 
-test('terminate an Outgoing connection will terminate the server',
+test('terminate an Outgoing connection',
   function (t) {
-    serversManager.start()
-      .then(function () {
-        t.end();
-      });
-  });
+    serversManager = null;
+    var closeServerFunction = null;
+    var closeServerCalled = false;
+    var ProxiedTCPServersManager =
+      proxyquire('thali/NextGeneration/mux/thaliTcpServersManager',
+        { './createPeerListener': {
+          closeServer: function () {
+            return closeServerFunction.apply(this, arguments);
+          }
+        } });
 
-test('terminate an Outgoing connection with wrong arguments is not harmful',
-  function (t) {
-    serversManager.start()
-      .then(function () {
-        t.end();
-      });
+    closeServerFunction = function () {
+      t.fail('We should not have been called on this test');
+    };
+
+    var proxiedTCPServersManager = new ProxiedTCPServersManager(55);
+    return proxiedTCPServersManager.terminateOutgoingConnection('foo', 32)
+    .then(function () {
+      t.ok(true, 'Passed bogus id');
+      proxiedTCPServersManager._peerServers.foo = {
+        server: {
+          address: function () {
+            return {
+              port: 900
+            };
+          }
+        }
+      };
+      closeServerFunction = function () {
+        t.fail('Second try - should not have been called.');
+      };
+      return proxiedTCPServersManager.terminateOutgoingConnection('foo', 901);
+    })
+    .then(function () {
+      t.ok(true, 'Passed good id but bogus port');
+      closeServerFunction = function (self, server, error, retry) {
+        t.equal(self, proxiedTCPServersManager, 'Passed right context');
+        t.equal(server, proxiedTCPServersManager._peerServers.foo.server,
+          'Right server');
+        t.equal(error, null, 'No error should be set');
+        t.equal(retry, false, 'Retry should be false');
+        closeServerCalled = true;
+      };
+      return proxiedTCPServersManager.terminateOutgoingConnection('foo', 900);
+    })
+    .then(function () {
+      t.ok(closeServerCalled, 'We called close server');
+    })
+    .catch(function (err) {
+      t.fail('Got an error, should not be possible. ' + err);
+    })
+    .then(function () {
+      t.end();
+    });
   });

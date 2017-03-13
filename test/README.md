@@ -20,23 +20,23 @@ USB could also talk that way.
 
 The method of co-ordination differs slightly between Unit and Performance tests:
 
-- With Unit tests the coordinating server simply synchronizes test setup and teardown across devices running the test 
-suite. By this method we can ensure that devices are running the same test at the same time. Tests written to run 
-under this regime should therefore assume they will run against themsselves running on a different device. 
+- With Unit tests the coordinating server simply synchronizes test setup and teardown across devices running the test
+suite. By this method we can ensure that devices are running the same test at the same time. Tests written to run
+under this regime should therefore assume they will run against themsselves running on a different device.
 
-- With performance tests the coordinating server additionally provides global options to devices running the test 
+- With performance tests the coordinating server additionally provides global options to devices running the test
 (e.g. number of times to run a particular test before collating results).
 
-In order to point the devices running test suites at the coordinating server a file, server-address.js, containing the 
+In order to point the devices running test suites at the coordinating server a file, server-address.js, containing the
 ip address of the server host is installed in the jxcore folder of the test app. If the coordination server runs on
-the same machine that you build the mobile apps on then everything will be set up for you. Otherwise you'll need to edit 
+the same machine that you build the mobile apps on then everything will be set up for you. Otherwise you'll need to edit
 the server-address.js file yourself to make sure it contains the right server address.
 
-On startup the test devices will connect back to the server to indicate their readiness to proceed. Once the required 
-number of devices are ready the server will signal them to begin the first test. The server will then coordinate test 
+On startup the test devices will connect back to the server to indicate their readiness to proceed. Once the required
+number of devices are ready the server will signal them to begin the first test. The server will then coordinate test
 execution so that each subsequent test is not commenced before all devices have finished the preceding one.
 
-It is essential, therefore, that tests remain in a state which facilitates completion for the other devices in the test 
+It is essential, therefore, that tests remain in a state which facilitates completion for the other devices in the test
 configuration before finally completing and tearing down it's resources.
 
 ## Usage
@@ -51,15 +51,15 @@ In terms of operating system we assume you are running on macOS. In theory we ca
 run successfully on Linux or Windows but we really don't test there very often
 so things are likely to break.
 
-From there you need to install in macOS a fairly large mountain of software. For
-now you can see the list [here](https://github.com/thaliproject/Thali_CordovaPlugin/blob/1df36b74ee93f1ece85579857ed90a0e05a0cdd1/thali/install/validateBuildEnvironment.js#L16).
-You need to install the listed software at the listed version. Two of the entries
-are about Sinopia. Details on that is in the next section.
+From there you need to install in macOS a fairly large mountain of software. We
+ have a script, validateBuildEnvironment.js, that checks for all the required
+ software. You need to install all that software at the listed version for the
+ build to work. Two of the entries are about Sinopia. Details on that is in the next section.
 
 ### Running your own NPM registry
 From time to time we run into bugs in PouchDB and Express-PouchDB that we can't
 get fixed and into the public NPM repo fast enough to not block our development.
-So we have written a script (installCustomPouchDB.js) that handles installing a
+So we have written a script `installCustomPouchDB.js` that handles installing a
 custom version of those packages if and when we need them. To make this work we
 depend on the developer running a local copy of a program called sinopia
 (although any private NPM repository server will do) and using that as a place
@@ -67,11 +67,11 @@ to stage our custom releases. This requires the following manual steps:
 
 1. `npm install -g sinopia`. If you get errors, try to install via
 `npm install -g sinopia --no-optional --no-shrinkwrap`
-2. Run the 'sinopia' command in a terminal window and leave it running, forever.
+2. Run the `sinopia` command in a terminal window and leave it running, forever.
 3. `npm set registry http://localhost:4873` or whatever the address of the
-NPM registry server is. 
-4. `jx npm get registry`. There should be http://localhost:4873 or the other address from the previous point.
-Otherwise run `jx npm set registry http://localhost:4873`
+NPM registry server is.
+4. `npm get registry`. There should be http://localhost:4873 or the other address from the previous point.
+Otherwise run `npm set registry http://localhost:4873`
 5. `npm adduser --registry http://localhost:4873` this last command will require
 you to make up a name and password.
 
@@ -86,23 +86,47 @@ the Cordova project onto the phones. One also needs to run a coordination server
 To run the mobile tests:
 
 1. If you have a sibling directory to Thali_CordovaPlugin called ThaliTest, now would be a good time to delete it.
-1. Go to Thali_CordovaPlugin/thali/install
-2. Run either `jx npm run setupUnit` or `jx npm run setupPerf` depending on what type of test project you want to
-create. On Windows, run `./setUpTests.sh UnitTest_app.js` or `./setupTests.sh PerfTest_app.js` on the latest
-Git Bash.
-2.1 The script will create a sibling directory to Thali_CordovaPlugin called ThaliTest and will compile it for both
-Android and iOS. This assumes you are running on a Mac with all the right tools.
-3. Go to Thali_CordovaPlugin/test/TestServer
-4. Examine Config_PerfTest.json or Config_UnitTest.json (depending on the test type you are running) and make sure it
-is configured properly.
-5. Run `jx index.js \{\"devices\":\{\"ios\":2,\"android\":2\}\}` in that directory on your local PC to start the 
+2. Go to `Thali_CordovaPlugin/thali/install`
+3. Run `npm run setupUnit`. On Windows, run `./setUpTests.sh UnitTest_app.js`
+or `./setupTests.sh PerfTest_app.js` on the latest Git Bash. The script will create a sibling directory to Thali_CordovaPlugin called
+ThaliTest and will compile it for both Android and iOS. This assumes you are
+running on a Mac with all the right tools.
+4. Go to `Thali_CordovaPlugin/test/TestServer`.
+5. Check out the default configuration options in test/TestServer/config/UnitTest.js
+5. Run `jx index.js \{\"devices\":\{\"ios\":2,\"android\":2\}\}` in that directory on your local PC to start the
 coordination server. Obviously edit the device counts passed on the command line to reflect the actual test
 environment.
 6. Deploy and run the tests on your two Android or two iPhone devices.
 
+#### Hints on making native testing a bit easier
+
+If you are manually running native tests it's usually because you are debugging something. Typically you are going to want to disable
+all tests but those that you actually want to run. Below we outline ways to quickly disable various tests.
+
+Note that the changes below should be made in ThaliTest NOT in Thali_CordovaPlugin. You don't want to check in these changes.
+
+We have tests that are written in Java and are run from app.js via a command to Mobile('executeNativeTests'). These tests typically
+ take about 60 seconds to run and run every time the app starts. So if you aren't debugging those tests then you really want to
+ disable them. The easiest way to do that is to replace 'platform._isRealMobile' with false.
+
+Next up you have to make sure you are running the kind of test you want to run. In UnitTest_app.js we set global.NETWORK_TYPE. When
+running on desktop this gets overridden in all sorts of ways but not when we are on a device. So make sure the network type is what
+you intend to actually test.
+
+Then head over to ThaliTest/platform/android/assets/www/jxcore/bv_tests and either delete or move to a new folder any tests you don't
+want to run. By default we only run files that start with the name 'test' and are children of the bv_tests folder.
+
+One of the hardest tasks in debugging on Android is dealing with the logs. I've found that LogRabbit, a Mac OS program, is extremely
+useful for this. Since one is typically debugging with multiple devices it is necessary to start up multiple instances of LogRabbit.
+Chris Wilson, the developer of LogRabbit, showed how to do this, just issue the following on the command line:
+
+```
+$ /Applications/LogRabbit.app/Contents/MacOS/LogRabbit > /dev/null 2>&1 &
+```
+
 #### Testing Doze and App Standby on Android
 
-Doze and App Standby are two new power-saving features introduced in Android 6.0 (API level 23). 
+Doze and App Standby are two new power-saving features introduced in Android 6.0 (API level 23).
 For more information, see [Optimizing for Doze and App Standby](http://developer.android.com/training/monitoring-device-state/doze-standby.html).
 To test how the Thali Cordova Plug-in copes with these modes on Android, follow the steps below:
 
@@ -145,14 +169,14 @@ To test how the Thali Cordova Plug-in copes with these modes on Android, follow 
 
 All of the test files are designed to be runnable also on the desktop. Tests that require the real mobile environment
 will de-activate themselves when run on the desktop. What is especially nice about running on the desktop is that
-one can develop and debug directly in the Thali_CordovaPlugin directory. There is no need to do the kind of 
+one can develop and debug directly in the Thali_CordovaPlugin directory. There is no need to do the kind of
 copying and pasting that Cordova development normally requires.
 
-To set up your desktop environment for development go to 
-Thali_CordovaPlugin/thali/install and run `jx npm run setupDesktop`.
+To set up your desktop environment for development go to
+`Thali_CordovaPlugin/thali/install` and run `npm run setupDesktop`.
 
-Sudo might be needed because this script installs a symbolic link into your global NPM directory. But if you can get 
-away without using it you will be much happier as using sudo for this (especially on macOS) seems to cause permission 
+Sudo might be needed because this script installs a symbolic link into your global NPM directory. But if you can get
+away without using it you will be much happier as using sudo for this (especially on macOS) seems to cause permission
 nightmares.
 
 You can run all the tests by going to Thali_CordovaPlugin/test/www/jxcore and issuing one of the following:
@@ -162,6 +186,10 @@ $ jx npm test
 $ jx npm run test-meta
 $ jx npm run test-coordinated
 ```
+
+You can change the order of the tests via `"preferredOrder"` option in
+Thali_CordovaPlugin/test/www/jxcore/config.json. Unlisted tests are sorted
+alphabetically and added to the end of the list.
 
 Some test files will also happily run stand-alone so you can run a test directly
 (e.g. `jx runTests.js bv_tests/testTests.js`)
@@ -183,6 +211,26 @@ starting the coordinated test from the command line but passing in the parameter
 `--waitForInstance`. The coordinator will then start one less instance when
 it runs with the assumption that one will then run `jx UnitTest_app.js` from
 inside an IDE to debug.
+
+By default tests are running with mocked android native API and with native
+network type. It is possible to change it via `--networkType=<wifi|both|native>`
+and `--platform=<ios|android>` parameters, for example:
+
+```
+$ jx runCoordinatedTests.js --platform=ios --networkType=both
+```
+
+Also it is possible to run multiple coordinated tests simultaneously on the same
+machine. Use `COORDINATED_PORT` environment variable to set different port for
+each test runner, for example:
+
+```
+COORDINATED_PORT=12345 jx runCoordinatedTests.js --platform=ios &> ios.log & \
+COORDINATED_PORT=54321 jx runCoordinatedTests.js --platform=android &> android.log &
+```
+
+This example will start iOS tests and android tests in parallel in background
+and write entire output to the ios.log and android.log respectively.
 
 ### Writing Unit Tests
 The Unit Tests are kept in Thali_CordovaPlugin/test/www/jxcore/bv_tests. So please put new tests there.

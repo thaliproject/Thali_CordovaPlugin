@@ -1,5 +1,6 @@
 'use strict';
 
+var path   = require('path');
 var util   = require('util');
 var format = util.format;
 
@@ -8,16 +9,23 @@ var fs     = require('fs-extra-promise');
 
 var uuid         = require('node-uuid');
 var randomString = require('randomstring');
+var Promise      = require('bluebird');
 
 // ponyfills
 var endsWith = require('end-with');
 
-var Promise = require('./utils/Promise');
-require('./utils/process');
+require('./process');
 
+var IOS_BUILD_PATH = 'platforms/ios';
+var ANDROID_BUILD_PATH = 'platforms/android';
+
+// js files require more specific paths to ignore intermediate/build files from
+// previous builds
+var IOS_WWW_PATH = 'platform/ios/www';
+var ANDROID_WWW_PATH = 'platforms/android/assets/www';
 
 // We want to find the first path that ends with 'name'.
-function findFirstFile (name) {
+function findFirstFile (name, rootDir) {
   return new Promise(function (resolve, reject) {
     var resultPath;
 
@@ -31,21 +39,21 @@ function findFirstFile (name) {
       }
     }
 
-    var finder = findit('.')
-      .on('file', function (path) {
-        // We can receive here 'path': 'a/b/my-file', 'a/b/bad-my-file',
-        //  'my-file', 'bad-my-file'.
-        // Both 'a/b/my-file' and 'my-file' should be valid.
-        if (path === name || endsWith(path, '/' + name)) {
-          resultPath = path;
-          finder.stop();
-        }
-      })
-      .on('error', function (error) {
-        reject(new Error(error));
-      })
-      .on('stop', end)
-      .on('end', end);
+    var finder = findit(rootDir)
+    .on('file', function (path) {
+      // We can receive here 'path': 'a/b/my-file', 'a/b/bad-my-file',
+      //  'my-file', 'bad-my-file'.
+      // Both 'a/b/my-file' and 'my-file' should be valid.
+      if (path === name || endsWith(path, '/' + name)) {
+        resultPath = path;
+        finder.stop();
+      }
+    })
+    .on('error', function (error) {
+      reject(new Error(error));
+    })
+    .on('stop', end)
+    .on('end', end);
   })
     .catch(function (error) {
       console.error(
@@ -56,7 +64,7 @@ function findFirstFile (name) {
     });
 }
 
-function replaceContent(content, replacements) {
+function replaceContent(path, content, replacements) {
   // String.prototype.replace in javascript is defected by design.
   // https://stackoverflow.com/questions/5257000/how-to-know-if-javascript-string-replace-did-anything
   function replace(string, pattern, replacement) {
@@ -77,11 +85,11 @@ function replaceContent(content, replacements) {
     });
 
     if (!isReplaced) {
-      console.log(pattern);
       throw new Error(
         format(
-          'we couldn\'t replace pattern: \'%s\' with value: \'%s\'',
-          pattern, replacement
+          'we couldn\'t replace pattern: \'%s\' with value: \'%s\' ' +
+          'in file: \'%s\'',
+          pattern, replacement, path
         )
       );
     }
@@ -96,27 +104,25 @@ function replaceContent(content, replacements) {
 // We want to replace multiple 'strings' in file.
 // 'replacements' will be an array:
 // [{ pattern: /pattern/, value: 'replacement' }]
-function replaceStringsInFile(name, replacements) {
-  return new Promise(function (resolve) {
-    return findFirstFile(name)
-      .then(function (path) {
-        return fs.readFileAsync(path, 'utf8')
-          .then(function (content) {
-            return replaceContent(content, replacements);
-          })
-          .then(function (content) {
-            return fs.writeFileAsync(path, content, 'utf8');
-          })
-          .then(resolve);
-      });
-  })
-    .catch(function (error) {
-      console.error(
-        'we couldn\'t replace strings in file, error: \'%s\', stack: \'%s\'',
-        error.toString(), error.stack
-      );
-      return Promise.reject(error);
+function replaceStringsInFile(name, rootDir, replacements) {
+  return findFirstFile(name, rootDir)
+  .then(function (path) {
+    return fs.readFileAsync(path, 'utf8')
+    .then(function (content) {
+      return replaceContent(path, content, replacements);
+    })
+    .then(function (content) {
+      return fs.writeFileAsync(path, content, 'utf8');
     });
+
+  })
+  .catch(function (error) {
+    console.error(
+      'we couldn\'t replace strings in file, error: \'%s\', stack: \'%s\'',
+      error.toString(), error.stack
+    );
+    return Promise.reject(error);
+  });
 }
 
 // Our task is to replace 'b' between 'a' and 'c' with other value.
@@ -126,9 +132,10 @@ function replaceStringsInFile(name, replacements) {
 // So we have to use:
 //   'abc'.replace(/(a)(b)(c)/, '$1q$3')
 
-function replaceThaliConfig () {
+function replaceThaliConfig (rootDir) {
   // example: 'SSDP_NT: process.env.SSDP_NT || 'http://www.thaliproject.org/ssdp','
-  // We want to replace 'http://www.thaliproject.org/ssdp' here with random string.
+  // or: SSDP_NT: 'http://www.thaliproject.org/ssdp',
+  // We want to replace it with random string.
   var value = randomString.generate({
     length: 'http://www.thaliproject.org/ssdp'.length
   });
@@ -145,10 +152,10 @@ function replaceThaliConfig () {
     ),
     value: '$1 \'' + value + '\','
   };
-  return replaceStringsInFile('thaliConfig.js', [replacement]);
+  return replaceStringsInFile('thaliConfig.js', rootDir, [replacement]);
 }
 
-function replaceConnectionHelper () {
+function replaceConnectionHelper (rootDir) {
   var replacements = [];
 
   // Example: 'private static final String BLE_SERVICE_UUID_AS_STRING =
@@ -159,7 +166,7 @@ function replaceConnectionHelper () {
     pattern: new RegExp(
       [
         '(',
-        ['static', 'final', 'String', 'BLE_SERVICE_UUID_AS_STRING']
+          ['static', 'final', 'String', 'BLE_SERVICE_UUID_AS_STRING']
             .join('\\s+'),
         '\\s*', '=', '\\s*',
         ')',
@@ -181,7 +188,7 @@ function replaceConnectionHelper () {
     pattern: new RegExp(
       [
         '(',
-        ['static', 'final', 'int', 'MANUFACTURER_ID'].join('\\s+'),
+          ['static', 'final', 'int', 'MANUFACTURER_ID'].join('\\s+'),
         '\\s*', '=',
         ')',
         '(',
@@ -192,10 +199,10 @@ function replaceConnectionHelper () {
     value: '$1 ' + getRandomNumber(1100, 65534) + ';'
   });
 
-  return replaceStringsInFile('ConnectionHelper.java', replacements);
+  return replaceStringsInFile('ConnectionHelper.java', rootDir, replacements);
 }
 
-function replaceJXcoreExtension() {
+function replaceJXcoreExtension(rootDir) {
   // example:
   // 'appContext = [[AppContext alloc] initWithServiceType:@"thaliproject"];'
   // We want to replace 'thaliproject' here with random alphabetic string.
@@ -216,14 +223,32 @@ function replaceJXcoreExtension() {
     ),
     value: '$1"' + value + '"'
   };
-  return replaceStringsInFile('JXcoreExtension.m', [replacement]);
+  return replaceStringsInFile('JXcoreExtension.m', rootDir, [replacement]);
 }
 
-Promise.all([
-  replaceThaliConfig(),
-  replaceConnectionHelper(),
-  replaceJXcoreExtension()
-  ])
-  .then(function () {
+module.exports = function (ctx) {
+  var actions = [];
+
+  var iosPath = path.join(ctx.opts.projectRoot, IOS_BUILD_PATH);
+  var iosWwwPath = path.join(ctx.opts.projectRoot, IOS_WWW_PATH);
+  var androidPath = path.join(ctx.opts.projectRoot, ANDROID_BUILD_PATH);
+  var androidWwwPath = path.join(ctx.opts.projectRoot, ANDROID_WWW_PATH);
+
+  if (ctx.opts.platforms.indexOf('ios') !== -1) {
+    actions.push(
+      replaceThaliConfig(iosWwwPath),
+      replaceJXcoreExtension(iosPath)
+    );
+  }
+
+  if (ctx.opts.platforms.indexOf('android') !== -1) {
+    actions.push(
+      replaceThaliConfig(androidWwwPath),
+      replaceConnectionHelper(androidPath)
+    );
+  }
+
+  return Promise.all(actions).then(function () {
     console.info('We have replaced hardcoded ids with random values.');
   });
+};

@@ -6,7 +6,7 @@ var http = require('http');
 var fs = require('fs'); // Will be overwritten by fs-extra-promise
 var Promise = null; // Wil be set below
 
-var pouchDBNodePackageName = 'pouchdb-node';
+var pouchDBNodePackageName = 'pouchdb';
 var expressPouchDBPackageName = 'express-pouchdb';
 
 function getPackageJsonVersion(packageName) {
@@ -35,12 +35,13 @@ function installPackage(packageName, version, callback) {
 // This is stolen from install.js, I copy it here to simplify the work of
 // making this file function since as it is, it is run before we run
 // 'npm install'.
-function childProcessExecPromise(commandString, currentWorkingDirectory) {
+function childProcessExecPromise(commandString, currentWorkingDirectory, env) {
   return new Promise(function (resolve, reject) {
     var commandSplit = commandString.split(' ');
     var command = commandSplit.shift();
+    env = Object.assign({}, process.env, env);
     var theProcess = spawn(command, commandSplit,
-                            { cwd: currentWorkingDirectory});
+      { cwd: currentWorkingDirectory, env: env });
     theProcess.stdout.on('data', function (data) {
       console.log('' + data);
     });
@@ -58,9 +59,11 @@ function childProcessExecPromise(commandString, currentWorkingDirectory) {
 
 /**
  * Runs an array of commands on the command line one by one.
+ *
  * @param {string[][]} arrayOfCommandDirs An array of arrays. The child arrays
  * each must contain exactly two values, the first is the command to execute
  * and the second is the directory to run the command in.
+ *
  * @returns {Promise<null|Error>} If all goes well then returns Promise resolve
  * with null otherwise returns a reject with an error
  */
@@ -68,7 +71,7 @@ function childProcessExecCommandLine(arrayOfCommandDirs) {
   var promiseResult = Promise.resolve();
   arrayOfCommandDirs.forEach(function (commandDir) {
     promiseResult = promiseResult.then(function () {
-      return childProcessExecPromise(commandDir[0], commandDir[1]);
+      return childProcessExecPromise(commandDir[0], commandDir[1], commandDir[2]);
     });
   });
   return promiseResult;
@@ -81,12 +84,13 @@ function childProcessExecCommandLine(arrayOfCommandDirs) {
  * monorepo and publishes to the NPM repository (we assume that Sinopia or
  * equivalent has been set up locally but that is handled manually)
  *
- * @param  {string} gitUrl
- * @param  {string} branchName
- * @param  {string} commitId
+ * @param  {string} gitUrl Git URL
+ * @param  {string} branchName branch name
+ * @param  {string} commitId commit ID
  * @param  {string} packageName If specified only this package will be
  * published. Otherwise all the packages in the repo will be published.
- * @param  {string} targetDirName
+ * @param  {string} targetDirName target dir name
+ * @returns {promise} Did the install work?
  */
 function installCustomMonoRepoPackage(gitUrl, branchName, commitId, packageName,
                                       targetDirName) {
@@ -150,15 +154,31 @@ function installCustomMonoRepoPackage(gitUrl, branchName, commitId, packageName,
  * There is a bug in Node-PouchDB that causes failures in Express-PouchDB. We
  * need to fix it but don't have time right now so we are using this as a
  * stop gap.
+ * @returns {promise} Did the install work?
  */
-function installNodePouchDB () {
-  var gitUrl = 'https://github.com/pouchdb/pouchdb.git';
-  var branch = 'master';
-  var commitId = '8d2af9bd78';
+function installNodePouchDB (version) {
+  var gitUrl = 'https://github.com/thaliproject/pouchdb.git';
+  var branch = 'v6.2.0-prerelease_aaladev_1644';
+  var commitId = 'feadf44dd209ec00cbe35590bd0949894c99afcb';
   var targetDir = 'customPouchDir';
 
-  return installCustomMonoRepoPackage(gitUrl, branch, commitId, null,
-                                      targetDir);
+  var customPouchDirPath = path.join(__dirname, targetDir);
+  return fs.removeAsync(targetDir)
+    .then(function () {
+      return childProcessExecCommandLine([
+        ['git clone --single-branch --branch ' + branch + ' ' +
+          gitUrl + ' ' + targetDir, __dirname],
+        ['git reset --hard ' + commitId, customPouchDirPath],
+        // We intentionally are using npm and not 'jx npm' below because
+        // PouchDB at least depends on leveldown which can't be built in
+        // jxcore (only leveldown-mobile). There is probably a way to hack
+        // the build to skip that part and let us use JXcore but since we are
+        // only going to use pure Javascript output by these build process
+        // but it's not worth the effort.
+        ['npm run set-version -- ' + version, customPouchDirPath],
+        ['npm run release', customPouchDirPath, { BETA: 1 }]
+      ]);
+    });
 }
 
 /**
@@ -170,11 +190,13 @@ function installNodePouchDB () {
  * than the one change we made to the express-pouchdb package, the contents of
  * the other packages are in NPM. So we just need to publish the one package we
  * are using and can ignore the rest for now.
+ *
+ * @returns {promise} Did the install work?
  */
 function installExpressPouchDB () {
   var gitUrl = 'https://github.com/yaronyg/pouchdb-server.git';
   var branch = 'thali-release';
-  var commitId = '6f40454';
+  var commitId = 'a4c87d3f48b0573a5533d2b863836d2fe5611e3b';
   var packageName = 'express-pouchdb';
   var targetDir = 'customPouchServerDir';
 
@@ -199,9 +221,10 @@ function getNpmRegistryUrl() {
 /**
  * Detects if the NPM registry configured on the system has a copy of the
  * version of a package we are looking for.
- * @param {string} packageName
- * @param {string} versionNumber
- * @param {string} registryUrl
+ * @param {string} packageName Package Name
+ * @param {string} versionNumber Version Number
+ * @param {string} registryUrl Registry Url
+ * @returns {promise} Does the version exist?
  */
 function versionExists(packageName, versionNumber, registryUrl) {
   return new Promise(function (resolve, reject) {
@@ -243,22 +266,28 @@ function versionExists(packageName, versionNumber, registryUrl) {
  * we will do nothing. But if they aren't there then we will build and publish
  * them. This code assumes that 'npm adduser' has already been used to enable
  * this machine to publish to its local NPM registry.
+ * @returns {promise} Did it work?
  */
 function installAll() {
   var promises = [];
   var registryUrl = null;
+  var pouchDBNodeVersion = null;
+
   return getNpmRegistryUrl()
   .then(function (foundRegistryUrl) {
     registryUrl = foundRegistryUrl;
     // Uncomment this code to build our custom version of PouchDB
-    //   var pouchDBNodeVersion = getPackageJsonVersion(pouchDBNodePackageName);
-    //   return versionExists(pouchDBNodePackageName, pouchDBNodeVersion,
-    //                        registryUrl);
-    // })
-    // .then(function (pouchDBVersionExists) {
-    //   if (!pouchDBVersionExists) {
-    //     promises.push(installNodePouchDB());
-    //   }
+    // /*
+    pouchDBNodeVersion = getPackageJsonVersion(pouchDBNodePackageName);
+    return versionExists(pouchDBNodePackageName, pouchDBNodeVersion,
+                          registryUrl);
+    })
+    .then(function (pouchDBVersionExists) {
+      if (!pouchDBVersionExists) {
+        promises.push(installNodePouchDB(pouchDBNodeVersion));
+      }
+    // */
+
     var expressPouchDBVersion =
       getPackageJsonVersion(expressPouchDBPackageName);
     return versionExists(expressPouchDBPackageName, expressPouchDBVersion,

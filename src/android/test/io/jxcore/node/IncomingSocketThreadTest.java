@@ -16,115 +16,124 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.Field;
-import java.net.Socket;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 public class IncomingSocketThreadTest {
 
-    static String mTag = IncomingSocketThreadTest.class.getName();
-    ByteArrayOutputStream outgoingOutputStream;
-    ListenerMock mListenerMockOutgoing;
-    InputStreamMock mInputStreamMockOutgoing;
-    OutputStreamMockOutgoing mOutputStreamMockOutgoing;
-    OutgoingSocketThreadMock mOutgoingSocketThread;
-    String textOutgoing = "Lorem ipsum dolor sit amet elit nibh, imperdiet dignissim, " +
-            "imperdiet wisi. Morbi vel risus. Nunc molestie placerat, nulla mi, id nulla ornare " +
-            "risus. Sed lacinia, urna eros lacus, elementum eu.";
+    private static final String TAG = IncomingSocketThreadTest.class.getName();
+    private ByteArrayOutputStream outgoingOutputStream;
+    private OutgoingSocketThreadMock mOutgoingSocketThread;
+    private String textOutgoing = "Lorem ipsum dolor sit amet elit nibh, imperdiet dignissim, " +
+        "imperdiet wisi. Morbi vel risus. Nunc molestie placerat, nulla mi, id nulla ornare " +
+        "risus. Sed lacinia, urna eros lacus, elementum eu.";
 
-    final int testPortNumber = 47775;
+    private final int testPortNumber = 47775;
 
-    ByteArrayOutputStream incomingOutputStream;
-    ListenerMock mListenerMockIncoming;
-    InputStreamMock mInputStreamMockIncoming;
-    OutputStreamMockIncoming mOutputStreamMockIncoming;
-    IncomingSocketThreadMock mIncomingSocketThread;
-    String textIncoming = "Nullam in massa. Vivamus elit odio, in neque ut congue quis, " +
-            "venenatis placerat, nulla ornare suscipit, erat urna, pellentesque dapibus vel, " +
-            "lorem. Sed egestas non, dolor. Aliquam hendrerit sollicitudin sed.";
+    private ByteArrayOutputStream incomingOutputStream;
+    private IncomingSocketThreadMock mIncomingSocketThread;
+    private String textIncoming = "Nullam in massa. Vivamus elit odio, in neque ut congue quis, " +
+        "venenatis placerat, nulla ornare suscipit, erat urna, pellentesque dapibus vel, " +
+        "lorem. Sed egestas non, dolor. Aliquam hendrerit sollicitudin sed.";
 
-    ExecutorService mExecutor;
+    private ExecutorService mExecutor;
+    private CountDownLatch copyingFinishedLatch;
 
     @Rule
     public TestRule watcher = new TestWatcher() {
         protected void starting(Description description) {
-            Log.i(mTag, "Starting test: " + description.getMethodName());
+            Log.i(TAG, "Starting test: " + description.getMethodName());
         }
     };
 
     @Before
     public void setUp() throws Exception {
+        initDependencies();
+    }
+
+    private void initDependencies() throws Exception {
         outgoingOutputStream = new ByteArrayOutputStream();
         incomingOutputStream = new ByteArrayOutputStream();
+        // We need to wait
+        // until data is copied from incomingMock to local outgoing stream in IncomingSocketThread
+        // and from local incoming stream to outgoingMock in OutgoingSocketThread
+        copyingFinishedLatch = new CountDownLatch(2);
+        initIncomingSocketThread();
+        initOutgoingSocketThread();
+        mExecutor = Executors.newSingleThreadExecutor();
+    }
 
-        mInputStreamMockIncoming = new InputStreamMock(textIncoming);
-        mOutputStreamMockIncoming = new OutputStreamMockIncoming();
-        mListenerMockIncoming = new ListenerMock();
-        mIncomingSocketThread =
-                new IncomingSocketThreadMock(null, mListenerMockIncoming, mInputStreamMockIncoming,
-                        mOutputStreamMockIncoming);
+    private void initIncomingSocketThread() throws IOException {
+        InputStreamMock inputStream = new InputStreamMock(textIncoming);
+        OutputStreamMock outputStream = new OutputStreamMock(incomingOutputStream);
+        ListenerMock listenerIncoming = new ListenerMock();
+        mIncomingSocketThread = new IncomingSocketThreadMock(null, listenerIncoming, inputStream,
+            outputStream);
 
-        mInputStreamMockOutgoing = new InputStreamMock(textOutgoing);
-        mOutputStreamMockOutgoing = new OutputStreamMockOutgoing();
-        mListenerMockOutgoing = new ListenerMock();
-        mOutgoingSocketThread =
-                new OutgoingSocketThreadMock(null, mListenerMockOutgoing, mInputStreamMockOutgoing,
-                        mOutputStreamMockOutgoing);
+    }
+
+    private void initOutgoingSocketThread() throws IOException {
+        InputStreamMock inputStream = new InputStreamMock(textOutgoing);
+        OutputStreamMock outputStream = new OutputStreamMock(outgoingOutputStream);
+        ListenerMock listenerOutgoing = new ListenerMock();
+        mOutgoingSocketThread = new OutgoingSocketThreadMock(null, listenerOutgoing, inputStream,
+            outputStream);
 
         mExecutor = Executors.newSingleThreadExecutor();
     }
 
-    public Callable<Boolean> createCheckOutgoingSocketThreadStart() {
+    private Callable<Boolean> createCheckOutgoingSocketThreadStart() {
         return new Callable<Boolean>() {
             int counter = 0;
+
             @Override
             public Boolean call() {
-                while (mOutgoingSocketThread.mServerSocket == null && counter < ThaliTestRunner.counterLimit) {
+                while (mOutgoingSocketThread.mServerSocket == null && counter < ThaliTestRunner.COUNTER_LIMIT) {
                     try {
-                        Thread.sleep(ThaliTestRunner.timeoutLimit);
+                        Thread.sleep(ThaliTestRunner.TIMEOUT_LIMIT);
                         counter++;
                     } catch (InterruptedException e1) {
                         e1.printStackTrace();
                         return false;
                     }
                 }
-                if (counter < ThaliTestRunner.counterLimit) {
+                if (counter < ThaliTestRunner.COUNTER_LIMIT) {
                     return true;
                 } else {
-                    Log.e(mTag, "OutgoingSocketThread didn't start after 5s!");
+                    Log.e(TAG, "OutgoingSocketThread didn't start after 5s!");
                     return false;
                 }
             }
         };
     }
 
-    public Callable<Boolean> createCheckIncomingSocketThreadStart() {
+    private Callable<Boolean> createCheckIncomingSocketThreadStart() {
         return new Callable<Boolean>() {
             int counter = 0;
+
             @Override
             public Boolean call() {
-                while (!mIncomingSocketThread.localStreamsCreatedSuccessfully && counter < ThaliTestRunner.counterLimit) {
+                while (!mIncomingSocketThread.localStreamsCreatedSuccessfully && counter < ThaliTestRunner.COUNTER_LIMIT) {
                     try {
-                        Thread.sleep(ThaliTestRunner.timeoutLimit);
+                        Thread.sleep(ThaliTestRunner.TIMEOUT_LIMIT);
                         counter++;
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                         return false;
                     }
                 }
-                if (counter < ThaliTestRunner.counterLimit) {
+                if (counter < ThaliTestRunner.COUNTER_LIMIT) {
                     return true;
                 } else {
-                    Log.e(mTag, "IncomingSocketThread didn't start after 5s!");
+                    Log.e(TAG, "IncomingSocketThread didn't start after 5s!");
                     return false;
                 }
             }
@@ -132,91 +141,81 @@ public class IncomingSocketThreadTest {
     }
 
     @Test
-    public void testConstructor() throws Exception {
-        assertThat("mIncomingSocketThread should not be null", mIncomingSocketThread,
-                is(notNullValue()));
-    }
+    public void testRun() throws Exception {
+        try {
+            startThreads();
+            checkStreams();
+            copyingFinishedLatch.await(5000L, TimeUnit.MILLISECONDS);
+            int attempts = ThaliTestRunner.COUNTER_LIMIT;
+            Log.i(this.getClass().getName(), "testRun");
+            while (attempts > 0 && !outgoingOutputStream.toString().equals(textIncoming)) {
+                attempts--;
+                closeSockets();
+                initDependencies();
+                startOutgoingSocketThread();
+                startIncomingSocketThread();
+                copyingFinishedLatch.await(5000L, TimeUnit.MILLISECONDS);
+                Log.i(TAG, "IncomingSocketThreadTest failed, attempts left " + attempts);
+                Log.i(TAG, "outgoingOutputStream.toString() = " + outgoingOutputStream.toString());
+                Log.i(TAG, "textIncoming = " + textIncoming);
+            }
+            if (attempts == 0) {
+                assertThat("OutgoingSocketThread should get inputStream from IncomingSocketThread and " +
+                        "copy it to local outgoingOutputStream", outgoingOutputStream.toString(),
+                    is(equalTo(textIncoming)));
+            }
 
-    @Test
-    public void testGetTcpPortNumber() throws Exception {
-        Field fTcpPortNumber = mIncomingSocketThread.getClass().getSuperclass()
-                .getDeclaredField("mTcpPortNumber");
-        fTcpPortNumber.setAccessible(true);
 
-        int mTcpPortNumber = fTcpPortNumber.getInt(mIncomingSocketThread);
-
-        assertThat("mTcpPortNumber should be equal to getTcpPortNumber", mTcpPortNumber,
-                is(equalTo(mIncomingSocketThread.getTcpPortNumber())));
-    }
-
-    @Test
-    public void testSetTcpPortNumber() throws Exception {
-        int tcpPortNumberSample = 1111;
-        mIncomingSocketThread.setTcpPortNumber(tcpPortNumberSample);
-
-        assertThat("tcpPortNumber from get method should be equal to tcpPortNumberSample",
-                mIncomingSocketThread.getTcpPortNumber(), is(equalTo(tcpPortNumberSample)));
-    }
-
-    @Test
-    public void testGetLocalHostPort() throws Exception {
-        Field fLocalhostSocket = mIncomingSocketThread.getClass().getSuperclass()
-                .getSuperclass().getDeclaredField("mLocalhostSocket");
-        fLocalhostSocket.setAccessible(true);
-        Socket mLocalhostSocket = (Socket) fLocalhostSocket.get(mIncomingSocketThread);
-
-        if (mLocalhostSocket == null) {
-            assertThat("getLocalHostPort should return 0 if mLocalhostSocket is not null",
-                    mIncomingSocketThread.getLocalHostPort(), is(0));
-        } else {
-            assertThat("getLocalHostPort should return null if mLocalhostSocket is null",
-                    mIncomingSocketThread.getLocalHostPort(), is(nullValue()));
+        } finally {
+            closeSockets();
+            Log.i("!!", " finally closed");
         }
     }
-    // 1214
-    // @Test
-    public void testRun() throws Exception {
-        Future<Boolean> mFuture;
+
+    private void startThreads() throws Exception {
+        Future<Boolean> startFuture = startOutgoingSocketThread();
+        assertThat("OutgoingSocketThread started", startFuture.get(), is(true));
+        startFuture = startIncomingSocketThread();
+        assertThat("IncomingSocketThread started", startFuture.get(), is(true));
+    }
+
+    private Future<Boolean> startOutgoingSocketThread() {
         mOutgoingSocketThread.setPort(testPortNumber);
         mIncomingSocketThread.setPort(testPortNumber);
 
         mOutgoingSocketThread.start(); //Simulate end point to connect to
 
-        mFuture = mExecutor.submit(createCheckOutgoingSocketThreadStart());
+        return mExecutor.submit(createCheckOutgoingSocketThreadStart());
+    }
 
-        assertThat("OutgoingSocketThread started", mFuture.get(), is(true));
-
+    private Future<Boolean> startIncomingSocketThread() {
         mIncomingSocketThread.start(); //Connect to end point
-        mFuture = mExecutor.submit(createCheckIncomingSocketThreadStart());
+        return mExecutor.submit(createCheckIncomingSocketThreadStart());
+    }
 
-        assertThat("IncomingSocketThread started", mFuture.get(), is(true));
-
+    private void checkStreams() {
         assertThat("localStreamsCreatedSuccessfully should be true",
-                mIncomingSocketThread.localStreamsCreatedSuccessfully,
-                is(true));
+            mIncomingSocketThread.localStreamsCreatedSuccessfully,
+            is(true));
 
         assertThat("tempInputStream should be equal to mLocalInputStream",
-                mIncomingSocketThread.tempInputStream,
-                is(equalTo(mIncomingSocketThread.mLocalInputStream)));
+            mIncomingSocketThread.tempInputStream,
+            is(equalTo(mIncomingSocketThread.mLocalInputStream)));
 
         assertThat("tempOutputStream should be equal to mLocalOutputStream",
-                mIncomingSocketThread.tempOutputStream,
-                is(equalTo(mIncomingSocketThread.mLocalOutputStream)));
+            mIncomingSocketThread.tempOutputStream,
+            is(equalTo(mIncomingSocketThread.mLocalOutputStream)));
 
         assertThat("mLocalhostSocket port should be equal to " + testPortNumber,
-                mIncomingSocketThread.mLocalhostSocket.getPort(),
-                is(equalTo(testPortNumber)));
+            mIncomingSocketThread.mLocalhostSocket.getPort(),
+            is(equalTo(testPortNumber)));
+    }
 
-        assertThat("OutgoingSocketThread should get inputStream from IncomingSocketThread and " +
-                        "copy it to local outgoingOutputStream", outgoingOutputStream.toString(),
-                is(equalTo(textIncoming)));
-
-        assertThat("IncomingSocketThread should get inputStream from OutgoingSocketThread and " +
-                        "copy it to local incomingOutputStream", incomingOutputStream.toString(),
-                is(equalTo(textOutgoing)));
-
+    private void closeSockets() {
         try {
-            mOutgoingSocketThread.mServerSocket.close();
+            if (mOutgoingSocketThread.mServerSocket != null) {
+                mOutgoingSocketThread.mServerSocket.close();
+            }
             mIncomingSocketThread.close();
             mOutgoingSocketThread.close();
         } catch (IOException e) {
@@ -224,35 +223,21 @@ public class IncomingSocketThreadTest {
         }
     }
 
-    class OutputStreamMockOutgoing extends OutputStream {
-        public boolean isClosed = false;
+    private class OutputStreamMock extends OutputStream {
+
+        private OutputStream outputStream;
+
+        OutputStreamMock(OutputStream outputStream) {
+            this.outputStream = outputStream;
+        }
 
         @Override
         public void write(int oneByte) throws IOException {
-            outgoingOutputStream.write(oneByte);
-        }
-
-        @Override
-        public void close() throws IOException {
-            isClosed = true;
+            outputStream.write(oneByte);
         }
     }
 
-    class OutputStreamMockIncoming extends OutputStream {
-        public boolean isClosed = false;
-
-        @Override
-        public void write(int oneByte) throws IOException {
-            incomingOutputStream.write(oneByte);
-        }
-
-        @Override
-        public void close() throws IOException {
-            isClosed = true;
-        }
-    }
-
-    class InputStreamMock extends InputStream {
+    private class InputStreamMock extends InputStream {
         public boolean isClosed = false;
 
         ByteArrayInputStream inputStream;

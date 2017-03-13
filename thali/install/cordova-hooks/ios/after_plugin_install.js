@@ -7,7 +7,7 @@
 'use strict';
 
 var fs = require('fs');
-var nativeInstaller = require('../../thali/install/ios/nativeInstaller');
+var nativeInstaller = require('../../ios/nativeInstaller');
 var path = require('path');
 
 function loadIsTestEnvironment() {
@@ -32,7 +32,7 @@ function loadIsTestEnvironment() {
   }
 
   return false;
-};
+}
 
 module.exports = function (context) {
 
@@ -64,6 +64,8 @@ module.exports = function (context) {
     context.opts.plugin.dir, 'lib', 'ios', 'ThaliCore');
   var thaliCoreOutputFolder = path.join(
     context.opts.plugin.dir, 'lib', 'ios');
+  var testingInfrastructureDir = path.join(
+    context.opts.plugin.dir, 'src', 'ios', 'Testing');
 
   // We need to embded frameworks to the project here.
   // They need to be embedded binaries and cordova does not yet support that.
@@ -72,16 +74,16 @@ module.exports = function (context) {
 
   // Cordova libs to get the project path and project name
   // so we can locate the xcode project file.
-  var cordova_util = context.requireCordovaModule('cordova-lib/src/cordova/util'),
-      ConfigParser = context.requireCordovaModule('cordova-lib').configparser,
-      appRoot = context.opts.projectRoot,
-      projectRoot = cordova_util.isCordova(),
-      xml = cordova_util.projectConfig(projectRoot),
-      cfg = new ConfigParser(xml);
+  var cordovaUtil =
+      context.requireCordovaModule('cordova-lib/src/cordova/util');
+  var ConfigParser = context.requireCordovaModule('cordova-lib').configparser;
+  var projectRoot = cordovaUtil.isCordova();
+  var xml = cordovaUtil.projectConfig(projectRoot);
+  var cfg = new ConfigParser(xml);
 
   var projectPath = path.join(
     projectRoot, 'platforms', 'ios', cfg.name() + '.xcodeproj');
 
-  return nativeInstaller.addFramework(
-    projectPath, thaliCoreProjectFolder, thaliCoreOutputFolder, isTestEnvironment);
+  return nativeInstaller.addFramework(projectPath, thaliCoreProjectFolder,
+    thaliCoreOutputFolder, isTestEnvironment, testingInfrastructureDir);
 };

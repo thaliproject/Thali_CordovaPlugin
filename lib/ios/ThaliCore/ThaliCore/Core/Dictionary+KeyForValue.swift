@@ -10,10 +10,10 @@
 // MARK: Find key for value in Dictionary
 extension Dictionary where Value: Equatable {
 
-    func key(for value: Value) -> Key? {
-        return self.filter { $1 == value }
-                   .map { $0.0 }
-                   .first
-               ?? nil
-    }
+  func key(for value: Value) -> Key? {
+    return self.filter { $1 == value }
+               .map { $0.0 }
+               .first
+           ?? nil
+  }
 }

@@ -1,6 +1,13 @@
 'use strict';
 
+var EventEmitter = require('events').EventEmitter;
+
 var Promise = require('lie');
+var util = require('util');
+var urlsafeBase64 = require('urlsafe-base64');
+
+var logger = require('../../ThaliLogger')('thaliPeerAction');
+
 
 /** @module thaliPeerAction */
 
@@ -10,6 +17,20 @@ var Promise = require('lie');
  * @type {number}
  */
 var peerActionCounter = 0;
+
+/**
+ * This event is emitted synchronously when action state is changed to STARTED.
+ *
+ * @event started
+ * @public
+ */
+
+/**
+ * This event is emitted synchronously when action state is changed to KILLED.
+ *
+ * @event killed
+ * @public
+ */
 
 /**
  * An action that has been given to the pool to manage.
@@ -23,6 +44,8 @@ var peerActionCounter = 0;
  * @public
  * @interface PeerAction
  * @constructor
+ * @fires event:killed
+ * @fires event:started
  * @param {string} peerIdentifier
  * @param {module:ThaliMobileNativeWrapper.connectionTypes} connectionType
  * @param {string} actionType
@@ -30,8 +53,9 @@ var peerActionCounter = 0;
  * @param {Buffer} pskKey
  */
 function PeerAction (peerIdentifier, connectionType, actionType, pskIdentity,
-                      pskKey)
+                     pskKey)
 {
+  EventEmitter.call(this);
   this._peerIdentifier = peerIdentifier;
   this._connectionType = connectionType;
   this._actionType = actionType;
@@ -41,6 +65,8 @@ function PeerAction (peerIdentifier, connectionType, actionType, pskIdentity,
   this._id = peerActionCounter;
   ++peerActionCounter;
 }
+
+util.inherits(PeerAction, EventEmitter);
 
 /**
  * Records the current state of the action.
@@ -58,6 +84,11 @@ PeerAction.actionState = {
   KILLED: 'killed'
 };
 
+PeerAction.prototype.loggingDescription = function () {
+  return util.format('Action ID: %d, Action Type: %s, Connection Type: %s, ' +
+    'Peer Identifier: %s', this.getId(), this.getActionType(),
+    this.getConnectionType(), urlsafeBase64.encode(this.getPeerIdentifier()));
+};
 
 /**
  * The remote peer this action targets
@@ -178,11 +209,12 @@ PeerAction.prototype.getId = function () {
  * return success with null. After all, kill doesn't reflect a failure
  * of the action but a change in outside circumstances.
  */
-// jscs:disable disallowUnusedParams
 PeerAction.prototype.start = function (httpAgentPool) {
+  this._httpAgentPool = httpAgentPool;
   switch (this._actionState) {
     case PeerAction.actionState.CREATED: {
       this._actionState = PeerAction.actionState.STARTED;
+      this.emit('started');
       return Promise.resolve();
     }
     case PeerAction.actionState.STARTED: {
@@ -196,7 +228,6 @@ PeerAction.prototype.start = function (httpAgentPool) {
     }
   }
 };
-// jscs:enable disallowUnusedParams
 
 /**
  * Error message returned when start called twice in a row
@@ -232,12 +263,24 @@ PeerAction.START_AFTER_KILLED = 'action has completed';
  * @returns {?Error}
  */
 PeerAction.prototype.kill = function () {
-  this._actionState = PeerAction.actionState.KILLED;
+  if (this._httpAgentPool) {
+    if (typeof this._httpAgentPool.destroy === 'function') {
+      this._httpAgentPool.destroy();
+    } else {
+      logger.debug('we couldn\'t destroy http agent explicitly');
+    }
+    this._httpAgentPool = null;
+  }
+
+  if (this._actionState !== PeerAction.actionState.KILLED) {
+    this._actionState = PeerAction.actionState.KILLED;
+    this.emit('killed');
+  }
   return null;
 };
 
 PeerAction.prototype.waitUntilKilled = function () {
   return Promise.resolve();
-}
+};
 
 module.exports = PeerAction;

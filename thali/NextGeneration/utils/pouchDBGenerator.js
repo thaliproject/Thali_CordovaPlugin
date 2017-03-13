@@ -1,8 +1,10 @@
 'use strict';
 
 var inherits     = require('inherits');
-var extend       = require('js-extend').extend;
 var EventEmitter = require('events').EventEmitter;
+var assign       = require('object-assign');
+
+var LeveldownAdapter = require('./leveldownMobileAdapter');
 
 
 /**
@@ -29,24 +31,22 @@ var EventEmitter = require('events').EventEmitter;
  * @returns {PouchDB}
  */
 function PouchDBGenerator(PouchDB, defaultDirectory, options) {
-  // Shamelessly stolen from https://github.com/pouchdb/pouchdb/blob/fb77927d2f14911478032884f1576b770815bcab/packages/pouchdb-core/src/setup.js#L108-L137
+  // Shamelessly stolen from https://github.com/pouchdb/pouchdb/blob/e11a863a80ef746aba0fc3a0e235dbdf2048db5d/packages/node_modules/pouchdb-core/src/setup.js#L58-L90.
 
-  function PouchAlt(name, opts, callback) {
+  function PouchAlt(name, opts) {
     if (!(this instanceof PouchAlt)) {
-      return new PouchAlt(name, opts, callback);
+      return new PouchAlt(name, opts);
     }
 
-    if (typeof opts === 'function' || typeof opts === 'undefined') {
-      callback = opts;
-      opts = {};
-    }
+    opts = opts || {};
 
     if (name && typeof name === 'object') {
       opts = name;
-      name = undefined;
+      name = opts.name;
+      delete opts.name;
     }
 
-    opts = extend({}, opts);
+    opts = assign({}, PouchAlt.__defaults, opts);
 
     // If database endpoint is not remote we will use defaultDirectory as
     // prefix and defaultAdapter as adapter for it.
@@ -56,17 +56,21 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
       name.indexOf('https') !== 0
     ) {
       if (!opts.db && options.defaultAdapter) {
-        opts.db = options.defaultAdapter;
+        opts.db      = options.defaultAdapter;
+        opts.adapter = 'leveldb-mobile';
       }
       if (!opts.prefix) {
         opts.prefix = defaultDirectory;
       }
     }
 
-    PouchDB.call(this, name, opts, callback);
+    // Workaround for https://github.com/pouchdb/pouchdb-size/issues/23.
+    this._db_name = name;
+
+    PouchDB.call(this, name, opts);
   }
 
-  options = extend({}, options);
+  options = assign({}, options);
 
   inherits(PouchAlt, PouchDB);
 
@@ -77,51 +81,31 @@ function PouchDBGenerator(PouchDB, defaultDirectory, options) {
     }
   });
 
+  PouchAlt.__defaults = assign({}, PouchDB.__defaults);
+
+  PouchAlt.adapter = function (id, obj, addToPreferredAdapters) {
+    if (obj.valid()) {
+      PouchAlt.adapters[id] = obj;
+      if (addToPreferredAdapters) {
+        PouchAlt.preferredAdapters.push(id);
+      }
+    }
+  };
+
   PouchAlt.plugin = function (obj) {
     if (typeof obj === 'function') { // function style for plugins
       obj(PouchAlt);
+    } else if (typeof obj !== 'object' || Object.keys(obj).length === 0) {
+      throw new Error('Invalid plugin: got \"' + obj + '\", expected an object or a function');
     } else {
       Object.keys(obj).forEach(function (id) { // object style for plugins
         PouchAlt.prototype[id] = obj[id];
       });
     }
     return PouchAlt;
-  };
+  }
 
-  // This is a workaround for #870.
-  PouchAlt.prototype.info = function () {
-    return PouchAlt.super_.prototype.info.apply(this, arguments)
-    .catch(function () {
-      return { update_seq: 0 };
-    });
-  };
-
-  // This is a workaround for #970.
-  PouchAlt.prototype.on =
-  PouchAlt.prototype.addListener = function (type, listener) {
-    var self = this;
-
-    // We don't want PouchDB to catch our exception from 'listener'.
-    // We want to cancel current PouchDB action and emit 'error' with exception.
-    return PouchAlt.super_.prototype.addListener.call(this, type, function () {
-      try {
-        listener.apply(this, arguments);
-      } catch (e) {
-        self.emit('error', e);
-      }
-    });
-  };
-
-  // This is a workaround for #970.
-  // 'Changes' has an 'EventEmitter' too, but it isn't exported.
-  // We have to overwrite 'EventEmitter' methods here.
-  PouchAlt.prototype.changes = function () {
-    var changes = PouchAlt.super_.prototype.changes.apply(this, arguments);
-    // 'Changes' has its own 'addListener' method, we shouldn't overwrite it.
-    // This method is based on 'EventEmitter.prototype.on' method.
-    changes.on = PouchAlt.prototype.on.bind(changes);
-    return changes;
-  };
+  PouchAlt.plugin(LeveldownAdapter);
 
   return PouchAlt;
 }

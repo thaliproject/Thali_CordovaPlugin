@@ -6,21 +6,25 @@
 
 'use strict';
 
+var Promise = require('bluebird');
+Promise.config({
+  cancellation: true
+});
+
 var platform = require('thali/NextGeneration/utils/platform');
 
 if (typeof Mobile === 'undefined') {
-  global.Mobile =
-    require('./lib/wifiBasedNativeMock.js')(platform.names.ANDROID);
+  var mockPlatform = require('./lib/parsePlatformArg')();
+  global.Mobile = require('./lib/wifiBasedNativeMock.js')(mockPlatform);
 }
 
-var config = require('./config.json');
+var config = require('./config');
 var objectAssign = require('object-assign');
 process.env = objectAssign(process.env, config.env);
 
 var logger = require('./lib/testLogger')('UnitTest_app');
 var testUtils = require('./lib/testUtils');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
-var Promise = require('bluebird');
 
 var utResult = false;
 
@@ -65,39 +69,12 @@ if (!utResult) {
   global.nativeUTFailed = true;
 }
 
-// Issue #914
-var networkTypes = [ThaliMobile.networkTypes.WIFI];
+global.NETWORK_TYPE = ThaliMobile.networkTypes.NATIVE;
 
-ThaliMobile.getNetworkStatus()
-.then(function (networkStatus) {
-  var promiseList = [];
-  if (networkStatus.wifi === 'off') {
-    promiseList.push(testUtils.toggleWifi(true));
-  }
-  if (networkStatus.bluetooth === 'off') {
-    promiseList.push(testUtils.toggleBluetooth(true));
-  }
-  Promise.all(promiseList)
-  .then(function () {
-    Mobile('GetDeviceName').callNative(function (name) {
-      logger.debug('My device name is: %s', name);
-      testUtils.setName(name);
-
-      return networkTypes.reduce(function (sequence, networkType) {
-        return sequence
-          .then(function () {
-            logger.debug('Running for ' + networkType + ' network type');
-            global.NETWORK_TYPE = networkType;
-            require('./runTests.js');
-            return null;
-          });
-      }, Promise.resolve())
-      .catch(function (error) {
-        logger.error(error.message + '\n' + error.stack);
-        return null;
-      });
-    });
-  });
+Mobile('GetDeviceName').callNative(function (name) {
+  logger.debug('My device name is: \'%s\'', name);
+  testUtils.setName(name);
+  require('./runTests.js');
 });
 
 logger.debug('Unit Test app is loaded');

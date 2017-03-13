@@ -12,370 +12,411 @@ import XCTest
 
 class BrowserManagerTests: XCTestCase {
 
-    // MARK: - State
-    var serviceType: String!
+  // MARK: - State
+  var advertiserManager: AdvertiserManager!
+  var browserManager: BrowserManager!
+  var serviceType: String!
 
-    override func setUp() {
-        serviceType = String.randomValidServiceType(length: 7)
+  let disposeTimeout: NSTimeInterval = 2.0
+  let peerAvailabilityHandlerTimeout: NSTimeInterval = 5.0
+  let getErrorOnStartListeningTimeout: NSTimeInterval = 5.0
+  let creatingMPCFSessionTimeout: NSTimeInterval = 5.0
+  let browserConnectTimeout: NSTimeInterval = 10.0
+
+  // MARK: - Setup & Teardown
+  override func setUp() {
+    super.setUp()
+    serviceType = String.randomValidServiceType(length: 7)
+    advertiserManager = AdvertiserManager(serviceType: serviceType,
+                                          disposeAdvertiserTimeout: disposeTimeout)
+
+    browserManager = BrowserManager(serviceType: serviceType,
+                                    inputStreamReceiveTimeout: 1) { peers in }
+  }
+
+  override func tearDown() {
+    browserManager.stopListeningForAdvertisements()
+    browserManager = nil
+    advertiserManager.stopAdvertising()
+    advertiserManager = nil
+    serviceType = nil
+    super.tearDown()
+  }
+
+  // MARK: - Tests
+  func testStartListeningChangesListeningState() {
+    // When
+    browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+
+    // Then
+    XCTAssertTrue(browserManager.listening)
+  }
+
+  func testStopListeningWithoutCallingStartIsNOTError() {
+    // When
+    browserManager.stopListeningForAdvertisements()
+
+    // Then
+    XCTAssertFalse(browserManager.listening)
+  }
+
+  func testStopListeningTwiceWithoutCallingStartIsNOTError() {
+    // When
+    browserManager.stopListeningForAdvertisements()
+    browserManager.stopListeningForAdvertisements()
+
+    // Then
+    XCTAssertFalse(browserManager.listening)
+  }
+
+  func testStopListeningChangesListeningState() {
+    browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+    XCTAssertTrue(browserManager.listening)
+
+    // When
+    browserManager.stopListeningForAdvertisements()
+
+    // Then
+    XCTAssertFalse(browserManager.listening)
+  }
+
+  func testStartStopStartListeningChangesListeningState() {
+    // When
+    browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+    // Then
+    XCTAssertTrue(browserManager.listening)
+
+    // When
+    browserManager.stopListeningForAdvertisements()
+    // Then
+    XCTAssertFalse(browserManager.listening)
+
+    // When
+    browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+    // Then
+    XCTAssertTrue(browserManager.listening)
+  }
+
+  func testStartListeningCalledTwiceChangesStateProperly() {
+    // When
+    browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+    browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+
+    // Then
+    XCTAssertTrue(browserManager.listening)
+  }
+
+  func testStopListeningCalledTwiceChangesStateProperly() {
+    // When
+    browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+    // Then
+    XCTAssertTrue(browserManager.listening)
+
+    // When
+    browserManager.stopListeningForAdvertisements()
+    browserManager.stopListeningForAdvertisements()
+    // Then
+    XCTAssertFalse(browserManager.listening)
+  }
+
+  func testConnectToPeerWithoutListeningReturnStartListeningNotActiveError() {
+    // Expectations
+    let getStartListeningNotActiveError =
+      expectationWithDescription("got startListening not active error")
+
+    // Given
+    var connectionError: ThaliCoreError?
+    XCTAssertFalse(browserManager.listening)
+
+    // When
+    browserManager.connectToPeer(Peer().uuid, syncValue: "0") {
+      [weak getStartListeningNotActiveError] syncValue, error, port in
+      if let error = error as? ThaliCoreError {
+        connectionError = error
+        getStartListeningNotActiveError?.fulfill()
+      }
     }
 
-    // MARK: - Tests
-    func testStartListeningChangesListeningState() {
-        // Given
-        let browserManager = BrowserManager(serviceType: serviceType,
-                                            inputStreamReceiveTimeout: 1) { peers in }
+    // Then
+    waitForExpectationsWithTimeout(getErrorOnStartListeningTimeout, handler: nil)
+    XCTAssertEqual(connectionError, .StartListeningNotActive)
+  }
 
-        // When
-        browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+  func testConnectToWrongPeerReturnsIllegalPeerIDError() {
+    // Expectations
+    let getIllegalPeerIDError = expectationWithDescription("get Illegal Peer")
 
-        // Then
-        XCTAssertTrue(browserManager.listening)
+    // Given
+    var connectionError: ThaliCoreError?
+    browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+
+    // When
+    let notDiscoveredPeer = Peer()
+    browserManager.connectToPeer(notDiscoveredPeer.uuid, syncValue: "0") {
+      [weak getIllegalPeerIDError] syncValue, error, port in
+      if let error = error as? ThaliCoreError {
+        connectionError = error
+        getIllegalPeerIDError?.fulfill()
+      }
     }
 
-    func testStopListeningChangesListeningState() {
-        // Given
-        let browserManager = BrowserManager(serviceType: serviceType,
-                                            inputStreamReceiveTimeout: 1) { peers in }
-        browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
-        XCTAssertTrue(browserManager.listening)
+    // Then
+    let getIllegalPeerTimeout: NSTimeInterval = 5
+    waitForExpectationsWithTimeout(getIllegalPeerTimeout, handler: nil)
+    XCTAssertEqual(connectionError, .ConnectionFailed)
+  }
 
-        // When
-        browserManager.stopListeningForAdvertisements()
+  func testPickLatestGenerationAdvertiserOnConnect() {
+    // Expectations
+    let foundTwoAdvertisers = expectationWithDescription("found two advertisers")
 
-        // Then
-        XCTAssertFalse(browserManager.listening)
+    // Given
+    let port1: UInt16 = 42
+    let port2: UInt16 = 43
+
+    var foundedAdvertisersCount = 0
+    let expectedAdvertisersCount = 2
+
+    // Starting 1st generation of advertiser
+    advertiserManager.startUpdateAdvertisingAndListening(onPort: port1,
+                                                         errorHandler: unexpectedErrorHandler)
+    guard let firstGenerationAdvertiserIdentifier =
+      advertiserManager.advertisers.value.last?.peer else {
+        XCTFail("Advertiser manager must have at least one advertiser")
+        return
     }
 
-    func testStartStopStartListeningChangesListeningState() {
-        // Given
-        let browserManager = BrowserManager(serviceType: serviceType,
-                                            inputStreamReceiveTimeout: 1) { peers in }
-
-        // When
-        browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
-        // Then
-        XCTAssertTrue(browserManager.listening)
-
-        // When
-        browserManager.stopListeningForAdvertisements()
-        // Then
-        XCTAssertFalse(browserManager.listening)
-
-        // When
-        browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
-        // Then
-        XCTAssertTrue(browserManager.listening)
+    // Starting 2nd generation of advertiser
+    advertiserManager.startUpdateAdvertisingAndListening(onPort: port2,
+                                                         errorHandler: unexpectedErrorHandler)
+    guard let secondGenerationAdvertiserIdentifier =
+      advertiserManager.advertisers.value.last?.peer else {
+        XCTFail("Advertiser manager must have at least one advertiser")
+        return
     }
 
-    func testStartListeningCalledTwiceChangesStateProperly() {
-        // Given
-        let browserManager = BrowserManager(serviceType: serviceType,
-                                            inputStreamReceiveTimeout: 1) { peers in }
+    let browserManager = BrowserManager(
+      serviceType: serviceType,
+      inputStreamReceiveTimeout: 1,
+      peerAvailabilityChanged: {
+        [weak foundTwoAdvertisers] peerAvailability in
 
-        // When
-        browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
-        browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
-        // Then
-        XCTAssertTrue(browserManager.listening)
-
-    }
-
-    func testStopListeningCalledTwiceChangesStateProperly() {
-        // Given
-        let browserManager = BrowserManager(serviceType: serviceType,
-                                            inputStreamReceiveTimeout: 1) { peers in }
-
-        // When
-        browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
-        // Then
-        XCTAssertTrue(browserManager.listening)
-
-        // When
-        browserManager.stopListeningForAdvertisements()
-        browserManager.stopListeningForAdvertisements()
-        // Then
-        XCTAssertFalse(browserManager.listening)
-
-    }
-
-    func testConnectToPeerWithoutListeningReturnStartListeningNotActiveError() {
-        // Given
-        let browserManager = BrowserManager(serviceType: serviceType,
-                                            inputStreamReceiveTimeout: 1) { peers in }
-
-        let getStartListeningNotActiveError =
-            expectationWithDescription("got startListening not active error")
-        var connectionError: ThaliCoreError?
-
-        XCTAssertFalse(browserManager.listening)
-
-        // When
-        browserManager.connectToPeer(Peer().uuid, syncValue: "0") {
-            [weak getStartListeningNotActiveError] syncValue, error, port in
-            if let error = error as? ThaliCoreError {
-                connectionError = error
-                getStartListeningNotActiveError?.fulfill()
-            }
+        if let
+          availability = peerAvailability.first
+          where
+          availability.peerIdentifier == secondGenerationAdvertiserIdentifier.uuid {
+          foundedAdvertisersCount += 1
+          if foundedAdvertisersCount == expectedAdvertisersCount {
+            foundTwoAdvertisers?.fulfill()
+          }
         }
+      })
 
-        // Then
-        let getErrorOnStartListeningTimeout: NSTimeInterval = 5
-        waitForExpectationsWithTimeout(getErrorOnStartListeningTimeout, handler: nil)
-        XCTAssertEqual(connectionError, .StartListeningNotActive)
+    // When
+    browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+
+    // Then
+    waitForExpectationsWithTimeout(peerAvailabilityHandlerTimeout, handler: nil)
+    let lastGenerationOfAdvertiserPeer =
+      browserManager.lastGenerationPeer(for: firstGenerationAdvertiserIdentifier.uuid)
+
+    XCTAssertEqual(lastGenerationOfAdvertiserPeer?.generation,
+                   secondGenerationAdvertiserIdentifier.generation)
+
+    // Cleanup
+    browserManager.stopListeningForAdvertisements()
+  }
+
+  func testReceivedPeerAvailabilityEventAfterFoundAdvertiser() {
+    // Expectations
+    let foundPeer = expectationWithDescription("found peer advertiser's identifier")
+
+    // Given
+    var advertiserPeerAvailability: PeerAvailability? = nil
+    advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
+                                                         errorHandler: unexpectedErrorHandler)
+
+    // When
+    let browserManager = BrowserManager(serviceType: serviceType,
+                                        inputStreamReceiveTimeout: 1,
+                                        peerAvailabilityChanged: {
+                                          [weak foundPeer] peerAvailability in
+                                          advertiserPeerAvailability = peerAvailability.first
+                                          foundPeer?.fulfill()
+                                        })
+    browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+
+    // Then
+    waitForExpectationsWithTimeout(peerAvailabilityHandlerTimeout, handler: nil)
+
+    if let advertiser = advertiserManager.advertisers.value.first {
+      XCTAssertEqual(advertiserPeerAvailability?.available, true)
+      XCTAssertEqual(advertiser.peer.uuid, advertiserPeerAvailability?.peerIdentifier)
+    } else {
+      XCTFail("AdvertiserManager does not have any advertisers")
     }
 
-    func testConnectToWrongPeerReturnsIllegalPeerIDError() {
-        // Given
-        let browserManager = BrowserManager(serviceType: serviceType,
-                                            inputStreamReceiveTimeout: 1) { peers in }
-        let getIllegalPeerIDError = expectationWithDescription("get Illegal Peer")
-        var connectionError: ThaliCoreError?
+    // Cleanup
+    browserManager.stopListeningForAdvertisements()
+  }
 
-        browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+  func testIncrementAvailablePeersWhenFoundPeer() {
+    // Expectations
+    let MPCFConnectionCreated = expectationWithDescription("MPCF connection is created")
 
-        // When
-        let notDiscoveredPeer = Peer()
-        browserManager.connectToPeer(notDiscoveredPeer.uuid, syncValue: "0") {
-            [weak getIllegalPeerIDError] syncValue, error, port in
-            if let error = error as? ThaliCoreError {
-                connectionError = error
-                getIllegalPeerIDError?.fulfill()
-            }
-        }
-
-        // Then
-        let getIllegalPeerTimeout: NSTimeInterval = 5
-        waitForExpectationsWithTimeout(getIllegalPeerTimeout, handler: nil)
-        XCTAssertEqual(connectionError, .IllegalPeerID)
+    // Given
+    let (advertiserManager, browserManager) = createMPCFPeers {
+      peerAvailability in
+      MPCFConnectionCreated.fulfill()
     }
 
-    func testPickLatestGenerationAdvertiserOnConnect() {
-        // Given
-        let port1: UInt16 = 42
-        let port2: UInt16 = 43
+    // When
+    waitForExpectationsWithTimeout(creatingMPCFSessionTimeout, handler: nil)
 
-        let disposeTimeout = 2.0
-        var foundedAdvertisersCount = 0
-        let expectedAdvertisersCount = 2
-        let foundTwoAdvertisers = expectationWithDescription("found two advertisers")
+    // Then
+    XCTAssertEqual(1,
+                   browserManager.availablePeers.value.count,
+                   "BrowserManager has not available peers")
 
-        let advertiserManager = AdvertiserManager(serviceType: serviceType,
-                                                  disposeAdvertiserTimeout: disposeTimeout)
+    // Cleanup
+    browserManager.stopListeningForAdvertisements()
+    advertiserManager.stopAdvertising()
+  }
 
-        // Starting 1st generation of advertiser
-        advertiserManager.startUpdateAdvertisingAndListening(onPort: port1,
-                                                             errorHandler: unexpectedErrorHandler)
-        guard let firstGenerationAdvertiserIdentifier =
-            advertiserManager.advertisers.value.last?.peer else {
-                XCTFail("Advertiser manager must have at least one advertiser")
-                return
+  func testPeerAvailabilityChangedAfterStartAdvertising() {
+    // Expectations
+    let peerAvailabilityChangedToTrue =
+      expectationWithDescription("PeerAvailability changed to true")
+
+    // Given
+    var advertiserPeerAvailability: PeerAvailability? = nil
+
+    let browserManager = BrowserManager(
+      serviceType: serviceType,
+      inputStreamReceiveTimeout: 1,
+      peerAvailabilityChanged: {
+        [weak peerAvailabilityChangedToTrue] peerAvailability in
+
+        if let peerAvailability = peerAvailability.first {
+          if peerAvailability.available {
+            // When
+            advertiserPeerAvailability = peerAvailability
+            peerAvailabilityChangedToTrue?.fulfill()
+          }
         }
+      })
 
+    browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+    advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
+                                                         errorHandler: unexpectedErrorHandler)
 
-        // Starting 2nd generation of advertiser
-        advertiserManager.startUpdateAdvertisingAndListening(onPort: port2,
-                                                             errorHandler: unexpectedErrorHandler)
-        guard let secondGenerationAdvertiserIdentifier =
-            advertiserManager.advertisers.value.last?.peer else {
-                XCTFail("Advertiser manager must have at least one advertiser")
-                return
+    // Then
+    waitForExpectationsWithTimeout(peerAvailabilityHandlerTimeout, handler: nil)
+    XCTAssertEqual(advertiserManager.advertisers.value.first!.peer.uuid,
+                   advertiserPeerAvailability?.peerIdentifier)
+
+    // Cleanup
+    browserManager.stopListeningForAdvertisements()
+  }
+
+  func testPeerAvailabilityChangedAfterStopAdvertising() {
+    // Expectations
+    let peerAvailabilityChangedToFalse =
+      expectationWithDescription("PeerAvailability changed to false")
+
+    // Given
+    let browserManager = BrowserManager(
+      serviceType: serviceType,
+      inputStreamReceiveTimeout: 1,
+      peerAvailabilityChanged: {
+        [weak advertiserManager, weak peerAvailabilityChangedToFalse]
+        peerAvailability in
+
+        if let peerAvailability = peerAvailability.first {
+          if peerAvailability.available {
+            // When
+            advertiserManager?.stopAdvertising()
+          } else {
+            peerAvailabilityChangedToFalse?.fulfill()
+          }
         }
+      })
 
-        let browserManager = BrowserManager(
-            serviceType: serviceType,
-            inputStreamReceiveTimeout: 1,
-            peersAvailabilityChangedHandler: {
-                [weak foundTwoAdvertisers] peerAvailability in
+    browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+    advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
+                                                         errorHandler: unexpectedErrorHandler)
 
-                if let
-                    availability = peerAvailability.first
-                    where
-                        availability.peerIdentifier == secondGenerationAdvertiserIdentifier.uuid {
-                            foundedAdvertisersCount += 1
-                            if foundedAdvertisersCount == expectedAdvertisersCount {
-                                foundTwoAdvertisers?.fulfill()
-                            }
-                }
-            })
+    // Then
+    waitForExpectationsWithTimeout(peerAvailabilityHandlerTimeout, handler: nil)
 
-        // When
-        browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+    // Cleanup
+    browserManager.stopListeningForAdvertisements()
+  }
 
-        // Then
-        waitForExpectationsWithTimeout(disposeTimeout, handler: nil)
-        let lastGenerationOfAdvertiserPeer =
-            browserManager.lastGenerationPeer(for: firstGenerationAdvertiserIdentifier.uuid)
+  func testConnectToPeerMethodReturnsTCPPort() {
+    // Expectations
+    var MPCFBrowserFoundAdvertiser: XCTestExpectation?
+    var TCPSocketSuccessfullyCreated: XCTestExpectation?
 
-        XCTAssertEqual(lastGenerationOfAdvertiserPeer?.generation,
-                       secondGenerationAdvertiserIdentifier.generation)
+    // Given
+    // Prepare pair of advertiser and browser
+    MPCFBrowserFoundAdvertiser =
+      expectationWithDescription("Browser peer found Advertiser peer")
+
+    // Start listening for advertisements on browser
+    let browserManager = BrowserManager(serviceType: serviceType,
+                                        inputStreamReceiveTimeout: 5,
+                                        peerAvailabilityChanged: {
+                                          peerAvailability in
+
+                                          guard let peer = peerAvailability.first else {
+                                            XCTFail("Browser didn't find Advertiser peer")
+                                            return
+                                          }
+                                          XCTAssertTrue(peer.available)
+                                          MPCFBrowserFoundAdvertiser?.fulfill()
+                                        })
+    browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+
+    // Start advertising on advertiser
+    let advertiserManager = AdvertiserManager(serviceType: serviceType,
+                                              disposeAdvertiserTimeout: disposeTimeout)
+    advertiserManager.startUpdateAdvertisingAndListening(onPort: 0,
+                                                         errorHandler: unexpectedErrorHandler)
+
+    waitForExpectationsWithTimeout(browserConnectTimeout) {
+      error in
+      MPCFBrowserFoundAdvertiser = nil
     }
 
-    func testReceivedPeerAvailabilityEventAfterFoundAdvertiser() {
-        // Given
-        let foundPeer = expectationWithDescription("found peer advertiser's identifier")
+    TCPSocketSuccessfullyCreated = expectationWithDescription("Browser has returned TCP socket")
 
-        var advertiserPeerAvailability: PeerAvailability? = nil
-        let disposeAdvertiserTimeout = 2.0
+    // When
+    let peerToConnect = browserManager.availablePeers.value.first!
+    browserManager.connectToPeer(peerToConnect.uuid, syncValue: "0") {
+      syncValue, error, port in
 
-        let advertiserManager =
-            AdvertiserManager(serviceType: serviceType,
-                              disposeAdvertiserTimeout: disposeAdvertiserTimeout)
-        advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
-                                                             errorHandler: unexpectedErrorHandler)
-        // When
-        let browserManager = BrowserManager(serviceType: serviceType,
-                                            inputStreamReceiveTimeout: 1,
-                                            peersAvailabilityChangedHandler: {
-                                                [weak foundPeer] peerAvailability in
-                                                advertiserPeerAvailability = peerAvailability.first
-                                                foundPeer?.fulfill()
-                                            })
-        browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
+      guard error == nil else {
+        XCTFail("Error during connection: \(error.debugDescription)")
+        return
+      }
 
-        // Then
-        waitForExpectationsWithTimeout(disposeAdvertiserTimeout, handler: nil)
-
-        if let advertiser = advertiserManager.advertisers.value.first {
-            XCTAssertEqual(advertiserPeerAvailability?.available, true)
-            XCTAssertEqual(advertiser.peer.uuid, advertiserPeerAvailability?.peerIdentifier)
-        } else {
-            XCTFail("AdvertiserManager does not have any advertisers")
-        }
+      TCPSocketSuccessfullyCreated?.fulfill()
     }
 
-    func testIncrementAvailablePeersWhenFoundPeer() {
-        // Given
-        let MPCFConnectionCreated =
-            expectationWithDescription("MPCF connection is created")
-
-        let (advertiserManager, browserManager) = createMPCFPeers {
-            peerAvailability in
-            MPCFConnectionCreated.fulfill()
-        }
-
-        // When
-        let creatingMPCFSessionTimeout = 5.0
-        waitForExpectationsWithTimeout(creatingMPCFSessionTimeout, handler: nil)
-
-        // Then
-        XCTAssertEqual(1,
-                       browserManager.availablePeers.value.count,
-                       "BrowserManager has not available peers")
-
-        browserManager.stopListeningForAdvertisements()
-        advertiserManager.stopAdvertising()
+    // Then
+    waitForExpectationsWithTimeout(browserConnectTimeout) {
+      error in
+      guard error == nil else {
+        XCTFail("Browser couldn't connect to peer")
+        return
+      }
+      browserManager.stopListeningForAdvertisements()
+      TCPSocketSuccessfullyCreated = nil
     }
 
-    func testPeerAvailabilityChangedAfterStartAdvertising() {
-        // Given
-        let peerAvailabilityChangedToTrue =
-            expectationWithDescription("PeerAvailability changed to true")
-
-        var advertiserPeerAvailability: PeerAvailability? = nil
-
-        let advertiserManager = AdvertiserManager(serviceType: serviceType,
-                                                  disposeAdvertiserTimeout: 2.0)
-
-        let browserManager = BrowserManager(
-            serviceType: serviceType,
-            inputStreamReceiveTimeout: 1,
-            peersAvailabilityChangedHandler: {
-                [weak peerAvailabilityChangedToTrue] peerAvailability in
-
-                if let peerAvailability = peerAvailability.first {
-                    if peerAvailability.available {
-                        // When
-                        advertiserPeerAvailability = peerAvailability
-                        peerAvailabilityChangedToTrue?.fulfill()
-                    }
-                }
-            })
-
-        browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
-        advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
-                                                             errorHandler: unexpectedErrorHandler)
-
-        // Then
-        let peerAvailabilityHandlerTimeout = 10.0
-        waitForExpectationsWithTimeout(peerAvailabilityHandlerTimeout, handler: nil)
-        XCTAssertEqual(advertiserManager.advertisers.value.first!.peer.uuid,
-                       advertiserPeerAvailability?.peerIdentifier)
-    }
-
-    func testPeerAvailabilityChangedAfterStopAdvertising() {
-        // Given
-        let peerAvailabilityChangedToFalse =
-            expectationWithDescription("PeerAvailability changed to false")
-
-        var advertiserPeerAvailability: PeerAvailability? = nil
-
-        let advertiserManager = AdvertiserManager(serviceType: serviceType,
-                                                  disposeAdvertiserTimeout: 2.0)
-
-        let browserManager = BrowserManager(
-            serviceType: serviceType,
-            inputStreamReceiveTimeout: 1,
-            peersAvailabilityChangedHandler: {
-                [weak advertiserManager, weak peerAvailabilityChangedToFalse]
-                peerAvailability in
-
-                if let peerAvailability = peerAvailability.first {
-                    if peerAvailability.available {
-                        // When
-                        advertiserManager?.stopAdvertising()
-                    } else {
-                        advertiserPeerAvailability = peerAvailability
-                        peerAvailabilityChangedToFalse?.fulfill()
-                    }
-                }
-            })
-
-        browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
-        advertiserManager.startUpdateAdvertisingAndListening(onPort: 42,
-                                                             errorHandler: unexpectedErrorHandler)
-
-        // Then
-        let peerAvailabilityHandlerTimeout = 10.0
-        waitForExpectationsWithTimeout(peerAvailabilityHandlerTimeout, handler: nil)
-    }
-
-    func testConnectToPeerMethodReturnsTCPPort() {
-        // Given
-        var MPCFConnectionCreated: XCTestExpectation? =
-            expectationWithDescription("MPCF connection is created")
-
-        let (advertiserManager, browserManager) = createMPCFPeers {
-            peerAvailability in
-            MPCFConnectionCreated?.fulfill()
-        }
-
-        let creatingMPCFSessionTimeout = 5.0
-        waitForExpectationsWithTimeout(creatingMPCFSessionTimeout) {
-            error in
-            MPCFConnectionCreated = nil
-        }
-
-        var TCPSocketSuccessfullyCreated: XCTestExpectation? =
-            expectationWithDescription("Waiting until TCP socket created")
-
-        // When
-        let peerToConnect = browserManager.availablePeers.value.first!
-        browserManager.connectToPeer(peerToConnect.uuid, syncValue: "0") {
-            syncValue, error, port in
-
-            guard error == nil else {
-                XCTFail("Error during connection: \(error.debugDescription)")
-                return
-            }
-
-            TCPSocketSuccessfullyCreated?.fulfill()
-        }
-
-        // Then
-        let creatingTCPSocketTimeout = 10.0
-        waitForExpectationsWithTimeout(creatingTCPSocketTimeout) {
-            error in
-            TCPSocketSuccessfullyCreated = nil
-        }
-    }
+    // Cleanup
+    browserManager.stopListeningForAdvertisements()
+    advertiserManager.stopAdvertising()
+  }
 }

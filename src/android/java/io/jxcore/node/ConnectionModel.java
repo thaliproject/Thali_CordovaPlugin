@@ -146,13 +146,8 @@ public class ConnectionModel {
      * @param incomingSocketThread An incoming (connection) socket thread instance to add.
      * @return True, if the thread was successfully added to the collection. False otherwise.
      */
-    public synchronized boolean addConnectionThread(IncomingSocketThread incomingSocketThread) {
-        if (!mIncomingSocketThreads.addIfAbsent(incomingSocketThread)) {
-            Log.e(TAG, "addConnectionThread: A matching thread for incoming connection already exists");
-            return false;
-        }
-
-        return true;
+    public boolean addConnectionThread(IncomingSocketThread incomingSocketThread) {
+        return mIncomingSocketThreads.add(incomingSocketThread);
     }
 
     /**
@@ -161,13 +156,28 @@ public class ConnectionModel {
      * @param outgoingSocketThread An outgoing (connection) socket thread instance to add.
      * @return True, if the thread was successfully added to the collection. False otherwise.
      */
-    public synchronized boolean addConnectionThread(OutgoingSocketThread outgoingSocketThread) {
-        if (!mOutgoingSocketThreads.addIfAbsent(outgoingSocketThread)) {
-            Log.e(TAG, "addConnectionThread: A matching thread for outgoing connection already exists");
-            return false;
-        }
+    public boolean addConnectionThread(OutgoingSocketThread outgoingSocketThread) {
+        return mOutgoingSocketThreads.add(outgoingSocketThread);
+    }
 
-        return true;
+    /**
+     * Check that current collection contains the provided thread
+     *
+     * @param incomingSocketThread An incoming (connection) socket thread instance to add.
+     * @return True, if the thread is already added to the collection. False otherwise.
+     */
+    public boolean contains(IncomingSocketThread incomingSocketThread) {
+        return mIncomingSocketThreads.contains(incomingSocketThread);
+    }
+
+    /**
+     * Check that current collection contains the provided thread
+     *
+     * @param outgoingSocketThread An outgoing (connection) socket thread instance to add.
+     * @return True, if the thread is already added to the collection. False otherwise.
+     */
+    public boolean contains(OutgoingSocketThread outgoingSocketThread) {
+        return mOutgoingSocketThreads.contains(outgoingSocketThread);
     }
 
     /**

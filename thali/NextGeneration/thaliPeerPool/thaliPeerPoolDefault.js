@@ -71,10 +71,12 @@ function ThaliPeerPoolDefault() {
 util.inherits(ThaliPeerPoolDefault, ThaliPeerPoolInterface);
 ThaliPeerPoolDefault.ERRORS = ThaliPeerPoolInterface.ERRORS;
 
-ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED = 'We are stopped';
+ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED =
+  'we ignored peer action, because we has been already stopped';
 
 ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
   if (this._stopped) {
+    peerAction.kill();
     throw new Error(ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED);
   }
 
@@ -84,10 +86,7 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
     ThaliPeerPoolDefault.super_.prototype.enqueue.apply(this, arguments);
 
   var actionAgent = new ForeverAgent.SSL({
-    keepAlive: true,
-    keepAliveMsecs: thaliConfig.TCP_TIMEOUT_WIFI/2,
-    maxSockets: Infinity,
-    maxFreeSockets: 256,
+    maxSockets: 8,
     ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
     pskIdentity: peerAction.getPskIdentity(),
     pskKey: peerAction.getPskKey()
@@ -108,20 +107,19 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
 };
 
 ThaliPeerPoolDefault.prototype.start = function () {
-  var self = this;
   this._stopped = false;
 
   return ThaliPeerPoolDefault.super_.prototype.start.apply(this, arguments);
-}
+};
 
 /**
  * This function is used primarily for cleaning up after tests and will
  * kill any actions that this pool has started that haven't already been
  * killed. It will also return errors if any further attempts are made
  * to enqueue.
+ * @return {Promise}
  */
 ThaliPeerPoolDefault.prototype.stop = function () {
-  var self = this;
   this._stopped = true;
 
   return ThaliPeerPoolDefault.super_.prototype.stop.apply(this, arguments);

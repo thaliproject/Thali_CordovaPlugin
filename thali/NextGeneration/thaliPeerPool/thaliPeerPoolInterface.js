@@ -69,6 +69,7 @@ ThaliPeerPoolInterface.prototype._inQueue = null;
  *
  * @public
  * @param {module:thaliPeerAction~PeerAction} peerAction
+ * @returns {null}
  * @throws {Error}
  */
 ThaliPeerPoolInterface.prototype.enqueue = function (peerAction) {
@@ -82,36 +83,20 @@ ThaliPeerPoolInterface.prototype.enqueue = function (peerAction) {
   if (this._inQueue[peerActionId]) {
     throw new Error(ThaliPeerPoolInterface.ERRORS.OBJECT_ALREADY_ENQUEUED);
   }
-
   this._inQueue[peerActionId] = peerAction;
 
-  // TODO implement _TODO_ mentioned in 'ThaliPullReplicationFromNotification'
-  // We can use here:
-  // peerAction.once('killed', this._onPeerActionKilled.bind(this, peerAction));
+  // Remove peer action from the queue if it become 'killed'.
+  peerAction.once('killed', function () {
+    assert(
+      this._inQueue[peerActionId] === peerAction,
+      'peerAction shouldn\'t escape the queue without going through kill'
+    );
+    delete this._inQueue[peerActionId];
+  }.bind(this));
 
-  // This is a workaround for 'once'.
-  var self = this;
-  var originalKill = peerAction.kill;
-  peerAction.kill = function () {
-    self._onPeerActionKilled(peerAction);
-    peerAction.kill = originalKill;
-    return originalKill.apply(this, arguments);
-  }
+  return null;
 };
 
-/**
- * Remove peer action from the queue if it become 'killed'.
- * @private
- * @param {module:thaliPeerAction~PeerAction} peerAction
- */
-ThaliPeerPoolInterface.prototype._onPeerActionKilled = function (peerAction) {
-  var peerActionId = peerAction.getId();
-  assert(
-    this._inQueue[peerActionId] === peerAction,
-    'peerAction shouldn\'t escape the queue without going through kill'
-  );
-  delete this._inQueue[peerActionId];
-}
 
 /**
  * Error messages.
@@ -131,11 +116,13 @@ ThaliPeerPoolInterface.prototype.start = function () {
     Object.getOwnPropertyNames(this._inQueue).length === 0,
     ThaliPeerPoolInterface.ERRORS.QUEUE_IS_NOT_EMPTY
   );
-}
+};
 
 /**
  * Kills all peer actions in the queue.
  * @public
+ * @returns {Promise} Returns a promise that indicates via resolve or reject
+ * if stop worked properly.
  */
 ThaliPeerPoolInterface.prototype.stop = function () {
   var self = this;
@@ -153,6 +140,6 @@ ThaliPeerPoolInterface.prototype.stop = function () {
   );
 
   return Promise.all(promises);
-}
+};
 
 module.exports = ThaliPeerPoolInterface;

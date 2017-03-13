@@ -78,8 +78,12 @@
     return [self wifiDetails] == nil ? NO : YES;
 }
 
-- (NSString *) BSSID {
+- (NSString *)BSSID {
     return [self wifiDetails][(__bridge NSString *)kCNNetworkInfoKeyBSSID];
+}
+
+- (NSString *)SSID {
+    return [self wifiDetails][(__bridge NSString *)kCNNetworkInfoKeySSID];
 }
 
 @end

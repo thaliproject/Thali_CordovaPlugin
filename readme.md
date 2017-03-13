@@ -19,7 +19,7 @@ please head over to test/README.md and follow the directions in the sections
 entitled 'Installing software' and 'Running your own NPM registry'.
 
 From there you need to create your cordova project and install Thali into it.
-To do that I assume you are at the command line and are starting at the 
+To do that I assume you are at the command line and are starting at the
 directory which contains the clone of Thali_CordovaPlugin.
 
 ```
@@ -62,6 +62,16 @@ saved that file.
 jx npm init
 ```
 
+We are still inside of FooBar/www/jxcore and now we are running the script
+that MUST be run before installing thali since a bug in our installer.
+In other case install will fail. This script will go away as soon as
+installed fixed. See one of the reasons [thaliproject/Thali_CordovaPlugin#1221](https://github.com/thaliproject/Thali_CordovaPlugin/issues/1221),
+[thaliproject/Thali_CordovaPlugin#1250](https://github.com/thaliproject/Thali_CordovaPlugin/issues/1250) to run this script.
+
+```
+npm run setupDesktop --prefix ../../../Thali_CordovaPlugin/thali/install
+```
+
 We are still inside of FooBar/www/jxcore and now we are dealing with creating a
 package.json. If you don't already have a package.json, this will create one for
 you. If you already have a package.json then you can skip the previous command.
@@ -86,7 +96,7 @@ have hanging out in your package.json.
 find . -name "*.gz" -delete
 ```
 
-You may have noticed above we have commands '--autoremove "*.gz'. These are a
+You may have noticed above we have commands '--autoremove "*.gz"'. These are a
 special command in JXcore that does exactly what the line above does. However
 we have noticed that the command doesn't always seem to work so we just use the
 line above to be sure. The point of this command is that Android gets very unhappy
@@ -153,7 +163,7 @@ Again, see testThaliManagerCoordinated.js for the relevant includes. The code
 above creates a new public key object with a specific curve, then generates a
 public/private key pair matching that curve. We have to use this specific curve
 so don't change it.
- 
+
 Note that the private key can be retrieved via getPrivateKey() and stored
 somewhere secure on the device. This key will be needed the next time the device
 runs to create a new ECDH object in the future using setPrivateKey(). Note that
@@ -196,7 +206,7 @@ some point, connected to the cloud in order to download a list of public keys.
 If you don't happen to have a handy cloud then you need to figure out your own
 solution for how to distribute the keys. Anyone wanting to resurrect the identity
 exchange code can contact us via any of the mechanisms listed [here](http://thaliproject.org/WaysToContribute/).
-Alternatively you can just cheat. Set up an open PouchDB/CouchDB server some 
+Alternatively you can just cheat. Set up an open PouchDB/CouchDB server some
 place and have devices sync their keys there and then sync down from that server
 all the other device's keys. It's a hack to get you going.
 
@@ -210,6 +220,47 @@ you can call 'stop'.
 That is about it. If it works then anything you stick into the database you
 gave us the name for should be sync'd to the other devices you told us about
 if they are around and vice versa.
+
+## Useful commands to run Android apps via command line
+
+### Build
+
+```
+cordova build android --release --device
+```
+
+### Sign unsigned
+
+`cordova build` creates unsigned _apk_. So in order to install the _apk_ into device
+you need to sign the _apk_.
+
+Please note that `build-tools` should be at least `25.0.0`.
+Because this guide uses tool `apksigner` that is available starting
+from `build-tools` `25.0.0`.
+
+You should have keystore file before running the command below.
+
+```
+/usr/local/opt/android-sdk/build-tools/25.0.0/apksigner sign --ks path/to/keystore/file path/to/unsigned.apk
+```
+
+### Get devices list
+
+You need to know device serial number or qualifier to install build into device
+via command line. The command below lists all connected devices with their
+qualifiers (first value in each line).
+
+```
+adb devices -l
+```
+
+### Install onto device and debug
+
+```
+adb -s DEVICE_QUALIFIER install -r path/to/signed.apk
+```
+
+Please note using `logcat` if you need providing the team with the logs from devices.
 
 ## Prerequisites
 
@@ -266,14 +317,14 @@ Download [Xcode 6](https://developer.apple.com/xcode/), or later.
 
 ### Install latest JXCore
 
-The installation guide for JXCore 3.1.2 on Mac OS and Windows can be found [here](https://github.com/thaliproject/jxbuild/blob/master/distribute.md).
+The installation guide for JXCore 3.1.10 on Mac OS and Windows can be found [here](https://github.com/thaliproject/jxbuild/blob/master/distribute.md).
 
-The latest version of JXCore 3.1.2b only for Mac OS can be downloaded from [here](https://jxcore.blob.core.windows.net/jxcore-release/jxcore/0312b/release/jx_osx64v8.zip)
+The latest version of JXCore 3.1.10 only for Mac OS can be downloaded from [here](https://jxcore.blob.core.windows.net/jxcore-release/jxcore/03110/release/jx_osx64v8.zip)
 
 To check the version of the current JXCore installation run:
 ```
 $ jx -jxv
-v 0.3.1.2b
+v 0.3.1.10
 ```
 
 ### Install Cordova
@@ -282,7 +333,7 @@ v 0.3.1.2b
 and [iOS Platform Guide](https://cordova.apache.org/docs/en/4.0.0/guide_platforms_ios_index.md.html#iOS%20Platform%20Guide) for detailed instructions.)
 
 ```
-$ sudo jx npm install -g cordova
+$ npm install -g cordova@6.4.0
 ```
 
 ### Create a Cordova project
@@ -314,6 +365,15 @@ Note that Thali uses a subdirectory in your project called thaliDontCheckin to m
 If you want to upgrade to a newer version of Thali_CordovaPlugin all you have to do is just edit your package.json
 with the version you want and then run 'jx npm install'. This will automatically update the Javascript files as well
 as uninstall the old plugin and install the new plugin.
+
+### Troubleshooting
+
+In case of Thali failures do the following first.
+
+1. Go into cloned Thali folder and execute the following command `find . -name "node_modules" -type d -exec rm -r "{}" \;`. __WARNING: Use `rm -r` with caution it deletes the folder and all its contents__.
+2. `rm -r ~/.jx`
+3. `rm -r ~/.jxc`
+4. `rm -r ~/.node-gyp`
 
 ### Documentation
 

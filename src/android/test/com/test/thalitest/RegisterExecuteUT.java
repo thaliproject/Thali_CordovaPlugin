@@ -7,13 +7,13 @@ import org.json.JSONObject;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.thaliproject.p2p.btconnectorlib.PeerProperties;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+
 import java.util.ArrayList;
 import java.util.Date;
 
 import io.jxcore.node.ConnectionHelper;
 import io.jxcore.node.ConnectionHelperTest;
+import io.jxcore.node.JXcoreExtension;
 import io.jxcore.node.jxcore;
 
 public final class RegisterExecuteUT {
@@ -24,8 +24,7 @@ public final class RegisterExecuteUT {
     static String TAG = "RegisterExecuteUT";
 
     private static void FireTestedMethod(String methodName) {
-        ConnectionHelperTest.mConnectionHelper = new ConnectionHelper();
-
+        ConnectionHelperTest.mConnectionHelper = new ConnectionHelper(JXcoreExtension.getInstance());
         switch (methodName) {
             case "onPeerLost":
                 ConnectionHelperTest.mConnectionHelper
@@ -33,7 +32,7 @@ public final class RegisterExecuteUT {
                 break;
             case "onPeerDiscovered":
                 ConnectionHelperTest.mConnectionHelper
-                    .onPeerDiscovered(new PeerProperties("33:44:55:44:33:22"));
+                    .onPeerDiscovered(new PeerProperties("33:44:55:44:33:22", 0));
                 break;
             default:
                 Log.e(TAG, "Method called in FireTestedMethod doesn't exists!");
@@ -69,7 +68,6 @@ public final class RegisterExecuteUT {
         jxcore.RegisterMethod("executeNativeTests", new jxcore.JXcoreCallback() {
             @Override
             public void Receiver(ArrayList<Object> params, String callbackId) {
-                ConnectionHelperTest.mConnectionHelper = new ConnectionHelper();
                 String logtag = "ExecuteNativeTests";
                 Log.d(logtag, "Running unit tests");
                 Result resultTest = ThaliTestRunner.runTests();
@@ -78,18 +76,18 @@ public final class RegisterExecuteUT {
                 Boolean jsonObjectCreated = false;
                 String failures = "";
 
-                for (Failure failure: resultTest.getFailures()) {
+                for (Failure failure : resultTest.getFailures()) {
                     failures += failure.getMessage() + "\n";
                 }
 
                 try {
-                    if(!failures.equals("")){
+                    if (!failures.equals("")) {
                         jsonObject.put("failures", failures);
                     }
 
                     jsonObject.put("total", resultTest.getRunCount());
                     jsonObject.put("passed", resultTest.getRunCount() -
-                            resultTest.getFailureCount() - resultTest.getIgnoreCount());
+                        resultTest.getFailureCount() - resultTest.getIgnoreCount());
                     jsonObject.put("failed", resultTest.getFailureCount());
                     jsonObject.put("ignored", resultTest.getIgnoreCount());
                     jsonObject.put("duration", new Date(resultTest.getRunTime()).getTime());
@@ -97,7 +95,7 @@ public final class RegisterExecuteUT {
                     jsonObjectCreated = true;
                 } catch (JSONException e) {
                     Log.e(logtag, "executeNativeTests: " +
-                            "Failed to populate the JSON object: " + e.getMessage(), e);
+                        "Failed to populate the JSON object: " + e.getMessage(), e);
                 }
 
                 if (jsonObjectCreated) {

@@ -10,7 +10,7 @@ var testUtils = require('./lib/testUtils');
 var TestFrameworkClient = require('./perf_tests/PerfTestFrameworkClient');
 var platform = require('thali/NextGeneration/utils/platform');
 
-/*------------------------------------------------------------------------------
+/* -----------------------------------------------------------------------------
  code for connecting to the coordinator server
  -----------------------------------------------------------------------------*/
 
@@ -22,11 +22,11 @@ function getDeviceCharacteristics(cb) {
   else if (platform.isAndroid) {
     Mobile('GetBluetoothAddress').callNative(
       function (bluetoothAddressError, bluetoothAddress) {
-      Mobile('GetBluetoothName').callNative(
+        Mobile('GetBluetoothName').callNative(
         function (bluetoothNameError, bluetoothName) {
-        Mobile('GetDeviceName').callNative(
+          Mobile('GetDeviceName').callNative(
           function (deviceName) {
-          console.log('Received device characteristics:\n' +
+            console.log('Received device characteristics:\n' +
                       'Bluetooth address: ' + bluetoothAddress + '\n' +
                       'Bluetooth name: ' + bluetoothName + '\n' +
                       'Device name: ' + deviceName);
@@ -36,15 +36,15 @@ function getDeviceCharacteristics(cb) {
           // guaranteed to be unique, because it is concatenated from device
           // manufacturer and model and will thus be the same in case of
           // identical devices.
-          var myName = bluetoothName || deviceName;
-          if (!myName || !bluetoothAddress) {
-            console.log('An error while getting the device characteristics!');
-          }
-          testUtils.setName(myName);
-          cb(myName, bluetoothAddress);
+            var myName = bluetoothName || deviceName;
+            if (!myName || !bluetoothAddress) {
+              console.log('An error while getting the device characteristics!');
+            }
+            testUtils.setName(myName);
+            cb(myName, bluetoothAddress);
+          });
         });
       });
-    });
   } else {
     Mobile('GetDeviceName').callNative(function (deviceName) {
       // In case of iOS, the device name is used directly, because
@@ -55,7 +55,7 @@ function getDeviceCharacteristics(cb) {
   }
 }
 
-/*------------------------------------------------------------------------------
+/* -----------------------------------------------------------------------------
  code for handling test communications
  -----------------------------------------------------------------------------*/
 

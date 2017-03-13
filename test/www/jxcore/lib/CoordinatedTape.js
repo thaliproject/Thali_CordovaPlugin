@@ -37,8 +37,8 @@ CoordinatedThaliTape.prototype.defaults = objectAssign(
   {},
   CoordinatedThaliTape.prototype.defaults,
   {
-    emitRetryCount:   20,
-    emitRetryTimeout: 1000
+    emitRetryCount:   100,
+    emitRetryTimeout: 2000
   }
 );
 
@@ -48,7 +48,7 @@ CoordinatedThaliTape.prototype._begin = function () {
     'we should be in created state'
   );
   this._state = CoordinatedThaliTape.states.started;
-}
+};
 
 CoordinatedThaliTape.prototype._getTests = function () {
   var self = this;
@@ -57,10 +57,12 @@ CoordinatedThaliTape.prototype._getTests = function () {
     test.options = self._options;
     return test;
   });
-}
+};
 
-CoordinatedThaliTape.begin = function (platform, version, hasRequiredHardware, nativeUTFailed) {
-  var tests = CoordinatedThaliTape.instances.reduce(function (tests, thaliTape) {
+CoordinatedThaliTape.begin = function (platform, version, hasRequiredHardware,
+                                       nativeUTFailed) {
+  var tests = CoordinatedThaliTape.instances.reduce(function (tests, thaliTape)
+  {
     thaliTape._begin();
     return tests.concat(thaliTape._getTests());
   }, []);
@@ -99,6 +101,6 @@ CoordinatedThaliTape.begin = function (platform, version, hasRequiredHardware, n
     logger.debug('****TEST_LOGGER:[PROCESS_ON_EXIT_FAILED]****');
     return Promise.reject(error);
   });
-}
+};
 
 module.exports = CoordinatedThaliTape;
