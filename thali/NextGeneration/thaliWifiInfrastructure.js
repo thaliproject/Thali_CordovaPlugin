@@ -682,6 +682,13 @@ ThaliWifiInfrastructure.prototype._setUpEvents = function() {
 
 inherits(ThaliWifiInfrastructure, EventEmitter);
 
+ThaliWifiInfrastructure.prototype._isDisconnected = function () {
+  var lastStatus = this._lastNetworkStatus;
+  return lastStatus ?
+    (lastStatus.wifi === 'off' || lastStatus.bssidName === null) :
+    false;
+};
+
 ThaliWifiInfrastructure.prototype._handleNetworkChanges =
 function (networkStatus) {
   var lastStatus = this._lastNetworkStatus;
@@ -878,7 +885,7 @@ enqueued(function () {
   if (!this._isStarted) {
     return Promise.reject(new Error('Call Start!'));
   }
-  if (this._lastNetworkStatus && this._lastNetworkStatus.wifi === 'off') {
+  if (this._isDisconnected()) {
     return this._rejectPerWifiState();
   }
   return this.listener.start();
@@ -994,7 +1001,7 @@ enqueued(function () {
     return Promise.reject(new Error('Call Start!'));
   }
 
-  if (this._lastNetworkStatus && this._lastNetworkStatus.wifi === 'off') {
+  if (this._isDisconnected()) {
     return this._rejectPerWifiState();
   }
 
@@ -1034,20 +1041,18 @@ ThaliWifiInfrastructure.prototype._pauseAdvertisingAndListening =
 
 ThaliWifiInfrastructure.prototype._rejectPerWifiState = function () {
   var errorMessage;
-  switch (this._lastNetworkStatus.wifi) {
-    case 'off': {
-      errorMessage = 'Radio Turned Off';
-      break;
-    }
-    case 'notHere': {
-      errorMessage = 'No Wifi radio';
-      break;
-    }
-    default: {
-      logger.warn('Got unexpected Wifi state: %s',
-        this.states.networkStatus.wifi);
-      errorMessage = 'Unspecified Error with Radio infrastructure';
-    }
+  var wifi = this._lastNetworkStatus.wifi;
+  var bssidName = this._lastNetworkStatus.bssidName;
+  if (wifi === 'off') {
+    errorMessage = 'Radio Turned Off';
+  } else if (wifi === 'notHere') {
+    errorMessage = 'No Wifi radio';
+  } else if (bssidName === null) {
+    errorMessage = 'Not connected to WiFi access point';
+  } else {
+    logger.warn('Got unexpected Wifi state (wifi: %s, bssidName: %s)',
+      JSON.stringify(wifi), JSON.stringify(bssidName));
+    errorMessage = 'Unspecified Error with Radio infrastructure';
   }
   return Promise.reject(new Error(errorMessage));
 };
