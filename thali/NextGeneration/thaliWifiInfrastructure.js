@@ -354,7 +354,7 @@ WifiAdvertiser.prototype.update = enqueued(function () {
   }
 
   // We need to change USN every time a WifiClient changed generation
-  self.peer.generation++; 
+  self.peer.generation++;
   self._server.setUSN(USN.stringify(self.peer));
 
   return Promise.resolve();
@@ -682,46 +682,33 @@ ThaliWifiInfrastructure.prototype._setUpEvents = function() {
 
 inherits(ThaliWifiInfrastructure, EventEmitter);
 
-ThaliWifiInfrastructure.prototype._isDisconnected = function () {
-  var lastStatus = this._lastNetworkStatus;
-  return lastStatus ?
-    (lastStatus.wifi === 'off' || lastStatus.bssidName === null) :
-    false;
+ThaliWifiInfrastructure.prototype._isConnected = function () {
+  // We use this method only when thaliWifiInfrastructure is started
+  assert(this._lastNetworkStatus, 'have latest network status');
+  return this._lastNetworkStatus.bssidName !== null;
 };
 
 ThaliWifiInfrastructure.prototype._handleNetworkChanges =
-function (networkStatus) {
-  var lastStatus = this._lastNetworkStatus;
+function (newStatus) {
+  var oldStatus = this._lastNetworkStatus;
+  this._lastNetworkStatus = newStatus;
 
-  /** true if device became connected to the WiFi access point */
-  var connectedToAP;
-  /** true if device is no longer connected to any WiFi access point */
-  var disconnectedFromAP;
-  /** true if device moved from one WiFi access point to another access point */
-  var changedAP;
-
-  if (lastStatus) {
-    connectedToAP =
-      (lastStatus.wifi === 'off' && networkStatus.wifi === 'on') ||
-      (lastStatus.bssidName === null && networkStatus.bssidName !== null);
-    disconnectedFromAP =
-      (lastStatus.wifi === 'on' && networkStatus.wifi === 'off') ||
-      (lastStatus.bssidName !== null && networkStatus.bssidName === null);
-    changedAP =
-      !disconnectedFromAP && !connectedToAP &&
-      lastStatus.bssidName !== networkStatus.bssidName;
-  } else {
-    connectedToAP =
-      networkStatus.wifi === 'on' && networkStatus.bssidName !== null;
-    disconnectedFromAP =
-      networkStatus.wifi === 'off' || networkStatus.bssidName === null;
-    changedAP = false;
+  // Check if this is a first call triggered by start method. In this case we
+  // don't need to do anything.
+  if (!oldStatus) {
+    return;
   }
 
-  assert((disconnectedFromAP && connectedToAP) === false,
-    'either connected or disconnected');
-
-  this._lastNetworkStatus = networkStatus;
+  /** true if device became connected to the WiFi access point */
+  var connectedToAP =
+    (oldStatus.bssidName === null && newStatus.bssidName !== null);
+  /** true if device is no longer connected to any WiFi access point */
+  var disconnectedFromAP =
+    (oldStatus.bssidName !== null && newStatus.bssidName === null);
+  /** true if device moved from one WiFi access point to another access point */
+  var changedAP =
+    !disconnectedFromAP && !connectedToAP &&
+    oldStatus.bssidName !== newStatus.bssidName;
 
   // If we are stopping or the wifi state hasn't changed,
   // we are not really interested.
@@ -885,7 +872,7 @@ enqueued(function () {
   if (!this._isStarted) {
     return Promise.reject(new Error('Call Start!'));
   }
-  if (this._isDisconnected()) {
+  if (!this._isConnected()) {
     return this._rejectPerWifiState();
   }
   return this.listener.start();
@@ -1001,7 +988,7 @@ enqueued(function () {
     return Promise.reject(new Error('Call Start!'));
   }
 
-  if (this._isDisconnected()) {
+  if (!this._isConnected()) {
     return this._rejectPerWifiState();
   }
 
