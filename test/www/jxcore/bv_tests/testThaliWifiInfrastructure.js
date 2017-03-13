@@ -816,9 +816,6 @@ test('#stop should clear watchers', function (t) {
 });
 
 test('wifi peer is marked unavailable if announcements stop',
-  function () {
-    return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
-  },
   function (t) {
     // Store the original threshold so that it can be restored
     // at the end of the test.
@@ -848,33 +845,32 @@ test('wifi peer is marked unavailable if announcements stop',
     }));
 
     var spy = sinon.spy();
+    var peerAvailable = false;
     var availabilityChangedHandler = function (peer) {
       if (peer.peerIdentifier !== testPeerIdentifier) {
         return;
       }
-
-      // TODO Apply changes from #904 to tests
       spy();
+      peer.portNumber !== null && peer.hostAddress !== null ?
+        peerAvailable = true :
+        peerAvailable = false;
       if (spy.calledOnce) {
-        t.equal(peer.peerAvailable, true, 'peer should be available');
+        t.equal(peerAvailable, true, 'peer should be available');
+        testServer.stop();
       } else if (spy.calledTwice) {
-        t.equal(peer.peerAvailable, false, 'peer should become unavailable');
+        t.equal(peerAvailable, false, 'peer should become unavailable');
 
-        ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
+        wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged',
           availabilityChangedHandler);
-        testServer.stop(function () {
-          thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD = originalThreshold;
-          t.end();
-        });
+
+        thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD = originalThreshold;
+        t.end();
       }
     };
-    ThaliMobile.emitter.on('peerAvailabilityChanged',
+    wifiInfrastructure.on('wifiPeerAvailabilityChanged',
       availabilityChangedHandler);
 
-    ThaliMobile.start(express.Router())
-    .then(function () {
-      return ThaliMobile.startListeningForAdvertisements();
-    })
+    wifiInfrastructure.startListeningForAdvertisements()
     .then(function () {
       testServer.start(function () {
         // Handler above should get called.
