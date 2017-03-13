@@ -331,7 +331,8 @@ WifiAdvertiser.prototype.start = enqueued(function (router, pskIdToSecret) {
 
   return self._setUpExpressApp(router, pskIdToSecret)
     .then(function () {
-      return self._startPeerAdvertising(self.peer);
+      self._server.setUSN(USN.stringify(self.peer));
+      return self._server.startAsync();
     })
     .then(function () {
       self._isAdvertising = true;
@@ -343,18 +344,6 @@ WifiAdvertiser.prototype.start = enqueued(function (router, pskIdToSecret) {
 });
 
 /**
- * @param {Object} peer
- * @param {string} peer.peerIdentifier
- * @param {number} peer.generation
- * @return {Promise}
- */
-WifiAdvertiser.prototype._startPeerAdvertising = function (peer) {
-  var usn = USN.stringify(peer);
-  this._server.setUSN(usn);
-  return this._server.startAsync();
-};
-
-/**
  * @return {Promise}
  */
 WifiAdvertiser.prototype.update = enqueued(function () {
@@ -364,16 +353,11 @@ WifiAdvertiser.prototype.update = enqueued(function () {
     return Promise.reject(new Error('Call Start!'));
   }
 
-  // We need to restart the server so that a byebye is issued for the old USN
-  // and alive message for the new one.
-  return self._server.stopAsync()
-    .then(function () {
-      self.peer.generation++;
-      return self._startPeerAdvertising(self.peer);
-    })
-    .catch(function (error) {
-      return self._errorStop(error);
-    });
+  // We need to change USN every time a WifiClient changed generation
+  self.peer.generation++; 
+  self._server.setUSN(USN.stringify(self.peer));
+
+  return Promise.resolve();
 });
 
 /**
