@@ -115,6 +115,38 @@ function changeBssid (value) {
   });
 }
 
+function testBssidChangeReaction (context, newBssid, callCount) {
+  var t = context.t;
+  var stubs = context.stubs;
+  // reset call counts
+  stubs.serverStart.reset();
+  stubs.serverStop.reset();
+  stubs.clientStart.reset();
+  stubs.clientStop.reset();
+  return new Promise(function (resolve) {
+    changeBssid(newBssid);
+    // TODO: #1805
+    setTimeout(function () {
+      t.equal(stubs.serverStart.callCount, callCount.start,
+        'server start called ' + callCount.start + ' times');
+      t.equal(stubs.serverStop.callCount, callCount.stop,
+        'server stop called ' + callCount.stop + ' times');
+      t.equal(stubs.clientStart.callCount, callCount.start,
+        'client start called ' + callCount.start + ' times');
+      t.equal(stubs.clientStop.callCount, callCount.stop,
+        'client stop called ' + callCount.stop + ' times');
+      if (callCount.start === 1 && callCount.stop === 1) {
+        t.ok(stubs.serverStop.calledBefore(stubs.serverStart),
+          'server stop called before start');
+        t.ok(stubs.clientStop.calledBefore(stubs.clientStart),
+          'client stop called before start');
+      }
+      resolve();
+    }, 200);
+  });
+}
+
+
 test(
   'ssdp server and client should be restarted when bssid changed',
   function () {
@@ -124,33 +156,14 @@ test(
     var wifiInfrastructure = new ThaliWifiInfrastructure();
     var ssdpServer = wifiInfrastructure._getSSDPServer();
     var ssdpClient = wifiInfrastructure._getSSDPClient();
-    var serverStartStub = sandbox.stub(ssdpServer, 'start', callArg);
-    var serverStopStub = sandbox.stub(ssdpServer, 'stop', callArg);
-    var clientStartStub = sandbox.stub(ssdpClient, 'start', callArg);
-    var clientStopStub = sandbox.stub(ssdpClient, 'stop', callArg);
-
-    function testBssidChangeReaction (newBssid) {
-      // reset call counts
-      serverStartStub.reset();
-      serverStopStub.reset();
-      clientStartStub.reset();
-      clientStopStub.reset();
-      return new Promise(function (resolve) {
-        changeBssid(newBssid);
-        // TODO: #1805
-        setTimeout(function () {
-          t.equal(serverStartStub.callCount, 1, 'server start called once');
-          t.equal(serverStopStub.callCount, 1, 'server stop called once');
-          t.equal(clientStartStub.callCount, 1, 'client start called once');
-          t.equal(clientStopStub.callCount, 1, 'client start called once');
-          t.ok(serverStopStub.calledBefore(serverStartStub),
-            'server stop called before start');
-          t.ok(clientStopStub.calledBefore(clientStartStub),
-            'client stop called before start');
-          resolve();
-        }, 200);
-      });
-    }
+    var stubs = {
+      serverStart: sandbox.stub(ssdpServer, 'start', callArg),
+      serverStop: sandbox.stub(ssdpServer, 'stop', callArg),
+      clientStart: sandbox.stub(ssdpClient, 'start', callArg),
+      clientStop: sandbox.stub(ssdpClient, 'stop', callArg)
+    };
+    var context = { t: t, stubs: stubs };
+    var testBssid = testBssidChangeReaction.bind(null, context);
 
     wifiInfrastructure.start(express.Router(), pskIdToSecret)
       .then(function () {
@@ -161,15 +174,18 @@ test(
       })
       .then(function () {
         // bssid -> null
-        return testBssidChangeReaction(null);
+        var callCount = { stop: 1, start: 0 };
+        return testBssid(null, callCount);
       })
       .then(function () {
         // null -> bssid
-        return testBssidChangeReaction('00:00:00:00:00:00');
+        var callCount = { stop: 0, start: 1 };
+        return testBssid('00:00:00:00:00:00', callCount);
       })
       .then(function () {
         // bssid -> another bssid
-        return testBssidChangeReaction('11:11:11:11:11:11');
+        var callCount = { stop: 1, start: 1 };
+        return testBssid('11:11:11:11:11:11', callCount);
       })
       .then(function () {
         return wifiInfrastructure.stop();
@@ -195,37 +211,27 @@ test(
     var wifiInfrastructure = new ThaliWifiInfrastructure();
     var ssdpServer = wifiInfrastructure._getSSDPServer();
     var ssdpClient = wifiInfrastructure._getSSDPClient();
-    var serverStartStub = sandbox.stub(ssdpServer, 'start', callArg);
-    var serverStopStub = sandbox.stub(ssdpServer, 'stop', callArg);
-    var clientStartStub = sandbox.stub(ssdpClient, 'start', callArg);
-    var clientStopStub = sandbox.stub(ssdpClient, 'stop', callArg);
-
-    function testBssidChangeReaction (newBssid) {
-      return new Promise(function (resolve) {
-        changeBssid(newBssid);
-        // TODO: #1805
-        setTimeout(function () {
-          t.equal(serverStartStub.callCount, 0, 'server start never called');
-          t.equal(serverStopStub.callCount, 0, 'server stop never called');
-          t.equal(clientStartStub.callCount, 0, 'client start never called');
-          t.equal(clientStopStub.callCount, 0, 'client start never called');
-          resolve();
-        }, 200);
-      });
-    }
+    var stubs = {
+      serverStart: sandbox.stub(ssdpServer, 'start', callArg),
+      serverStop: sandbox.stub(ssdpServer, 'stop', callArg),
+      clientStart: sandbox.stub(ssdpClient, 'start', callArg),
+      clientStop: sandbox.stub(ssdpClient, 'stop', callArg)
+    };
+    var context = { t: t, stubs: stubs };
+    var testBssid = testBssidChangeReaction.bind(null, context);
 
     wifiInfrastructure.start(express.Router(), pskIdToSecret)
       .then(function () {
         // bssid -> null
-        return testBssidChangeReaction(null);
+        return testBssid(null, { start: 0, stop: 0 });
       })
       .then(function () {
         // null -> bssid
-        return testBssidChangeReaction('00:00:00:00:00:00');
+        return testBssid('00:00:00:00:00:00', { start: 0, stop: 0 });
       })
       .then(function () {
         // bssid -> another bssid
-        return testBssidChangeReaction('11:11:11:11:11:11');
+        return testBssid('11:11:11:11:11:11', { start: 0, stop: 0 });
       })
       .then(function () {
         return wifiInfrastructure.stop();
