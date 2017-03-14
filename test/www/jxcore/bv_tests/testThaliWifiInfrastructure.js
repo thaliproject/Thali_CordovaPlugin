@@ -992,3 +992,90 @@ function (t) {
   testUtils.toggleWifi(false);
 });
 
+test('SSDP server should not restart after Wifi Client changed generation',
+  function (t) {
+    var advertisingEndSpy =
+      sinon.spy(wifiInfrastructure.advertiser._server, 'stop');
+    wifiInfrastructure.startListeningForAdvertisements()
+      .then(function () {
+        return wifiInfrastructure.startUpdateAdvertisingAndListening();
+      })
+      .then(function () {
+        return wifiInfrastructure.startUpdateAdvertisingAndListening();
+      })
+      .then(function () {
+        t.equals(advertisingEndSpy.callCount, 0, 'SDDP server does not restart');
+      })
+      .catch(function (err) {
+        t.fail(err);
+      })
+      .then(function () {
+        advertisingEndSpy.restore();
+        t.end();
+      });
+  }
+);
+
+test('startUpdateAdvertisingAndListening does not send ssdp:byebye notifications', function (t) {
+  var testClient = new nodessdp.Client({
+    ssdpIp: thaliConfig.SSDP_IP
+  });
+
+  var peerIdentifier = null;
+  var aliveCalled = false;
+  var byeCalled = false;
+  var currentUSN = null;
+  var updatedUSN = null;
+
+  function finishTest() {
+    testClient.stop();
+    t.equals(aliveCalled, true, 'advertise-alive fired');
+    t.equals(byeCalled, false, 'advertise-bye not fired');
+    t.ok(currentUSN.generation < updatedUSN.generation, 'generation must be increased');
+    t.end();
+  }
+
+  testClient.on('advertise-alive', function (data) {
+    // Check for the Thali NT in case there is some other
+    // SSDP traffic in the network.
+    if (data.NT !== thaliConfig.SSDP_NT) {
+      return;
+    }
+
+    var tempUSN = USN.tryParse(data.USN);
+
+    if (peerIdentifier !== tempUSN.peerIdentifier) {
+      return;
+    }
+
+    if (!aliveCalled) {
+      currentUSN = tempUSN;
+      aliveCalled = true;
+      wifiInfrastructure.startUpdateAdvertisingAndListening();
+    } else {
+      updatedUSN = tempUSN;
+      finishTest();
+    }
+    
+  });
+
+  testClient.on('advertise-bye', function (data) {
+    // Check for the Thali NT in case there is some other
+    // SSDP traffic in the network.
+    if (data.NT !== thaliConfig.SSDP_NT) {
+      return;
+    }
+
+    byeCalled = true;
+    finishTest();
+  });
+
+  testClient.start(function () {
+    // This is the first call to the update function after which
+    // some USN value should be advertised.
+    wifiInfrastructure.startUpdateAdvertisingAndListening().then(function () {
+      peerIdentifier = wifiInfrastructure._getCurrentPeer().peerIdentifier;
+    })
+  });
+});
+

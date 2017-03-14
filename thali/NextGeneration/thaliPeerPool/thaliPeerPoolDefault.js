@@ -77,7 +77,7 @@ ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED =
 ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
   if (this._stopped) {
     peerAction.kill();
-    return new Error(ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED);
+    throw new Error(ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED);
   }
 
   // Right now we will just allow everything to run parallel.
@@ -117,6 +117,7 @@ ThaliPeerPoolDefault.prototype.start = function () {
  * kill any actions that this pool has started that haven't already been
  * killed. It will also return errors if any further attempts are made
  * to enqueue.
+ * @return {Promise}
  */
 ThaliPeerPoolDefault.prototype.stop = function () {
   this._stopped = true;
