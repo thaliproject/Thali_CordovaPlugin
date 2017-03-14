@@ -1059,7 +1059,6 @@ function handlePeer (peer) {
       return;
     }
   }
-
   if (peer.peerAvailable) {
     changeCachedPeerAvailable(peer);
   } else {
@@ -1259,8 +1258,12 @@ function changeCachedPeerUnavailable (peer) {
 
 function changeCachedPeerAvailable (peer) {
   var cachedPeer = JSON.parse(JSON.stringify(peer));
-  peerAvailabilities[peer.connectionType][peer.peerIdentifier] = cachedPeer;
+  var peerIdentifier = peer.peerIdentifier;
+  var connectionType = peer.connectionType;
+  peerAvailabilities[connectionType][peerIdentifier] = cachedPeer;
+
   addAvailabilityWatcherToPeerIfNotExist(cachedPeer);
+  emitIfConnectionTypePeersLimitReached(connectionType);
 }
 
 function changePeersUnavailable (connectionType) {
@@ -1484,3 +1487,46 @@ thaliWifiInfrastructure
  * @fires module:thaliMobile.event:discoveryDOS
  */
 module.exports.emitter = new EventEmitter();
+
+var connectionTypePeersLimits = {};
+connectionTypePeersLimits[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] =
+  thaliConfig.MULTI_PEER_CONNECTIVITY_FRAMEWORK_PEERS_LIMIT;
+connectionTypePeersLimits[connectionTypes.BLUETOOTH] =
+  thaliConfig.BLUETOOTH_PEERS_LIMIT;
+connectionTypePeersLimits[connectionTypes.TCP_NATIVE] =
+  thaliConfig.TCP_NATIVE_PEERS_LIMIT;
+
+module.exports.connectionTypePeersLimits = connectionTypePeersLimits;
+
+var emitIfConnectionTypePeersLimitReached = function (connectionType) {
+  var connectionTypePeers = peerAvailabilities[connectionType];
+  var connectionTypePeersCount = Object.keys(connectionTypePeers).length;
+  var peersLimit = connectionTypePeersLimits[connectionType];
+  if (connectionTypePeersCount > peersLimit) {
+    module.exports.emitter
+      .emit(connectionType + 'PeersLimitReached', {
+        limit: peersLimit,
+        count: connectionTypePeersCount
+      });
+  }
+}
+
+var emitDiscoveryDOS = function (dosInfo) {
+  module.exports.emitter.emit('discoveryDOS', dosInfo);
+};
+
+Object.keys(connectionTypes)
+  .forEach(function (key) {
+    var connectionType = connectionTypes[key];
+
+    module.exports.emitter.on(connectionType + 'PeersLimitReached',
+      function (info) {
+        emitDiscoveryDOS({
+          connectionType: connectionType,
+          limit: info.limit,
+          count: info.count
+        });
+      })
+  });
+
+
