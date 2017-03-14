@@ -748,6 +748,13 @@ function (newStatus) {
     }
   }
 
+  if (connectedToAP || changedAP) {
+    // TODO: advertiser should provide API to update its advertising hostname or
+    // it should handle network changes itself
+    this.advertiser.routerServerAddress = ip.address();
+    this.advertiser._updateLocation();
+  }
+
   Promise.all(actionResults).then(function (results) {
     results.forEach(function (result) {
       if (result) {
