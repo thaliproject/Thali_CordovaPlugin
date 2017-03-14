@@ -149,7 +149,7 @@ function addFramework(
       console.log('Checkouting done!');
 
       var checkoutDir = path.join(frameworkOutputDir, 'Carthage', 'Checkouts');
-      var buildDir = path.join(frameworkOutputDir, 'Carthage', 'Build');
+      var buildDir = path.join(checkoutDir, 'thali-ios', 'Carthage', 'Build');
       console.log('checkout dir is ' + checkoutDir);
       console.log('build dir is ' + buildDir);
 
@@ -159,7 +159,7 @@ function addFramework(
       console.log('Building CocoaAsyncSocket done!');
 
       var checkoutDir = path.join(frameworkOutputDir, 'Carthage', 'Checkouts');
-      var buildDir = path.join(frameworkOutputDir, 'Carthage', 'Build');
+      var buildDir = path.join(checkoutDir, 'thali-ios', 'Carthage', 'Build');
       console.log('checkout dir is ' + checkoutDir);
       console.log('build dir is ' + buildDir);
 
