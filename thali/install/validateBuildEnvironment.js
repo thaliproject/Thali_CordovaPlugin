@@ -207,8 +207,13 @@ const commandsAndResults =
       (result, version) => boolToPromise(version === result.trim())
   },
   carthage: {
+    // We can run into the situation when carthage proposes new updates
+    // In this case output is similar to:
+    //  *** Please update to the latest Carthage version: 0.20.1. You currently are on 0.20.0
+    //  0.20.0
+    // This is why we're reading only the last line from output
     platform: ['darwin'],
-    versionCheck: 'carthage version',
+    versionCheck: 'carthage version | tail -n 1',
     versionValidate:
       (result, version) => boolToPromise(version === result.trim())
   },
