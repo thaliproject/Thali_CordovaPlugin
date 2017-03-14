@@ -206,12 +206,12 @@ const commandsAndResults =
     versionValidate:
       (result, version) => boolToPromise(version === result.trim())
   },
-  carthage: {
+/*  carthage: {
     platform: ['darwin'],
     versionCheck: 'carthage version',
     versionValidate:
       (result, version) => boolToPromise(version === result.trim())
-  },
+  },*/
   sinopiaNode: {
     versionCheck: 'npm get registry',
     versionValidate:
