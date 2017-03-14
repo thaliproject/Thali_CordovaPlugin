@@ -19,9 +19,9 @@ trap 'log_error $LINENO' ERR
 cd `dirname $0`
 cd ../..
 REPO_ROOT_DIR=$(pwd)
-PROJECT_NAME=${TEST_PROJECT_NAME:-ThaliTest}
+PROJECT_NAME=${THALI_TEST_PROJECT_NAME:-ThaliTest}
 PROJECT_ROOT_DIR=${REPO_ROOT_DIR}/../${PROJECT_NAME}
-PROJECT_ID=${TEST_PROJECT_ID:-com.thaliproject.thalitest}
+PROJECT_ID=${THALI_TEST_PROJECT_ID:-com.thaliproject.thalitest}
 
 # Prepares test project
 prepare_project()
