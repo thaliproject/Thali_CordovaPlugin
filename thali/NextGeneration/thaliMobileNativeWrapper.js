@@ -811,14 +811,18 @@ module.exports._terminateListener = function (peerIdentifier, port) {
     return Promise.reject(new Error('Not connect platform'));
   }
   return gPromiseQueue.enqueue(function (resolve, reject) {
-    gServersManager.terminateOutgoingConnection(peerIdentifier, port)
-    .then(function () {
-      delete peerGenerations[peerIdentifier];
-      resolve();
-    })
-    .catch(function (error) {
-      reject(error);
-    });
+    if(gServersManager !== null) {
+      gServersManager.terminateOutgoingConnection(peerIdentifier, port)
+        .then(function () {
+          delete peerGenerations[peerIdentifier];
+          resolve();
+        })
+        .catch(function (error) {
+          reject(error);
+        });
+      } else {
+        resolve();
+      }
   });
 };
 
