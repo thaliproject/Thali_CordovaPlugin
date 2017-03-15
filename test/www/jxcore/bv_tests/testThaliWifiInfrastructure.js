@@ -723,7 +723,7 @@ test(
     return !platform.isAndroid
   },
   function (t) {
-    var peerIdentifier = 'urn:uuid:' + uuid.v4();
+    var peerIdentifier = uuid.v4();
     var portNumber = 8080;
     var generation = 50;
 
@@ -783,7 +783,7 @@ test(
 );
 
 test('#stop should clear watchers', function (t) {
- var somePeerIdentifier = 'urn:uuid:' + uuid.v4();
+ var somePeerIdentifier = uuid.v4();
 
   wifiInfrastructure.startListeningForAdvertisements()
     .then(function () {
