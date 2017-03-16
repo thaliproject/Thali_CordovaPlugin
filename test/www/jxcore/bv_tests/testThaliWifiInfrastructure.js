@@ -719,9 +719,6 @@ test('functions are run from a queue in the right order', function (t) {
 test(
   'Discovered peer should be removed if no availability updates ' +
   'were received during availability timeout',
-  function () {
-    return !platform.isAndroid
-  },
   function (t) {
     var peerIdentifier = uuid.v4();
     var portNumber = 8080;
@@ -750,8 +747,9 @@ test(
           if (peer.peerIdentifier !== peerIdentifier) {
             return;
           }
-
-          t.notOk((peer.portNumber === null && peer.hostAddress === null), 'Peer should not be available');
+          //peer should not be available
+          t.equal(peer.portNumber, null, 'port is null');
+          t.equal(peer.hostAddress, null, 'host is null');
 
           wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged',
             unavailabilityHandler);
@@ -769,10 +767,10 @@ test(
         'wifiPeerAvailabilityChanged',
         {
           peerIdentifier: peerIdentifier,
-          peerAvailable: true,
           generation: generation,
           portNumber: portNumber,
-          hostAddress: '127.0.0.1'
+          hostAddress: '127.0.0.1',
+          availableSince: Date.now()
         }
       );
     })
@@ -856,7 +854,6 @@ test('wifi peer is marked unavailable if announcements stop',
         peerAvailable = false;
       if (spy.calledOnce) {
         t.equal(peerAvailable, true, 'peer should be available');
-        testServer.stop();
       } else if (spy.calledTwice) {
         t.equal(peerAvailable, false, 'peer should become unavailable');
 

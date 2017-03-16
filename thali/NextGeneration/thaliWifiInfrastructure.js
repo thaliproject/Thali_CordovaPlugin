@@ -760,7 +760,7 @@ function (networkStatus) {
 
 ThaliWifiInfrastructure.prototype._hadlePeerAvailabilityWatchers =
 function (peer) {
-  if (peer.peerAvailable) {
+  if (Boolean(peer.hostAddress && peer.portNumber)) {
     this._addAvailabilityWatcherToPeerIfNotExist(peer);
   } else {
     this._removeAvailabilityWatcherFromPeerIfExists(peer);
@@ -817,7 +817,6 @@ function (peer) {
     if (!this._isAvailabilityWatcherForPeerExist(peer)) {
       return;
     }
-
     var peerIdentifier = peer.peerIdentifier;
 
     var interval = this.peerAvailabilityWatchers[peerIdentifier];
