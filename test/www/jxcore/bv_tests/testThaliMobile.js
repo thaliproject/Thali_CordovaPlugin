@@ -2213,6 +2213,41 @@ test('does not fire duplicate events after peer listener recreation',
   }
 );
 
+test('needs clean up native Android peer listeners when it declares a peer unavailable',
+  function () {
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
+  },
+  function (t) {
+    var nativePeer = generateLowerLevelPeers().nativePeer;
+
+    var availabilityHandler = function (peerStatus) {
+      if (peerStatus.peerIdentifier !== nativePeer.peerIdentifier) {
+        return;
+      }
+      ThaliMobile.emitter
+        .removeListener('peerAvailabilityChanged', availabilityHandler);
+
+      var nativeDisconnectSpy =
+        sinon.spy(ThaliMobile, 'disconnect');
+
+      ThaliMobile.stop().then(function () {
+        t.equal(nativeDisconnectSpy.callCount, 1,
+          'native wrapper `disconnect` called');
+      })
+      .then(function () {
+        nativeDisconnectSpy.restore();
+        t.end();
+      });
+    };
+
+    ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
+
+    ThaliMobile.start(express.Router()).then(function () {
+      emitNativePeerAvailability(nativePeer);
+    });
+  }
+);
+
 if (!tape.coordinated) {
   return;
 }
