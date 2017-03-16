@@ -108,16 +108,16 @@ function updateProjectFrameworks(
   // Add the frameworks again.
   // This time they will have the code-sign option set
   // so they get code signed when being deployed to devices.
-  if (buildWithTests) {
-    console.log('Adding XCTest.framework');
-    var xcTestFrameworkPath = '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework';
-    // '/Applications/Xcode.app/Contents/Developer/Platforms/
-    // iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest
-    // .framework';
-    xcodeProject.addFramework(
-      xcTestFrameworkPath,
-      {customFramework: true, embed: true, link: true, sign: true});
-  }
+  // if (buildWithTests) {
+  //   console.log('Adding XCTest.framework');
+  //   var xcTestFrameworkPath = '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework';
+  //   // '/Applications/Xcode.app/Contents/Developer/Platforms/
+  //   // iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest
+  //   // .framework';
+  //   xcodeProject.addFramework(
+  //     xcTestFrameworkPath,
+  //     {customFramework: true, embed: true, link: true, sign: true});
+  // }
 }
 
 function updateProjectTestingInfrastructure(
