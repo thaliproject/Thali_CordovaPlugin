@@ -808,6 +808,9 @@ module.exports.disconnect = function (peerIdentifier, portNumber) {
  * @returns {Promise<?error>}
  */
 module.exports._terminateListener = function (peerIdentifier, port) {
+  if (platform.isIOS) {
+    return Promise.reject(new Error('Not connect platform'));
+  }
   return gPromiseQueue.enqueue(function (resolve, reject) {
     gServersManager.terminateOutgoingConnection(peerIdentifier, port)
     .then(function () {
