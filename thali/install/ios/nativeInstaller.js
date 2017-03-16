@@ -224,6 +224,11 @@ function biuldCocoaAsyncSocket(checkoutDir, buildDir, buildWithTests) {
   var projectScheme = 'iOS Framework';
 
   var projectConfiguration = 'Release';
+
+  if (buildWithTests) {
+    projectConfiguration = 'Debug';
+  }
+
   var sdk = 'iphoneos';
   var projectPath = path.join(checkoutDir, projectDir, projectName + '.xcodeproj');
   var buildDir = path.join(buildDir, projectName);
