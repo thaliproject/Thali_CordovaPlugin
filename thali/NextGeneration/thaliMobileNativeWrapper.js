@@ -754,18 +754,13 @@ module.exports._terminateConnection = function (incomingConnectionId) {
 module.exports._disconnect = function (peerIdentifier) {
   return gPromiseQueue
     .enqueue(function (resolve, reject) {
-      if (platform.isAndroid) {
-        return reject(new Error('Not multiConnect platform'));
-      }
-      if (platform.isIOS) {
-        Mobile('disconnect')
-          .callNative(function (errorMsg) {
-            if (errorMsg) {
-              return reject(new Error(errorMsg));
-            }
-            resolve();
-          });
-      }
+      Mobile('disconnect')
+        .callNative(function (errorMsg) {
+          if (errorMsg) {
+            return reject(new Error(errorMsg));
+          }
+          resolve();
+        });
     });
 };
 
@@ -813,9 +808,6 @@ module.exports.disconnect = function (peerIdentifier, portNumber) {
  * @returns {Promise<?error>}
  */
 module.exports._terminateListener = function (peerIdentifier, port) {
-  if (platform.isIOS) {
-    return Promise.reject(new Error('Not connect platform'));
-  }
   return gPromiseQueue.enqueue(function (resolve, reject) {
     gServersManager.terminateOutgoingConnection(peerIdentifier, port)
     .then(function () {
