@@ -303,6 +303,7 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
     ' -configuration ' + projectConfiguration +
     ' -sdk ' + sdk +
     ' ONLY_ACTIVE_ARCH=NO ' +
+    ' IPHONEOS_DEPLOYMENT_TARGET=10.0' +
     ' BUILD_DIR=' + '\"' + buildDir + '\"' +
     ' clean build';
 
