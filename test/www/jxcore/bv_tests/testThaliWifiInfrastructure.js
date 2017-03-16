@@ -781,7 +781,7 @@ test(
 );
 
 test('#stop should clear watchers', function (t) {
- var somePeerIdentifier = uuid.v4();
+  var somePeerIdentifier = uuid.v4();
 
   wifiInfrastructure.startListeningForAdvertisements()
     .then(function () {
@@ -1053,7 +1053,7 @@ test('startUpdateAdvertisingAndListening does not send ssdp:byebye notifications
       updatedUSN = tempUSN;
       finishTest();
     }
-    
+
   });
 
   testClient.on('advertise-bye', function (data) {

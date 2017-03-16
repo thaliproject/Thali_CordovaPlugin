@@ -355,7 +355,7 @@ WifiAdvertiser.prototype.update = enqueued(function () {
   }
 
   // We need to change USN every time a WifiClient changed generation
-  self.peer.generation++; 
+  self.peer.generation++;
   self._server.setUSN(USN.stringify(self.peer));
 
   return Promise.resolve();
@@ -658,7 +658,7 @@ function ThaliWifiInfrastructure() {
 
 
   this.peerAvailabilityWatchers = {};
-  
+
   this._setUpEvents();
 }
 
@@ -778,9 +778,6 @@ function (peer) {
 
 ThaliWifiInfrastructure.prototype._watchForPeerAvailability =
 function (peer) {
-  var peerIdentifier = peer.peerIdentifier;
-  var connectionType = peer.connectionType;
-
   var now = Date.now();
   var unavailabilityThreshold =
     thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
@@ -792,7 +789,12 @@ function (peer) {
   }
 
   this._removeAvailabilityWatcherFromPeerIfExists(peer);
-  this.emit('wifiPeerAvailabilityChanged', peer);
+  this.emit('wifiPeerAvailabilityChanged', {
+    peerIdentifier: peer.peerIdentifier,
+    generation: null,
+    portNumber: null,
+    hostAddress: null
+  });
 };
 
 
@@ -814,15 +816,15 @@ function (peer) {
 
 ThaliWifiInfrastructure.prototype._removeAvailabilityWatcherFromPeerIfExists =
 function (peer) {
-    if (!this._isAvailabilityWatcherForPeerExist(peer)) {
-      return;
-    }
-    var peerIdentifier = peer.peerIdentifier;
+  if (!this._isAvailabilityWatcherForPeerExist(peer)) {
+    return;
+  }
+  var peerIdentifier = peer.peerIdentifier;
 
-    var interval = this.peerAvailabilityWatchers[peerIdentifier];
+  var interval = this.peerAvailabilityWatchers[peerIdentifier];
 
-    clearInterval(interval);
-    delete this.peerAvailabilityWatchers[peerIdentifier];
+  clearInterval(interval);
+  delete this.peerAvailabilityWatchers[peerIdentifier];
 };
 
 
