@@ -285,11 +285,13 @@ function biuldSwiftXCTest(checkoutDir, buildDir, buildWithTests) {
 function buildFramework(projectDir, outputDir, buildWithTests) {
   var projectName = 'ThaliCore';
   var projectScheme = 'ThaliCore';
+  var projectConfiguration = 'Release';
+
   if (buildWithTests) {
     projectScheme = 'ThaliCoreCITests';
+    projectConfiguration = 'Debug';
   }
 
-  var projectConfiguration = 'Debug';
   var sdk = 'iphoneos';
   var projectPath = path.join(projectDir, projectName + '.xcodeproj');
   var buildDir = path.join(projectDir, 'build');
