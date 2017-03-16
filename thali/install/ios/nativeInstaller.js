@@ -250,6 +250,17 @@ function biuldCocoaAsyncSocket(checkoutDir, buildDir, buildWithTests) {
     .then(function () {
       return fs.ensureDir(buildDir);
     })
+    .then(function () {
+      var frameworkBuildDir = path.join(
+        buildDir, projectConfiguration + '-' + sdk, projectName + '.framework');
+      var frameworkOutputDir = path.join(
+        buildDir, 'Release' + '-' + sdk, projectName + '.framework');
+
+      console.log('copy from ' + frameworkBuildDir);
+      console.log('copy to ' + frameworkOutputDir);
+
+      return fs.copy(frameworkBuildDir, frameworkOutputDir, { clobber: false });
+    });
 }
 
 function biuldSwiftXCTest(checkoutDir, buildDir, buildWithTests) {
