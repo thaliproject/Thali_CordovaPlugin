@@ -8,7 +8,9 @@ if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
 }
 
 var net = require('net');
+var tls = require('tls');
 var randomString = require('randomstring');
+var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var tape = require('../lib/thaliTape');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var Promise = require('lie');
@@ -337,23 +339,26 @@ function findPeerAndConnect(advertisingPort) {
   });
 }
 
-function netConnect(port) {
-  return new Promise(function (resolve, reject) {
+function connect(module, options) {
+  var client;
+  var promise;
+  promise = new Promise(function (resolve, reject) {
     var connectErrorHandler = function (error) {
       console.log('Connection to the %d port on localhost failed: %s',
-        port, error.stack);
+        options.port, error.stack);
       reject(error);
     };
-    var client = net.connect(port, function () {
+    client = module.connect(options, function () {
       client.removeListener('error', connectErrorHandler);
-      console.log('Connected to the %d port on localhost', port);
+      console.log('Connected to the %d port on localhost', options.port);
       resolve(client);
     });
     client.once('error', connectErrorHandler);
   });
+  return { client: client, promise: promise };
 }
 
-test('Can shift some data', function (t) {
+test('Can shift data', function (t) {
   var exchangeData = 'small amount of data';
 
   var formatPrintableData = function (data) {
@@ -427,7 +432,122 @@ test('Can shift some data', function (t) {
     findPeerAndConnect(port).then(function (info) {
       console.log('Native connection established. Peer:', info.peer);
       var nativePort = info.connection.listeningPort;
-      return netConnect(nativePort);
+      console.log('Connecting to the %d port on localhost', nativePort);
+      return connect(net, { port: nativePort }).promise;
+    }).then(function (socket) {
+      shiftData(socket);
+    });
+  });
+});
+
+test('Can shift data securely', function (t) {
+  var exchangeData = 'small amount of data';
+
+  var formatPrintableData = function (data) {
+    var ellipsis = data.length > 40 ? '...' : '';
+    return '<' + data.slice(0, 40) + ellipsis + '>';
+  };
+
+  var pskKey = new Buffer('psk-key');
+  var pskId = 'psk-id';
+
+  var options = {
+    ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+    pskCallback: function (id) {
+      console.log('Server received psk id: %s', pskId);
+      return id === pskId ? pskKey : null;
+    }
+  };
+
+  var server = tls.createServer(options, function (socket) {
+    var ended = false;
+    var buffer = '';
+    socket.on('data', function (chunk) {
+      buffer += chunk.toString();
+      console.log('Server received (%d bytes): %s',
+        chunk.length, formatPrintableData(chunk.toString()));
+
+      // when received all data, send it back
+      if (buffer.length === exchangeData.length) {
+        console.log('Server received all data: %s',
+          formatPrintableData(buffer.toString()));
+        var rawData = new Buffer(buffer);
+        console.log('Server sends data back to client (%d bytes): %s',
+          rawData.length, formatPrintableData(buffer));
+        socket.write(rawData, function () {
+          console.log('Server data flushed');
+        });
+        ended = true;
+        socket.end(function () {
+          console.log('Server\'s socket stream finished');
+        });
+      }
+    });
+    socket.on('end', function () {
+      // server ends connection, not client
+      if (!ended) {
+        t.fail(new Error('Unexpected end event'));
+      }
+    });
+    socket.on('error', function (error) {
+      t.fail(error.message);
+    });
+  });
+  server = makeIntoCloseAllServer(server);
+  serverToBeClosed = server;
+
+  function shiftData(sock) {
+    sock.on('error', function (error) {
+      console.log('Client socket error:', error.message, error.stack);
+      t.fail(error.message);
+    });
+
+
+    var receivedData = '';
+    sock.on('data', function (chunk) {
+      receivedData += chunk.toString();
+    });
+    sock.on('end', function () {
+      t.equal(receivedData, exchangeData, 'got the same data back');
+      t.end();
+    });
+
+    var rawData = new Buffer(exchangeData);
+    console.log('Client sends data (%d bytes): %s',
+      rawData.length, formatPrintableData(exchangeData));
+    sock.write(rawData, function () {
+      console.log('Client data flushed');
+    });
+  }
+
+  server.listen(0, function () {
+    var port = server.address().port;
+    findPeerAndConnect(port).then(function (info) {
+      console.log('Native connection established. Peer:', info.peer);
+      var nativePort = info.connection.listeningPort;
+      console.log('Connecting to the %d port on localhost', nativePort);
+      var pair = connect(tls, {
+        port: nativePort,
+        ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+        pskIdentity: pskId,
+        pskKey: pskKey,
+      });
+
+      // get net.Socket that transfers encrypted data
+      var socket = pair.client.socket;
+      socket.on('data', function (chunk) {
+        console.log('TLS socket received %d bytes', chunk.length);
+      });
+      var w = socket.write;
+      socket.write = function (data, encoding) {
+        var length = (typeof data === 'string') ?
+          new Buffer(data, encoding).length :
+          data.length;
+
+        console.log('TLS socket sends %d bytes', length);
+        return w.apply(this, arguments);
+      };
+      return pair.promise;
     }).then(function (socket) {
       shiftData(socket);
     });
