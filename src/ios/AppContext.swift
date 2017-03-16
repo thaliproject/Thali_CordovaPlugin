@@ -197,11 +197,11 @@ extension PeerAvailability {
     wifiState = wifiEnabled ? .on : .off
 
     let bssid = ((wifiState == .on) && wifiConnected)
-                ? networkReachability.BSSID()
-                : NSNull()
+                ? networkReachability.bssid()
+                : nil
     let ssid = ((wifiState == .on) && wifiConnected)
-                ? networkReachability.SSID()
-                : NSNull()
+                ? networkReachability.ssid()
+                : nil
 
     let networkStatus = [
       NetworkStatusParameters.wifi.rawValue                : wifiState.rawValue,
@@ -212,7 +212,7 @@ extension PeerAvailability {
       NetworkStatusParameters.ssid.rawValue                : ssid
     ]
 
-    delegate?.context(self, didChangeNetworkStatus: jsonValue(networkStatus))
+    delegate?.context(self, didChangeNetworkStatus: jsonValue(networkStatus as AnyObject))
   }
 
   fileprivate func handleWillEnterBackground() {
@@ -248,11 +248,11 @@ extension PeerAvailability {
 
   fileprivate func handleMultiConnectResolved(withSyncValue value: String, port: UInt16?,
                                                         error: Error?) {
-    let errorValue = error != nil ? errorDescription(error!) : NSNull()
-    let listeningPort = port != nil ? NSNumber(value: port! as UInt16) : NSNull()
+    let errorValue = error != nil ? errorDescription(error!) : nil
+    let listeningPort = port != nil ? NSNumber(value: port! as UInt16) : nil
     delegate?.context(self,
                       didResolveMultiConnectWithSyncValue: value,
-                      error: errorValue,
+                      error: errorValue as NSObject?,
                       listeningPort: listeningPort)
   }
 
@@ -260,9 +260,9 @@ extension PeerAvailability {
                                                                   error: Error?) {
     let parameters = [
       "peerIdentifier" : identifier,
-      "error" : error != nil ? errorDescription(error!) : NSNull()
+      "error" : error != nil ? errorDescription(error!) : nil
     ]
-    delegate?.context(self, didFailMultiConnectConnectionWith: jsonValue(parameters))
+    delegate?.context(self, didFailMultiConnectConnectionWith: jsonValue(parameters as AnyObject))
   }
 
   public init(serviceType: String) {
@@ -281,8 +281,7 @@ extension PeerAvailability {
     #if TEST
       // We use background queue because CI tests use main_queue synchronously
       // Otherwise we won't be able to get centralManager state.
-      let centralManagerDispatchQueue =
-        dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0)
+      let centralManagerDispatchQueue = DispatchQueue.global()
     #else
       let centralManagerDispatchQueue: DispatchQueue? = nil
     #endif
@@ -383,7 +382,7 @@ extension PeerAvailability {
   }
 
   public func connect(_ parameters: [AnyObject]) -> String {
-    return jsonValue([JSONKey.err.rawValue : AppContextError.connectNotSupported.description])
+    return jsonValue([JSONKey.err.rawValue : AppContextError.connectNotSupported.description] as AnyObject)
   }
 }
 
@@ -396,8 +395,8 @@ extension AppContext: CBCentralManagerDelegate {
       bluetoothState = .on
       bluetoothLowEnergyState = .on
       #if TEST
-        NSNotificationCenter.defaultCenter().postNotificationName(
-          Constants.NSNotificationName.centralBluetoothManagerDidChangeState,
+        NotificationCenter.default.post(
+          name: NSNotification.Name(rawValue: Constants.NSNotificationName.centralBluetoothManagerDidChangeState),
           object: self
         )
       #endif
@@ -405,8 +404,8 @@ extension AppContext: CBCentralManagerDelegate {
       bluetoothState = .off
       bluetoothLowEnergyState = .off
       #if TEST
-        NSNotificationCenter.defaultCenter().postNotificationName(
-          Constants.NSNotificationName.centralBluetoothManagerDidChangeState,
+        NotificationCenter.default.post(
+          name: NSNotification.Name(rawValue: Constants.NSNotificationName.centralBluetoothManagerDidChangeState),
           object: self
         )
       #endif
