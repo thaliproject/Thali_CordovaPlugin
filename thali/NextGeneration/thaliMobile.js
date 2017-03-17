@@ -1254,6 +1254,7 @@ function removeAllAvailabilityWatchersFromPeers () {
 
 function changeCachedPeerUnavailable (peer) {
   removeAvailabilityWatcherFromPeerIfExists(peer);
+  module.exports.disconnect(peer.peerIdentifier, peer.portNumber);
   delete peerAvailabilities[peer.connectionType][peer.peerIdentifier];
 }
 
