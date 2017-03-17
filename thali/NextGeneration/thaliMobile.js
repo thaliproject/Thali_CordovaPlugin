@@ -12,7 +12,6 @@ var connectionTypes = ThaliMobileNativeWrapper.connectionTypes;
 
 var ThaliWifiInfrastructure = require('./thaliWifiInfrastructure');
 var thaliWifiInfrastructure = new ThaliWifiInfrastructure();
-var _this = this;
 
 /**
  * for testing purposes
@@ -1255,7 +1254,7 @@ function removeAllAvailabilityWatchersFromPeers () {
 
 function changeCachedPeerUnavailable (peer) {
   removeAvailabilityWatcherFromPeerIfExists(peer);
-  _this.disconnect(peer.peerIdentifier, peer.portNumber);
+  module.exports.disconnect(peer.peerIdentifier, peer.portNumber);
   delete peerAvailabilities[peer.connectionType][peer.peerIdentifier];
 }
 

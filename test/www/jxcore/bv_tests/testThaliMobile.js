@@ -2213,7 +2213,7 @@ test('does not fire duplicate events after peer listener recreation',
   }
 );
 
-test('needs clean up native Android peer listeners when it declares a peer unavailable',
+test('needs clean up native Android peer listeners when it #stop called',
   function () {
     return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
   },
@@ -2232,7 +2232,7 @@ test('needs clean up native Android peer listeners when it declares a peer unava
 
       ThaliMobile.stop().then(function () {
         t.equal(nativeDisconnectSpy.callCount, 1,
-          'native wrapper `disconnect` called');
+          '`disconnect` called');
       })
       .then(function () {
         nativeDisconnectSpy.restore();
@@ -2241,6 +2241,61 @@ test('needs clean up native Android peer listeners when it declares a peer unava
     };
 
     ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
+
+    ThaliMobile.start(express.Router()).then(function () {
+      emitNativePeerAvailability(nativePeer);
+    });
+  }
+);
+
+test('needs clean up native Android peer listeners when it declares a peer unavailable',
+  function () {
+    return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
+  },
+  function (t) {
+    var nativePeer = generateLowerLevelPeers().nativePeer;
+    var callCount = 0;
+    var nativeDisconnectSpy =
+        sinon.spy(ThaliMobile, 'disconnect');
+
+    var availabilityHandler = function (peerStatus) {
+      if (peerStatus.peerIdentifier !== nativePeer.peerIdentifier) {
+        return;
+      }
+      callCount++;
+
+      switch (callCount) {
+        case 1:
+          t.equal(peerStatus.peerAvailable, true,
+            'peer should be available');
+          nativePeer.peerAvailable = false;
+          emitNativePeerAvailability(nativePeer);
+          break;
+        case 2:
+          t.equal(peerStatus.peerAvailable, false,
+            'peer should be unavailable');
+          t.equal(nativeDisconnectSpy.callCount, 1,
+          'native wrapper `disconnect` called');
+          t.ok(nativeDisconnectSpy.calledWithExactly(
+            nativePeer.peerIdentifier,
+            nativePeer.portNumber
+          ), '`disconnect` called with peer data');
+          setImmediate(end);
+          break;
+        default:
+          t.fail('should not be called more than twice');
+          break;
+      }
+    };
+
+    ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
+
+    function end() {
+      ThaliMobile.emitter
+        .removeListener('peerAvailabilityChanged', availabilityHandler);
+      nativeDisconnectSpy.restore();
+      t.end();
+    }
 
     ThaliMobile.start(express.Router()).then(function () {
       emitNativePeerAvailability(nativePeer);
