@@ -23,13 +23,16 @@ var net = require('net');
 var radioState = ThaliMobileNative.radioState;
 var connectionTypes = ThaliMobileNativeWrapper.connectionTypes;
 var verifyCombinedResultSuccess = testUtils.verifyCombinedResultSuccess;
+var sandbox;
 
 var test = tape({
   setup: function (t) {
+    sandbox = sinon.sandbox.create();
     t.notOk(ThaliMobile.isStarted(), 'ThaliMobile should be stopped');
     t.end();
   },
   teardown: function (t) {
+    sandbox.restore();
     ThaliMobile.stop()
     .then(function (combinedResult) {
       verifyCombinedResultSuccess(t, combinedResult);
@@ -230,7 +233,6 @@ test('#start subscribes to the WiFi infrastructure events and #stop ' +
     return true;
   },
   function (t) {
-    var sandbox = sinon.sandbox.create();
     var wifiEmitter = ThaliMobile._getThaliWifiInfrastructure();
     var nativeEmitter = ThaliMobileNativeWrapper.emitter;
 
@@ -275,7 +277,6 @@ test('#start subscribes to the WiFi infrastructure events and #stop ' +
     })
     .catch(t.fail)
     .then(function () {
-      sandbox.restore();
       t.end();
     });
   }
