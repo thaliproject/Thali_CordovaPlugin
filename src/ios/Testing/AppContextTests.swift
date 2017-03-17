@@ -9,7 +9,6 @@
 
 import SwiftXCTest
 import ThaliCore
-import ThaliCoreCITests
 import UIKit
 
 // MARK: - Random string generator

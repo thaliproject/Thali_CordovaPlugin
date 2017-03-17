@@ -10,7 +10,6 @@
 import Foundation
 import SwiftXCTest
 import ThaliCore
-import ThaliCoreCITests
 
 extension AppContext: TestRunnerProtocol {
 
