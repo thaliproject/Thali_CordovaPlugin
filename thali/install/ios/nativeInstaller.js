@@ -313,6 +313,14 @@ function biuldCocoaAsyncSocket(checkoutDir, buildDir, buildWithTests) {
         buildDir, 'Release' + '-' + sdk, projectName + '.framework');
 
       return fs.copy(frameworkBuildDir, frameworkOutputDir, { clobber: false });
+    })
+    .then(function () {
+      var frameworkBuildDir = path.join(
+        buildDir, projectConfiguration + '-' + sdk, projectName + '.framework');
+      var thaliCoreFrameworkOutputDir = path.join(
+        checkoutDir, '..', '..', projectName + '.framework');
+
+      return fs.copy(frameworkBuildDir, thaliCoreFrameworkOutputDir, { clobber: false });
     });
 }
 
@@ -320,6 +328,7 @@ function biuldSwiftXCTest(checkoutDir, buildDir, buildWithTests) {
   var projectDir = 'swift-corelibs-xctest';
   var projectName = 'XCTest'
   var projectScheme = 'SwiftXCTest-iOS';
+  var frameworkName = 'SwiftXCTest';
 
   var projectConfiguration = 'Release';
   var sdk = 'iphoneos';
@@ -343,6 +352,17 @@ function biuldSwiftXCTest(checkoutDir, buildDir, buildWithTests) {
     .then(function () {
       return fs.ensureDir(buildDir);
     })
+    .then(function () {
+      var frameworkBuildDir = path.join(
+        buildDir, projectConfiguration + '-' + sdk, frameworkName + '.framework');
+      var thaliCoreFrameworkOutputDir = path.join(
+        checkoutDir, '..', '..', frameworkName + '.framework');
+
+      console.log('from: ', frameworkBuildDir);
+      console.log('to : ', thaliCoreFrameworkOutputDir);
+
+      return fs.copy(frameworkBuildDir, thaliCoreFrameworkOutputDir, { clobber: false });
+    });
 }
 
 /**
