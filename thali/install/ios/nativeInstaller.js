@@ -150,18 +150,15 @@ function addFramework(
 
       var checkoutDir = path.join(frameworkOutputDir, 'Carthage', 'Checkouts');
       var buildDir = path.join(checkoutDir, 'thali-ios', 'Carthage', 'Build');
-      console.log('checkout dir is ' + checkoutDir);
-      console.log('build dir is ' + buildDir);
 
+      console.log('Building CocoaAsyncSocket.framework');
       return biuldCocoaAsyncSocket(checkoutDir, buildDir, buildWithTests)
     })
     .then (function () {
-      console.log('Building CocoaAsyncSocket done!');
+      console.log('Building CocoaAsyncSocket.framework has been finished');
 
       var checkoutDir = path.join(frameworkOutputDir, 'Carthage', 'Checkouts');
       var buildDir = path.join(checkoutDir, 'thali-ios', 'Carthage', 'Build');
-      console.log('checkout dir is ' + checkoutDir);
-      console.log('build dir is ' + buildDir);
 
       return biuldSwiftXCTest(checkoutDir, buildDir, buildWithTests)
     })
@@ -226,6 +223,7 @@ function biuldCocoaAsyncSocket(checkoutDir, buildDir, buildWithTests) {
   var projectConfiguration = 'Release';
 
   if (buildWithTests) {
+    console.log('Building in debug mode');
     projectConfiguration = 'Debug';
   }
 
@@ -255,9 +253,6 @@ function biuldCocoaAsyncSocket(checkoutDir, buildDir, buildWithTests) {
         buildDir, projectConfiguration + '-' + sdk, projectName + '.framework');
       var frameworkOutputDir = path.join(
         buildDir, 'Release' + '-' + sdk, projectName + '.framework');
-
-      console.log('copy from ' + frameworkBuildDir);
-      console.log('copy to ' + frameworkOutputDir);
 
       return fs.copy(frameworkBuildDir, frameworkOutputDir, { clobber: false });
     });
@@ -304,6 +299,7 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
   var projectConfiguration = 'Release';
 
   if (buildWithTests) {
+    console.log('Building in debug mode');
     projectScheme = 'ThaliCoreCITests';
     projectConfiguration = 'Debug';
   }
@@ -324,10 +320,12 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
     ' clean build';
 
   console.log('Building ThaliCore.framework');
+  console.log('Build command:\n' + buildCmd);
 
   // todo: fixed buffer size should be fixed with streaming in #1001
   return exec(buildCmd, { maxBuffer: 10*1024*1024 } )
     .then(function () {
+      console.log('Building ThaliCore.framework has been finished');
       return fs.ensureDir(outputDir);
     })
     .then(function () {
