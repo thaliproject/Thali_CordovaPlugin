@@ -130,6 +130,86 @@ test('Can call stopUpdateAdvertisingAndListening twice without start and ' +
   });
 });
 
+function pad(s) { return ('0'+s).slice(-2); }
+function pb(b) {
+  var result = 'Buffer <';
+  var l = b.length;
+  for (var i = 0; i < l; i++) {
+    if (i) { result += ' '; }
+    result += pad(b[i].toString(16));
+  }
+  return result + '>';
+}
+
+function createProxyServer(port, tag, reverse) {
+  var log = console.log.bind(console, tag);
+  var f = require('util').format;
+  var SEND = reverse ? '←' : '→';
+  var RECV = reverse ? '→' : '←';
+  var server = net.createServer(function (incomingSocket) {
+    var outgoingSocket = net.connect(port);
+    outgoingSocket.on('error', function (error) {
+      console.log('OUTGOING SOCKET ERROR:', error.message);
+      incomingSocket.destroy(error);
+    });
+    incomingSocket.on('error', function (error) {
+      console.log('INCOMING SOCKET ERROR:', error.message);
+      outgoingSocket.destroy(error);
+    });
+
+    incomingSocket.on('data', function (data) {
+      log(f('%s %d bytes: %s', RECV, data.length, pb(data)));
+      outgoingSocket.write(data);
+    });
+    incomingSocket.on('end', function () {
+      log(f('%s end', RECV));
+      outgoingSocket.end();
+    });
+
+    outgoingSocket.on('data', function (data) {
+      log(f('%s %d bytes: %s', SEND, data.length, pb(data)));
+      incomingSocket.write(data);
+    });
+    outgoingSocket.on('end', function () {
+      log(f('%s end', SEND));
+      incomingSocket.end();
+    });
+  });
+  return new Promise(function (resolve, reject) {
+    server.listen(0, function () {
+      resolve(server);
+    });
+    server.on('error', reject);
+  });
+}
+
+// test.only('simple', function (t) {
+//   var server = net.createServer(function (socket) {
+//     socket.pipe(socket);
+//   });
+//   server.listen(0, function () {
+//     var port = server.address().port;
+//     createProxyServer(port, 'SRV').then(function (proxyServer) {
+//       var proxyPort = proxyServer.address().port;
+
+//       var cl = net.connect(proxyPort, function () {
+//         console.log('connected to proxy');
+//         var all = 'hello';
+//         var received = '';
+//         cl.on('data', function (data) {
+//           received += data.toString();
+//           if (received.length >= all.length) {
+//             cl.end();
+//             t.equal(received, all);
+//             t.end();
+//           }
+//         });
+//         cl.write(all);
+//       });
+//     });
+//   });
+// });
+
 if (!tape.coordinated) {
   return;
 }
@@ -524,35 +604,29 @@ test('Can shift data securely', function (t) {
 
   server.listen(0, function () {
     var port = server.address().port;
-    findPeerAndConnect(port).then(function (info) {
-      console.log('Native connection established. Peer:', info.peer);
-      var nativePort = info.connection.listeningPort;
-      console.log('Connecting to the %d port on localhost', nativePort);
-      var pair = connect(tls, {
-        port: nativePort,
-        ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-        pskIdentity: pskId,
-        pskKey: pskKey,
+    var nativePort;
+    createProxyServer(port, 'TLS SERVER')
+      .then(function (server) {
+        var serverPort = server.address().port;
+        return findPeerAndConnect(serverPort);
+      })
+      .then(function (info) {
+        console.log('Native connection established. Peer:', info.peer);
+        nativePort = info.connection.listeningPort;
+        return createProxyServer(nativePort, 'TLS CLIENT', true);
+      })
+      .then(function (server) {
+        var port = server.address().port;
+        console.log('Connecting to the %d port on localhost', nativePort);
+        return connect(tls, {
+          port: port,
+          ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+          pskIdentity: pskId,
+          pskKey: pskKey,
+        }).promise;
+      }).then(function (socket) {
+        shiftData(socket);
       });
-
-      // get net.Socket that transfers encrypted data
-      var socket = pair.client.socket;
-      socket.on('data', function (chunk) {
-        console.log('TLS socket received %d bytes', chunk.length);
-      });
-      var w = socket.write;
-      socket.write = function (data, encoding) {
-        var length = (typeof data === 'string') ?
-          new Buffer(data, encoding).length :
-          data.length;
-
-        console.log('TLS socket sends %d bytes', length);
-        return w.apply(this, arguments);
-      };
-      return pair.promise;
-    }).then(function (socket) {
-      shiftData(socket);
-    });
   });
 });
 
@@ -810,9 +884,9 @@ function createMessage(code) {
 }
 
 /**
- *
  * @param {Object} t
  * @param {string} uuid
+ * @return {boolean}
  */
 function peerInTestList(t, uuid) {
   for (var i = 0; i < t.participants.length; ++i) {
@@ -954,7 +1028,7 @@ function clientRound(t, roundNumber, boundListener, quitSignal) {
         peerPromises.push(
           thaliMobileNativeTestUtils.connectToPeer(peer, quitSignal)
             .catch(function (err) {
-              error.fatal = false;
+              err.fatal = false;
               return Promise.reject(err);
             })
             .then(function (connection) {
@@ -1131,9 +1205,11 @@ function (t) {
     t.end();
   });
 
-  thaliMobileNativeTestUtils.startAndListen(t, pretendLocalMux, function (peers) {
-    boundListener.listener(peers);
-  });
+  thaliMobileNativeTestUtils.startAndListen(t, pretendLocalMux,
+    function (peers) {
+      boundListener.listener(peers);
+    }
+  );
 });
 
 test('discoveryAdvertisingStateUpdateNonTCP is called', function (t) {
