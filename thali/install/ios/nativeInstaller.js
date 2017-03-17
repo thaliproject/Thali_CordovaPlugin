@@ -45,8 +45,66 @@ function updateProjectBuildProperties(xcodeProject, buildWithTests) {
   // I believe that this line of code will be removed in the future
   xcodeProject.removeBuildProperty(
     'EMBEDDED_CONTENT_CONTAINS_SWIFT');
+
+  xcodeProject.removeBuildProperty(
+    'ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES');
   xcodeProject.addBuildProperty(
-    'EMBEDDED_CONTENT_CONTAINS_SWIFT', 'YES');
+    'ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES', 'YES');
+
+  xcodeProject.removeBuildProperty(
+    'IPHONEOS_DEPLOYMENT_TARGET');
+  xcodeProject.addBuildProperty(
+    'IPHONEOS_DEPLOYMENT_TARGET', '10.0');
+
+  xcodeProject.removeBuildProperty(
+    'SWIFT_VERSION');
+  xcodeProject.addBuildProperty(
+    'SWIFT_VERSION', '3.0');
+
+  xcodeProject.removeBuildProperty(
+    'CLANG_WARN_ENUM_CONVERSION');
+  xcodeProject.addBuildProperty(
+    'CLANG_WARN_ENUM_CONVERSION', 'YES');
+
+  xcodeProject.removeBuildProperty(
+    'CLANG_WARN_INFINITE_RECURSION');
+  xcodeProject.addBuildProperty(
+    'CLANG_WARN_INFINITE_RECURSION', 'YES');
+
+  xcodeProject.removeBuildProperty(
+    'CLANG_WARN_SUSPICIOUS_MOVE');
+  xcodeProject.addBuildProperty(
+    'CLANG_WARN_SUSPICIOUS_MOVE', 'YES');
+
+  xcodeProject.removeBuildProperty(
+    'CLANG_WARN_UNREACHABLE_CODE');
+  xcodeProject.addBuildProperty(
+    'CLANG_WARN_UNREACHABLE_CODE', 'YES');
+
+  xcodeProject.removeBuildProperty(
+    'ENABLE_STRICT_OBJC_MSGSEND');
+  xcodeProject.addBuildProperty(
+    'ENABLE_STRICT_OBJC_MSGSEND', 'YES');
+
+  xcodeProject.removeBuildProperty(
+    'ENABLE_TESTABILITY');
+  xcodeProject.addBuildProperty(
+    'ENABLE_TESTABILITY', 'YES');
+
+  xcodeProject.removeBuildProperty(
+    'GCC_NO_COMMON_BLOCKS');
+  xcodeProject.addBuildProperty(
+    'GCC_NO_COMMON_BLOCKS', 'YES');
+
+  xcodeProject.removeBuildProperty(
+    'GCC_WARN_64_TO_32_BIT_CONVERSION');
+  xcodeProject.addBuildProperty(
+    'GCC_WARN_64_TO_32_BIT_CONVERSION', 'YES');
+
+  xcodeProject.removeBuildProperty(
+    'SWIFT_OPTIMIZATION_LEVEL');
+  xcodeProject.addBuildProperty(
+    'SWIFT_OPTIMIZATION_LEVEL', '-Owholemodule');
 
   if (buildWithTests) {
     xcodeProject.removeBuildProperty(
