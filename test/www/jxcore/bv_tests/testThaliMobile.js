@@ -2039,6 +2039,7 @@ test('does not fire duplicate events after peer listener recreation',
   }
 );
 
+
 test('#stop should change peers', function (t) {
   var spy = sinon.spy();
 
@@ -2080,6 +2081,54 @@ test('#stop should change peers', function (t) {
       t.fail('Failed out with ' + err);
       t.end();
     });
+});
+
+test('If there are more then PEERS_LIMIT peers presented ' +
+  'then `discoveryDOS` event should be emitted', function (t) {
+    var PEERS_LIMIT = 1;
+
+    var CURRENT_MULTI_PEER_CONNECTIVITY_FRAMEWORK_PEERS_LIMIT =
+      ThaliMobile._connectionTypePeersLimits
+        [connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK];
+
+    var CURRENT_BLUETOOTH_PEERS_LIMIT =
+      ThaliMobile._connectionTypePeersLimits[connectionTypes.BLUETOOTH];
+
+    var CURRENT_TCP_NATIVE_PEERS_LIMIT =
+      ThaliMobile._connectionTypePeersLimits[connectionTypes.TCP_NATIVE];
+
+    ThaliMobile._connectionTypePeersLimits
+      [connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = PEERS_LIMIT;
+    ThaliMobile._connectionTypePeersLimits[connectionTypes.BLUETOOTH] =
+      PEERS_LIMIT;
+    ThaliMobile._connectionTypePeersLimits[connectionTypes.TCP_NATIVE] =
+      PEERS_LIMIT;
+
+    function finishTest (connectionType) {
+      ThaliMobile._connectionTypePeersLimits
+        [connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = 
+          CURRENT_MULTI_PEER_CONNECTIVITY_FRAMEWORK_PEERS_LIMIT;
+      ThaliMobile._connectionTypePeersLimits[connectionTypes.BLUETOOTH] =
+        CURRENT_BLUETOOTH_PEERS_LIMIT;
+      ThaliMobile._connectionTypePeersLimits[connectionTypes.TCP_NATIVE] = 
+        CURRENT_TCP_NATIVE_PEERS_LIMIT;
+      t.end();
+    }
+
+    ThaliMobile.start(express.Router())
+      .then(function () {
+        ThaliMobile.emitter.on('discoveryDOS', function (info) {
+          t.ok(info.limit, PEERS_LIMIT, 'DOS limit should be presented');
+          t.ok(info.count, 2, 'Actual number of peers should be presented');
+          finishTest();
+        });
+
+        var nativePeer = generateLowerLevelPeers().nativePeer;
+        var additionalNativePeer = generateLowerLevelPeers().nativePeer;
+
+        emitNativePeerAvailability(nativePeer);
+        emitNativePeerAvailability(additionalNativePeer);
+      });
 });
 
 if (!tape.coordinated) {

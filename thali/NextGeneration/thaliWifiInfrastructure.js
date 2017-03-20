@@ -688,65 +688,77 @@ ThaliWifiInfrastructure.prototype._setUpEvents = function() {
 
 inherits(ThaliWifiInfrastructure, EventEmitter);
 
+ThaliWifiInfrastructure.prototype._isConnected = function () {
+  // We use this method only when thaliWifiInfrastructure is started
+  assert(this._lastNetworkStatus, 'have latest network status');
+  return this._lastNetworkStatus.bssidName !== null;
+};
+
 ThaliWifiInfrastructure.prototype._handleNetworkChanges =
-function (networkStatus) {
-  var isWifiChanged = this._lastNetworkStatus ?
-    networkStatus.wifi !== this._lastNetworkStatus.wifi :
-    true;
+function (newStatus) {
+  var oldStatus = this._lastNetworkStatus;
+  this._lastNetworkStatus = newStatus;
 
-  var isBssidChanged = this._lastNetworkStatus ?
-    networkStatus.bssidName !== this._lastNetworkStatus.bssidName :
-    true;
+  // Check if this is a first call triggered by start method. In this case we
+  // don't need to do anything.
+  if (!oldStatus) {
+    return;
+  }
 
-  this._lastNetworkStatus = networkStatus;
+  /** true if device became connected to the WiFi access point */
+  var connectedToAP =
+    (oldStatus.bssidName === null && newStatus.bssidName !== null);
+  /** true if device is no longer connected to any WiFi access point */
+  var disconnectedFromAP =
+    (oldStatus.bssidName !== null && newStatus.bssidName === null);
+  /** true if device moved from one WiFi access point to another access point */
+  var changedAP =
+    !disconnectedFromAP && !connectedToAP &&
+    oldStatus.bssidName !== newStatus.bssidName;
 
   // If we are stopping or the wifi state hasn't changed,
   // we are not really interested.
-  if (!this._targetState.started || (!isWifiChanged && !isBssidChanged)) {
+  var noWifiChanges = (!connectedToAP && !disconnectedFromAP && !changedAP);
+  if (!this._targetState.started || noWifiChanges) {
     return;
   }
 
   var actionResults = [];
 
-  // Handle on -> off and off -> on changes
-  if (isWifiChanged) {
-    if (networkStatus.wifi === 'on') {
-      // If the wifi state turned on, try to get into the target states
-      if (this._targetState.listening) {
-        actionResults.push(
-          muteRejection(this.startListeningForAdvertisements())
-        );
-      }
-      if (this._targetState.advertising) {
-        actionResults.push(
-          muteRejection(this.startUpdateAdvertisingAndListening())
-        );
-      }
-    } else {
-      // If wifi didn't turn on, it was turned into a state where we want
-      // to stop our actions
+  if (connectedToAP) {
+    if (this._targetState.listening) {
       actionResults.push(
-        muteRejection(
-          this._pauseAdvertisingAndListening()
-        ),
-        muteRejection(
-          this._pauseListeningForAdvertisements()
-        )
+        muteRejection(this.startListeningForAdvertisements())
+      );
+    }
+    if (this._targetState.advertising) {
+      actionResults.push(
+        muteRejection(this.startUpdateAdvertisingAndListening())
       );
     }
   }
 
-  // Handle bssid only changes. We do not care about bssid when wifi was
-  // entirely disabled, because node-ssdp server would be restarted anyway
-  if (!isWifiChanged && isBssidChanged) {
-    // Without restarting node-ssdp server just does not advertise messages and
-    // client does not receive them after connecting to another access point
-    if (this.advertiser.isAdvertising()) {
+  if (disconnectedFromAP) {
+    actionResults.push(
+      muteRejection(this._pauseAdvertisingAndListening()),
+      muteRejection(this._pauseListeningForAdvertisements())
+    );
+  }
+
+  if (changedAP) {
+    if (this._targetState.advertising) {
       actionResults.push(muteRejection(this.advertiser.restartSSDPServer()));
     }
-    if (this.listener.isListening()) {
+    if (this._targetState.listening) {
       actionResults.push(muteRejection(this.listener.restartSSDPClient()));
     }
+  }
+
+  if (connectedToAP || changedAP) {
+    // TODO: advertiser should provide API to update its advertising hostname or
+    // it should handle network changes itself
+    this.advertiser.routerServerAddress = ip.address();
+    this.advertiser._updateLocation();
   }
 
   Promise.all(actionResults).then(function (results) {
@@ -963,7 +975,7 @@ enqueued(function () {
   if (!this._isStarted) {
     return Promise.reject(new Error('Call Start!'));
   }
-  if (this._lastNetworkStatus && this._lastNetworkStatus.wifi === 'off') {
+  if (!this._isConnected()) {
     return this._rejectPerWifiState();
   }
   return this.listener.start();
@@ -1079,7 +1091,7 @@ enqueued(function () {
     return Promise.reject(new Error('Call Start!'));
   }
 
-  if (this._lastNetworkStatus && this._lastNetworkStatus.wifi === 'off') {
+  if (!this._isConnected()) {
     return this._rejectPerWifiState();
   }
 
@@ -1119,20 +1131,18 @@ ThaliWifiInfrastructure.prototype._pauseAdvertisingAndListening =
 
 ThaliWifiInfrastructure.prototype._rejectPerWifiState = function () {
   var errorMessage;
-  switch (this._lastNetworkStatus.wifi) {
-    case 'off': {
-      errorMessage = 'Radio Turned Off';
-      break;
-    }
-    case 'notHere': {
-      errorMessage = 'No Wifi radio';
-      break;
-    }
-    default: {
-      logger.warn('Got unexpected Wifi state: %s',
-        this.states.networkStatus.wifi);
-      errorMessage = 'Unspecified Error with Radio infrastructure';
-    }
+  var wifi = this._lastNetworkStatus.wifi;
+  var bssidName = this._lastNetworkStatus.bssidName;
+  if (wifi === 'off') {
+    errorMessage = 'Radio Turned Off';
+  } else if (wifi === 'notHere') {
+    errorMessage = 'No Wifi radio';
+  } else if (bssidName === null) {
+    errorMessage = 'Not connected to WiFi access point';
+  } else {
+    logger.warn('Got unexpected Wifi state (wifi: %s, bssidName: %s)',
+      JSON.stringify(wifi), JSON.stringify(bssidName));
+    errorMessage = 'Unspecified Error with Radio infrastructure';
   }
   return Promise.reject(new Error(errorMessage));
 };
