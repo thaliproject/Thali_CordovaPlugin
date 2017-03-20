@@ -3,6 +3,7 @@
 var tape = require('../lib/thaliTape');
 var platform = require('thali/NextGeneration/utils/platform');
 var Promise = require('lie');
+var sinon   = require('sinon');
 
 var customData = 'custom data';
 
@@ -26,6 +27,18 @@ test('basic', function (t) {
 
 test('another', function (t) {
   t.ok(true, 'sane');
+  t.end();
+});
+
+var testObject = {
+  testMethod: function() {
+    logger.debug("test object for global sinon sansbox");
+  }
+};
+
+test('test sinon sansbox', function (t) {
+  var sandbox = sinon.sandbox.create();
+  sinon.spy(testObject, "testMethod");
   t.end();
 });
 
