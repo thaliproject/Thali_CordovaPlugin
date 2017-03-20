@@ -656,9 +656,10 @@ function ThaliWifiInfrastructure() {
   this.advertiser = advertiser;
   this.listener = listener;
 
-  this.peerAvailabilities = {};
-  this.peerAvailabilityWatchers = {};
-
+  this.peerAvailabilities = {
+    watchers: {},
+    timers: {}
+  };
   this._setUpEvents();
 }
 
@@ -771,8 +772,8 @@ ThaliWifiInfrastructure.prototype._isAvailabilityWatcherForPeerExist =
 function (peer) {
   var peerIdentifier = peer.peerIdentifier;
 
-  return !!(this.peerAvailabilityWatchers &&
-  this.peerAvailabilityWatchers[peerIdentifier]);
+  return !!(this.peerAvailabilities.watchers &&
+  this.peerAvailabilities.watchers[peerIdentifier]);
 };
 
 
@@ -785,7 +786,8 @@ function (peer) {
 
   // If the time from the latest availability advertisement doesn't
   // exceed the threshold, no need to do anything.
-  if (this.peerAvailabilities[peerIdentifier] + unavailabilityThreshold > now) {
+  if (this.peerAvailabilities.timers[peerIdentifier] +
+    unavailabilityThreshold > now) {
     return;
   }
 
@@ -804,18 +806,17 @@ function (peer) {
   var self = this;
   var peerIdentifier = peer.peerIdentifier;
 
+  this.peerAvailabilities.timers[peerIdentifier] = Date.now();
+  
   if (this._isAvailabilityWatcherForPeerExist(peer)) {
-    this.peerAvailabilities[peerIdentifier] = Date.now();
     return;
   }
-    
+
   var unavailabilityThreshold =
     thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
-
-  this.peerAvailabilityWatchers[peerIdentifier] =
+  this.peerAvailabilities.watchers[peerIdentifier] =
     setInterval((self._watchForPeerAvailability).bind(self),
       unavailabilityThreshold, peer);
-  this.peerAvailabilities[peerIdentifier] = Date.now();
 };
 
 ThaliWifiInfrastructure.prototype._removeAvailabilityWatcherFromPeerIfExists =
@@ -825,18 +826,18 @@ function (peer) {
   }
   var peerIdentifier = peer.peerIdentifier;
 
-  var interval = this.peerAvailabilityWatchers[peerIdentifier];
+  var interval = this.peerAvailabilities.watchers[peerIdentifier];
 
   clearInterval(interval);
-  delete this.peerAvailabilityWatchers[peerIdentifier];
-  delete this.peerAvailabilities[peerIdentifier];
+  delete this.peerAvailabilities.watchers[peerIdentifier];
+  delete this.peerAvailabilities.timers[peerIdentifier];
 };
 
 
 ThaliWifiInfrastructure.prototype._removeAllAvailabilityWatchersFromPeers =
 function() {
   var self = this;
-  Object.keys(this.peerAvailabilityWatchers)
+  Object.keys(this.peerAvailabilities.watchers)
     .forEach(function (peerIdentifier) {
       var assumingPeer = {
         peerIdentifier: peerIdentifier

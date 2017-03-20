@@ -796,13 +796,13 @@ test('#stop should clear watchers', function (t) {
       );
 
       t.equal(Object.getOwnPropertyNames(
-        wifiInfrastructure.peerAvailabilityWatchers).length, 1,
+        wifiInfrastructure.peerAvailabilities.watchers).length, 1,
         'Watchers have one entry for our connection type');
       return wifiInfrastructure.stop();
     })
     .then(function () {
       t.equal(Object.getOwnPropertyNames(
-        wifiInfrastructure.peerAvailabilityWatchers).length,
+        wifiInfrastructure.peerAvailabilities.watchers).length,
         0, 'No watchers');
       t.end();
     })
