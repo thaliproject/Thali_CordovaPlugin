@@ -1496,7 +1496,7 @@ connectionTypePeersLimits[connectionTypes.BLUETOOTH] =
 connectionTypePeersLimits[connectionTypes.TCP_NATIVE] =
   thaliConfig.TCP_NATIVE_PEERS_LIMIT;
 
-module.exports.connectionTypePeersLimits = connectionTypePeersLimits;
+module.exports._connectionTypePeersLimits = connectionTypePeersLimits;
 
 var emitIfConnectionTypePeersLimitReached = function (connectionType) {
   var connectionTypePeers = peerAvailabilities[connectionType];
@@ -1504,7 +1504,7 @@ var emitIfConnectionTypePeersLimitReached = function (connectionType) {
   var peersLimit = connectionTypePeersLimits[connectionType];
   if (connectionTypePeersCount > peersLimit) {
     module.exports.emitter
-      .emit(connectionType + 'PeersLimitReached', {
+      .emit(connectionType + '-PeersLimitReached', {
         limit: peersLimit,
         count: connectionTypePeersCount
       });
@@ -1519,7 +1519,7 @@ Object.keys(connectionTypes)
   .forEach(function (key) {
     var connectionType = connectionTypes[key];
 
-    module.exports.emitter.on(connectionType + 'PeersLimitReached',
+    module.exports.emitter.on(connectionType + '-PeersLimitReached',
       function (info) {
         emitDiscoveryDOS({
           connectionType: connectionType,

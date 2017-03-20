@@ -2218,29 +2218,29 @@ test('If there are more then PEERS_LIMIT peers presented ' +
     var PEERS_LIMIT = 1;
 
     var CURRENT_MULTI_PEER_CONNECTIVITY_FRAMEWORK_PEERS_LIMIT =
-      ThaliMobile.connectionTypePeersLimits
+      ThaliMobile._connectionTypePeersLimits
         [connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK];
 
     var CURRENT_BLUETOOTH_PEERS_LIMIT =
-      ThaliMobile.connectionTypePeersLimits[connectionTypes.BLUETOOTH];
+      ThaliMobile._connectionTypePeersLimits[connectionTypes.BLUETOOTH];
 
     var CURRENT_TCP_NATIVE_PEERS_LIMIT =
-      ThaliMobile.connectionTypePeersLimits[connectionTypes.TCP_NATIVE];
+      ThaliMobile._connectionTypePeersLimits[connectionTypes.TCP_NATIVE];
 
-    ThaliMobile.connectionTypePeersLimits
+    ThaliMobile._connectionTypePeersLimits
       [connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = PEERS_LIMIT;
-    ThaliMobile.connectionTypePeersLimits[connectionTypes.BLUETOOTH] =
+    ThaliMobile._connectionTypePeersLimits[connectionTypes.BLUETOOTH] =
       PEERS_LIMIT;
-    ThaliMobile.connectionTypePeersLimits[connectionTypes.TCP_NATIVE] =
+    ThaliMobile._connectionTypePeersLimits[connectionTypes.TCP_NATIVE] =
       PEERS_LIMIT;
 
     function finishTest (connectionType) {
-      ThaliMobile.connectionTypePeersLimits
+      ThaliMobile._connectionTypePeersLimits
         [connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = 
           CURRENT_MULTI_PEER_CONNECTIVITY_FRAMEWORK_PEERS_LIMIT;
-      ThaliMobile.connectionTypePeersLimits[connectionTypes.BLUETOOTH] =
+      ThaliMobile._connectionTypePeersLimits[connectionTypes.BLUETOOTH] =
         CURRENT_BLUETOOTH_PEERS_LIMIT;
-      ThaliMobile.connectionTypePeersLimits[connectionTypes.TCP_NATIVE] = 
+      ThaliMobile._connectionTypePeersLimits[connectionTypes.TCP_NATIVE] = 
         CURRENT_TCP_NATIVE_PEERS_LIMIT;
       t.end();
     }
