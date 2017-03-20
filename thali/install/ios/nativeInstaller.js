@@ -204,7 +204,7 @@ function addFramework(
       var buildDir = path.join(checkoutDir, 'thali-ios', 'Carthage', 'Build');
 
       console.log('Building CocoaAsyncSocket.framework');
-      return biuldCocoaAsyncSocket(checkoutDir, buildDir, buildWithTests)
+      return buildCocoaAsyncSocket(checkoutDir, buildDir, buildWithTests)
     })
     .then (function () {
       console.log('Building CocoaAsyncSocket.framework has been finished');
@@ -212,7 +212,7 @@ function addFramework(
       var checkoutDir = path.join(frameworkOutputDir, 'Carthage', 'Checkouts');
       var buildDir = path.join(checkoutDir, 'thali-ios', 'Carthage', 'Build');
 
-      return biuldSwiftXCTest(checkoutDir, buildDir, buildWithTests)
+      return buildSwiftXCTest(checkoutDir, buildDir, buildWithTests)
     })
     .then (function () {
       // We need to build ThaliCore.framework before embedding it into the project
@@ -267,7 +267,7 @@ function checkoutThaliCoreViaCarthage(cartfileDir, outputDir, buildWithTests) {
     })
 }
 
-function biuldCocoaAsyncSocket(checkoutDir, buildDir, buildWithTests) {
+function buildCocoaAsyncSocket(checkoutDir, buildDir, buildWithTests) {
   var projectDir = 'CocoaAsyncSocket';
   var projectName = 'CocoaAsyncSocket';
   var projectScheme = 'iOS Framework';
@@ -318,7 +318,7 @@ function biuldCocoaAsyncSocket(checkoutDir, buildDir, buildWithTests) {
     });
 }
 
-function biuldSwiftXCTest(checkoutDir, buildDir, buildWithTests) {
+function buildSwiftXCTest(checkoutDir, buildDir, buildWithTests) {
   var projectDir = 'swift-corelibs-xctest';
   var projectName = 'XCTest'
   var projectScheme = 'SwiftXCTest-iOS';
