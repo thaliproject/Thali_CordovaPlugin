@@ -656,7 +656,7 @@ function ThaliWifiInfrastructure() {
   this.advertiser = advertiser;
   this.listener = listener;
 
-
+  this.peerAvailabilities = {};
   this.peerAvailabilityWatchers = {};
 
   this._setUpEvents();
@@ -760,7 +760,7 @@ function (networkStatus) {
 
 ThaliWifiInfrastructure.prototype._hadlePeerAvailabilityWatchers =
 function (peer) {
-  if (Boolean(peer.hostAddress && peer.portNumber)) {
+  if (peer.hostAddress && peer.portNumber) {
     this._addAvailabilityWatcherToPeerIfNotExist(peer);
   } else {
     this._removeAvailabilityWatcherFromPeerIfExists(peer);
@@ -781,16 +781,17 @@ function (peer) {
   var now = Date.now();
   var unavailabilityThreshold =
     thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
+  var peerIdentifier = peer.peerIdentifier;
 
   // If the time from the latest availability advertisement doesn't
   // exceed the threshold, no need to do anything.
-  if (peer.availableSince + unavailabilityThreshold > now) {
+  if (this.peerAvailabilities[peerIdentifier] + unavailabilityThreshold > now) {
     return;
   }
 
   this._removeAvailabilityWatcherFromPeerIfExists(peer);
   this.emit('wifiPeerAvailabilityChanged', {
-    peerIdentifier: peer.peerIdentifier,
+    peerIdentifier: peerIdentifier,
     generation: null,
     portNumber: null,
     hostAddress: null
@@ -801,17 +802,20 @@ function (peer) {
 ThaliWifiInfrastructure.prototype._addAvailabilityWatcherToPeerIfNotExist =
 function (peer) {
   var self = this;
+  var peerIdentifier = peer.peerIdentifier;
+
   if (this._isAvailabilityWatcherForPeerExist(peer)) {
+    this.peerAvailabilities[peerIdentifier] = Date.now();
     return;
   }
-
-  var peerIdentifier = peer.peerIdentifier;
+    
   var unavailabilityThreshold =
     thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
 
   this.peerAvailabilityWatchers[peerIdentifier] =
     setInterval((self._watchForPeerAvailability).bind(self),
       unavailabilityThreshold, peer);
+  this.peerAvailabilities[peerIdentifier] = Date.now();
 };
 
 ThaliWifiInfrastructure.prototype._removeAvailabilityWatcherFromPeerIfExists =
@@ -825,6 +829,7 @@ function (peer) {
 
   clearInterval(interval);
   delete this.peerAvailabilityWatchers[peerIdentifier];
+  delete this.peerAvailabilities[peerIdentifier];
 };
 
 

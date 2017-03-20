@@ -769,8 +769,7 @@ test(
           peerIdentifier: peerIdentifier,
           generation: generation,
           portNumber: portNumber,
-          hostAddress: '127.0.0.1',
-          availableSince: Date.now()
+          hostAddress: '127.0.0.1'
         }
       );
     })
@@ -861,6 +860,7 @@ test('wifi peer is marked unavailable if announcements stop',
           availabilityChangedHandler);
 
         thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD = originalThreshold;
+        testServer.stop();
         t.end();
       }
     };
@@ -1075,4 +1075,3 @@ test('startUpdateAdvertisingAndListening does not send ssdp:byebye notifications
     })
   });
 });
-
