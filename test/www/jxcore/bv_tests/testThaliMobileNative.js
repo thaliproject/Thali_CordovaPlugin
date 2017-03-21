@@ -27,8 +27,7 @@ var logger = require('../lib/testLogger')('testThaliMobileNative');
 // that will get closed in teardown.
 var serverToBeClosed = null;
 
-var test = function () {};
-var reallytest = tape({
+var test = tape({
   setup: function (t) {
     serverToBeClosed = {
       closeAll: function (callback) {
@@ -148,7 +147,10 @@ function createProxyServer(port, tag, reverse) {
   var SEND = reverse ? '←' : '→';
   var RECV = reverse ? '→' : '←';
   var server = net.createServer(function (incomingSocket) {
-    var outgoingSocket = net.connect(port);
+    log(f('received incoming connection'));
+    var outgoingSocket = net.connect(port, function () {
+      log(f('created outgoing connection to %d port', port));
+    });
     outgoingSocket.on('error', function (error) {
       console.log('OUTGOING SOCKET ERROR:', error.message);
       incomingSocket.destroy(error);
@@ -178,6 +180,9 @@ function createProxyServer(port, tag, reverse) {
   });
   return new Promise(function (resolve, reject) {
     server.listen(0, function () {
+      var proxyPort = server.address().port;
+      log = console.log.bind(console, tag + ' (' + proxyPort + ')');
+      log(f('proxy for 127.0.0.1:%d listens on %d port', port, proxyPort));
       resolve(server);
     });
     server.on('error', reject);
@@ -421,25 +426,23 @@ function findPeerAndConnect(advertisingPort) {
 }
 
 function connect(module, options) {
-  var client;
-  var promise;
-  promise = new Promise(function (resolve, reject) {
+  return new Promise(function (resolve, reject) {
     var connectErrorHandler = function (error) {
       console.log('Connection to the %d port on localhost failed: %s',
         options.port, error.stack);
       reject(error);
     };
-    client = module.connect(options, function () {
+    console.log('Connecting to the localhost:%d', options.port);
+    var client = module.connect(options, function () {
       client.removeListener('error', connectErrorHandler);
-      console.log('Connected to the %d port on localhost', options.port);
+      console.log('Connected to the localhost:%d', options.port);
       resolve(client);
     });
     client.once('error', connectErrorHandler);
   });
-  return { client: client, promise: promise };
 }
 
-reallytest('Can shift data', function (t) {
+test('Can shift data', function (t) {
   var exchangeData = 'small amount of data';
 
   var formatPrintableData = function (data) {
@@ -513,20 +516,18 @@ reallytest('Can shift data', function (t) {
     findPeerAndConnect(port).then(function (info) {
       console.log('Native connection established. Peer:', info.peer);
       var nativePort = info.connection.listeningPort;
-      console.log('Connecting to the %d port on localhost', nativePort);
-      return connect(net, { port: nativePort }).promise;
+      return connect(net, { port: nativePort });
     }).then(function (socket) {
       shiftData(socket);
     });
   });
 });
 
-reallytest('Can shift data securely', function (t) {
+test.only('Can shift data securely', function (t) {
   var exchangeData = 'small amount of data';
 
   var formatPrintableData = function (data) {
-    var ellipsis = data.length > 40 ? '...' : '';
-    return '<' + data.slice(0, 40) + ellipsis + '>';
+    return data;
   };
 
   var pskKey = new Buffer('psk-key');
@@ -604,25 +605,26 @@ reallytest('Can shift data securely', function (t) {
   server.listen(0, function () {
     var port = server.address().port;
     var nativePort;
+    console.log('Test server is listening on the %d port', port);
     createProxyServer(port, 'TLS SERVER')
       .then(function (server) {
         var serverPort = server.address().port;
         return findPeerAndConnect(serverPort);
       })
       .then(function (info) {
-        console.log('Native connection established. Peer:', info.peer);
+        console.log('Native connection established. Info: %s',
+          JSON.stringify(info, null, 2));
         nativePort = info.connection.listeningPort;
         return createProxyServer(nativePort, 'TLS CLIENT', true);
       })
       .then(function (server) {
         var port = server.address().port;
-        console.log('Connecting to the %d port on localhost', nativePort);
         return connect(tls, {
           port: port,
           ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
           pskIdentity: pskId,
           pskKey: pskKey,
-        }).promise;
+        });
       }).then(function (socket) {
         shiftData(socket);
       });
