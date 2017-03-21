@@ -177,16 +177,6 @@ build_ios_if_possible()
 
     cordova prepare ios --device
 
-  # TODO: we need new cordova release to make it work
-  # (\
-  # cd $IOS_PROJECT_DIR && \
-  # cordova build --device -d \
-  #   --buildFlag="DEVELOPMENT_TEAM=${TEST_DEVELOPMENT_TEAM:-3648SALNRR}" \
-  #   --buildFlag="GCC_PREPROCESSOR_DEFINITIONS=DEBUG=1 TEST=1" \
-  #   --buildFlag="OTHER_SWIFT_FLAGS='-DTEST'" \
-  #   --buildFlag="SWIFT_VERSION='3.0'"
-  # )
-
     (\
     cd $IOS_PROJECT_DIR && \
     xcodebuild \
