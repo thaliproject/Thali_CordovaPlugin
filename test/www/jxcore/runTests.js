@@ -84,7 +84,7 @@ logger.info(
   'Platform: ' + (mockPlatform || currentPlatform)
 );
 
-var testsToRun = argv._[0] || 'bv_tests';
+var testsToRun = argv._[0] || 'bv_tests/testThaliMobileNative.js';
 var testsPath = path.join(__dirname, testsToRun);
 testLoader.load(testsPath, config.preferredOrder);
 

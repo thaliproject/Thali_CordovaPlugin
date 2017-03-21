@@ -27,7 +27,8 @@ var logger = require('../lib/testLogger')('testThaliMobileNative');
 // that will get closed in teardown.
 var serverToBeClosed = null;
 
-var test = tape({
+var test = function () {};
+var reallytest = tape({
   setup: function (t) {
     serverToBeClosed = {
       closeAll: function (callback) {
@@ -440,7 +441,7 @@ function connect(module, options) {
   return { client: client, promise: promise };
 }
 
-test('Can shift data', function (t) {
+reallytest('Can shift data', function (t) {
   var exchangeData = 'small amount of data';
 
   var formatPrintableData = function (data) {
@@ -522,7 +523,7 @@ test('Can shift data', function (t) {
   });
 });
 
-test('Can shift data securely', function (t) {
+reallytest('Can shift data securely', function (t) {
   var exchangeData = 'small amount of data';
 
   var formatPrintableData = function (data) {
