@@ -895,7 +895,7 @@ test('discoveryAdvertisingStateUpdateNonTCP is called', function (t) {
           t.equal(state.advertisingActive, false,
             'advertisingActive should be true');
           Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
-            t.notOk(err, 'Can call startUpdateAdvertisingAndListeningwithout error');
+            t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
           });
           break;
         case 2:
@@ -904,7 +904,7 @@ test('discoveryAdvertisingStateUpdateNonTCP is called', function (t) {
           t.equal(state.advertisingActive, true,
             'advertisingActive should be true');
           Mobile('stopListeningForAdvertisements').callNative(function (err) {
-            t.notOk(err, 'Can call stopListeningForAdvertisements error');
+            t.notOk(err, 'Can call stopListeningForAdvertisements without error');
           });
           break;
         case 3:
@@ -913,7 +913,7 @@ test('discoveryAdvertisingStateUpdateNonTCP is called', function (t) {
           t.equal(state.advertisingActive, true,
             'advertisingActive should be true');
           Mobile('stopAdvertisingAndListening').callNative(function (err) {
-            t.notOk(err, 'Can call stopAdvertisingAndListening error');
+            t.notOk(err, 'Can call stopAdvertisingAndListening without error');
           });
           break;
         case 4:
@@ -929,6 +929,6 @@ test('discoveryAdvertisingStateUpdateNonTCP is called', function (t) {
   });
 
   Mobile('startListeningForAdvertisements').callNative(function (err) {
-    t.notOk(err, 'Can call startListeningForAdvertisements error');
+    t.notOk(err, 'Can call startListeningForAdvertisements without error');
   });
 });
