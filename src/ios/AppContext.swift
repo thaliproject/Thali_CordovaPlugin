@@ -51,12 +51,24 @@ enum NetworkStatusParameters: String {
   case ssid = "ssid"
 }
 
-@objc public enum AppContextError: Int, Error, CustomStringConvertible {
-
+@objc public enum AppContextError: Int, CustomStringConvertible, CustomNSError, LocalizedError {
+  
   case badParameters
   case unknownError
   case connectNotSupported
-
+  
+  public static var errorDomain: String {
+    return "AppContextError"
+  }
+  
+  public var errorCode: Int {
+    return rawValue
+  }
+  
+  public var errorUserInfo: [String : Any] {
+    return ["ErrorDescription": description]
+  }
+  
   public var description: String {
     switch self {
     case .badParameters:
@@ -66,6 +78,10 @@ enum NetworkStatusParameters: String {
     case .connectNotSupported:
       return "Platform does not support connect"
     }
+  }
+  
+  public var errorDescription: String? {
+    return description
   }
 }
 
