@@ -606,26 +606,19 @@ test.only('Can shift data securely', function (t) {
     var port = server.address().port;
     var nativePort;
     console.log('Test server is listening on the %d port', port);
-    createProxyServer(port, 'TLS SERVER')
-      .then(function (server) {
-        var serverPort = server.address().port;
-        return findPeerAndConnect(serverPort);
-      })
+    findPeerAndConnect(port)
       .then(function (info) {
         console.log('Native connection established. Info: %s',
           JSON.stringify(info, null, 2));
         nativePort = info.connection.listeningPort;
-        return createProxyServer(nativePort, 'TLS CLIENT', true);
-      })
-      .then(function (server) {
-        var port = server.address().port;
         return connect(tls, {
-          port: port,
+          port: nativePort,
           ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
           pskIdentity: pskId,
           pskKey: pskKey,
         });
-      }).then(function (socket) {
+      })
+      .then(function (socket) {
         shiftData(socket);
       });
   });
