@@ -197,24 +197,9 @@ function addFramework(
 
   checkoutThaliCoreViaCarthage(
     frameworkOutputDir, frameworkProjectDir, buildWithTests)
-    .then(function () {
+    .then (function () {
       console.log('Checkouting done!');
 
-      var checkoutDir = path.join(frameworkOutputDir, 'Carthage', 'Checkouts');
-      var buildDir = path.join(checkoutDir, 'thali-ios', 'Carthage', 'Build');
-
-      console.log('Building CocoaAsyncSocket.framework');
-      return buildCocoaAsyncSocket(checkoutDir, buildDir, buildWithTests)
-    })
-    .then (function () {
-      console.log('Building CocoaAsyncSocket.framework has been finished');
-
-      var checkoutDir = path.join(frameworkOutputDir, 'Carthage', 'Checkouts');
-      var buildDir = path.join(checkoutDir, 'thali-ios', 'Carthage', 'Build');
-
-      return buildSwiftXCTest(checkoutDir, buildDir, buildWithTests)
-    })
-    .then (function () {
       // We need to build ThaliCore.framework before embedding it into the project
       return buildFramework(
         frameworkProjectDir, frameworkOutputDir, buildWithTests)
@@ -256,107 +241,15 @@ function addFramework(
 
 function checkoutThaliCoreViaCarthage(cartfileDir, outputDir, buildWithTests) {
   var changeDirCmd = 'cd ' + cartfileDir;
-  var carthageCmd = 'carthage checkout';
+  var carthageCmd = 'carthage update --no-build';
   var checkoutCmd = changeDirCmd + ' && ' + carthageCmd;
 
-  console.log('Checkouting ThaliCore-iOS and its dependencies');
+  console.log('Checkouting ThaliCore and its dependencies');
 
   return exec(checkoutCmd, { maxBuffer: 10*1024*1024 } )
     .then(function () {
       return fs.ensureDir(outputDir);
     })
-}
-
-function buildCocoaAsyncSocket(checkoutDir, buildDir, buildWithTests) {
-  var projectDir = 'CocoaAsyncSocket';
-  var projectName = 'CocoaAsyncSocket';
-  var projectScheme = 'iOS Framework';
-
-  var projectConfiguration = 'Release';
-
-  if (buildWithTests) {
-    console.log('Building in debug mode');
-    projectConfiguration = 'Debug';
-  }
-
-  var sdk = 'iphoneos';
-  var projectPath = path.join(checkoutDir, projectDir, projectName + '.xcodeproj');
-  var buildDir = path.join(buildDir, projectName);
-
-  var changeDirCmd = 'cd ' + checkoutDir + '/' + projectName;
-  var buildCmd = 'set -o pipefail && ' +
-    'xcodebuild -project' +
-    ' \"' + projectPath + '\"' +
-    ' -scheme ' + '\"' + projectScheme + '\"' +
-    ' -configuration ' + projectConfiguration +
-    ' -sdk ' + sdk +
-    ' ONLY_ACTIVE_ARCH=NO ' +
-    ' BUILD_DIR=' + '\"' + buildDir + '\"' +
-    ' clean build';
-
-  var changeDirAndBuildCmd = changeDirCmd + ' && ' + buildCmd;
-
-  return exec(changeDirAndBuildCmd, { maxBuffer: 10*1024*1024 } )
-    .then(function () {
-      return fs.ensureDir(buildDir);
-    })
-    .then(function () {
-      var frameworkBuildDir = path.join(
-        buildDir, projectConfiguration + '-' + sdk, projectName + '.framework');
-      var frameworkOutputDir = path.join(
-        buildDir, 'Release' + '-' + sdk, projectName + '.framework');
-
-      return fs.copy(frameworkBuildDir, frameworkOutputDir, { clobber: false });
-    })
-    .then(function () {
-      var frameworkBuildDir = path.join(
-        buildDir, projectConfiguration + '-' + sdk, projectName + '.framework');
-      var thaliCoreFrameworkOutputDir = path.join(
-        checkoutDir, '..', '..', projectName + '.framework');
-
-      return fs.copy(frameworkBuildDir, thaliCoreFrameworkOutputDir, { clobber: false });
-    });
-}
-
-function buildSwiftXCTest(checkoutDir, buildDir, buildWithTests) {
-  var projectDir = 'swift-corelibs-xctest';
-  var projectName = 'XCTest'
-  var projectScheme = 'SwiftXCTest-iOS';
-  var frameworkName = 'SwiftXCTest';
-
-  var projectConfiguration = 'Release';
-  var sdk = 'iphoneos';
-  var projectPath = path.join(checkoutDir, projectDir, projectName + '.xcodeproj');
-  var buildDir = path.join(buildDir, projectName);
-
-  var changeDirCmd = 'cd ' + checkoutDir + '/' + projectDir;
-  var buildCmd = 'set -o pipefail && ' +
-    'xcodebuild -project' +
-    ' \"' + projectPath + '\"' +
-    ' -scheme ' + '\"' + projectScheme + '\"' +
-    ' -configuration ' + projectConfiguration +
-    ' -sdk ' + sdk +
-    ' ONLY_ACTIVE_ARCH=NO ' +
-    ' BUILD_DIR=' + '\"' + buildDir + '\"' +
-    ' clean build';
-
-  var changeDirAndBuildCmd = changeDirCmd + ' && ' + buildCmd;
-
-  return exec(changeDirAndBuildCmd, { maxBuffer: 10*1024*1024 } )
-    .then(function () {
-      return fs.ensureDir(buildDir);
-    })
-    .then(function () {
-      var frameworkBuildDir = path.join(
-        buildDir, projectConfiguration + '-' + sdk, frameworkName + '.framework');
-      var thaliCoreFrameworkOutputDir = path.join(
-        checkoutDir, '..', '..', frameworkName + '.framework');
-
-      console.log('from: ', frameworkBuildDir);
-      console.log('to : ', thaliCoreFrameworkOutputDir);
-
-      return fs.copy(frameworkBuildDir, thaliCoreFrameworkOutputDir, { clobber: false });
-    });
 }
 
 /**
@@ -366,6 +259,10 @@ function buildSwiftXCTest(checkoutDir, buildDir, buildWithTests) {
  * @returns {Promise} Output of exec
  */
 function buildFramework(projectDir, outputDir, buildWithTests) {
+
+  var cocoaAsyncSocketFrameworkName = 'CocoaAsyncSocket';
+  var XCTestFrameworkName = 'SwiftXCTest';
+
   var projectName = 'ThaliCore';
   var projectScheme = 'ThaliCore';
   var projectConfiguration = 'Release';
@@ -401,12 +298,28 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
       return fs.ensureDir(outputDir);
     })
     .then(function () {
-      var frameworkBuildDir = path.join(
+      var thaliCoreFrameworkBuildDir = path.join(
         buildDir, projectConfiguration + '-' + sdk, projectName + '.framework');
       var frameworkOutputDir = path.join(
         outputDir, projectName + '.framework');
 
-      return fs.copy(frameworkBuildDir, frameworkOutputDir, { clobber: false });
+      return fs.copy(thaliCoreFrameworkBuildDir, frameworkOutputDir, { clobber: false });
+    })
+    .then(function () {
+      var cocoaAsyncSocketFrameworkBuildDir = path.join(
+        projectDir, 'Carthage', 'Build', 'iOS', cocoaAsyncSocketFrameworkName + '.framework');
+      var frameworkOutputDir = path.join(
+        outputDir, cocoaAsyncSocketFrameworkName + '.framework');
+
+      return fs.copy(cocoaAsyncSocketFrameworkBuildDir, frameworkOutputDir, { clobber: false });
+    })
+    .then(function () {
+      var swiftXCTestFrameworkBuildDir = path.join(
+        projectDir, 'Carthage', 'Build', 'iOS', XCTestFrameworkName + '.framework');
+      var frameworkOutputDir = path.join(
+        outputDir, XCTestFrameworkName + '.framework');
+
+      return fs.copy(swiftXCTestFrameworkBuildDir, frameworkOutputDir, { clobber: false });
     });
 }
 
