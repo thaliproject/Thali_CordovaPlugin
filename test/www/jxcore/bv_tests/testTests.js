@@ -4,9 +4,9 @@ var tape = require('../lib/thaliTape');
 var platform = require('thali/NextGeneration/utils/platform');
 var Promise = require('lie');
 var sinon   = require('sinon');
+var logger = require('thali/ThaliLogger')('testTests');
 
 var customData = 'custom data';
-
 var test = tape({
   setup: function (t) {
     if (tape.coordinated) {
@@ -36,11 +36,11 @@ var testObject = {
   }
 };
 
-test('test sinon sansbox', function (t) {
+test('test sinon sansbox', tape.sinonTest(function (t) {
   var sandbox = sinon.sandbox.create();
-  sinon.spy(testObject, "testMethod");
+  this.spy(testObject, "testMethod");
   t.end();
-});
+}));
 
 if (!tape.coordinated) {
   return;

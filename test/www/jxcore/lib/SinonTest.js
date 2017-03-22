@@ -4,6 +4,7 @@ var util     = require('util');
 var inherits = util.inherits;
 var sinon   = require('sinon');
 var tape = require('../lib/thaliTape');
+var newTape = require('../lib/thaliTape');
 var EventEmitter = require('events').EventEmitter;
 
 var asserts = require('./utils/asserts');
@@ -15,8 +16,8 @@ function SinonTest (callback) {
   if (!this) {
     return new SinonTest(callback);
   }
-
-  return this;
+  var sinonTest = sinon.test(callback);
+  return sinonTest;
 }
 
 inherits(SinonTest, EventEmitter);
