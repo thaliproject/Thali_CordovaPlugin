@@ -10,6 +10,22 @@ var TCPServersManager = require('./mux/thaliTcpServersManager');
 var https = require('https');
 var thaliConfig = require('./thaliConfig');
 var platform = require('./utils/platform');
+var proxify = require('./utils/proxify');
+
+var transform = require('./utils/transform');
+
+var serverProxyOptions = {
+  transform: {
+    encode: transform.decode,
+    decode: transform.encode
+  }
+};
+var clientProxyOptions = {
+  transform: {
+    encode: transform.encode,
+    decode: transform.decode
+  }
+};
 
 var states = {
   started: false
@@ -32,6 +48,7 @@ var gRouterServer = null;
 var gRouterServerPort = 0;
 var gServersManager = null;
 var gServersManagerLocalPort = 0;
+var gRouterIOSProxy = null;
 var gNonTcpNetworkStatus = null;
 
 // Exports below only used for testing.
@@ -328,12 +345,24 @@ module.exports.start = function (router, pskIdToSecret) {
               reject(err);
             });
         } else {
-          states.started = true;
-          resolve();
+          proxify.forward(
+            {
+              addres: '127.0.0.1',
+              port: gRouterServerPort
+            },
+            serverProxyOptions
+          ).then(function (proxy) {
+            gRouterIOSProxy = proxy;
+            states.started = true;
+            resolve();
+          }, reject);
         }
 
       });
     gRouterServer = makeIntoCloseAllServer(gRouterServer);
+
+    if (platform.isIOS) {
+    }
   });
 };
 
@@ -361,6 +390,10 @@ function stop(resolve, reject) {
   .then(function () {
     var oldRouterServer = gRouterServer;
     gRouterServer = null;
+    if (gRouterIOSProxy) {
+      gRouterIOSProxy.close();
+      gRouterIOSProxy = null;
+    }
     if (oldRouterServer) {
       return oldRouterServer.closeAllPromise();
     }
@@ -570,7 +603,7 @@ module.exports.startUpdateAdvertisingAndListening = function () {
 
     var port = platform.isAndroid ?
       gServersManagerLocalPort :
-      gRouterServerPort;
+      gRouterIOSProxy.address().port;
 
     Mobile('startUpdateAdvertisingAndListening').callNative(
       port,
@@ -646,6 +679,9 @@ module.exports.getNonTCPNetworkStatus = function () {
 
 var multiConnectCounter = 0;
 
+var proxyByPort = {};
+var proxyByPeer = {};
+
 /**
  * This calls the native multiConnect method. This code is responsible for
  * honoring the restrictions placed on calls to multiConnect. Which is that
@@ -701,10 +737,31 @@ module.exports._multiConnect = function (peerIdentifier) {
             if (error === 'Connection could not be established') {
               recreatePeer(peerIdentifier);
             }
-
           }
 
-          resolve(portNumber);
+          if (proxyByPort[portNumber]) {
+            resolve(proxyByPort[portNumber].address().port);
+            return;
+          }
+
+          var address = {
+            address: '127.0.0.1',
+            port: portNumber,
+          };
+
+          var promise = proxify.forward(address, clientProxyOptions).then(
+            function (proxy) {
+              resolve(proxy.address().port);
+            },
+            reject
+          );
+
+          var proxy = promise.proxy;
+          proxyByPort[portNumber] = proxy;
+          proxyByPeer[peerIdentifier] = {
+            proxy: proxy,
+            portNumber: portNumber
+          };
         }
       );
     });
@@ -754,13 +811,20 @@ module.exports._terminateConnection = function (incomingConnectionId) {
 module.exports._disconnect = function (peerIdentifier) {
   return gPromiseQueue
     .enqueue(function (resolve, reject) {
-      Mobile('disconnect')
-        .callNative(function (errorMsg) {
-          if (errorMsg) {
-            return reject(new Error(errorMsg));
-          }
+      var proxy = proxyByPeer[peerIdentifier];
+      if (proxy) {
+        proxy.proxy.close();
+        var port = proxy.portNumber;
+        delete proxyByPeer[peerIdentifier];
+        delete proxyByPort[port];
+      }
+      Mobile('disconnect').callNative(peerIdentifier, function (errorMsg) {
+        if (errorMsg) {
+          reject(new Error(errorMsg));
+        } else {
           resolve();
-        });
+        }
+      });
     });
 };
 
