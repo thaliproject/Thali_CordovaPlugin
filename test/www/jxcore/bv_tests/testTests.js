@@ -31,24 +31,42 @@ test('another', function (t) {
 });
 
 var testObject = {
-  testMethod: function() {
-    logger.debug("test object for global sinon sansbox");
+  testSpyMethod: function() {
+    logger.debug('test spy method for global sinon sansbox');
+  },
+  testStubMethod: function () {
+    return 'test stub method for global sinon sansbox'
   }
 };
 
 var testSanboxObject = testObject;
 
 test('test sinon sansbox spy', tape.sinonTest(function (t) {
-  this.spy(testObject, "testMethod");
-  t.equal(testObject.testMethod, testSanboxObject.testMethod,
+  this.spy(testObject, 'testSpyMethod');
+  t.equal(testObject.testSpyMethod, testSanboxObject.testSpyMethod,
     'test sandbox spy works correctly');
   t.end();
 }));
 
 test('test sinon sansbox stub', tape.sinonTest(function (t) {
-  this.stub(testObject, "testMethod");
-  t.notEqual(testObject.testMethod, testSanboxObject.testMethod,
-    'test sandbox stub works correctly');
+  var callback = this.stub().returns(42);
+  t.equal(callback(), 42, 'test sandbox stub works correctly');
+  t.end();
+}));
+
+test('test sinon sansbox stub override', tape.sinonTest(function (t) {
+  var result = testObject.testStubMethod();
+  var stub = this.stub(testObject, 'testStubMethod', function () { return "test";});
+  t.notEqual(stub(), result, 'test sandbox stub works correctly');
+  t.end();
+}));
+
+test('test sinon sansbox mock', tape.sinonTest(function (t) {
+  var mock = this.mock(testObject);
+  mock.expects("testStubMethod").twice();
+  testObject.testStubMethod();
+  testObject.testStubMethod();
+  mock.verify();
   t.end();
 }));
 
