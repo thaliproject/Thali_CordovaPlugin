@@ -754,13 +754,13 @@ module.exports._terminateConnection = function (incomingConnectionId) {
 module.exports._disconnect = function (peerIdentifier) {
   return gPromiseQueue
     .enqueue(function (resolve, reject) {
-      Mobile('disconnect')
-        .callNative(function (errorMsg) {
-          if (errorMsg) {
-            return reject(new Error(errorMsg));
-          }
+      Mobile('disconnect').callNative(peerIdentifier, function (errorMsg) {
+        if (errorMsg) {
+          reject(new Error(errorMsg));
+        } else {
           resolve();
-        });
+        }
+      });
     });
 };
 
