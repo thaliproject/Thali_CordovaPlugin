@@ -36,9 +36,19 @@ var testObject = {
   }
 };
 
-test('test sinon sansbox', tape.sinonTest(function (t) {
-  var sandbox = sinon.sandbox.create();
+var testSanboxObject = testObject;
+
+test('test sinon sansbox spy', tape.sinonTest(function (t) {
   this.spy(testObject, "testMethod");
+  t.equal(testObject.testMethod, testSanboxObject.testMethod,
+    'test sandbox spy works correctly');
+  t.end();
+}));
+
+test('test sinon sansbox stub', tape.sinonTest(function (t) {
+  this.stub(testObject, "testMethod");
+  t.notEqual(testObject.testMethod, testSanboxObject.testMethod,
+    'test sandbox stub works correctly');
   t.end();
 }));
 
