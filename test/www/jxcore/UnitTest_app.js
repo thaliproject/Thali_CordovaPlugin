@@ -6,6 +6,8 @@
 
 'use strict';
 
+require('./https-override');
+
 var Promise = require('bluebird');
 Promise.config({
   cancellation: true

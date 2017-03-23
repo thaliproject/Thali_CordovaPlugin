@@ -478,7 +478,7 @@ test('#startUpdateAdvertisingAndListening bad psk should be rejected ' +
         t.end();
       });
       httpRequest.on('error', function (err) {
-        t.equal(err.message, 'socket hang up', 'Connection should be rejected');
+        t.equal(err.message, 'socket hang up -2', 'Connection should be rejected');
         t.end();
       });
     });
@@ -892,7 +892,7 @@ test('startUpdateAdvertisingAndListening does not send ssdp:byebye notifications
       updatedUSN = tempUSN;
       finishTest();
     }
-    
+
   });
 
   testClient.on('advertise-bye', function (data) {

@@ -1,5 +1,7 @@
 'use strict';
 
+require('./https-override');
+
 var path = require('path');
 var randomString = require('randomstring');
 var testLoader = require('./lib/testLoader');

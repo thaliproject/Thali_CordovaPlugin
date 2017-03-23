@@ -594,7 +594,10 @@ test('Action fails because of a bad hostname.', function (t) {
     'enqueue',
     function (action) {
       requestCount++;
-      var keepAliveAgent = new http.Agent();
+      var keepAliveAgent = httpTester.getTestAgent(
+        thaliConfig.BEACON_PSK_IDENTITY,
+        thaliConfig.BEACON_KEY
+      );
       action.eventEmitter.once(
         ThaliNotificationAction.Events.Resolved,
         testResolutionEvent
@@ -652,7 +655,7 @@ test('Action fails because of a bad hostname.', function (t) {
   notificationClient._peerAvailabilityChanged(TCPEvent);
 });
 
-test('hostaddress is removed when the action is running. ', function (t) {
+test.only('hostaddress is removed when the action is running. ', function (t) {
   var isTestFinished = false;
   // Scenario:
   // 1. Event: connectionType is TCP_NATIVE, peer is available
@@ -665,12 +668,16 @@ test('hostaddress is removed when the action is running. ', function (t) {
 
   // Simulates how peer pool runs actions
   var enqueue = function (action) {
-    var keepAliveAgent = new http.Agent();
+    var keepAliveAgent = httpTester.getTestAgent(
+      thaliConfig.BEACON_PSK_IDENTITY,
+      thaliConfig.BEACON_KEY
+    );
     action.start(keepAliveAgent)
       .catch(function (err) {
         if (isTestFinished) {
           return;
         }
+        console.log(err);
         isTestFinished = true;
 
         t.fail('This action should not fail');

@@ -91,7 +91,7 @@ test('#_doImmediateSeqUpdate - server accepts & closes connection',
     testCloseAllServer.listen(0, function () {
       var serverPort = testCloseAllServer.address().port;
       runBadImmediateSeqUpdateTest(t, serverPort, function (err) {
-        t.equal(err.message, 'socket hang up', 'Got socket hang up');
+        t.equal(err.message, 'socket hang up -2', 'Got socket hang up');
       });
     });
   });
