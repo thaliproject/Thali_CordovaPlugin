@@ -2,7 +2,6 @@
 
 var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils');
-var sinon = require('sinon');
 var randomString = require('randomstring');
 
 var PouchDB = testUtils.getLevelDownPouchDb()
@@ -59,9 +58,9 @@ function () {
   // incomplete solution
   return true;
 },
-function (t) {
-  var spy = sinon.spy();
-  var anotherSpy = sinon.spy();
+tape.sinonTest(function (t) {
+  var spy = this.spy();
+  var anotherSpy = this.spy();
 
   var endTestIfBothSpiesWereCalledOnce = function (test) {
     if (spy.callCount > 1 || anotherSpy.callCount > 1) {
@@ -84,7 +83,7 @@ function (t) {
   });
 
   db.put(new Doc()).catch(t.end);
-});
+}));
 
 test('Call of onCheckpointReached handler on multiple db changes ' +
 'that are in the checkpoints plugin delay interval',
@@ -93,9 +92,9 @@ function () {
   // incomplete solution
   return true;
 },
-function (t) {
+tape.sinonTest(function (t) {
   var ENSURE_DELAY = 1000;
-  var spy = sinon.spy();
+  var spy = this.spy();
 
   db.onCheckpointReached(function () {
     spy();
@@ -117,7 +116,7 @@ function (t) {
     .catch(function (error) {
       t.end(error);
     });
-});
+}));
 
 test('Call of onCheckpointReached handler on multiple db changes ' +
 'that are out of the checkpoints plugin delay interval',
@@ -126,8 +125,8 @@ function () {
   // incomplete solution
   return true;
 },
-function (t) {
-  var spy = sinon.spy();
+tape.sinonTest(function (t) {
+  var spy = this.spy();
 
   var handler = function () {
     spy();
@@ -148,4 +147,4 @@ function (t) {
         .catch(function (error) {
           t.end(error);
         });
-});
+}));
