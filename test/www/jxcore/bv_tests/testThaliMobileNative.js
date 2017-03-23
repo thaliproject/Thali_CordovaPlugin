@@ -444,6 +444,12 @@ function connect(module, options) {
   });
 }
 
+function wairForEvent(emitter, event) {
+  return new Promise(function (resolve) {
+    emitter.once(event, resolve);
+  });
+}
+
 test('Can shift data', function (t) {
   var exchangeData = 'small amount of data';
 
@@ -528,6 +534,11 @@ test('Can shift data', function (t) {
 test.only('Can shift data securely', function (t) {
   var exchangeData = 'small amount of data';
 
+  var uuids = t.participants.map(function (p) { return p.uuid; });
+  assert(uuids.length === 2, 'This test requires exactly 2 devices');
+  uuids.sort();
+  var iAmFirst = (tape.uuid === uuids[0]);
+
   var formatPrintableData = function (data) {
     return data;
   };
@@ -571,7 +582,9 @@ test.only('Can shift data securely', function (t) {
       // server ends connection, not client
       if (!ended) {
         t.fail(new Error('Unexpected end event'));
+        return;
       }
+      server.emit('CLIENT_DONE');
     });
     socket.on('error', function (error) {
       t.fail(error.message);
@@ -579,6 +592,16 @@ test.only('Can shift data securely', function (t) {
   });
   server = makeIntoCloseAllServer(server);
   serverToBeClosed = server;
+
+  var serverStarted = new Promise(function (resolve, reject) {
+    server.once('error', reject);
+    server.listen(0, function () {
+      server.removeListener('error', reject);
+      resolve(server);
+    });
+  });
+
+  var waitForServerEnd = wairForEvent(server, 'CLIENT_DONE');
 
   function shiftData(sock) {
     sock.on('error', function (error) {
@@ -593,7 +616,6 @@ test.only('Can shift data securely', function (t) {
     });
     sock.on('end', function () {
       t.equal(receivedData, exchangeData, 'got the same data back');
-      t.end();
     });
 
     var rawData = new Buffer(exchangeData);
@@ -602,28 +624,45 @@ test.only('Can shift data securely', function (t) {
     sock.write(rawData, function () {
       console.log('Client data flushed');
     });
+    return wairForEvent(sock, 'end');
   }
 
-  server.listen(0, function () {
-    var port = server.address().port;
-    var nativePort;
-    console.log('Test server is listening on the %d port', port);
-    findPeerAndConnect(port)
-      .then(function (info) {
-        console.log('Native connection established. Info: %s',
-          JSON.stringify(info, null, 2));
-        nativePort = info.connection.listeningPort;
-        return connect(tls, {
-          port: nativePort,
-          ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-          pskIdentity: pskId,
-          pskKey: pskKey,
-        });
-      })
-      .then(function (socket) {
-        shiftData(socket);
+  function startShiftData(port) {
+    return connect(tls, {
+      port: port,
+      ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+      pskIdentity: pskId,
+      pskKey: pskKey,
+    })
+    .then(function (socket) {
+      return shiftData(socket);
+    });
+  }
+
+
+  serverStarted
+    .then(function (server) {
+      var port = server.address().port;
+      console.log('Test server is listening on the %d port', port);
+      return findPeerAndConnect(port);
+    })
+    .then(function (info) {
+      console.log('Native connection established. Info: %s',
+        JSON.stringify(info, null, 2));
+      var nativePort = info.connection.listeningPort;
+      if (iAmFirst) {
+        return startShiftData(nativePort);
+      }
+      return waitForServerEnd.then(function () {
+        return startShiftData(nativePort);
       });
-  });
+    })
+    .catch(function (err) {
+      t.fail(err.message + '\n' + err.stack);
+    })
+    .then(function () {
+      t.end();
+    });
 });
 
 test('Can shift large amounts of data', function (t) {
