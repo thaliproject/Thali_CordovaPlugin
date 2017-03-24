@@ -561,16 +561,18 @@ module.exports.stopListeningForAdvertisements = function () {
  * @public
  * @returns {Promise<?Error>}
  */
-module.exports.startUpdateAdvertisingAndListening = function () {
+module.exports.startUpdateAdvertisingAndListening = function (port) {
   targetStates.advertising = true;
   return gPromiseQueue.enqueue(function (resolve, reject) {
     if (!states.started) {
       return reject(new Error('Call Start!'));
     }
 
-    var port = platform.isAndroid ?
-      gServersManagerLocalPort :
-      gRouterServerPort;
+    if (!port) {
+      port = platform.isAndroid ?
+        gServersManagerLocalPort :
+        gRouterServerPort;
+    }
 
     Mobile('startUpdateAdvertisingAndListening').callNative(
       port,
@@ -753,14 +755,14 @@ module.exports._terminateConnection = function (incomingConnectionId) {
  */
 module.exports._disconnect = function (peerIdentifier) {
   return gPromiseQueue.enqueue(function (resolve, reject) {
-    Mobile('disconnect').callNative(peerIdentifier, function (errorMsg) {
-      if (errorMsg) {
-        reject(new Error(errorMsg));
-      } else {
-        resolve();
-      }
+      Mobile('disconnect').callNative(peerIdentifier, function (errorMsg) {
+        if (errorMsg) {
+          reject(new Error(errorMsg));
+        } else {
+          resolve();
+        }
+      });
     });
-  });
 };
 
 /**

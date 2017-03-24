@@ -27,7 +27,8 @@ var logger = require('../lib/testLogger')('testThaliMobileNative');
 // that will get closed in teardown.
 var serverToBeClosed = null;
 
-var test = tape({
+var test = function () {};
+var xtest = tape({
   setup: function (t) {
     serverToBeClosed = {
       closeAll: function (callback) {
@@ -448,7 +449,7 @@ function wairForEvent(emitter, event) {
   });
 }
 
-test('Can shift data', function (t) {
+xtest('Can shift data', function (t) {
   var exchangeData = 'small amount of data';
 
   var formatPrintableData = function (data) {
@@ -529,12 +530,11 @@ test('Can shift data', function (t) {
   });
 });
 
-test('Can shift data via parallel connections', function (t) {
-  var exchangeData = 'small amount of data';
+xtest('Can shift data via parallel connections', function (t) {
+  var dataLength = 22;
 
   var formatPrintableData = function (data) {
-    var ellipsis = data.length > 40 ? '...' : '';
-    return '<' + data.slice(0, 40) + ellipsis + '>';
+    return data;
   };
 
   var server = net.createServer(function (socket) {
@@ -546,7 +546,7 @@ test('Can shift data via parallel connections', function (t) {
         chunk.length, formatPrintableData(chunk.toString()));
 
       // when received all data, send it back
-      if (buffer.length === exchangeData.length) {
+      if (buffer.length === dataLength) {
         console.log('Server received all data: %s',
           formatPrintableData(buffer.toString()));
         var rawData = new Buffer(buffer);
@@ -574,7 +574,7 @@ test('Can shift data via parallel connections', function (t) {
   server = makeIntoCloseAllServer(server);
   serverToBeClosed = server;
 
-  function shiftData(sock) {
+  function shiftData(sock, exchangeData) {
     return new Promise(function (resolve, reject) {
       sock.on('error', function (error) {
         console.log('Client socket error:', error.message, error.stack);
@@ -610,12 +610,20 @@ test('Can shift data via parallel connections', function (t) {
         connect(net, { port: nativePort }),
       ]);
     }).then(function (sockets) {
-      sockets.forEach(shiftData);
+      return Promise.all(sockets.map(function (socket, index) {
+        var string =  'small amount of data ' + index;
+        t.equal(string.length, dataLength, 'correct string length');
+        return shiftData(socket, string);
+      }));
+    })
+    .catch(t.fail)
+    .then(function () {
+      t.end();
     });
   });
 });
 
-test.only('Can shift data securely', function (t) {
+xtest('Can shift data securely', function (t) {
   var exchangeData = 'small amount of data';
 
   var uuids = t.participants.map(function (p) { return p.uuid; });

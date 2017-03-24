@@ -8,6 +8,8 @@ module.exports = {
   // Tests are ordered in the dependency order to avoid testing modules
   // before all its dependencies have been tested.
   preferredOrder: [
+    'testThaliMobileNative.js',
+    'testHttp.js',
     'testMakeIntoCloseAllServer.js',
     'testPouchDBCheckpointPlugin.js',
     'testPouchDBGenerator.js',
