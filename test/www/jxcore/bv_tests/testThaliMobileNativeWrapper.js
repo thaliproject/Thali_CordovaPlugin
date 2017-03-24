@@ -8,7 +8,6 @@ if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
 var express = require('express');
 var net = require('net');
 var Promise = require('lie');
-var sinon = require('sinon');
 var testUtils = require('../lib/testUtils.js');
 
 if (typeof Mobile === 'undefined') {
@@ -1043,13 +1042,13 @@ test('We fire nonTCPPeerAvailabilityChangedEvent with the same generation ' +
     return true;
     // return platform.isIOS
   },
-  function (t) {
+  tape.sinonTest(function (t) {
     trivialEndToEndTest(t, function (peerId) {
       var beforeRecreatePeer = null;
       var afterRecreatePeer = null;
       var isKilled = false;
       var serversManager = thaliMobileNativeWrapper._getServersManager();
-      var smEmitSpy = sinon.spy(serversManager, 'emit');
+      var smEmitSpy = this.spy(serversManager, 'emit');
 
       function finishTest() {
         t.ok(isKilled, 'mux must be destroyed');
@@ -1083,7 +1082,6 @@ test('We fire nonTCPPeerAvailabilityChangedEvent with the same generation ' +
           'nonTCPPeerAvailabilityChangedEvent',
           nonTCPAvailableHandler
         );
-        smEmitSpy.restore();
         t.end();
       }
 
@@ -1116,5 +1114,5 @@ test('We fire nonTCPPeerAvailabilityChangedEvent with the same generation ' +
       thaliMobileNativeWrapper.emitter
         .on('nonTCPPeerAvailabilityChangedEvent', nonTCPAvailableHandler);
     });
-  }
+  })
 );

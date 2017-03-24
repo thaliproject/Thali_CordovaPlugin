@@ -16,16 +16,20 @@ function SinonTest (callback) {
     var args = slice.call(arguments);
     var tapeEnd = t.end;
     var exception, result;
+    var ok;
 
     if (typeof t.end === "function") {
-  	  t.end = function end(res) {
-  	    if (res) {
-  	      sandbox.restore();
-  	    } else {
-  	      sandbox.verifyAndRestore();
-  	    }
-  	  	tapeEnd(res);
-  	  };
+      t.on("result", function(res) {
+        ok = res.ok;
+      })
+
+      t.on("end", function(res) {
+        if (!ok) {
+          sandbox.restore();
+        } else {
+          sandbox.verifyAndRestore();
+        }
+      })
   	}
 
     try {
