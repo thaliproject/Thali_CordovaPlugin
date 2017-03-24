@@ -529,6 +529,92 @@ test('Can shift data', function (t) {
   });
 });
 
+test('Can shift data via parallel connections', function (t) {
+  var exchangeData = 'small amount of data';
+
+  var formatPrintableData = function (data) {
+    var ellipsis = data.length > 40 ? '...' : '';
+    return '<' + data.slice(0, 40) + ellipsis + '>';
+  };
+
+  var server = net.createServer(function (socket) {
+    var ended = false;
+    var buffer = '';
+    socket.on('data', function (chunk) {
+      buffer += chunk.toString();
+      console.log('Server received (%d bytes): %s',
+        chunk.length, formatPrintableData(chunk.toString()));
+
+      // when received all data, send it back
+      if (buffer.length === exchangeData.length) {
+        console.log('Server received all data: %s',
+          formatPrintableData(buffer.toString()));
+        var rawData = new Buffer(buffer);
+        console.log('Server sends data back to client (%d bytes): %s',
+          rawData.length, formatPrintableData(buffer));
+        socket.write(rawData, function () {
+          console.log('Server data flushed');
+        });
+        ended = true;
+        socket.end(function () {
+          console.log('Server\'s socket stream finished');
+        });
+      }
+    });
+    socket.on('end', function () {
+      // server ends connection, not client
+      if (!ended) {
+        t.fail(new Error('Unexpected end event'));
+      }
+    });
+    socket.on('error', function (error) {
+      t.fail(error.message);
+    });
+  });
+  server = makeIntoCloseAllServer(server);
+  serverToBeClosed = server;
+
+  function shiftData(sock) {
+    return new Promise(function (resolve, reject) {
+      sock.on('error', function (error) {
+        console.log('Client socket error:', error.message, error.stack);
+        reject(error);
+      });
+
+      var receivedData = '';
+      sock.on('data', function (chunk) {
+        receivedData += chunk.toString();
+      });
+      sock.on('end', function () {
+        t.equal(receivedData, exchangeData, 'got the same data back');
+        resolve();
+      });
+
+      var rawData = new Buffer(exchangeData);
+      console.log('Client sends data (%d bytes): %s',
+        rawData.length, formatPrintableData(exchangeData));
+      sock.write(rawData, function () {
+        console.log('Client data flushed');
+      });
+    });
+  }
+
+  server.listen(0, function () {
+    var port = server.address().port;
+    findPeerAndConnect(port).then(function (info) {
+      console.log('Native connection established. Peer:', info.peer);
+      var nativePort = info.connection.listeningPort;
+      return Promise.all([
+        connect(net, { port: nativePort }),
+        connect(net, { port: nativePort }),
+        connect(net, { port: nativePort }),
+      ]);
+    }).then(function (sockets) {
+      sockets.forEach(shiftData);
+    });
+  });
+});
+
 test.only('Can shift data securely', function (t) {
   var exchangeData = 'small amount of data';
 
