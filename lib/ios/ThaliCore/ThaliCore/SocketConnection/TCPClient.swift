@@ -15,6 +15,7 @@ class TCPClient: NSObject {
   private var activeConnections: Atomic<[GCDAsyncSocket]> = Atomic([])
   private var didReadDataHandler: ((GCDAsyncSocket, NSData) -> Void)
   private var didDisconnectHandler: ((GCDAsyncSocket) -> Void)
+  private var port: UInt16! = 0
 
   // MARK: - Public methods
   required init(with didReadData: (GCDAsyncSocket, NSData) -> Void,
@@ -33,6 +34,7 @@ class TCPClient: NSObject {
       socket.delegate = self
       socket.delegateQueue = socketQueue
       try socket.connectToHost("127.0.0.1", onPort: port)
+      self.port = port
       completion(socket: socket, port: port, error: nil)
     } catch _ {
       completion(socket: nil, port: port, error: ThaliCoreError.ConnectionFailed)
@@ -53,6 +55,7 @@ extension TCPClient: GCDAsyncSocketDelegate {
   func socket(sock: GCDAsyncSocket, didConnectToHost host: String, port: UInt16) {
     activeConnections.modify { $0.append(sock) }
     sock.readDataWithTimeout(-1, tag: 0)
+    print("NATIVE: TCPClient socket did connect to host on port: \(port) expected port: \(self.port)")
   }
 
   func socketDidDisconnect(sock: GCDAsyncSocket, withError err: NSError?) {
@@ -65,6 +68,7 @@ extension TCPClient: GCDAsyncSocketDelegate {
     }
 
     didDisconnectHandler(sock)
+    print("NATIVE: TCPClient socket did disconnect on port: \(port)")
   }
 
   func socket(sock: GCDAsyncSocket, didWriteDataWithTag tag: Int) {
@@ -73,5 +77,6 @@ extension TCPClient: GCDAsyncSocketDelegate {
 
   func socket(sock: GCDAsyncSocket, didReadData data: NSData, withTag tag: Int) {
     didReadDataHandler(sock, data)
+    print("NATIVE: TCPClient socket did read data on port: \(port) data size: \(data.length)")
   }
 }

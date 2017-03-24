@@ -134,6 +134,8 @@ public final class AdvertiserManager {
     }
 
     self.currentAdvertiser = newAdvertiser
+
+    print("NATIVE: Advertising started with UUID: \(newPeer.uuid)")
   }
 
   /**

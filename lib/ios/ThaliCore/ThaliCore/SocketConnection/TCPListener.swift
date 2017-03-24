@@ -88,15 +88,18 @@ extension TCPListener: GCDAsyncSocketDelegate {
       }
       didSocketDisconnectHandler(sock)
     }
+    print("NATIVE: TCPListener socket did disconnect on port: \(listenerPort) error: \(err)")
   }
 
   func socket(sock: GCDAsyncSocket, didAcceptNewSocket newSocket: GCDAsyncSocket) {
     activeConnections.modify { $0.append(newSocket) }
     didAcceptConnectionHandler?(newSocket)
+    print("NATIVE: TCPListener socket did accept new socket on port: \(listenerPort)")
   }
 
   func socket(sock: GCDAsyncSocket, didReadData data: NSData, withTag tag: Int) {
     didReadDataFromSocketHandler(sock, data)
     sock.readDataWithTimeout(-1, tag: 0)
+    print("NATIVE: TCPListener socket did read data on port: \(listenerPort) size: \(data.length) with tag: \(tag)")
   }
 }

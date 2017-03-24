@@ -107,6 +107,7 @@ class VirtualSocket: NSObject {
     if bytesReaded >= 0 {
       let data = NSData(bytes: &buffer, length: bytesReaded)
       didReadDataFromStreamHandler?(self, data)
+      print("NATIVE: VritualSocket is writing data to output stream, size: \(data.length)")
     } else {
       closeStreams()
     }

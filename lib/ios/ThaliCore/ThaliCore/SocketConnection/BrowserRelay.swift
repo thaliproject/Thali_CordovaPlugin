@@ -45,6 +45,8 @@ final class BrowserRelay {
                                              connectionAccepted: didAcceptConnectionHandler) {
       port, error in
       completion(port: port, error: error)
+
+      print("NATIVE: browser socket started listening on port \(port) error: \(error.debugDescription)")
     }
   }
 
