@@ -478,7 +478,7 @@ test('#startUpdateAdvertisingAndListening bad psk should be rejected ' +
         t.end();
       });
       httpRequest.on('error', function (err) {
-        t.equal(err.message, 'socket hang up -2', 'Connection should be rejected');
+        t.equal(err.code, 'ECONNRESET', 'Connection should be rejected');
         t.end();
       });
     });

@@ -918,7 +918,7 @@ test('calls correct starts when network changes',
 test('test to coordinate connection cut',
   function () {
     // This should be running on Android too but see #1600
-    return platform._isRealAndroid;
+    return platform.isIOS || platform._isRealAndroid;
   },
   function (t) {
     // This cuts connections on Android.
@@ -938,7 +938,7 @@ test('test to coordinate connection cut',
 test('can do HTTP requests after connections are cut',
   function () {
     // This should be running on Android too but see #1600
-    return platform._isRealAndroid;
+    return platform.isIOS || platform._isRealAndroid;
   },
   function (t) {
   // Turn Bluetooth back on so that Android can operate

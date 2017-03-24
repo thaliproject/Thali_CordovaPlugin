@@ -655,7 +655,7 @@ test('Action fails because of a bad hostname.', function (t) {
   notificationClient._peerAvailabilityChanged(TCPEvent);
 });
 
-test.only('hostaddress is removed when the action is running. ', function (t) {
+test('hostaddress is removed when the action is running. ', function (t) {
   var isTestFinished = false;
   // Scenario:
   // 1. Event: connectionType is TCP_NATIVE, peer is available
@@ -677,7 +677,6 @@ test.only('hostaddress is removed when the action is running. ', function (t) {
         if (isTestFinished) {
           return;
         }
-        console.log(err);
         isTestFinished = true;
 
         t.fail('This action should not fail');
