@@ -9,7 +9,6 @@ var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils.js');
 var express = require('express');
 var validations = require('thali/validations');
-var sinon = require('sinon');
 var uuid = require('uuid');
 var nodessdp = require('node-ssdp');
 var objectAssign = require('object-assign');
@@ -23,16 +22,13 @@ var net = require('net');
 var radioState = ThaliMobileNative.radioState;
 var connectionTypes = ThaliMobileNativeWrapper.connectionTypes;
 var verifyCombinedResultSuccess = testUtils.verifyCombinedResultSuccess;
-var sandbox;
 
 var test = tape({
   setup: function (t) {
-    sandbox = sinon.sandbox.create();
     t.notOk(ThaliMobile.isStarted(), 'ThaliMobile should be stopped');
     t.end();
   },
   teardown: function (t) {
-    sandbox.restore();
     ThaliMobile.stop()
     .then(function (combinedResult) {
       verifyCombinedResultSuccess(t, combinedResult);
@@ -232,14 +228,14 @@ test('#start subscribes to the WiFi infrastructure events and #stop ' +
     // NATIVE and for BOTH modes
     return true;
   },
-  function (t) {
+  tape.sinonTest(function (t) {
     var wifiEmitter = ThaliMobile._getThaliWifiInfrastructure();
     var nativeEmitter = ThaliMobileNativeWrapper.emitter;
 
-    var wifiOnSpy = sandbox.spy(wifiEmitter, 'on');
-    var nativeOnSpy = sandbox.spy(nativeEmitter, 'on');
-    var wifiOffSpy = sandbox.spy(wifiEmitter, 'removeListener');
-    var nativeOffSpy = sandbox.spy(nativeEmitter, 'removeListener');
+    var wifiOnSpy = this.spy(wifiEmitter, 'on');
+    var nativeOnSpy = this.spy(nativeEmitter, 'on');
+    var wifiOffSpy = this.spy(wifiEmitter, 'removeListener');
+    var nativeOffSpy = this.spy(nativeEmitter, 'removeListener');
 
     function resetSpies() {
       wifiOnSpy.reset();
@@ -279,7 +275,7 @@ test('#start subscribes to the WiFi infrastructure events and #stop ' +
     .then(function () {
       t.end();
     });
-  }
+  })
 );
 
 test('does not emit duplicate discoveryAdvertisingStateUpdate',
@@ -288,8 +284,8 @@ test('does not emit duplicate discoveryAdvertisingStateUpdate',
     // the native layer
     return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
   },
-  function (t) {
-    var spy = sinon.spy();
+  tape.sinonTest(function (t) {
+    var spy = this.spy();
     ThaliMobile.start(express.Router()).then(function () {
       return ThaliMobile.startListeningForAdvertisements();
     }).then(function () {
@@ -323,12 +319,12 @@ test('does not emit duplicate discoveryAdvertisingStateUpdate',
         'discoveryAdvertisingStateUpdateNonTCP', testStatus
       );
     });
-  }
+  })
 );
 
-test('does not send duplicate availability changes', function (t) {
+test('does not send duplicate availability changes', tape.sinonTest(function (t) {
   var nativePeer = generateLowerLevelPeers().nativePeer;
-  var spy = sinon.spy(ThaliMobile.emitter, 'emit');
+  var spy = this.spy(ThaliMobile.emitter, 'emit');
   emitNativePeerAvailability(nativePeer);
   process.nextTick(function () {
     t.equals(spy.callCount, 1, 'should be called once');
@@ -339,7 +335,7 @@ test('does not send duplicate availability changes', function (t) {
       t.end();
     });
   });
-});
+}));
 
 test('can get the network status', function (t) {
   ThaliMobile.getNetworkStatus()
@@ -365,14 +361,12 @@ test('wifi peer is marked unavailable if announcements stop',
   function () {
     return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
   },
-  function (t) {
-    // Store the original threshold so that it can be restored
-    // at the end of the test.
-    var originalThreshold = thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
+  tape.sinonTest(function (t) {
     // Make the threshold a bit shorter so that the test doesn't
     // have to wait for so long.
-    thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD =
-      thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 2;
+    var threshold = thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 2;
+    this.stub(thaliConfig, 'TCP_PEER_UNAVAILABILITY_THRESHOLD', threshold);
+  
     var testPeerIdentifier = uuid.v4();
     var testServerHostAddress = randomstring.generate({
       charset: 'hex', // to get lowercase chars for the host address
@@ -393,7 +387,7 @@ test('wifi peer is marked unavailable if announcements stop',
       generation: 0
     }));
 
-    var spy = sinon.spy();
+    var spy = this.spy();
     var availabilityChangedHandler = function (peer) {
       if (peer.peerIdentifier !== testPeerIdentifier) {
         return;
@@ -409,7 +403,6 @@ test('wifi peer is marked unavailable if announcements stop',
         ThaliMobile.emitter.removeListener('peerAvailabilityChanged',
           availabilityChangedHandler);
         testServer.stop(function () {
-          thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD = originalThreshold;
           t.end();
         });
       }
@@ -426,17 +419,15 @@ test('wifi peer is marked unavailable if announcements stop',
         // Handler above should get called.
       });
     });
-  }
+  })
 );
 
 test('native peer should be removed if no availability updates ' +
 'were received during availability timeout',
-  function (t) {
-    var originalThreshold = thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
+  tape.sinonTest(function (t) {
     // Make the threshold a bit shorter so that the test doesn't
     // have to wait for so long.
-    thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD = 100;
-
+    this.stub(thaliConfig, 'NON_TCP_PEER_UNAVAILABILITY_THRESHOLD', 100);
     t.timeoutAfter(thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD * 3);
 
     var nativePeer = generateLowerLevelPeers().nativePeer;
@@ -455,8 +446,6 @@ test('native peer should be removed if no availability updates ' +
         case 2:
           t.equal(peerStatus.peerAvailable, false,
             'peer is not availabel because it was too silent');
-          // restore everything
-          thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD = originalThreshold;
           ThaliMobile.emitter
               .removeListener('peerAvailabilityChanged', availabilityHandler);
           t.end();
@@ -468,7 +457,7 @@ test('native peer should be removed if no availability updates ' +
     ThaliMobile.start(express.Router()).then(function () {
       emitNativePeerAvailability(nativePeer);
     });
-  }
+  })
 );
 
 test('peerAvailabilityChanged - peer added/removed to/from cache (native)',
@@ -724,15 +713,13 @@ test('native available - peer with the same port and generation but with ' +
   function () {
     return !platform.isAndroid;
   },
-  function (t) {
+  tape.sinonTest(function (t) {
     var nativePeer = generateLowerLevelPeers().nativePeer;
     var callCount = 0;
 
     // make update window shorter because nobody wants to wait 51 seconds for
     // test to complete
-    var originalUpdateWindow = thaliConfig.UPDATE_WINDOWS_FOREGROUND_MS;
-    thaliConfig.UPDATE_WINDOWS_FOREGROUND_MS = 0.1;
-
+    this.stub(thaliConfig, 'UPDATE_WINDOWS_FOREGROUND_MS', 0.1);
     t.timeoutAfter(thaliConfig.UPDATE_WINDOWS_FOREGROUND_MS * 1000);
 
     var availabilityHandler = function (peerStatus) {
@@ -761,7 +748,6 @@ test('native available - peer with the same port and generation but with ' +
     ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
 
     function end() {
-      thaliConfig.UPDATE_WINDOWS_FOREGROUND_MS = originalUpdateWindow;
       ThaliMobile.emitter
         .removeListener('peerAvailabilityChanged', availabilityHandler);
       t.end();
@@ -769,7 +755,7 @@ test('native available - peer with the same port and generation but with ' +
 
     nativePeer.generation = 2;
     emitNativePeerAvailability(nativePeer);
-  }
+  })
 );
 
 test('native available - peer with greater generation is cached (MPCF)',
@@ -1275,7 +1261,7 @@ test('multiconnect failure - new peer is ignored (MPCF)',
     // return !platform.isIOS;
     return true;
   },
-  function (t) {
+  tape.sinonTest(function (t) {
     var nativePeer = generateLowerLevelPeers().nativePeer;
 
     var failedPeer = {
@@ -1283,7 +1269,7 @@ test('multiconnect failure - new peer is ignored (MPCF)',
       connectionType: getNativeConnectionType()
     };
 
-    var availabilityHandler = sinon.spy();
+    var availabilityHandler = this.spy();
 
     function end() {
       var cache = ThaliMobile._getPeerAvailabilities();
@@ -1302,7 +1288,7 @@ test('multiconnect failure - new peer is ignored (MPCF)',
     ThaliMobileNativeWrapper.emitter.emit('failedNativeConnection', failedPeer);
 
     end();
-  }
+  })
 );
 
 test('multiconnect failure - cached peer fires peerAvailabilityChanged (MPCF)',
@@ -1572,7 +1558,7 @@ test('#getPeerHostInfo - returns discovered cached native peer and calls ' +
   function () {
     return !platform.isIOS;
   },
-  function (t) {
+  tape.sinonTest(function (t) {
     var peer = {
       peerIdentifier: 'foo',
       peerAvailable: true,
@@ -1581,7 +1567,7 @@ test('#getPeerHostInfo - returns discovered cached native peer and calls ' +
     };
     var resolvedPortNumber = 12345;
 
-    var multiConnectStub = sinon.stub(
+    var multiConnectStub = this.stub(
       ThaliMobileNativeWrapper,
       '_multiConnect',
       function (peerId) {
@@ -1607,10 +1593,9 @@ test('#getPeerHostInfo - returns discovered cached native peer and calls ' +
     })
     .catch(t.fail)
     .then(function () {
-      multiConnectStub.restore();
       t.end();
     });
-  }
+  })
 );
 
 test('#getPeerHostInfo - returns discovered cached wifi peer',
@@ -1672,8 +1657,10 @@ test('#disconnect delegates native peers to the native wrapper',
   function () {
     return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
   },
-  function (t) {
+  tape.sinonTest(function (t) {
     var nativePeer = generateLowerLevelPeers().nativePeer;
+    var nativeDisconnectSpy =
+        this.spy(ThaliMobileNativeWrapper, 'disconnect');
 
     var availabilityHandler = function (peerStatus) {
       if (peerStatus.peerIdentifier !== nativePeer.peerIdentifier) {
@@ -1681,9 +1668,6 @@ test('#disconnect delegates native peers to the native wrapper',
       }
       ThaliMobile.emitter
         .removeListener('peerAvailabilityChanged', availabilityHandler);
-
-      var nativeDisconnectSpy =
-        sinon.spy(ThaliMobileNativeWrapper, 'disconnect');
 
       ThaliMobile
         .disconnect(
@@ -1703,7 +1687,6 @@ test('#disconnect delegates native peers to the native wrapper',
           ), 'native wrapper `disconnect` called with peer data');
         })
         .then(function () {
-          nativeDisconnectSpy.restore();
           t.end();
         });
     };
@@ -1713,7 +1696,7 @@ test('#disconnect delegates native peers to the native wrapper',
     ThaliMobile.start(express.Router()).then(function () {
       emitNativePeerAvailability(nativePeer);
     });
-  }
+  })
 );
 
 test('network changes emitted correctly',
@@ -2033,7 +2016,7 @@ test('If a peer is not available (and hence is not in the thaliMobile cache)' +
     return !platform.isAndroid ||
       global.NETWORK_TYPE !== ThaliMobile.networkTypes.NATIVE;
   },
-  function (t) {
+  tape.sinonTest(function (t) {
     var somePeerIdentifier = uuid.v4();
 
     var socket;
@@ -2079,7 +2062,7 @@ test('If a peer is not available (and hence is not in the thaliMobile cache)' +
       cleanUp();
       return Promise.resolve();
     }
-    sinon.stub(ThaliMobileNativeWrapper, 'disconnect', disconnect);
+    this.stub(ThaliMobileNativeWrapper, 'disconnect', disconnect);
 
     ThaliMobile.start(
       express.Router(),
@@ -2107,7 +2090,7 @@ test('If a peer is not available (and hence is not in the thaliMobile cache)' +
       ThaliMobileNativeWrapper.terminateListener = originalListener;
       cleanUp();
     });
-  }
+  })
 );
 
 test('does not fire duplicate events after peer listener recreation',
@@ -2262,8 +2245,8 @@ test('peer should be found once after listening and discovery started',
 function () {
   return global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI;
 },
-function (t) {
-  var spy = sinon.spy();
+tape.sinonTest(function (t) {
+  var spy = this.spy();
   var availabilityChangedHandler = function (peer) {
     // Only count changes that mark peer becoming available.
     if (peer.hostAddress !== null && peer.portNumber !== null) {
@@ -2298,7 +2281,7 @@ function (t) {
       done();
     }, timeout);
   });
-});
+}));
 
 var participantState = {
   running: 'running',

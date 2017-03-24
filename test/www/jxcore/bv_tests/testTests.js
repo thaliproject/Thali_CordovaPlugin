@@ -3,7 +3,6 @@
 var tape = require('../lib/thaliTape');
 var platform = require('thali/NextGeneration/utils/platform');
 var Promise = require('lie');
-var sinon   = require('sinon');
 var logger = require('thali/ThaliLogger')('testTests');
 
 var customData = 'custom data';

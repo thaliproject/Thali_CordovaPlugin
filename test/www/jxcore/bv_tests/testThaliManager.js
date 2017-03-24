@@ -10,7 +10,6 @@ var PouchDB = require('pouchdb');
 var express = require('express');
 var expressPouchDB = require('express-pouchdb');
 
-var sinon = require('sinon');
 var proxyquire = require('proxyquire').noCallThru();
 
 var Salti = require('salti');
@@ -41,57 +40,57 @@ var test = tape({
   }
 });
 
-function Mocks(t) {
+function Mocks(t, sandboxObject) {
   // All objects should be cloned in order to prevent
   // 'already wrapped' error by 'sinon.spy'.
 
   this.t = t;
 
-  this.express          = sinon.spy(express);
-  this.expressPouchDB   = sinon.spy(expressPouchDB);
-  this.LevelDownPouchDB = sinon.spy(testUtils.getLevelDownPouchDb());
+  this.express          = sandboxObject.spy(express);
+  this.expressPouchDB   = sandboxObject.spy(expressPouchDB);
+  this.LevelDownPouchDB = sandboxObject.spy(testUtils.getLevelDownPouchDb());
 
   this.ThaliMobile = extend({}, ThaliMobile);
 
-  this.MobileStart = sinon.spy(this.ThaliMobile, 'start');
-  this.MobileStop  = sinon.spy(this.ThaliMobile, 'stop');
+  this.MobileStart = sandboxObject.spy(this.ThaliMobile, 'start');
+  this.MobileStop  = sandboxObject.spy(this.ThaliMobile, 'stop');
 
-  this.MobileStartLA = sinon.spy(
+  this.MobileStartLA = sandboxObject.spy(
     this.ThaliMobile, 'startListeningForAdvertisements'
   );
-  this.MobileStartUAA = sinon.spy(
+  this.MobileStartUAA = sandboxObject.spy(
     this.ThaliMobile, 'startUpdateAdvertisingAndListening'
   );
 
-  this.Notification = sinon.spy(
+  this.Notification = sandboxObject.spy(
     ThaliSendNotificationBasedOnReplication
   );
   this.Notification.prototype = extend(
     {},
     ThaliSendNotificationBasedOnReplication.prototype
   );
-  this.NotificationStart = sinon.spy(
+  this.NotificationStart = sandboxObject.spy(
     this.Notification.prototype, 'start'
   );
-  this.NotificationStop = sinon.spy(
+  this.NotificationStop = sandboxObject.spy(
     this.Notification.prototype, 'stop'
   );
 
-  this.Replication = sinon.spy(
+  this.Replication = sandboxObject.spy(
     ThaliPullReplicationFromNotification
   );
   this.Replication.prototype = extend(
     {},
     ThaliPullReplicationFromNotification.prototype
   );
-  this.ReplicationStart = sinon.spy(
+  this.ReplicationStart = sandboxObject.spy(
     this.Replication.prototype, 'start'
   );
-  this.ReplicationStop = sinon.spy(
+  this.ReplicationStop = sandboxObject.spy(
     this.Replication.prototype, 'stop'
   );
 
-  this.Salti = sinon.spy(Salti);
+  this.Salti = sandboxObject.spy(Salti);
   this.ThaliManager =
     proxyquire('thali/NextGeneration/thaliManager', {
       './replication/thaliSendNotificationBasedOnReplication':
@@ -380,7 +379,7 @@ Mocks.prototype.checkSalti = function(dbName) {
   );
 };
 
-test('test thali manager spies', function (t) {
+test('test thali manager spies', tape.sinonTest(function (t) {
   // This function will return all participant's public keys
   // except local 'publicKeyForLocalDevice' one.
   var partnerKeys;
@@ -392,7 +391,7 @@ test('test thali manager spies', function (t) {
     partnerKeys = [];
   }
 
-  var mocks = new Mocks(t);
+  var mocks = new Mocks(t, this);
 
   // Creating thali manager with mocks.
   var dbName = testUtils.getRandomPouchDBName();
@@ -418,9 +417,9 @@ test('test thali manager spies', function (t) {
     mocks.checkStop();
     t.end();
   });
-});
+}));
 
-test('test thali manager multiple starts and stops', function (t) {
+test('test thali manager multiple starts and stops', tape.sinonTest(function (t) {
   // This function will return all participant's public keys
   // except local 'publicKeyForLocalDevice' one.
   var partnerKeys;
@@ -432,7 +431,7 @@ test('test thali manager multiple starts and stops', function (t) {
     partnerKeys = [];
   }
 
-  var mocks = new Mocks(t);
+  var mocks = new Mocks(t, this);
 
   // Creating thali manager with mocks.
   var dbName = testUtils.getRandomPouchDBName();
@@ -518,4 +517,4 @@ test('test thali manager multiple starts and stops', function (t) {
   .then(function () {
     t.end();
   });
-});
+}));

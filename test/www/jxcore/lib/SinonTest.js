@@ -10,7 +10,7 @@ var logger = require('thali/ThaliLogger')('SinonTest');
 function SinonTest (callback) {
   return function (t) {
   	var slice = Array.prototype.slice;
-	var config = sinon.getConfig(sinon.config);
+  	var config = sinon.getConfig(sinon.config);
     config.injectInto = config.injectIntoThis && this || config.injectInto;
     var sandbox = sinon.sandbox.create(config);
     var args = slice.call(arguments);
@@ -18,15 +18,15 @@ function SinonTest (callback) {
     var exception, result;
 
     if (typeof t.end === "function") {
-	  t.end = function end(res) {
-	    if (res) {
-	      sandbox.restore();
-	    } else {
-	      sandbox.verifyAndRestore();
-	    }
-	  	tapeEnd(res);
-	  };
-	}
+  	  t.end = function end(res) {
+  	    if (res) {
+  	      sandbox.restore();
+  	    } else {
+  	      sandbox.verifyAndRestore();
+  	    }
+  	  	tapeEnd(res);
+  	  };
+  	}
 
     try {
       result = callback.apply(this, args.concat(sandbox.args));
