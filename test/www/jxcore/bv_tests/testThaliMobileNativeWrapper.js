@@ -346,7 +346,7 @@ test('all services are stopped when we call stop', function (t) {
 
 var verifyCallWithArguments = function (t, callName, parameters) {
   var mockServersManager = {};
-  var spy = sinon.spy();
+  var spy = this.spy();
   var serversManagerEquivalentCallName = callName === '_terminateConnection' ?
     'terminateIncomingConnection' : 'terminateOutgoingConnection';
   mockServersManager[serversManagerEquivalentCallName] = function () {
@@ -369,9 +369,9 @@ var verifyCallWithArguments = function (t, callName, parameters) {
 
 test('make sure terminateConnection is properly hooked up',
   testUtils.skipOnIOS,
-  function (t) {
-    verifyCallWithArguments(t, '_terminateConnection', ['connection-id']);
-  }
+  tape.sinonTest(function (t) {
+    verifyCallWithArguments.call(this, t, '_terminateConnection', ['connection-id']);
+  })
 );
 
 test('make sure terminateConnection is return error if we get called on iOS',
@@ -393,9 +393,9 @@ test('make sure terminateConnection is return error if we get called on iOS',
 
 test('make sure terminateListener is properly hooked up',
   testUtils.skipOnIOS,
-  function (t) {
-    verifyCallWithArguments(t, '_terminateListener', ['peer-id', 8080]);
-  }
+  tape.sinonTest(function (t) {
+    verifyCallWithArguments.call(this, t, '_terminateListener', ['peer-id', 8080]);
+  })
 );
 
 test('make sure terminateListener is return error if we get called on iOS',
@@ -848,11 +848,11 @@ test('can still do HTTP requests between peers with coordinator', function (t) {
 
 test('calls correct starts when network changes',
   testUtils.skipOnIOS, // uses toggleBluetooth
-  function (t) {
+  tape.sinonTest(function (t) {
     var listeningSpy =
-      sinon.spy(thaliMobileNativeWrapper, 'startListeningForAdvertisements');
+      this.spy(thaliMobileNativeWrapper, 'startListeningForAdvertisements');
     var advertisingSpy =
-      sinon.spy(thaliMobileNativeWrapper, 'startUpdateAdvertisingAndListening');
+      this.spy(thaliMobileNativeWrapper, 'startUpdateAdvertisingAndListening');
 
     return thaliMobileNativeWrapper.start(express.Router())
       .then(function () {
@@ -905,11 +905,9 @@ test('calls correct starts when network changes',
         return thaliMobileNativeWrapper.stop();
       })
       .then(function () {
-        listeningSpy.restore();
-        advertisingSpy.restore();
         t.end();
       });
-  }
+  })
 );
 
 // The connection cut is implemented as a separate test instead
