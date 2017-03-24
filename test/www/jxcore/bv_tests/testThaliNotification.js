@@ -24,7 +24,7 @@ var HELLO_PATH = '/hello';
 var globals = {};
 
 function allDictionaryItemsNonZero(dictionary) {
-  if( Object.keys(dictionary).length === 0) {
+  if (Object.keys(dictionary).length === 0) {
     return false;
   }
 
@@ -82,6 +82,17 @@ var GlobalVariables = function () {
 
 };
 
+function logState(stateName) {
+  console.log('State:', stateName);
+  console.log('  adverts:', JSON.stringify(globals.peerAdvertisesDataForUsEvents));
+  console.log('  replies:', JSON.stringify(globals.peerRepliedToUs));
+  console.log('  request:', JSON.stringify(globals.peerRequestedUs));
+  console.log('  myPublicBase64 =', JSON.stringify(globals.myPublicBase64));
+  console.log('  failedPskIdentityCount =', JSON.stringify(globals.failedPskIdentityCount));
+  console.log('  numberOfParticipants =', JSON.stringify(globals.numberOfParticipants));
+}
+
+
 var test = tape({
   setup: function (t) {
     globals = new GlobalVariables();
@@ -123,8 +134,11 @@ function initiateHttpsRequestToPeer(peerDetails, requestNumber){
 
   var requestSuccessful = false;
 
+  console.log('making request', peerDetails);
   var req = https.request(options, function (res) {
     var data = [];
+
+    console.log('got response');
 
     res.on('data', function (chunk) {
       data.push(chunk);
@@ -134,11 +148,15 @@ function initiateHttpsRequestToPeer(peerDetails, requestNumber){
       if (data) {
         var buffer = Buffer.concat(data);
         var textChunk = buffer.toString('utf8');
+        console.log('response end:', textChunk);
         if (textChunk === HELLO) {
           var publicKeyHash =
             NotificationBeacons.createPublicKeyHash(peerDetails.keyId);
           globals.peerRepliedToUs[publicKeyHash]++;
           requestSuccessful = true;
+          logState('after response');
+        } else {
+          console.log('invalid data, expected:', HELLO);
         }
       }
     });
@@ -148,8 +166,9 @@ function initiateHttpsRequestToPeer(peerDetails, requestNumber){
     logger.warn(err.message);
   });
 
-  req.on('close', function (err) {
-    if(!requestSuccessful) {
+  req.on('close', function () {
+    if (!requestSuccessful) {
+      console.log('Closed before success');
       initiateHttpsRequestToPeer(peerDetails, requestNumber);
     }
   });
@@ -167,7 +186,7 @@ function checkSuccess() {
     allDictionaryItemsNonZero(globals.peerRequestedUs);
 }
 
-test('Client to server request coordinated', function (t) {
+test.only('Client to server request coordinated', function (t) {
 
   // For this test we share our own public key with other peers and collect
   // their public keys. Then we wait until we get a peerAvailabilityChanged
@@ -205,6 +224,8 @@ test('Client to server request coordinated', function (t) {
     });
   }
 
+  logState('initial');
+
   if (!t.participants || addressBook.length === 0) {
     t.pass('Can\'t run the test because no participants');
     return t.end();
@@ -225,6 +246,7 @@ test('Client to server request coordinated', function (t) {
 
   // Initializes test server that just says 'hello world'
   var helloWorld = function (req, res) {
+    console.log('Got hw request');
 
     var clientPubKey = null;
 
@@ -232,13 +254,15 @@ test('Client to server request coordinated', function (t) {
       clientPubKey = getPskIdToPublicKey(req.connection.pskIdentity);
     }
 
-    if(clientPubKey) {
+    if (clientPubKey) {
       var publicKeyHash =
         NotificationBeacons.createPublicKeyHash(clientPubKey);
       globals.peerRequestedUs[publicKeyHash]++;
     } else {
       globals.failedPskIdentityCount++;
     }
+
+    logState('after request');
 
     res.set('Content-Type', 'text/plain');
     res.setHeader('Cache-Control', 'no-cache');
@@ -257,13 +281,14 @@ test('Client to server request coordinated', function (t) {
 
       var publicKeyHash = NotificationBeacons.createPublicKeyHash(res.keyId);
       globals.peerAdvertisesDataForUsEvents[publicKeyHash]++;
+      logState('after got advert');
       initiateHttpsRequestToPeer(res, 1);
     });
 
   var intervalRounds = 0;
 
   globals.testInterval = setInterval( function () {
-    if(checkSuccess() || ++intervalRounds > 24) {
+    if (checkSuccess() || ++intervalRounds > 24) {
       // Test has been completed successfully or we have hit the time limit
       clearInterval(globals.testInterval);
       thaliMobile.stopListeningForAdvertisements().then(function () {
