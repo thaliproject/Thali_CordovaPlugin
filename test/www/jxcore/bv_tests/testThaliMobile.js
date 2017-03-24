@@ -2043,6 +2043,41 @@ test('does not fire duplicate events after peer listener recreation',
 test('#stop should change peers', function (t) {
   var spy = sinon.spy();
 
+  var availabilityHandler = function(peer) {
+    spy();
+
+    switch (spy.callCount) {
+      case 1:
+        t.equal(Object.getOwnPropertyNames(
+          ThaliMobile._peerAvailabilities[peer.connectionType]).length, 1,
+          'Peer availabilities has one entry for our connection type');
+        break;
+      case 2:
+        t.equal(Object.getOwnPropertyNames(
+          ThaliMobile._peerAvailabilities[peer.connectionType]).length, 1,
+          'Peer availabilities has one entry for our connection type');
+        ThaliMobile.stop().then(function(){
+          Object.getOwnPropertyNames(connectionTypes)
+          .forEach(function (connectionKey) {
+            var connectionType = connectionTypes[connectionKey];
+            t.equal(Object.getOwnPropertyNames(
+              ThaliMobile._peerAvailabilities[connectionType]).length,
+              0, 'No peers');
+          });
+          finishTest();
+        });
+        break;
+      default:
+        break;
+    }
+  };
+
+  function finishTest() {
+    ThaliMobile.emitter
+      .removeListener('peerAvailabilityChanged', availabilityHandler);
+    t.end();
+  }
+
   ThaliMobile.start(express.Router(), new Buffer('foo'),
     ThaliMobile.networkTypes.BOTH)
     .then(function () {
@@ -2052,42 +2087,13 @@ test('#stop should change peers', function (t) {
       var nativePeer  = generateLowerLevelPeers().nativePeer;
       var wifiPeer =  generateLowerLevelPeers().wifiPeer;
 
-      var availabilityHandler = function(peer) {
-        spy();
-
-        switch (spy.callCount) {
-          case 1:
-            t.equal(Object.getOwnPropertyNames(
-              ThaliMobile._peerAvailabilities[peer.connectionType]).length, 1,
-              'Peer availabilities has one entry for our connection type');
-            break;
-          case 2:
-            t.equal(Object.getOwnPropertyNames(
-              ThaliMobile._peerAvailabilities[peer.connectionType]).length, 1,
-              'Peer availabilities has one entry for our connection type');
-            ThaliMobile.stop().then(function(){
-              Object.getOwnPropertyNames(connectionTypes)
-              .forEach(function (connectionKey) {
-                var connectionType = connectionTypes[connectionKey];
-                t.equal(Object.getOwnPropertyNames(
-                  ThaliMobile._peerAvailabilities[connectionType]).length,
-                  0, 'No peers');
-              });
-              t.end();
-            });
-            break;
-          default:
-            break;
-        }
-      };
-
       ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
       emitNativePeerAvailability(nativePeer);
       emitWifiPeerAvailability(wifiPeer);
     })
     .catch(function (err) {
       t.fail('Failed out with ' + err);
-      t.end();
+      finishTest();
     });
 });
 
