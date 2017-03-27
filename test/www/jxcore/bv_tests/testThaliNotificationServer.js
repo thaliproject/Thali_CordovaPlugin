@@ -135,6 +135,8 @@ var test = tape({
   },
   teardown: function (t) {
     globalVariables.kill().then(function () {
+      globalVariables.spyStartUpdateAdvertisingAndListening.restore();
+      globalVariables.spyStopAdvertisingAndListening.restore();
       t.end();
     }).catch(function (failure) {
       t.fail('Server cleaning failed:' + failure);

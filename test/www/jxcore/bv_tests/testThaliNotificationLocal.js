@@ -2,7 +2,6 @@
 var tape = require('../lib/thaliTape');
 var express = require('express');
 var crypto = require('crypto');
-var sinon = require('sinon');
 var Promise = require('lie');
 var httpTester = require('../lib/httpTester.js');
 var proxyquire = require('proxyquire').noCallThru();
@@ -81,7 +80,7 @@ var GlobalVariables = function () {
 };
 
 function stubGetPeerHostInfo() {
-  return sinon.stub(
+  return this.stub(
     ThaliMobile,
     'getPeerHostInfo',
     function (peerIdentifier, connectionType) {
@@ -137,73 +136,74 @@ var test = tape({
   }
 });
 
-test('Client to server request locally', function (t) {
-  // Purpose of this test is to ensure basic communication between
-  // NotificationClient and NotificationServer works using mainly Notification
-  // layer components. Behavior of the ThaliMobile is mocked on the
-  // server side and it is simulated calling _peerAvailabilityChanged for the
-  // client.
+test('Client to server request locally',
+  tape.sinonTest(function (t) {
+    // Purpose of this test is to ensure basic communication between
+    // NotificationClient and NotificationServer works using mainly Notification
+    // layer components. Behavior of the ThaliMobile is mocked on the
+    // server side and it is simulated calling _peerAvailabilityChanged for the
+    // client.
 
-  var getPskIdToSecret = globals.notificationServer.getPskIdToSecret();
-  var peerPool = new ThaliPeerPoolDefault();
+    var getPskIdToSecret = globals.notificationServer.getPskIdToSecret();
+    var peerPool = new ThaliPeerPoolDefault();
 
-  // Simulates how the peer pool runs actions
-  var enqueue = function (action) {
-    var keepAliveAgent = httpTester.getTestAgent();
-    action.start(keepAliveAgent).catch(function (err) {
-      t.fail('This action should not fail!');
-      t.end(err);
-    });
-  };
-
-  sinon.stub(peerPool, 'enqueue', enqueue);
-  var getPeerHostInfoStub = stubGetPeerHostInfo();
-
-  // Initialize the ThaliNotificationClient
-  var notificationClient =
-    new ThaliNotificationClient(peerPool,
-      globals.targetDeviceKeyExchangeObjects[0]);
-
-  notificationClient.on(
-    notificationClient.Events.PeerAdvertisesDataForUs,
-    function (res) {
-      var secret = getPskIdToSecret(res.pskIdentifyField);
-      t.ok(secret.compare(res.psk) === 0, 'secrets are equal');
-
-      t.equal(res.keyId, globals.serverPublicKey,
-        'Public key matches with the server key');
-      t.equals(
-        res.hostAddress,
-        globals.TCPPeerHostInfo.hostAddress,
-        'hostAddress must match');
-      t.equals(
-        res.portNumber,
-        globals.TCPPeerHostInfo.portNumber,
-        'portNumber must match');
-      t.equals(
-        res.suggestedTCPTimeout,
-        globals.TCPPeerHostInfo.suggestedTCPTimeout,
-        'suggestedTCPTimeout must match');
-      t.equals(
-        res.connectionType,
-        globals.TCPEvent.connectionType,
-        'connectionType must match');
-      notificationClient.stop();
-      getPeerHostInfoStub.restore();
-      globals.notificationServer.stop().then(function () {
-        t.end();
-      }).catch(function (failure) {
-        t.fail('Stopping failed:' + failure);
-        t.end();
+    // Simulates how the peer pool runs actions
+    var enqueue = function (action) {
+      var keepAliveAgent = httpTester.getTestAgent();
+      action.start(keepAliveAgent).catch(function (err) {
+        t.fail('This action should not fail!');
+        t.end(err);
       });
-    }
-  );
+    };
 
-  globals.notificationServer.start(globals.targetPublicKeysToNotify).
-  then(function () {
-    notificationClient.start([globals.serverPublicKey]);
-    notificationClient._peerAvailabilityChanged(globals.TCPEvent);
-  });
-});
+    this.stub(peerPool, 'enqueue', enqueue);
+    var getPeerHostInfoStub = stubGetPeerHostInfo.call(this);
+
+    // Initialize the ThaliNotificationClient
+    var notificationClient =
+      new ThaliNotificationClient(peerPool,
+        globals.targetDeviceKeyExchangeObjects[0]);
+
+    notificationClient.on(
+      notificationClient.Events.PeerAdvertisesDataForUs,
+      function (res) {
+        var secret = getPskIdToSecret(res.pskIdentifyField);
+        t.ok(secret.compare(res.psk) === 0, 'secrets are equal');
+
+        t.equal(res.keyId, globals.serverPublicKey,
+          'Public key matches with the server key');
+        t.equals(
+          res.hostAddress,
+          globals.TCPPeerHostInfo.hostAddress,
+          'hostAddress must match');
+        t.equals(
+          res.portNumber,
+          globals.TCPPeerHostInfo.portNumber,
+          'portNumber must match');
+        t.equals(
+          res.suggestedTCPTimeout,
+          globals.TCPPeerHostInfo.suggestedTCPTimeout,
+          'suggestedTCPTimeout must match');
+        t.equals(
+          res.connectionType,
+          globals.TCPEvent.connectionType,
+          'connectionType must match');
+        notificationClient.stop();
+        globals.notificationServer.stop().then(function () {
+          t.end();
+        }).catch(function (failure) {
+          t.fail('Stopping failed:' + failure);
+          t.end();
+        });
+      }
+    );
+
+    globals.notificationServer.start(globals.targetPublicKeysToNotify).
+    then(function () {
+      notificationClient.start([globals.serverPublicKey]);
+      notificationClient._peerAvailabilityChanged(globals.TCPEvent);
+    });
+  })
+);
 
 

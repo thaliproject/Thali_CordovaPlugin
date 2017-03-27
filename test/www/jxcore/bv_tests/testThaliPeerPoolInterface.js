@@ -6,7 +6,6 @@ var connectionTypes =
   require('thali/NextGeneration/thaliMobileNativeWrapper').connectionTypes;
 var inherits = require('util').inherits;
 var ThaliPeerPoolInterface = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolInterface');
-var sinon = require('sinon');
 
 var testPeerAction = null;
 var peerIdentifier = 'foo';
@@ -119,12 +118,12 @@ test('#ThaliPeerPoolInterface - do not allow same object type', function (t) {
 
 test(
   '#ThaliPeerPoolInterface - make sure we catch kill and dequeue',
-  function (t) {
+  tape.sinonTest(function (t) {
     testThaliPeerPool.start();
     var testPeerAction2 = new TestPeerAction(
       peerIdentifier, connectionType, actionType
     );
-    var killSpy = sinon.spy(testPeerAction, 'kill');
+    var killSpy = this.spy(testPeerAction, 'kill');
     t.doesNotThrow(
       function () {
         testThaliPeerPool.enqueue(testPeerAction);
@@ -159,7 +158,7 @@ test(
     );
 
     t.end();
-  }
+  })
 );
 
 test(

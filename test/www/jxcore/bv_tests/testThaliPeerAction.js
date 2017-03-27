@@ -10,7 +10,6 @@ var connectionTypes =
 var inherits     = require('util').inherits;
 var globalAgent  = require('http').globalAgent;
 var ForeverAgent = require('forever-agent');
-var sinon        = require('sinon');
 
 var testPeerAction = null;
 var peerIdentifier = 'foo';
@@ -106,32 +105,34 @@ test('#testThaliPeerAction - make sure ids are unique', function (t) {
   t.end();
 });
 
-test('#testThaliPeerAction - check that forever agent can be destroyed', function (t) {
-  var foreverAgent = new ForeverAgent.SSL({
-    maxSockets: Infinity,
-    ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-    pskIdentity: pskIdentity,
-    pskKey: pskKey
-  });
-  t.ok(
-    typeof foreverAgent.destroy === 'function',
-    'forever agent should have it\'s own destroy method'
-  );
-  var destroySpy = sinon.spy(foreverAgent, 'destroy');
-
-  testPeerAction.start(foreverAgent)
-    .then(function () {
-      testPeerAction.kill();
-      t.ok(destroySpy.calledOnce, 'agent\'s destroy should be called');
-    })
-    .then(function () {
-      testPeerAction.kill();
-      t.ok(destroySpy.calledOnce, 'agent\'s destroy should not be called again');
-      t.pass('agent is destroyed');
-      t.end();
-    })
-    .catch(function (error) {
-      t.fail('got error - ' + error);
-      t.end();
+test('#testThaliPeerAction - check that forever agent can be destroyed',
+  tape.sinonTest(function (t) {
+    var foreverAgent = new ForeverAgent.SSL({
+      maxSockets: Infinity,
+      ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+      pskIdentity: pskIdentity,
+      pskKey: pskKey
     });
-});
+    t.ok(
+      typeof foreverAgent.destroy === 'function',
+      'forever agent should have it\'s own destroy method'
+    );
+    var destroySpy = this.spy(foreverAgent, 'destroy');
+
+    testPeerAction.start(foreverAgent)
+      .then(function () {
+        testPeerAction.kill();
+        t.ok(destroySpy.calledOnce, 'agent\'s destroy should be called');
+      })
+      .then(function () {
+        testPeerAction.kill();
+        t.ok(destroySpy.calledOnce, 'agent\'s destroy should not be called again');
+        t.pass('agent is destroyed');
+        t.end();
+      })
+      .catch(function (error) {
+        t.fail('got error - ' + error);
+        t.end();
+      });
+  })
+);

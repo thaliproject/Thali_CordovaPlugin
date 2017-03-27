@@ -467,7 +467,7 @@ CoordinatedClient.prototype._processEvent = function (tape, test, event, fun,
         };
         tape.once('end', endHandler);
 
-        fun(tape);
+        fun.call(test, tape);
       })
       .finally(function () {
         if (resultHandler) {
