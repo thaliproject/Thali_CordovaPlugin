@@ -17,7 +17,7 @@ public final class TestRunner: NSObject {
     let executedCount: Int
     let succeededCount: Int
     let failureCount: Int
-    let duration: NSTimeInterval
+    let duration: TimeInterval
     let executed: Bool
   }
 
@@ -30,7 +30,7 @@ public final class TestRunner: NSObject {
   public static let `default`: TestRunner = TestRunner.createDefaultRunner()
 
   private static func createDefaultRunner() -> TestRunner {
-    return TestRunner(testSuite: XCTestSuite.defaultTestSuite())
+    return TestRunner(testSuite: XCTestSuite.default())
   }
 
   public var resultDescription: String? {
@@ -77,13 +77,13 @@ public final class TestRunner: NSObject {
   @objc public func runTest() {
     // Test must only be run on the main thread.
     // Please note that it's important not using GCD, because XCTest.framework doesn't use GCD
-    if !NSThread.currentThread().isMainThread {
-      performSelectorOnMainThread(#selector(runTest), withObject: nil, waitUntilDone: true)
+    if !Thread.current.isMainThread {
+      performSelector(onMainThread: #selector(runTest), with: nil, waitUntilDone: true)
       return
     }
-    XCTestObservationCenter.sharedTestObservationCenter().addTestObserver(self)
-    testSuite.runTest()
-    XCTestObservationCenter.sharedTestObservationCenter().removeTestObserver(self)
+    XCTestObservationCenter.shared().addTestObserver(self)
+    testSuite.run()
+    XCTestObservationCenter.shared().removeTestObserver(self)
   }
 
 }
@@ -100,12 +100,12 @@ extension TestRunner.RunResult {
       "ignored": 0,
       "duration": duration,
       "executed": executed
-    ]
+    ] as [String : Any]
 
     do {
-      let jsonData = try NSJSONSerialization.dataWithJSONObject(jsonDictionary, options: [])
+      let jsonData = try JSONSerialization.data(withJSONObject: jsonDictionary, options: [])
 
-      return String(data: jsonData, encoding: NSUTF8StringEncoding)
+      return String(data: jsonData, encoding: String.Encoding.utf8)
     } catch _ as NSError {
       return nil
     }

@@ -1,6 +1,6 @@
 //
-//  Thali CordovaPlugin
 //  AppContext.swift
+//  Thali
 //
 //  Copyright (C) Microsoft. All rights reserved.
 //  Licensed under the MIT license.
@@ -11,20 +11,20 @@ import CoreBluetooth
 import Foundation
 import ThaliCore
 
-func jsonValue(object: AnyObject) -> String {
+func jsonValue(_ object: AnyObject) -> String {
   guard let data =
-    try? NSJSONSerialization.dataWithJSONObject(object,
-                                                options: NSJSONWritingOptions(rawValue:0))
+    try? JSONSerialization.data(withJSONObject: object,
+                                options: JSONSerialization.WritingOptions(rawValue:0))
     else {
       return ""
   }
-  return String(data: data, encoding: NSUTF8StringEncoding) ?? ""
+  return String(data: data, encoding: String.Encoding.utf8) ?? ""
 }
 
-func dictionaryValue(jsonText: String) -> [String : AnyObject]? {
-  if let data = jsonText.dataUsingEncoding(NSUTF8StringEncoding) {
+func dictionaryValue(_ jsonText: String) -> [String : AnyObject]? {
+  if let data = jsonText.data(using: String.Encoding.utf8) {
     do {
-      return try NSJSONSerialization.JSONObjectWithData(data, options: []) as? [String : AnyObject]
+      return try JSONSerialization.jsonObject(with: data, options: []) as? [String : AnyObject]
     } catch let error as NSError {
       print(error)
     }
@@ -51,7 +51,7 @@ enum NetworkStatusParameters: String {
   case ssid = "ssid"
 }
 
-@objc public enum AppContextError: Int, ErrorType, CustomStringConvertible {
+@objc public enum AppContextError: Int, Error, CustomStringConvertible {
 
   case badParameters
   case unknownError
@@ -87,9 +87,9 @@ public enum JSONKey: String {
 extension PeerAvailability {
 
   var dictionaryValue: [String : AnyObject] {
-    return [JSONKey.peerIdentifier.rawValue : peerIdentifier,
-            JSONKey.peerAvailable.rawValue : available,
-            JSONKey.generation.rawValue : generation]
+    return [JSONKey.peerIdentifier.rawValue : peerIdentifier as AnyObject,
+            JSONKey.peerAvailable.rawValue : available as AnyObject,
+            JSONKey.generation.rawValue : generation as AnyObject]
   }
 }
 
@@ -100,7 +100,7 @@ extension PeerAvailability {
    - parameter peers:   json with data about changed peers
    - parameter context: related AppContext
    */
-  func context(context: AppContext, didChangePeerAvailability peersJSONString: String)
+  func context(_ context: AppContext, didChangePeerAvailability peersJSONString: String)
 
   /**
    Notifies about network status changes
@@ -108,7 +108,7 @@ extension PeerAvailability {
    - parameter status:  json string with network availability status
    - parameter context: related AppContext
    */
-  func context(context: AppContext, didChangeNetworkStatus statusJSONString: String)
+  func context(_ context: AppContext, didChangeNetworkStatus statusJSONString: String)
 
   /**
    Notifies about peer advertisement update
@@ -116,7 +116,7 @@ extension PeerAvailability {
    - parameter discoveryAdvertisingState: json with information about peer's state
    - parameter context:                   related AppContext
    */
-  func context(context: AppContext,
+  func context(_ context: AppContext,
                didUpdateDiscoveryAdvertisingState discoveryAdvertisingStateJSONString: String)
 
   /**
@@ -125,13 +125,13 @@ extension PeerAvailability {
    - parameter port:      port failed to connect
    - parameter context: related AppContext
    */
-  func context(context: AppContext, didFailIncomingConnectionToPort port: UInt16)
+  func context(_ context: AppContext, didFailIncomingConnectionToPort port: UInt16)
 
   /**
    callback for multiConnect function
 
    */
-  func context(context: AppContext,
+  func context(_ context: AppContext,
                didResolveMultiConnectWithSyncValue value: String,
                error: NSObject?,
                listeningPort: NSObject?)
@@ -140,7 +140,7 @@ extension PeerAvailability {
    callback for multiConnect function
 
    */
-  func context(context: AppContext, didFailMultiConnectConnectionWith paramsJSONString: String)
+  func context(_ context: AppContext, didFailMultiConnectConnectionWith paramsJSONString: String)
 
   /**
    Notifies about entering background
@@ -159,15 +159,15 @@ extension PeerAvailability {
 
 /// Interface for communication between native and cross-platform parts
 @objc public final class AppContext: NSObject {
-  private let disposeAdvertiserTimeout = 30.0
-  private let inputStreamReceiveTimeout = 5.0
+  fileprivate let disposeAdvertiserTimeout = 30.0
+  fileprivate let inputStreamReceiveTimeout = 5.0
 
-  private let serviceType: String
-  private let appNotificationsManager: ApplicationStateNotificationsManager
+  fileprivate let serviceType: String
+  fileprivate let appNotificationsManager: ApplicationStateNotificationsManager
 
-  private var networkChangedRegistered: Bool = false
+  fileprivate var networkChangedRegistered: Bool = false
   public weak var delegate: AppContextDelegate?
-  lazy private var browserManager: BrowserManager = {
+  lazy fileprivate var browserManager: BrowserManager = {
     [unowned self] in
 
     return BrowserManager(serviceType: self.serviceType,
@@ -179,13 +179,13 @@ extension PeerAvailability {
                             strongSelf.handleOnPeersAvailabilityChanged(peers)
                           })
   }()
-  private let advertiserManager: AdvertiserManager
+  fileprivate let advertiserManager: AdvertiserManager
 
-  private var bluetoothState = RadioState.unavailable
-  private var bluetoothLowEnergyState = RadioState.unavailable
-  private var bluetoothManager: CBCentralManager?
+  fileprivate var bluetoothState = RadioState.unavailable
+  fileprivate var bluetoothLowEnergyState = RadioState.unavailable
+  fileprivate var bluetoothManager: CBCentralManager?
 
-  private func notifyOnDidUpdateNetworkStatus() {
+  fileprivate func notifyOnDidUpdateNetworkStatus() {
 
     var wifiState = RadioState.unavailable
     let cellularState = RadioState.doNotCare
@@ -197,10 +197,11 @@ extension PeerAvailability {
     wifiState = wifiEnabled ? .on : .off
 
     let bssid = ((wifiState == .on) && wifiConnected)
-                ? networkReachability.BSSID()
+                ? networkReachability.bssid() as NSString
                 : NSNull()
+
     let ssid = ((wifiState == .on) && wifiConnected)
-                ? networkReachability.SSID()
+                ? networkReachability.ssid() as NSString
                 : NSNull()
 
     let networkStatus = [
@@ -210,20 +211,20 @@ extension PeerAvailability {
       NetworkStatusParameters.cellular.rawValue            : cellularState.rawValue,
       NetworkStatusParameters.bssid.rawValue               : bssid,
       NetworkStatusParameters.ssid.rawValue                : ssid
-    ]
+    ] as [String : Any]
 
-    delegate?.context(self, didChangeNetworkStatus: jsonValue(networkStatus))
+    delegate?.context(self, didChangeNetworkStatus: jsonValue(networkStatus as AnyObject))
   }
 
-  private func handleWillEnterBackground() {
+  fileprivate func handleWillEnterBackground() {
     delegate?.appWillEnterBackground(with: self)
   }
 
-  private func handleDidEnterForeground() {
+  fileprivate func handleDidEnterForeground() {
     delegate?.appDidEnterForeground(with: self)
   }
 
-  private func handleOnPeersAvailabilityChanged(peers: [PeerAvailability]) {
+  fileprivate func handleOnPeersAvailabilityChanged(_ peers: [PeerAvailability]) {
     let mappedPeers = peers
                       .filter {
                         // We shouldn't notify JXcore when device discovers itself
@@ -235,34 +236,34 @@ extension PeerAvailability {
     guard mappedPeers.count > 0 else {
       return
     }
-    delegate?.context(self, didChangePeerAvailability: jsonValue(mappedPeers))
+    delegate?.context(self, didChangePeerAvailability: jsonValue(mappedPeers as AnyObject))
   }
 
-  private func updateListeningAdvertisingState() {
+  fileprivate func updateListeningAdvertisingState() {
     let newState = [
       JSONKey.discoveryActive.rawValue : browserManager.listening,
       JSONKey.advertisingActive.rawValue : advertiserManager.advertising
     ]
-    delegate?.context(self, didUpdateDiscoveryAdvertisingState: jsonValue(newState))
+    delegate?.context(self, didUpdateDiscoveryAdvertisingState: jsonValue(newState as AnyObject))
   }
 
-  private func handleMultiConnectResolved(withSyncValue value: String, port: UInt16?,
-                                                        error: ErrorType?) {
-    let errorValue = error != nil ? errorDescription(error!) : NSNull()
-    let listeningPort = port != nil ? NSNumber(unsignedShort: port!) : NSNull()
+  fileprivate func handleMultiConnectResolved(withSyncValue value: String, port: UInt16?,
+                                                        error: Error?) {
+    let errorValue = error != nil ? errorDescription(error!) as NSString : NSNull()
+    let listeningPort = port != nil ? NSNumber(value: port! as UInt16) : NSNull()
     delegate?.context(self,
                       didResolveMultiConnectWithSyncValue: value,
                       error: errorValue,
                       listeningPort: listeningPort)
   }
 
-  private func handleMultiConnectConnectionFailure(withIdentifier identifier: String,
-                                                                  error: ErrorType?) {
+  fileprivate func handleMultiConnectConnectionFailure(withIdentifier identifier: String,
+                                                                  error: Error?) {
     let parameters = [
       "peerIdentifier" : identifier,
-      "error" : error != nil ? errorDescription(error!) : NSNull()
-    ]
-    delegate?.context(self, didFailMultiConnectConnectionWith: jsonValue(parameters))
+      "error" : error != nil ? errorDescription(error!) as NSString : NSNull()
+    ] as [String : Any]
+    delegate?.context(self, didFailMultiConnectConnectionWith: jsonValue(parameters as AnyObject))
   }
 
   public init(serviceType: String) {
@@ -281,10 +282,9 @@ extension PeerAvailability {
     #if TEST
       // We use background queue because CI tests use main_queue synchronously
       // Otherwise we won't be able to get centralManager state.
-      let centralManagerDispatchQueue =
-        dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0)
+      let centralManagerDispatchQueue = DispatchQueue.global(qos: DispatchQoS.QoSClass.default)
     #else
-      let centralManagerDispatchQueue: dispatch_queue_t? = nil
+      let centralManagerDispatchQueue: DispatchQueue? = nil
     #endif
     bluetoothManager = CBCentralManager(delegate: self,
                                         queue: centralManagerDispatchQueue,
@@ -305,7 +305,7 @@ extension PeerAvailability {
   }
 
   public func startUpdateAdvertisingAndListening(withParameters parameters: [AnyObject]) throws {
-    guard let port = (parameters.first as? NSNumber)?.unsignedShortValue else {
+    guard let port = (parameters.first as? NSNumber)?.uint16Value else {
       throw AppContextError.badParameters
     }
     advertiserManager.startUpdateAdvertisingAndListening(onPort: port) { [weak self] error in
@@ -320,13 +320,13 @@ extension PeerAvailability {
     self.updateListeningAdvertisingState()
   }
 
-  public func multiConnectToPeer(parameters: [AnyObject],
+  public func multiConnectToPeer(_ parameters: [AnyObject],
                                  validationCompletionHandler: (NSError?) -> Void) {
     guard parameters.count >= 2 else {
       validationCompletionHandler(AppContextError.badParameters as NSError)
       return
     }
-    guard let identifierString = parameters[0] as? String, syncValue = parameters[1] as? String
+    guard let identifierString = parameters[0] as? String, let syncValue = parameters[1] as? String
       else {
         validationCompletionHandler(AppContextError.badParameters as NSError)
         return
@@ -357,14 +357,14 @@ extension PeerAvailability {
     return
   }
 
-  public func killConnection(parameters: [AnyObject]) throws {
+  public func killConnection(_ parameters: [AnyObject]) throws {
   }
 
   public func getIOSVersion() -> String {
-    return NSProcessInfo().operatingSystemVersionString
+    return ProcessInfo().operatingSystemVersionString
   }
 
-  public func didRegisterToNative(parameters: [AnyObject]) throws {
+  public func didRegisterToNative(_ parameters: [AnyObject]) throws {
     guard let functionName = parameters.first as? String else {
       throw AppContextError.badParameters
     }
@@ -373,7 +373,7 @@ extension PeerAvailability {
     }
   }
 
-  public func disconnect(parameters: [AnyObject]) throws {
+  public func disconnect(_ parameters: [AnyObject]) throws {
     guard let identifierString = parameters.first as? String else {
       throw AppContextError.badParameters
     }
@@ -382,44 +382,35 @@ extension PeerAvailability {
     }
   }
 
-  public func connect(parameters: [AnyObject]) -> String {
-    return jsonValue([JSONKey.err.rawValue : AppContextError.connectNotSupported.description])
+  public func connect(_ parameters: [AnyObject]) -> String {
+    return jsonValue([JSONKey.err.rawValue : AppContextError.connectNotSupported.description] as AnyObject)
   }
-
-  #if TEST
-  func executeNativeTests() -> String {
-    let runner = TestRunner.`default`
-    runner.runTest()
-    return runner.resultDescription ?? ""
-  }
-  #endif
-
 }
 
 // MARK: CBCentralManagerDelegate
 extension AppContext: CBCentralManagerDelegate {
 
-  public func centralManagerDidUpdateState(central: CBCentralManager) {
+  public func centralManagerDidUpdateState(_ central: CBCentralManager) {
     switch central.state {
-    case .PoweredOn:
+    case .poweredOn:
       bluetoothState = .on
       bluetoothLowEnergyState = .on
       #if TEST
-        NSNotificationCenter.defaultCenter().postNotificationName(
-          Constants.NSNotificationName.centralBluetoothManagerDidChangeState,
+        NotificationCenter.default.post(
+          name: NSNotification.Name(rawValue: Constants.NSNotificationName.centralBluetoothManagerDidChangeState),
           object: self
         )
       #endif
-    case .PoweredOff:
+    case .poweredOff:
       bluetoothState = .off
       bluetoothLowEnergyState = .off
       #if TEST
-        NSNotificationCenter.defaultCenter().postNotificationName(
-          Constants.NSNotificationName.centralBluetoothManagerDidChangeState,
+        NotificationCenter.default.post(
+          name: NSNotification.Name(rawValue: Constants.NSNotificationName.centralBluetoothManagerDidChangeState),
           object: self
         )
       #endif
-    case .Unsupported:
+    case .unsupported:
       bluetoothState = .notHere
       bluetoothLowEnergyState = .notHere
     default:
@@ -430,34 +421,34 @@ extension AppContext: CBCentralManagerDelegate {
 }
 
 /// Node functions names
-@objc public class AppContextJSEvent: NSObject {
-  @objc public static let networkChanged: String = "networkChanged"
-  @objc public static let peerAvailabilityChanged: String = "peerAvailabilityChanged"
-  @objc public static let appEnteringBackground: String = "appEnteringBackground"
-  @objc public static let appEnteredForeground: String = "appEnteredForeground"
-  @objc public static let discoveryAdvertisingStateUpdateNonTCP: String =
+@objc open class AppContextJSEvent: NSObject {
+  @objc open static let networkChanged: String = "networkChanged"
+  @objc open static let peerAvailabilityChanged: String = "peerAvailabilityChanged"
+  @objc open static let appEnteringBackground: String = "appEnteringBackground"
+  @objc open static let appEnteredForeground: String = "appEnteredForeground"
+  @objc open static let discoveryAdvertisingStateUpdateNonTCP: String =
   "discoveryAdvertisingStateUpdateNonTCP"
-  @objc public static let incomingConnectionToPortNumberFailed: String =
+  @objc open static let incomingConnectionToPortNumberFailed: String =
   "incomingConnectionToPortNumberFailed"
-  @objc public static let executeNativeTests: String = "executeNativeTests"
-  @objc public static let getOSVersion: String = "getOSVersion"
-  @objc public static let didRegisterToNative: String = "didRegisterToNative"
-  @objc public static let killConnections: String = "killConnections"
-  @objc public static let connect: String = "connect"
-  @objc public static let multiConnect: String = "multiConnect"
-  @objc public static let multiConnectResolved: String = "multiConnectResolved"
-  @objc public static let multiConnectConnectionFailure: String = "multiConnectConnectionFailure"
-  @objc public static let stopAdvertisingAndListening: String = "stopAdvertisingAndListening"
-  @objc public static let startUpdateAdvertisingAndListening: String =
+  @objc open static let executeNativeTests: String = "executeNativeTests"
+  @objc open static let getOSVersion: String = "getOSVersion"
+  @objc open static let didRegisterToNative: String = "didRegisterToNative"
+  @objc open static let killConnections: String = "killConnections"
+  @objc open static let connect: String = "connect"
+  @objc open static let multiConnect: String = "multiConnect"
+  @objc open static let multiConnectResolved: String = "multiConnectResolved"
+  @objc open static let multiConnectConnectionFailure: String = "multiConnectConnectionFailure"
+  @objc open static let stopAdvertisingAndListening: String = "stopAdvertisingAndListening"
+  @objc open static let startUpdateAdvertisingAndListening: String =
   "startUpdateAdvertisingAndListening"
-  @objc public static let stopListeningForAdvertisements: String =
+  @objc open static let stopListeningForAdvertisements: String =
   "stopListeningForAdvertisements"
-  @objc public static let startListeningForAdvertisements: String =
+  @objc open static let startListeningForAdvertisements: String =
   "startListeningForAdvertisements"
-  @objc public static let disconnect: String = "disconnect"
+  @objc open static let disconnect: String = "disconnect"
 }
 
-func errorDescription(error: ErrorType) -> String {
+func errorDescription(_ error: Error) -> String {
   if let thaliCoreError = error as? ThaliCoreError {
     return thaliCoreError.rawValue
   }

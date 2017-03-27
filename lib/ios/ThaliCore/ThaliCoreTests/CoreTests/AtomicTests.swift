@@ -46,14 +46,14 @@ class AtomicTests: XCTestCase {
 
   func testLockOnReadWrite() {
     let atomicArray = Atomic<[Int]>([])
-    let queue = dispatch_queue_create("org.thaliproject.testqueue", DISPATCH_QUEUE_CONCURRENT)
-    let semaphore = dispatch_semaphore_create(0)
+    let queue = DispatchQueue(label: "org.thaliproject.testqueue", attributes: .concurrent)
+    let semaphore = DispatchSemaphore(value: 0)
     let queuesCount = 100
     let loopIterationsCount = 100
 
     for i in 0..<queuesCount {
       // Performing async write on even iterations and read on odd iterations
-      dispatch_async(queue) {
+      queue.async {
         if i % 2 == 0 {
           atomicArray.modify {
             let initialValue = $0.count
@@ -73,13 +73,13 @@ class AtomicTests: XCTestCase {
           }
         }
 
-        dispatch_semaphore_signal(semaphore)
+        semaphore.signal()
       }
     }
 
     // Wating for async block execution completion
     for _ in 0..<queuesCount {
-      let _ = dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER)
+      let _ = semaphore.wait(timeout: .distantFuture)
     }
   }
 }
