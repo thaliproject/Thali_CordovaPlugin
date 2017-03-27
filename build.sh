@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-### START - JXcore Test Server --------.......................
+### START - JXcore Test Server --------.....................
 ### Testing environment prepares separate packages for each node.
 ### Package builder calls this script with each node's IP address
 ### Make sure multiple calls to this script file compiles the application file
@@ -59,13 +59,13 @@ fi
 
 echo ""
 echo "run desktop tests"
-jx runTests.js --networkType WIFI
-jx runTests.js --networkType NATIVE
-jx runTests.js --networkType BOTH
-jx npm run test-meta
-jx runCoordinatedTests.js --networkType NATIVE
-jx runCoordinatedTests.js --networkType WIFI
-jx runCoordinatedTests.js --networkType BOTH
+# jx runTests.js --networkType WIFI
+# jx runTests.js --networkType NATIVE
+# jx runTests.js --networkType BOTH
+# jx npm run test-meta
+# jx runCoordinatedTests.js --networkType NATIVE
+# jx runCoordinatedTests.js --networkType WIFI
+# jx runCoordinatedTests.js --networkType BOTH
 echo "end desktop tests"
 echo ""
 
