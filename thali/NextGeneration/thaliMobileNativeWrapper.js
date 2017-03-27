@@ -752,15 +752,16 @@ module.exports._terminateConnection = function (incomingConnectionId) {
  * a null result.
  */
 module.exports._disconnect = function (peerIdentifier) {
-  return gPromiseQueue.enqueue(function (resolve, reject) {
-    Mobile('disconnect').callNative(peerIdentifier, function (errorMsg) {
-      if (errorMsg) {
-        reject(new Error(errorMsg));
-      } else {
-        resolve();
-      }
+  return gPromiseQueue
+    .enqueue(function (resolve, reject) {
+      Mobile('disconnect').callNative(peerIdentifier, function (errorMsg) {
+        if (errorMsg) {
+          reject(new Error(errorMsg));
+        } else {
+          resolve();
+        }
+      });
     });
-  });
 };
 
 /**

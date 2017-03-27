@@ -26,6 +26,7 @@ var logger = require('thali/ThaliLogger')('testThaliWifiInfrastructure');
 
 
 var wifiInfrastructure = new ThaliWifiInfrastructure();
+var connectionTypes = ThaliMobileNativeWrapper.connectionTypes;
 
 var pskIdentity = 'I am an id!';
 var pskKey = new Buffer('And I am a secret!!!!');
@@ -712,6 +713,163 @@ test('functions are run from a queue in the right order',
   })
 );
 
+test(
+  'Discovered peer should be removed if no availability updates ' +
+  'were received during availability timeout',
+  function (t) {
+    var peerIdentifier = uuid.v4();
+    var portNumber = 8080;
+    var generation = 50;
+
+    var originalThreshold = thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
+    thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD = 500;
+
+    var finalizeTest = function (error) {
+      thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD =
+        originalThreshold;
+      t.end(error);
+    };
+
+    wifiInfrastructure.startListeningForAdvertisements()
+    .then(function () {
+      var availabilityHandler = function (peer) {
+        if (peer.peerIdentifier !== peerIdentifier) {
+          return;
+        }
+
+        wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged',
+          availabilityHandler);
+
+        var unavailabilityHandler = function (peer) {
+          if (peer.peerIdentifier !== peerIdentifier) {
+            return;
+          }
+          //peer should not be available
+          t.equal(peer.portNumber, null, 'port is null');
+          t.equal(peer.hostAddress, null, 'host is null');
+
+          wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged',
+            unavailabilityHandler);
+
+          finalizeTest(null);
+        };
+
+        wifiInfrastructure.on('wifiPeerAvailabilityChanged',
+          unavailabilityHandler);
+      };
+
+      wifiInfrastructure.on('wifiPeerAvailabilityChanged', availabilityHandler);
+
+      wifiInfrastructure.listener.emit(
+        'wifiPeerAvailabilityChanged',
+        {
+          peerIdentifier: peerIdentifier,
+          generation: generation,
+          portNumber: portNumber,
+          hostAddress: '127.0.0.1'
+        }
+      );
+    })
+    .catch(function (error) {
+      finalizeTest(error);
+    });
+  }
+);
+
+test('#stop should clear watchers', function (t) {
+  var somePeerIdentifier = uuid.v4();
+
+  wifiInfrastructure.startListeningForAdvertisements()
+    .then(function () {
+      wifiInfrastructure.listener.emit(
+        'wifiPeerAvailabilityChanged',
+        {
+          peerIdentifier: somePeerIdentifier,
+          peerAvailable: true,
+          generation: 20,
+          portNumber: 8080,
+          hostAddress: '127.0.0.1'
+        }
+      );
+
+      t.equal(Object.getOwnPropertyNames(
+        wifiInfrastructure.peerAvailabilities.watchers).length, 1,
+        'Watchers have one entry for our connection type');
+      return wifiInfrastructure.stop();
+    })
+    .then(function () {
+      t.equal(Object.getOwnPropertyNames(
+        wifiInfrastructure.peerAvailabilities.watchers).length,
+        0, 'No watchers');
+      t.end();
+    })
+    .catch(function (err) {
+      t.fail('Failed out with ' + err);
+      t.end();
+    });
+});
+
+test('wifi peer is marked unavailable if announcements stop',
+  tape.sinonTest(function (t) {
+    // Make the threshold a bit shorter so that the test doesn't
+    // have to wait for so long.
+    var threshold = thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 2;
+    this.stub(thaliConfig, 'TCP_PEER_UNAVAILABILITY_THRESHOLD', threshold);
+       
+    var testPeerIdentifier = uuid.v4();
+    var testServerHostAddress = randomstring.generate({
+      charset: 'hex', // to get lowercase chars for the host address
+      length: 8
+    });
+    var testServerPort = 8080;
+    var testServer = new nodessdp.Server({
+      location: 'http://' + testServerHostAddress + ':' + testServerPort,
+      ssdpIp: thaliConfig.SSDP_IP,
+      udn: thaliConfig.SSDP_NT,
+      // Make the interval 10 times longer than expected
+      // to make sure we determine the peer is gone while
+      // waiting for the advertisement.
+      adInterval: thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 10
+    });
+    testServer.setUSN(USN.stringify({
+      peerIdentifier: testPeerIdentifier,
+      generation: 0
+    }));
+
+    var spy = this.spy();
+    var peerAvailable = false;
+    var availabilityChangedHandler = function (peer) {
+      if (peer.peerIdentifier !== testPeerIdentifier) {
+        return;
+      }
+      spy();
+      peer.portNumber !== null && peer.hostAddress !== null ?
+        peerAvailable = true :
+        peerAvailable = false;
+      if (spy.calledOnce) {
+        t.equal(peerAvailable, true, 'peer should be available');
+      } else if (spy.calledTwice) {
+        t.equal(peerAvailable, false, 'peer should become unavailable');
+
+        wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged',
+          availabilityChangedHandler);
+
+        testServer.stop();
+        t.end();
+      }
+    };
+    wifiInfrastructure.on('wifiPeerAvailabilityChanged',
+      availabilityChangedHandler);
+
+    wifiInfrastructure.startListeningForAdvertisements()
+    .then(function () {
+      testServer.start(function () {
+        // Handler above should get called.
+      });
+    });
+  })
+);
+
 // From here onwards, tests only work on mocked up desktop
 // environment where network changes can be simulated.
 if (platform._isRealMobile) {
@@ -890,7 +1048,7 @@ test('startUpdateAdvertisingAndListening does not send ssdp:byebye notifications
       updatedUSN = tempUSN;
       finishTest();
     }
-    
+
   });
 
   testClient.on('advertise-bye', function (data) {

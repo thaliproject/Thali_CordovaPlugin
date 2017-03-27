@@ -45,8 +45,66 @@ function updateProjectBuildProperties(xcodeProject, buildWithTests) {
   // I believe that this line of code will be removed in the future
   xcodeProject.removeBuildProperty(
     'EMBEDDED_CONTENT_CONTAINS_SWIFT');
+
+  xcodeProject.removeBuildProperty(
+    'ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES');
   xcodeProject.addBuildProperty(
-    'EMBEDDED_CONTENT_CONTAINS_SWIFT', 'YES');
+    'ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES', 'YES');
+
+  xcodeProject.removeBuildProperty(
+    'IPHONEOS_DEPLOYMENT_TARGET');
+  xcodeProject.addBuildProperty(
+    'IPHONEOS_DEPLOYMENT_TARGET', '10.0');
+
+  xcodeProject.removeBuildProperty(
+    'SWIFT_VERSION');
+  xcodeProject.addBuildProperty(
+    'SWIFT_VERSION', '3.0');
+
+  xcodeProject.removeBuildProperty(
+    'CLANG_WARN_ENUM_CONVERSION');
+  xcodeProject.addBuildProperty(
+    'CLANG_WARN_ENUM_CONVERSION', 'YES');
+
+  xcodeProject.removeBuildProperty(
+    'CLANG_WARN_INFINITE_RECURSION');
+  xcodeProject.addBuildProperty(
+    'CLANG_WARN_INFINITE_RECURSION', 'YES');
+
+  xcodeProject.removeBuildProperty(
+    'CLANG_WARN_SUSPICIOUS_MOVE');
+  xcodeProject.addBuildProperty(
+    'CLANG_WARN_SUSPICIOUS_MOVE', 'YES');
+
+  xcodeProject.removeBuildProperty(
+    'CLANG_WARN_UNREACHABLE_CODE');
+  xcodeProject.addBuildProperty(
+    'CLANG_WARN_UNREACHABLE_CODE', 'YES');
+
+  xcodeProject.removeBuildProperty(
+    'ENABLE_STRICT_OBJC_MSGSEND');
+  xcodeProject.addBuildProperty(
+    'ENABLE_STRICT_OBJC_MSGSEND', 'YES');
+
+  xcodeProject.removeBuildProperty(
+    'ENABLE_TESTABILITY');
+  xcodeProject.addBuildProperty(
+    'ENABLE_TESTABILITY', 'YES');
+
+  xcodeProject.removeBuildProperty(
+    'GCC_NO_COMMON_BLOCKS');
+  xcodeProject.addBuildProperty(
+    'GCC_NO_COMMON_BLOCKS', 'YES');
+
+  xcodeProject.removeBuildProperty(
+    'GCC_WARN_64_TO_32_BIT_CONVERSION');
+  xcodeProject.addBuildProperty(
+    'GCC_WARN_64_TO_32_BIT_CONVERSION', 'YES');
+
+  xcodeProject.removeBuildProperty(
+    'SWIFT_OPTIMIZATION_LEVEL');
+  xcodeProject.addBuildProperty(
+    'SWIFT_OPTIMIZATION_LEVEL', '-Owholemodule');
 
   if (buildWithTests) {
     xcodeProject.removeBuildProperty(
@@ -105,20 +163,13 @@ function updateProjectFrameworks(
     path.join(frameworkOutputDir, 'ThaliCore.framework'),
     {customFramework: true, embed: true, link: true, sign: true});
 
-  // Add the frameworks again.
-  // This time they will have the code-sign option set
-  // so they get code signed when being deployed to devices.
-  if (buildWithTests) {
-    console.log('Adding XCTest.framework');
-    var xcTestFrameworkPath = '/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework';
-    // var xcTestFrameworkPath =
-    // '/Applications/Xcode.app/Contents/Developer/Platforms/
-    // iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest
-    // .framework';
-    xcodeProject.addFramework(
-      xcTestFrameworkPath,
-      {customFramework: true, embed: true, link: true, sign: true});
-  }
+  xcodeProject.addFramework(
+    path.join(frameworkOutputDir, 'SwiftXCTest.framework'),
+    {customFramework: true, embed: true, link: true, sign: true});
+
+  xcodeProject.addFramework(
+    path.join(frameworkOutputDir, 'CocoaAsyncSocket.framework'),
+    {customFramework: true, embed: true, link: true, sign: true});
 }
 
 function updateProjectTestingInfrastructure(
@@ -144,43 +195,62 @@ function addFramework(
   projectPath, frameworkProjectDir, frameworkOutputDir,
   buildWithTests, testingInfrastructureDir) {
 
-  // We need to build ThaliCore.framework before embedding it into the project
-  return buildFramework(
-    frameworkProjectDir, frameworkOutputDir, buildWithTests)
-    .then(function () {
-      var pbxProjectPath = path.join(projectPath, 'project.pbxproj');
-      var xcodeProject = xcode.project(pbxProjectPath);
+  checkoutThaliCoreViaCarthage(
+    frameworkOutputDir, frameworkProjectDir, buildWithTests)
+    .then (function () {
+      console.log('Checkouting done!');
 
-      return new Promise(function (resolve, reject) {
+      // We need to build ThaliCore.framework before embedding it into the project
+      return buildFramework(
+        frameworkProjectDir, frameworkOutputDir, buildWithTests)
+        .then(function () {
+          var pbxProjectPath = path.join(projectPath, 'project.pbxproj');
+          var xcodeProject = xcode.project(pbxProjectPath);
 
-        xcodeProject.parse(function (error) {
+          return new Promise(function (resolve, reject) {
 
-          // If we couldn't parse the project, bail out.
-          if (error) {
-            var message =
-              'Cannot parse Xcode project: ' + JSON.stringify(error);
-            reject(new Error(message));
-            return;
-          }
+            xcodeProject.parse(function (error) {
 
-          updateProjectBuildProperties(xcodeProject, buildWithTests);
+              // If we couldn't parse the project, bail out.
+              if (error) {
+                var message =
+                  'Cannot parse Xcode project: ' + JSON.stringify(error);
+                reject(new Error(message));
+                return;
+              }
 
-          updateProjectFrameworks(
-            xcodeProject, frameworkOutputDir, buildWithTests);
+              updateProjectBuildProperties(xcodeProject, buildWithTests);
 
-          updateProjectTestingInfrastructure(
-            xcodeProject, testingInfrastructureDir, buildWithTests);
+              updateProjectFrameworks(
+                xcodeProject, frameworkOutputDir, buildWithTests);
 
-          resolve(xcodeProject);
+              updateProjectTestingInfrastructure(
+                xcodeProject, testingInfrastructureDir, buildWithTests);
+
+              resolve(xcodeProject);
+            });
+          })
+          .then(function (xcodeProject) {
+            // Save the project file back to disk.
+            return fs.writeFileAsync(
+              pbxProjectPath, xcodeProject.writeSync(), 'utf-8');
+          });
         });
-      })
-      .then(function (xcodeProject) {
-        // Save the project file back to disk.
-        return fs.writeFileAsync(
-          pbxProjectPath, xcodeProject.writeSync(), 'utf-8');
-      });
-    });
+    })
 };
+
+function checkoutThaliCoreViaCarthage(cartfileDir, outputDir, buildWithTests) {
+  var changeDirCmd = 'cd ' + cartfileDir;
+  var carthageCmd = 'carthage update --no-build';
+  var checkoutCmd = changeDirCmd + ' && ' + carthageCmd;
+
+  console.log('Checkouting ThaliCore and its dependencies');
+
+  return exec(checkoutCmd, { maxBuffer: 10*1024*1024 } )
+    .then(function () {
+      return fs.ensureDir(outputDir);
+    })
+}
 
 /**
  * @param {string} projectDir Xcode project directory
@@ -189,13 +259,20 @@ function addFramework(
  * @returns {Promise} Output of exec
  */
 function buildFramework(projectDir, outputDir, buildWithTests) {
+
+  var cocoaAsyncSocketFrameworkName = 'CocoaAsyncSocket';
+  var XCTestFrameworkName = 'SwiftXCTest';
+
   var projectName = 'ThaliCore';
   var projectScheme = 'ThaliCore';
+  var projectConfiguration = 'Release';
+
   if (buildWithTests) {
+    console.log('Building in debug mode');
     projectScheme = 'ThaliCoreCITests';
+    projectConfiguration = 'Debug';
   }
 
-  var projectConfiguration = 'Release';
   var sdk = 'iphoneos';
   var projectPath = path.join(projectDir, projectName + '.xcodeproj');
   var buildDir = path.join(projectDir, 'build');
@@ -207,23 +284,42 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
     ' -configuration ' + projectConfiguration +
     ' -sdk ' + sdk +
     ' ONLY_ACTIVE_ARCH=NO ' +
+    ' IPHONEOS_DEPLOYMENT_TARGET=10.0' +
     ' BUILD_DIR=' + '\"' + buildDir + '\"' +
     ' clean build';
 
   console.log('Building ThaliCore.framework');
+  console.log('Build command:\n' + buildCmd);
 
   // todo: fixed buffer size should be fixed with streaming in #1001
   return exec(buildCmd, { maxBuffer: 10*1024*1024 } )
     .then(function () {
+      console.log('Building ThaliCore.framework has been finished');
       return fs.ensureDir(outputDir);
     })
     .then(function () {
-      var frameworkBuildDir = path.join(
+      var thaliCoreFrameworkBuildDir = path.join(
         buildDir, projectConfiguration + '-' + sdk, projectName + '.framework');
       var frameworkOutputDir = path.join(
         outputDir, projectName + '.framework');
 
-      return fs.copy(frameworkBuildDir, frameworkOutputDir, { clobber: false });
+      return fs.copy(thaliCoreFrameworkBuildDir, frameworkOutputDir, { clobber: false });
+    })
+    .then(function () {
+      var cocoaAsyncSocketFrameworkBuildDir = path.join(
+        projectDir, 'Carthage', 'Build', 'iOS', cocoaAsyncSocketFrameworkName + '.framework');
+      var frameworkOutputDir = path.join(
+        outputDir, cocoaAsyncSocketFrameworkName + '.framework');
+
+      return fs.copy(cocoaAsyncSocketFrameworkBuildDir, frameworkOutputDir, { clobber: false });
+    })
+    .then(function () {
+      var swiftXCTestFrameworkBuildDir = path.join(
+        projectDir, 'Carthage', 'Build', 'iOS', XCTestFrameworkName + '.framework');
+      var frameworkOutputDir = path.join(
+        outputDir, XCTestFrameworkName + '.framework');
+
+      return fs.copy(swiftXCTestFrameworkBuildDir, frameworkOutputDir, { clobber: false });
     });
 }
 
