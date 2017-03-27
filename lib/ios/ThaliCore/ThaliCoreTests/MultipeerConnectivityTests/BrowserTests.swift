@@ -19,14 +19,14 @@ class BrowserTests: XCTestCase {
   var randomlyGeneratedPeerID: MCPeerID!
   var mcBrowser: MCNearbyServiceBrowser!
 
-  let foundPeerTimeout: NSTimeInterval = 1.0
-  let lostPeerTimeout: NSTimeInterval = 1.0
-  let startBrowsingErrorTimeout: NSTimeInterval = 1.0
+  let foundPeerTimeout: TimeInterval = 1.0
+  let lostPeerTimeout: TimeInterval = 1.0
+  let startBrowsingErrorTimeout: TimeInterval = 1.0
 
   // MARK: - Setup & Teardown
   override func setUp() {
     super.setUp()
-    randomlyGeneratedServiceType = String.randomValidServiceType(length: 7)
+    randomlyGeneratedServiceType = String.randomValidServiceType(7)
     randomlyGeneratedPeer = Peer()
     randomlyGeneratedPeerID = MCPeerID(displayName: randomlyGeneratedPeer.stringValue)
     mcBrowser = MCNearbyServiceBrowser(peer: randomlyGeneratedPeerID,
@@ -188,7 +188,7 @@ class BrowserTests: XCTestCase {
 
   func testFoundPeerHandlerCalled() {
     // Expectations
-    let foundPeer = expectationWithDescription("foundPeerHandler is called on Browser object")
+    let foundPeer = expectation(description: "foundPeerHandler is called on Browser object")
 
     // Given
     let newBrowser = Browser(serviceType: randomlyGeneratedServiceType,
@@ -208,12 +208,12 @@ class BrowserTests: XCTestCase {
     browser.browser(mcBrowser, foundPeer: randomlyGeneratedPeerID, withDiscoveryInfo: nil)
 
     // Then
-    waitForExpectationsWithTimeout(foundPeerTimeout, handler: nil)
+    waitForExpectations(timeout: foundPeerTimeout, handler: nil)
   }
 
   func testLostPeerHandlerCalled() {
     // Expectations
-    let lostPeer = expectationWithDescription("lostPeerHandler is called on Browser object")
+    let lostPeer = expectation(description: "lostPeerHandler is called on Browser object")
 
     // Given
     let newBrowser = Browser(serviceType: randomlyGeneratedServiceType,
@@ -232,13 +232,13 @@ class BrowserTests: XCTestCase {
     browser.browser(mcBrowser, lostPeer: randomlyGeneratedPeerID)
 
     // Then
-    waitForExpectationsWithTimeout(lostPeerTimeout, handler: nil)
+    waitForExpectations(timeout: lostPeerTimeout, handler: nil)
   }
 
   func testStartListeningErrorHandlerCalled() {
     // Expectations
     let failedStartBrowsing =
-      expectationWithDescription("Failed start advertising " +
+      expectation(description: "Failed start advertising " +
         "because of delegate MCNearbyServiceBrowserDelegate call")
 
     // Given
@@ -265,12 +265,12 @@ class BrowserTests: XCTestCase {
     browser.browser(mcBrowser, didNotStartBrowsingForPeers: error)
 
     // Then
-    waitForExpectationsWithTimeout(startBrowsingErrorTimeout, handler: nil)
+    waitForExpectations(timeout: startBrowsingErrorTimeout, handler: nil)
   }
 
   func testInviteToConnectPeerMethodReturnsSession() {
     // Expectations
-    let foundPeer = expectationWithDescription("foundPeerHandler is called on Browser object")
+    let foundPeer = expectation(description: "foundPeerHandler is called on Browser object")
 
     // Given
     // Firsly we have to "find" peer and get handler called
@@ -291,7 +291,7 @@ class BrowserTests: XCTestCase {
     // Fake invocation of delegate method
     browser.browser(mcBrowser, foundPeer: randomlyGeneratedPeerID, withDiscoveryInfo: nil)
 
-    waitForExpectationsWithTimeout(foundPeerTimeout, handler: nil)
+    waitForExpectations(timeout: foundPeerTimeout, handler: nil)
 
     // When
     do {
@@ -330,15 +330,15 @@ class BrowserTests: XCTestCase {
   }
 
   // MARK: - Private methods and handlers of unexpected events
-  private func unexpectedFoundPeerHandler(peer: Peer) {
+  fileprivate func unexpectedFoundPeerHandler(_ peer: Peer) {
     XCTFail("Unexpected call foundPeerHandler with peer: \(peer)")
   }
 
-  private func unexpectedLostPeerHandler(peer: Peer) {
+  fileprivate func unexpectedLostPeerHandler(_ peer: Peer) {
     XCTFail("unexpected lostPeerHandler with peer: \(peer)")
   }
 
-  private func failBrowserMustNotBeNil() {
+  fileprivate func failBrowserMustNotBeNil() {
     XCTFail("Browser must not be nil")
   }
 }

@@ -16,12 +16,12 @@ class AdvertiserTests: XCTestCase {
   // MARK: - State
   var randomlyGeneratedServiceType: String!
   var randomlyGeneratedPeer: Peer!
-  let startAdvertisingErrorTimeout: NSTimeInterval = 5.0
+  let startAdvertisingErrorTimeout: TimeInterval = 5.0
 
   // MARK: - Setup & Teardown
   override func setUp() {
     super.setUp()
-    randomlyGeneratedServiceType = String.randomValidServiceType(length: 7)
+    randomlyGeneratedServiceType = String.randomValidServiceType(7)
     randomlyGeneratedPeer = Peer()
   }
 
@@ -45,7 +45,7 @@ class AdvertiserTests: XCTestCase {
 
   func testAdvertiserReturnsNilWhenEmptyServiceType() {
     // Given
-    let emptyServiceType = String.randomValidServiceType(length: 0)
+    let emptyServiceType = String.randomValidServiceType(0)
 
     // When
     let advertiser = Advertiser(peer: randomlyGeneratedPeer,
@@ -220,7 +220,7 @@ class AdvertiserTests: XCTestCase {
 
     // Given
     startAdvertisingErrorHandlerCalled =
-      expectationWithDescription("startAdvertisingErrorHandler is called")
+      expectation(description: "startAdvertisingErrorHandler is called")
 
     let newAdvertiser = Advertiser(peer: randomlyGeneratedPeer,
                                    serviceType: randomlyGeneratedServiceType,
@@ -249,14 +249,14 @@ class AdvertiserTests: XCTestCase {
     advertiser.advertiser(mcAdvertiser, didNotStartAdvertisingPeer: error)
 
     // Then
-    waitForExpectationsWithTimeout(startAdvertisingErrorTimeout) {
+    waitForExpectations(timeout: startAdvertisingErrorTimeout) {
       error in
       startAdvertisingErrorHandlerCalled = nil
     }
   }
 
   // MARK: - Private methods
-  private func failAdvertiserMustNotBeNil() {
+  fileprivate func failAdvertiserMustNotBeNil() {
     XCTFail("Advertiser must not be nil")
   }
 }

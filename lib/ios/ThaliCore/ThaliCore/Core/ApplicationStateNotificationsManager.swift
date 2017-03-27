@@ -14,8 +14,8 @@ import UIKit
 public final class ApplicationStateNotificationsManager: NSObject {
 
   // MARK: - Public state
-  public var willEnterBackgroundHandler: (Void -> Void)?
-  public var didEnterForegroundHandler: (Void -> Void)?
+  public var willEnterBackgroundHandler: ((Void) -> Void)?
+  public var didEnterForegroundHandler: ((Void) -> Void)?
 
   // MARK: - Public methods
   public override init() {
@@ -24,27 +24,27 @@ public final class ApplicationStateNotificationsManager: NSObject {
   }
 
   deinit {
-    NSNotificationCenter.defaultCenter().removeObserver(self)
+    NotificationCenter.default.removeObserver(self)
   }
 
   // MARK: - Private methods
-  @objc private func applicationWillResignActiveNotification(notification: NSNotification) {
+  @objc fileprivate func applicationWillResignActiveNotification(_ notification: Notification) {
     willEnterBackgroundHandler?()
   }
 
-  @objc private func applicationDidBecomeActiveNotification(notification: NSNotification) {
+  @objc fileprivate func applicationDidBecomeActiveNotification(_ notification: Notification) {
     didEnterForegroundHandler?()
   }
 
-  private func subscribeAppStateNotifications() {
-    let notificationCenter = NSNotificationCenter.defaultCenter()
+  fileprivate func subscribeAppStateNotifications() {
+    let notificationCenter = NotificationCenter.default
     notificationCenter.addObserver(self,
                                    selector: #selector(applicationWillResignActiveNotification(_:)),
-                                   name: UIApplicationWillResignActiveNotification,
+                                   name: NSNotification.Name.UIApplicationWillResignActive,
                                    object: nil)
     notificationCenter.addObserver(self,
                                    selector: #selector(applicationDidBecomeActiveNotification(_:)),
-                                   name: UIApplicationDidBecomeActiveNotification,
+                                   name: NSNotification.Name.UIApplicationDidBecomeActive,
                                    object: nil)
   }
 }

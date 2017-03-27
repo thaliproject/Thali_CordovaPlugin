@@ -20,21 +20,21 @@ class AdvertiserRelayTests: XCTestCase {
 
   var anyAvailablePort: UInt16 = 0
 
-  let browserFindPeerTimeout: NSTimeInterval = 5.0
-  let browserConnectTimeout: NSTimeInterval = 10.0
-  let streamReceivedTimeout: NSTimeInterval = 5.0
-  let disposeTimeout: NSTimeInterval = 30.0
-  let receiveMessageTimeout: NSTimeInterval = 10.0
+  let browserFindPeerTimeout: TimeInterval = 5.0
+  let browserConnectTimeout: TimeInterval = 10.0
+  let streamReceivedTimeout: TimeInterval = 5.0
+  let disposeTimeout: TimeInterval = 30.0
+  let receiveMessageTimeout: TimeInterval = 10.0
 
   // MARK: - Setup & Teardown
   override func setUp() {
     super.setUp()
-    randomlyGeneratedServiceType = String.randomValidServiceType(length: 7)
+    randomlyGeneratedServiceType = String.randomValidServiceType(7)
 
     let crlf = "\r\n"
     let fullMessageLength = 10 * 1024
     let plainMessageLength = fullMessageLength - crlf.characters.count
-    randomMessage = String.random(length: plainMessageLength) + crlf
+    randomMessage = String.random(plainMessageLength) + crlf
 
     advertiserManager = AdvertiserManager(serviceType: randomlyGeneratedServiceType,
                                           disposeAdvertiserTimeout: disposeTimeout)
@@ -63,8 +63,8 @@ class AdvertiserRelayTests: XCTestCase {
                                              guard let strongSelf = self else { return }
 
                                              let receivedMessage = String(
-                                               data: data,
-                                               encoding: NSUTF8StringEncoding
+                                               data: data as Data,
+                                               encoding: String.Encoding.utf8
                                              )
                                              XCTAssertEqual(strongSelf.randomMessage,
                                                             receivedMessage,
@@ -81,7 +81,7 @@ class AdvertiserRelayTests: XCTestCase {
     }
 
     // Prepare pair of advertiser and browser
-    MPCFBrowserFoundAdvertiser = expectationWithDescription("Browser peer found Advertiser peer")
+    MPCFBrowserFoundAdvertiser = expectation(description: "Browser peer found Advertiser peer")
 
     // Start advertising on Advertiser's side
     advertiserManager.startUpdateAdvertisingAndListening(onPort: advertiserNodeListenerPort,
@@ -102,7 +102,7 @@ class AdvertiserRelayTests: XCTestCase {
                                         })
     browserManager.startListeningForAdvertisements(unexpectedErrorHandler)
 
-    waitForExpectationsWithTimeout(browserFindPeerTimeout) {
+    waitForExpectations(timeout: browserFindPeerTimeout) {
       error in
       MPCFBrowserFoundAdvertiser = nil
     }
@@ -115,7 +115,7 @@ class AdvertiserRelayTests: XCTestCase {
     }
 
     // Connect method invocation
-    browserManagerConnected = expectationWithDescription("BrowserManager is connected")
+    browserManagerConnected = expectation(description: "BrowserManager is connected")
 
     var browserNativeTCPListenerPort: UInt16 = 0
     browserManager.connectToPeer(peerToConnect.uuid, syncValue: "0") {
@@ -130,7 +130,7 @@ class AdvertiserRelayTests: XCTestCase {
       browserManagerConnected?.fulfill()
     }
 
-    waitForExpectationsWithTimeout(browserConnectTimeout) {
+    waitForExpectations(timeout: browserConnectTimeout) {
       error in
       guard error == nil else {
         XCTFail("Browser could not connect to peer")
@@ -143,9 +143,9 @@ class AdvertiserRelayTests: XCTestCase {
     // Check if relay objectes are valid
     guard
       let browserRelayInfo: (uuid: String, relay: BrowserRelay) =
-      browserManager.activeRelays.value.first,
+        browserManager.activeRelays.value.first as! (uuid: String, relay: BrowserRelay)?,
       let advertiserRelayInfo: (uuid: String, relay: AdvertiserRelay) =
-      advertiserManager.activeRelays.value.first
+        advertiserManager.activeRelays.value.first as! (uuid: String, relay: AdvertiserRelay)?
       else {
         return
     }
@@ -170,11 +170,11 @@ class AdvertiserRelayTests: XCTestCase {
     // When
     // Send message from advertiser's node mock server to browser's node mock client
     advertisersNodeServerReceivedMessage =
-      expectationWithDescription("Advertiser's fake node server received a message")
+      expectation(description: "Advertiser's fake node server received a message")
     browserNodeClientMock.send(self.randomMessage)
 
     // Then
-    waitForExpectationsWithTimeout(receiveMessageTimeout) {
+    waitForExpectations(timeout: receiveMessageTimeout) {
       error in
       advertisersNodeServerReceivedMessage = nil
     }

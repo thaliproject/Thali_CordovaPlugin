@@ -27,7 +27,7 @@ class PeerTests: XCTestCase {
 
   func testStringValueHasCorrectForm() {
     for i in 0...0xF {
-      let uuid = NSUUID().UUIDString
+      let uuid = UUID().uuidString
       let string = "\(uuid):\(String(i, radix: 16))"
       let peer = try? Peer(stringValue: string)
       XCTAssertEqual(peer?.uuid, uuid)
@@ -36,9 +36,9 @@ class PeerTests: XCTestCase {
   }
 
   func testInitWithStringHasTwoSeparatorsCausesError() {
-    let string = String.random(length: 4) + ":" +
-      String.random(length: 4) + ":" +
-      String.random(length: 4)
+    let string = String.random(4) + ":" +
+      String.random(4) + ":" +
+      String.random(4)
     var parsingError: ThaliCoreError?
     do {
       let _ = try Peer(stringValue: string)
@@ -50,7 +50,7 @@ class PeerTests: XCTestCase {
   }
 
   func testInitWithStringHasNoSeparatorCausesError() {
-    let string = String.random(length: 4)
+    let string = String.random(4)
     var parsingError: ThaliCoreError?
     do {
       let _ = try Peer(stringValue: string)
@@ -74,7 +74,7 @@ class PeerTests: XCTestCase {
   }
 
   func testInitWithStringHasNotNumberGenerationCausesError() {
-    let string = String.random(length: 4) + ":" + "not_a_number"
+    let string = String.random(4) + ":" + "not_a_number"
     var parsingError: ThaliCoreError?
     do {
       let _ = try Peer(stringValue: string)

@@ -18,7 +18,7 @@ class StringRandomTests: XCTestCase {
   func testReturnsTrueWhenServiceTypeIsValid() {
     for _ in 0...1000 {
       // Given
-      let randomServiceType = String.randomValidServiceType(length: serviceTypeLength)
+      let randomServiceType = String.randomValidServiceType(serviceTypeLength)
 
       // When, Then
       XCTAssertTrue(String.isValidServiceType(randomServiceType))
@@ -35,7 +35,7 @@ class StringRandomTests: XCTestCase {
 
   func testReturnsFalseWhenServiceTypeIsEmpty() {
     // Given
-    let invalidServiceType = String.random(length: 0)
+    let invalidServiceType = String.random(0)
 
     // When, Then
     XCTAssertFalse(String.isValidServiceType(invalidServiceType))
@@ -43,7 +43,7 @@ class StringRandomTests: XCTestCase {
 
   func testReturnsFalseWhenServiceTypeCharMoreThanMax() {
     // Given
-    let invalidServiceType = String.randomValidServiceType(length: 16)
+    let invalidServiceType = String.randomValidServiceType(16)
 
     // When, Then
     XCTAssertFalse(String.isValidServiceType(invalidServiceType))
@@ -54,8 +54,8 @@ class StringRandomTests: XCTestCase {
     let randomIndexInString = Int(arc4random_uniform(UInt32(serviceTypeLength)))
     let firstPartLength = randomIndexInString
     let secondPartLength = serviceTypeLength - randomIndexInString
-    let firstRandomlyGeneratedPart = String.randomValidServiceType(length: firstPartLength)
-    let secondRandomlyGeneratedPart = String.randomValidServiceType(length: secondPartLength)
+    let firstRandomlyGeneratedPart = String.randomValidServiceType(firstPartLength)
+    let secondRandomlyGeneratedPart = String.randomValidServiceType(secondPartLength)
     let invalidServiceType = firstRandomlyGeneratedPart + "." + secondRandomlyGeneratedPart
 
     // When, Then
@@ -77,7 +77,7 @@ class StringRandomTests: XCTestCase {
 
   func testReturnsFalseWhenServiceTypeContainsHyphenFirst() {
     // Given
-    let randomlyGeneratedServiceType = String.randomValidServiceType(length: serviceTypeLength)
+    let randomlyGeneratedServiceType = String.randomValidServiceType(serviceTypeLength)
     let invalidServiceType = "-" + randomlyGeneratedServiceType
 
     // When, Then
@@ -86,7 +86,7 @@ class StringRandomTests: XCTestCase {
 
   func testReturnsFalseWhenServiceTypeContainsHyphenLast() {
     // Given
-    let randomlyGeneratedServiceType = String.randomValidServiceType(length: serviceTypeLength)
+    let randomlyGeneratedServiceType = String.randomValidServiceType(serviceTypeLength)
     let invalidServiceType = randomlyGeneratedServiceType + "-"
 
     // When, Then
@@ -98,8 +98,8 @@ class StringRandomTests: XCTestCase {
     let randomIndexInString = Int(arc4random_uniform(UInt32(serviceTypeLength)))
     let firstPartLength = randomIndexInString
     let secondPartLength = serviceTypeLength - randomIndexInString
-    let firstRandomlyGeneratedPart = String.randomValidServiceType(length: firstPartLength)
-    let secondRandomlyGeneratedPart = String.randomValidServiceType(length: secondPartLength)
+    let firstRandomlyGeneratedPart = String.randomValidServiceType(firstPartLength)
+    let secondRandomlyGeneratedPart = String.randomValidServiceType(secondPartLength)
     let invalidServiceType = firstRandomlyGeneratedPart + "--" + secondRandomlyGeneratedPart
 
     // When, Then

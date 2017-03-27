@@ -7,7 +7,7 @@
 //  See LICENSE.txt file in the project root for full license information.
 //
 
-public enum ThaliCoreError: String, ErrorType {
+public enum ThaliCoreError: String, Error {
 
   case StartListeningNotActive = "startListeningForAdvertisements is not active"
   case ConnectionFailed = "Connection could not be established"

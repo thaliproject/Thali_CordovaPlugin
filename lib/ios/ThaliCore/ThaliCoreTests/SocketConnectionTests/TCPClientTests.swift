@@ -13,11 +13,11 @@ import XCTest
 class TCPClientTests: XCTestCase {
 
   // MARK: - State
-  let noTCPTimeout: NSTimeInterval = -1
+  let noTCPTimeout: TimeInterval = -1
   let defaultTCPDataTag = 0
-  let acceptConnectionTimeout: NSTimeInterval = 5.0
-  let readDataTimeout: NSTimeInterval = 5.0
-  let disconnectClientTimeout: NSTimeInterval = 5.0
+  let acceptConnectionTimeout: TimeInterval = 5.0
+  let readDataTimeout: TimeInterval = 5.0
+  let disconnectClientTimeout: TimeInterval = 5.0
 
   // MARK: - Tests
   func testTCPClientCanConnectToServerAndReturnsListenerPort() {
@@ -40,7 +40,7 @@ class TCPClientTests: XCTestCase {
 
     XCTAssertNotEqual(listenerPort, 0)
 
-    mockServerAcceptedConnection = expectationWithDescription("Mock server accepted connection")
+    mockServerAcceptedConnection = expectation(description: "Mock server accepted connection")
 
     // When
     // TCP Client is trying to connect to TCP mock server
@@ -53,7 +53,7 @@ class TCPClientTests: XCTestCase {
     }
 
     // Then
-    waitForExpectationsWithTimeout(acceptConnectionTimeout) {
+    waitForExpectations(timeout: acceptConnectionTimeout) {
       error in
       mockServerAcceptedConnection = nil
     }
@@ -80,7 +80,7 @@ class TCPClientTests: XCTestCase {
     }
     XCTAssertNotEqual(listenerPort, 0)
 
-    mockServerAcceptedConnection = expectationWithDescription("Mock server accepted connection")
+    mockServerAcceptedConnection = expectation(description: "Mock server accepted connection")
 
     // TCP Client is trying to connect to TCP mock server
     let tcpClient = TCPClient(with: {
@@ -90,23 +90,23 @@ class TCPClientTests: XCTestCase {
                               didDisconnect: { _ in })
     tcpClient.connectToLocalhost(onPort: listenerPort) {
       socket, port, error in
-      socket!.readDataWithTimeout(self.noTCPTimeout, tag: self.defaultTCPDataTag)
+      socket!.readData(withTimeout: self.noTCPTimeout, tag: self.defaultTCPDataTag)
       XCTAssertNil(error)
       XCTAssertEqual(port, listenerPort)
     }
 
-    waitForExpectationsWithTimeout(acceptConnectionTimeout) {
+    waitForExpectations(timeout: acceptConnectionTimeout) {
       error in
       mockServerAcceptedConnection = nil
     }
 
     // When
     // Mock server sends some data to TCP client
-    dataReadHandler = expectationWithDescription("dataReadHandler invoked")
-    serverMock.sendRandomMessage(length: 100)
+    dataReadHandler = expectation(description: "dataReadHandler invoked")
+    serverMock.sendRandomMessage(100)
 
     // Then
-    waitForExpectationsWithTimeout(readDataTimeout) {
+    waitForExpectations(timeout: readDataTimeout) {
       error in
       dataReadHandler = nil
     }
@@ -132,7 +132,7 @@ class TCPClientTests: XCTestCase {
     }
 
     // TCP Client is trying to connect to TCP mock server
-    mockServerAcceptedConnection = expectationWithDescription("Mock server accepted connection")
+    mockServerAcceptedConnection = expectation(description: "Mock server accepted connection")
 
     let tcpClient = TCPClient(with: unexpectedReadDataHandler,
                               didDisconnect: {
@@ -145,18 +145,18 @@ class TCPClientTests: XCTestCase {
       XCTAssertEqual(port, listenerPort)
     }
 
-    waitForExpectationsWithTimeout(acceptConnectionTimeout) {
+    waitForExpectations(timeout: acceptConnectionTimeout) {
       error in
       mockServerAcceptedConnection = nil
     }
 
     // When
     // Mock server disconnects TCP client
-    didDisconnectHandler = expectationWithDescription("didDisconnectHandler invoked")
+    didDisconnectHandler = expectation(description: "didDisconnectHandler invoked")
     serverMock.disconnectAllClients()
 
     // Then
-    waitForExpectationsWithTimeout(disconnectClientTimeout) {
+    waitForExpectations(timeout: disconnectClientTimeout) {
       error in
       didDisconnectHandler = nil
     }

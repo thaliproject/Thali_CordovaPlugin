@@ -10,10 +10,10 @@
 @testable import ThaliCore
 import XCTest
 
-func createMPCFPeers(with browsingCompletion: (PeerAvailability) -> Void)
+func createMPCFPeers(with browsingCompletion: @escaping (PeerAvailability) -> Void)
                      -> (AdvertiserManager, BrowserManager) {
 
-    let serviceType = String.randomValidServiceType(length: 7)
+    let serviceType = String.randomValidServiceType(7)
 
     let browserManager = BrowserManager(serviceType: serviceType,
                                         inputStreamReceiveTimeout: 5,
@@ -31,7 +31,7 @@ func createMPCFPeers(with browsingCompletion: (PeerAvailability) -> Void)
     return (advertiserManager, browserManager)
 }
 
-func unexpectedErrorHandler(error: ErrorType) {
+func unexpectedErrorHandler(_ error: Error) {
   XCTFail("unexpected error: \(error)")
 }
 
@@ -43,15 +43,15 @@ func unexpectedDisconnectHandler() {
   XCTFail("Unexpected disconnect received")
 }
 
-func unexpectedReadDataHandler(data: NSData) {
+func unexpectedReadDataHandler(_ data: Data) {
   XCTFail("Unexpected data readed. Data: \(data)")
 }
 
-func unexpectedReadDataHandler(socket: GCDAsyncSocket, data: NSData) {
+func unexpectedReadDataHandler(_ socket: GCDAsyncSocket, data: Data) {
   XCTFail("Unexpected data readed on socket \(socket). Data: \(data)")
 }
 
-func unexpectedSocketDisconnectHandler(socket: GCDAsyncSocket) {
+func unexpectedSocketDisconnectHandler(_ socket: GCDAsyncSocket) {
   XCTFail("Unexpected disconnect received on socket \(socket)")
 }
 
@@ -63,10 +63,10 @@ func unexpectedAcceptConnectionHandler() {
   XCTFail("Unexpected acceptConnection received")
 }
 
-func unexpectedAcceptConnectionHandler(socket: GCDAsyncSocket) {
+func unexpectedAcceptConnectionHandler(_ socket: GCDAsyncSocket) {
   XCTFail("Unexpected acceptConnection received")
 }
 
-func unexpectedReceivedSessionHandler(session: Session) {
+func unexpectedReceivedSessionHandler(_ session: Session) {
   XCTFail("Unexpected session received: \(session)")
 }

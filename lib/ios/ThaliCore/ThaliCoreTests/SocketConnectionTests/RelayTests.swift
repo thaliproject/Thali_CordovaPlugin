@@ -22,22 +22,22 @@ class RelayTests: XCTestCase {
 
   let anyAvailablePort: UInt16 = 0
 
-  let streamReceivedTimeout: NSTimeInterval = 5.0
-  let openRelayTimeout: NSTimeInterval = 10.0
-  let clientConnectTimeout: NSTimeInterval = 5.0
-  let clientDisconnectTimeout: NSTimeInterval = 10.0
-  let disposeTimeout: NSTimeInterval = 30.0
-  let newConnectionTimeout: NSTimeInterval = 10.0
-  let browserFindPeerTimeout: NSTimeInterval = 5.0
+  let streamReceivedTimeout: TimeInterval = 5.0
+  let openRelayTimeout: TimeInterval = 10.0
+  let clientConnectTimeout: TimeInterval = 5.0
+  let clientDisconnectTimeout: TimeInterval = 10.0
+  let disposeTimeout: TimeInterval = 30.0
+  let newConnectionTimeout: TimeInterval = 10.0
+  let browserFindPeerTimeout: TimeInterval = 5.0
   let browserConnectTimeout = 5.0
   let moveDataTimeout = 15.0
 
   // MARK: - Setup & Teardown
   override func setUp() {
     super.setUp()
-    randomGeneratedServiceType = String.randomValidServiceType(length: 7)
-    mcPeerID = MCPeerID(displayName: String.random(length: 5))
-    mcSessionMock = MCSessionMock(peer: MCPeerID(displayName: String.random(length: 5)))
+    randomGeneratedServiceType = String.randomValidServiceType(7)
+    mcPeerID = MCPeerID(displayName: String.random(5))
+    mcSessionMock = MCSessionMock(peer: MCPeerID(displayName: String.random(5)))
     nonTCPSession = Session(session: mcSessionMock,
                             identifier: mcPeerID,
                             connected: {},
@@ -46,7 +46,7 @@ class RelayTests: XCTestCase {
     let crlf = "\r\n"
     let fullMessageLength = 1 * 1024
     let plainMessageLength = fullMessageLength - crlf.characters.count
-    randomMessage = String.random(length: plainMessageLength) + crlf
+    randomMessage = String.random(plainMessageLength) + crlf
 
   }
 
@@ -77,7 +77,7 @@ class RelayTests: XCTestCase {
                       [weak self] socket, data in
                       guard let strongSelf = self else { return }
 
-                      let receivedMessage = String(data: data, encoding: NSUTF8StringEncoding)
+                      let receivedMessage = String(data: data as Data, encoding: String.Encoding.utf8)
                       XCTAssertEqual(strongSelf.randomMessage,
                                      receivedMessage,
                                      "Received message is wrong")
@@ -99,7 +99,7 @@ class RelayTests: XCTestCase {
     }
 
     // Prepare pair of advertiser and browser
-    MPCFBrowserFoundAdvertiser = expectationWithDescription("Browser peer found Advertiser peer")
+    MPCFBrowserFoundAdvertiser = expectation(description: "Browser peer found Advertiser peer")
 
     // Start listening for advertisements on browser
     let browserManager = BrowserManager(serviceType: randomGeneratedServiceType,
@@ -122,7 +122,7 @@ class RelayTests: XCTestCase {
     advertiserManager.startUpdateAdvertisingAndListening(onPort: advertiserNodeListenerPort,
                                                          errorHandler: unexpectedErrorHandler)
 
-    waitForExpectationsWithTimeout(browserFindPeerTimeout) {
+    waitForExpectations(timeout: browserFindPeerTimeout) {
       error in
       MPCFBrowserFoundAdvertiser = nil
     }
@@ -135,7 +135,7 @@ class RelayTests: XCTestCase {
     }
 
     // Connect method invocation
-    browserManagerConnected = expectationWithDescription("BrowserManager is connected")
+    browserManagerConnected = expectation(description: "BrowserManager is connected")
 
     var browserNativeTCPListenerPort: UInt16 = 0
     browserManager.connectToPeer(peerToConnect.uuid, syncValue: "0") {
@@ -150,7 +150,7 @@ class RelayTests: XCTestCase {
       browserManagerConnected?.fulfill()
     }
 
-    waitForExpectationsWithTimeout(browserConnectTimeout) {
+    waitForExpectations(timeout: browserConnectTimeout) {
       error in
       browserManager.stopListeningForAdvertisements()
       browserManagerConnected = nil
@@ -159,9 +159,9 @@ class RelayTests: XCTestCase {
     // Check if relay objectes are valid
     guard
       let browserRelayInfo: (uuid: String, relay: BrowserRelay) =
-      browserManager.activeRelays.value.first,
+        browserManager.activeRelays.value.first as! (uuid: String, relay: BrowserRelay)?,
       let advertiserRelayInfo: (uuid: String, relay: AdvertiserRelay) =
-      advertiserManager.activeRelays.value.first
+        advertiserManager.activeRelays.value.first as! (uuid: String, relay: AdvertiserRelay)?
       else {
         return
     }
@@ -191,9 +191,9 @@ class RelayTests: XCTestCase {
     }
 
     advertisersNodeServerReceivedMessage =
-      expectationWithDescription("Advertiser's fake node server received a message")
+      expectation(description: "Advertiser's fake node server received a message")
 
-    waitForExpectationsWithTimeout(moveDataTimeout) {
+    waitForExpectations(timeout: moveDataTimeout) {
       error in
       advertisersNodeServerReceivedMessage = nil
     }

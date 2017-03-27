@@ -15,12 +15,12 @@ class AdvertiserManagerTests: XCTestCase {
   // MARK: - State
   var serviceType: String!
   var advertiserManager: AdvertiserManager!
-  let disposeTimeout: NSTimeInterval = 4.0
+  let disposeTimeout: TimeInterval = 4.0
 
   // MARK: - Setup & Teardown
   override func setUp() {
     super.setUp()
-    serviceType = String.randomValidServiceType(length: 7)
+    serviceType = String.randomValidServiceType(7)
     advertiserManager = AdvertiserManager(serviceType: serviceType,
                                           disposeAdvertiserTimeout: disposeTimeout)
   }
@@ -183,7 +183,7 @@ class AdvertiserManagerTests: XCTestCase {
     XCTAssertEqual(advertiserManager.advertisers.value.count, 1)
 
     let firstAdvertiserPeer = advertiserManager.advertisers.value.first!.peer
-    let firstAdvertiserDisposed = expectationWithDescription("Advertiser disposed after delay")
+    let firstAdvertiserDisposed = expectation(description: "Advertiser disposed after delay")
 
     // When
     advertiserManager.startUpdateAdvertisingAndListening(onPort: port2,
@@ -198,7 +198,7 @@ class AdvertiserManagerTests: XCTestCase {
     }
 
     // Then
-    waitForExpectationsWithTimeout(disposeTimeout, handler: nil)
+    waitForExpectations(timeout: disposeTimeout, handler: nil)
     XCTAssertEqual(advertiserManager.advertisers.value.count, 1)
   }
 
