@@ -15,7 +15,7 @@
     "lie": "3.1.0",
     "request": "2.74.0",
     "unzip": "0.1.11",
-    "xcode": "0.8.9"
+    "xcode": "https://github.com/alunny/node-xcode.git#4cca2f6225c391b63324e6eb53421560649d4f98"
   },
   "scripts": {
     "setupUnit": "./setUpTests.sh UnitTest_app.js",

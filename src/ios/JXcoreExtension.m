@@ -1,6 +1,6 @@
 //
-//  Thali CordovaPlugin
 //  JXcoreExtension.m
+//  Thali
 //
 //  Copyright (C) Microsoft. All rights reserved.
 //  Licensed under the MIT license. See LICENSE.txt file in the project root for full license information.
@@ -149,18 +149,16 @@
 
 #ifdef TEST
 - (void)defineExecuteNativeTests:(AppContext *)appContext {
-    [JXcore addNativeBlock:^(NSArray * params, NSString *callbackId) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wundeclared-selector"
-        if ([appContext respondsToSelector:@selector(executeNativeTests)]) {
-            NSString *result = [appContext performSelector:@selector(executeNativeTests)];
-#pragma clang diagnostic pop
-            [JXcore callEventCallback:callbackId withJSON:result];
-        }
-        else {
-            [JXcore callEventCallback:callbackId withParams:@[@"Method not available"]];
-        }
-    } withName:[AppContextJSEvent executeNativeTests]];
+  [JXcore addNativeBlock:^(NSArray *params, NSString *callbackId) {
+    id<TestRunnerProtocol> testRunner = (id<TestRunnerProtocol>)appContext;
+
+    if (testRunner != nil) {
+      NSString *result = [testRunner runNativeTests];
+      [JXcore callEventCallback:callbackId withJSON:result];
+    } else {
+      [JXcore callEventCallback:callbackId withParams:@[@"Method not available"]];
+    }
+  } withName:[AppContextJSEvent executeNativeTests]];
 }
 #endif
 

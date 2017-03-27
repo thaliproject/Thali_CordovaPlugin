@@ -13,9 +13,9 @@ const assert = require('assert');
 
 const versions =
 {
-  xcode: '7.3.1',
+  xcode: '8.2.1',
   xcodeCommandLineTools: ' ',
-  macOS: '10.12.2',
+  macOS: '10.12.3',
   node: '6.9.1',
   npm: '3.10.8',
   brew: '1.1.',
@@ -33,7 +33,8 @@ const versions =
   cordova: '6.4.0',
   java: '1.8.0_102',
   git: '2.10.0',
-  swiftlint: '0.13.0',
+  swiftlint: '0.16.1',
+  carthage: '0.20.0',
   sinopiaNode: ' ',
   sinopiaJxCore: ' '
 };
@@ -202,6 +203,17 @@ const commandsAndResults =
   swiftlint: {
     platform: ['darwin'],
     versionCheck: 'swiftlint version',
+    versionValidate:
+      (result, version) => boolToPromise(version === result.trim())
+  },
+  carthage: {
+    // We can run into the situation when carthage proposes new updates
+    // In this case output is similar to:
+    //  *** Please update to the latest Carthage version: 0.20.1. You currently are on 0.20.0
+    //  0.20.0
+    // This is why we're reading only the last line from output
+    platform: ['darwin'],
+    versionCheck: 'carthage version | tail -n 1',
     versionValidate:
       (result, version) => boolToPromise(version === result.trim())
   },
