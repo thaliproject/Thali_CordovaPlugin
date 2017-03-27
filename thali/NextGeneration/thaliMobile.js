@@ -258,7 +258,6 @@ module.exports.isStarted = function () {
 module.exports.stop = function () {
   return promiseQueue.enqueue(function (resolve) {
     resetThaliMobileState();
-    removeAllAvailabilityWatchersFromPeers();
     Object.getOwnPropertyNames(connectionTypes)
       .forEach(function (connectionKey) {
         var connectionType = connectionTypes[connectionKey];
@@ -1160,99 +1159,8 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeer) {
   handlePeer(peer);
 });
 
-// TODO: move watchers to the separate module
-var peerAvailabilityWatchers = {};
-peerAvailabilityWatchers[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] =
-  {};
-peerAvailabilityWatchers[connectionTypes.BLUETOOTH] = {};
-peerAvailabilityWatchers[connectionTypes.TCP_NATIVE] = {};
-
-module.exports._peerAvailabilityWatchers = peerAvailabilityWatchers;
-
-function isAvailabilityWatcherForPeerExist (peer) {
-  var connectionType = peer.connectionType;
-  var peerIdentifier = peer.peerIdentifier;
-  var peerAvailabilityWatchersByConnectionType =
-    peerAvailabilityWatchers[connectionType];
-
-  return !!(peerAvailabilityWatchersByConnectionType &&
-  peerAvailabilityWatchersByConnectionType[peerIdentifier]);
-}
-
-function watchForPeerAvailability (peer) {
-  var peerIdentifier = peer.peerIdentifier;
-  var connectionType = peer.connectionType;
-
-  var now = Date.now();
-  var unavailabilityThreshold =
-    connectionType === connectionTypes.TCP_NATIVE ?
-      thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD :
-      thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
-
-  // If the time from the latest availability advertisement doesn't
-  // exceed the threshold, no need to do anything.
-  if (peer.availableSince + unavailabilityThreshold > now) {
-    return;
-  }
-
-  changeCachedPeerUnavailable(peer);
-  emitPeerUnavailable(peerIdentifier, connectionType);
-}
-
-function addAvailabilityWatcherToPeerIfNotExist (peer) {
-  if (isAvailabilityWatcherForPeerExist(peer)) {
-    return;
-  }
-
-  var connectionType = peer.connectionType;
-  var peerIdentifier = peer.peerIdentifier;
-  var unavailabilityThreshold =
-    connectionType === connectionTypes.TCP_NATIVE ?
-    thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD :
-    thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
-
-  // No reason to check peer availability
-  // more then once per unavailability threshold
-  peerAvailabilityWatchers[connectionType][peerIdentifier] =
-    setInterval(watchForPeerAvailability, unavailabilityThreshold, peer);
-}
-
-function removeAvailabilityWatcherFromPeerIfExists (peer) {
-  if (!isAvailabilityWatcherForPeerExist(peer)) {
-    return;
-  }
-
-  var connectionType = peer.connectionType;
-  var peerIdentifier = peer.peerIdentifier;
-
-  var interval = peerAvailabilityWatchers[connectionType][peerIdentifier];
-
-  clearInterval(interval);
-  delete peerAvailabilityWatchers[connectionType][peerIdentifier];
-}
-
-var removeAllAvailabilityWatchersFromPeersByConnectionType =
-  function (connectionType) {
-    var peersByConnectionType = peerAvailabilityWatchers[connectionType];
-
-    Object.keys(peersByConnectionType)
-      .forEach(function (peerIdentifier) {
-        var assumingPeer = {
-          peerIdentifier: peerIdentifier,
-          connectionType: connectionType
-        };
-
-        removeAvailabilityWatcherFromPeerIfExists(assumingPeer);
-      });
-  };
-
-function removeAllAvailabilityWatchersFromPeers () {
-  Object.keys(peerAvailabilityWatchers)
-    .forEach(removeAllAvailabilityWatchersFromPeersByConnectionType);
-}
 
 function changeCachedPeerUnavailable (peer) {
-  removeAvailabilityWatcherFromPeerIfExists(peer);
   delete peerAvailabilities[peer.connectionType][peer.peerIdentifier];
 }
 
@@ -1262,7 +1170,6 @@ function changeCachedPeerAvailable (peer) {
   var connectionType = peer.connectionType;
   peerAvailabilities[connectionType][peerIdentifier] = cachedPeer;
 
-  addAvailabilityWatcherToPeerIfNotExist(cachedPeer);
   emitIfConnectionTypePeersLimitReached(connectionType);
 }
 
