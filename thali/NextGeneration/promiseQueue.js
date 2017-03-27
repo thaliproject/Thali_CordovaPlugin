@@ -25,35 +25,45 @@ var Promise = require('lie');
  * @constructor
  */
 function PromiseQueue () {
-  this.globalPromise = Promise.resolve(true);
-  this._promiseFunctionArray = [];
+  this._running = false;
+  this._activePromise = null;
+  this._tasks = [];
+  this._run = this._run.bind(this);
 }
 
 /**
- * This is just a resolve or reject function returned by a Promise.
+ * This is just a resolve or reject function created by a Promise constructor.
  *
  * @private
  * @callback resolveOrRejectFn
- * @param {Object} result
+ * @param {any} result
  */
 
 /**
- * We use two different promises to wrap things up, this lets us make sure
- * both promise's resolve/reject functions are called.
- *
+ * @typedef {Object} Task
+ * Task object
  * @private
- * @param {module:promiseQueue~resolveOrRejectFn} localFn Either the local
- * resolve or reject function as appropriate.
- * @param {module:promiseQueue~resolveOrRejectFn} globalResolveFn Always the
- * resolve function since the global queue promise all resolves successfully
- * regardless of the outcome of the local fn.
- * @returns {Function}
+ * @property {function} run starts task. It will execute original executor and
+ * resolve or reject task's promise
+ * @property {Promise} promise promise that becomes resolved when task is
+ * successfully executed and rejected otherwise
  */
-function _finishPromise (localFn, globalResolveFn) {
-  return function (value) {
-    localFn(value);
-    globalResolveFn();
-  };
+
+/**
+ * Creates a [Task]{@link module:promiseQueue~executor} using provided executor.
+ * @private
+ * @param {module:promiseQueue~executor} executor
+ * @returns {Task}
+ */
+function createTask (executor) {
+  var run;
+  var promise = new Promise(function (resolve, reject) {
+    run = function () {
+      try { executor(resolve, reject); }
+      catch (error) { reject(error); }
+    };
+  });
+  return { run: run, promise: promise };
 }
 
 /**
@@ -64,58 +74,25 @@ function _finishPromise (localFn, globalResolveFn) {
  * reject function arguments.
  *
  * @public
- * @callback promiseFunction
+ * @callback executor
  * @param {module:promiseQueue~resolveOrRejectFn} resolve
  * @param {module:promiseQueue~resolveOrRejectFn} reject
  */
-
-/**
- * This is a function that takes a value as an argument and ideally puts
- * it onto the _promiseFunctionArray either at the start or end depending on
- * the context the function came from.
- *
- * @private
- * @callback unshiftOrPush
- * @param {Object} value
- */
-
-/**
- * @private
- * @param {module:promiseQueue~promiseFunction} fn
- * @param {module:promiseQueue~unshiftOrPush} unshiftOrPushFn
- * @return {Promise<?Error>}
- */
-PromiseQueue.prototype._changeQueue = function (fn, unshiftOrPushFn) {
-  var self = this;
-  return new Promise(function (localResolve, localReject) {
-    unshiftOrPushFn({ fn: fn,
-      localResolve: localResolve,
-      localReject: localReject});
-    self.globalPromise = self.globalPromise.then(function () {
-      return new Promise(function (globalResolve) {
-        var nextPromise = self._promiseFunctionArray.shift();
-        nextPromise.fn(
-          _finishPromise(nextPromise.localResolve, globalResolve),
-          _finishPromise(nextPromise.localReject, globalResolve));
-      });
-    });
-  });
-};
 
 /**
  * Enqueue a function to be executed only when all the functions enqueued before
  * it have been executed.
  *
  * @public
- * @param {promiseFunction} fn
+ * @param {executor} fn
  * @returns {Promise} A promise that will resolve or be rejected depending
  * on the outcome of the submitted function.
  */
 PromiseQueue.prototype.enqueue = function (fn) {
-  var self = this;
-  return self._changeQueue(fn, function (value) {
-    self._promiseFunctionArray.push(value);
-  });
+  var task = createTask(fn);
+  this._tasks.push(task);
+  this._processQueue();
+  return task.promise;
 };
 
 /**
@@ -125,13 +102,40 @@ PromiseQueue.prototype.enqueue = function (fn) {
  * the head of the queue in LIFO order.
  *
  * @public
- * @param {module:promiseQueue~promiseFunction} fn
+ * @param {module:promiseQueue~executor} fn
+ * @returns {Promise} A promise that will resolve or be rejected depending
+ * on the outcome of the submitted function.
  */
 PromiseQueue.prototype.enqueueAtTop = function (fn) {
-  var self = this;
-  return self._changeQueue(fn, function (value) {
-    self._promiseFunctionArray.unshift(value);
-  });
+  var task = createTask(fn);
+  this._tasks.unshift(task);
+  this._processQueue();
+  return task.promise;
+};
+
+/**
+ * Starts processing enqueued tasks
+ * @private
+ */
+PromiseQueue.prototype._processQueue = function () {
+  if (this._running) {
+    return;
+  }
+  this._running = true;
+  process.nextTick(this._run);
+};
+
+// Part of the `_processQueue`. Extracted into separated method so it can be
+// easily passed into `promise.then`
+PromiseQueue.prototype._run = function () {
+  var task = this._tasks.shift();
+  if (task) {
+    this._activePromise = task.promise.then(this._run, this._run);
+    task.run();
+  } else {
+    this._activePromise = null;
+    this._running = false;
+  }
 };
 
 module.exports = PromiseQueue;
