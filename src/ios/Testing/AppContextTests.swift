@@ -288,10 +288,6 @@ class AppContextTests: XCTestCase {
   func testErrorDescription() {
     XCTAssertEqual(ThaliCoreError.IllegalPeerID.rawValue,
                    errorDescription(ThaliCoreError.IllegalPeerID))
-
-    let unknownError = AppContextError.unknownError
-    XCTAssertEqual((unknownError as NSError).localizedDescription,
-                   errorDescription(unknownError))
   }
 
   func testJsonValue() {
