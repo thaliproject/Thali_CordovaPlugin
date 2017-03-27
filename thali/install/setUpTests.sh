@@ -31,7 +31,7 @@ prepare_project()
 
   IPADDRESS=${1:-}
   npm install --no-optional --production --prefix $REPO_ROOT_DIR/thali/install
-  node $REPO_ROOT_DIR/thali/install/validateBuildEnvironment.js
+  #node $REPO_ROOT_DIR/thali/install/validateBuildEnvironment.js
 
   cd $REPO_ROOT_DIR/test/TestServer
   npm install --no-optional
