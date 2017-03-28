@@ -26,7 +26,6 @@ var logger = require('thali/ThaliLogger')('testThaliWifiInfrastructure');
 
 
 var wifiInfrastructure = new ThaliWifiInfrastructure();
-var connectionTypes = ThaliMobileNativeWrapper.connectionTypes;
 
 var pskIdentity = 'I am an id!';
 var pskKey = new Buffer('And I am a secret!!!!');
@@ -247,9 +246,10 @@ test('messages with invalid location or USN should be ignored', function (t) {
 
 test('Delayed own message are still ignored after advertisement has been ' +
 'toggled on and off several times', tape.sinonTest(function (t) {
+  var self = this;
 
   var HISTORY_SIZE = 4;
-  this.stub(thaliConfig, 'SSDP_OWN_PEERS_HISTORY_SIZE', HISTORY_SIZE);
+  self.stub(thaliConfig, 'SSDP_OWN_PEERS_HISTORY_SIZE', HISTORY_SIZE);
 
   function captureMessages (callback) {
     var captureSize = HISTORY_SIZE * 2; // capture both alive and bye messages
@@ -258,7 +258,7 @@ test('Delayed own message are still ignored after advertisement has been ' +
     });
     var capturedMessages = [];
 
-    this.stub(
+    self.stub(
       wifiInfrastructure._getSSDPServer(),
       '_send',
       function (message) {
@@ -290,7 +290,7 @@ test('Delayed own message are still ignored after advertisement has been ' +
     wifiInfrastructure.startUpdateAdvertisingAndListening();
   }
 
-  captureMessages.call(this, function (messages) {
+  captureMessages(function (messages) {
     var allMessagesIgnored = messages.every(function (message) {
       return !wifiInfrastructure.listener._handleMessage(message);
     });
@@ -744,7 +744,7 @@ test(
           if (peer.peerIdentifier !== peerIdentifier) {
             return;
           }
-          //peer should not be available
+          // peer should not be available
           t.equal(peer.portNumber, null, 'port is null');
           t.equal(peer.hostAddress, null, 'host is null');
 
@@ -1067,6 +1067,6 @@ test('startUpdateAdvertisingAndListening does not send ssdp:byebye notifications
     // some USN value should be advertised.
     wifiInfrastructure.startUpdateAdvertisingAndListening().then(function () {
       peerIdentifier = wifiInfrastructure._getCurrentPeer().peerIdentifier;
-    })
+    });
   });
 });

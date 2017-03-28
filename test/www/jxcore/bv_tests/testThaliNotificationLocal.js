@@ -79,8 +79,8 @@ var GlobalVariables = function () {
 
 };
 
-function stubGetPeerHostInfo() {
-  return this.stub(
+function stubGetPeerHostInfo(sandbox) {
+  return sandbox.stub(
     ThaliMobile,
     'getPeerHostInfo',
     function (peerIdentifier, connectionType) {
@@ -157,7 +157,7 @@ test('Client to server request locally',
     };
 
     this.stub(peerPool, 'enqueue', enqueue);
-    var getPeerHostInfoStub = stubGetPeerHostInfo.call(this);
+    var getPeerHostInfoStub = stubGetPeerHostInfo(this);
 
     // Initialize the ThaliNotificationClient
     var notificationClient =

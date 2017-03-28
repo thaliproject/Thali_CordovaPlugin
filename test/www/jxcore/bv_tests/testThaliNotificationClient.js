@@ -146,8 +146,8 @@ var test = tape({
   }
 });
 
-function stubGetPeerHostInfo() {
-  return this.stub(
+function stubGetPeerHostInfo(sandbox) {
+  return sandbox.stub(
     ThaliMobile,
     'getPeerHostInfo',
     function (peerIdentifier, connectionType) {
@@ -164,8 +164,7 @@ test('Add two Peers.', tape.sinonTest(function (t) {
 
   // Expected result:
   // Two peers are added into the dictionary
-
-  var getPeerHostInfoStub = stubGetPeerHostInfo.call(this);
+  var getPeerHostInfoStub = stubGetPeerHostInfo(this);
 
   var notificationClient =
     new ThaliNotificationClient(globals.peerPoolInterfaceStub,
@@ -231,8 +230,7 @@ test('TCP_NATIVE peer loses DNS', tape.sinonTest(function (t) {
   // 2. Event: connectionType is TCP_NATIVE, hostaddress is not set
 
   // Expected result: Peer will be removed from the dictionary
-
-  var getPeerHostInfoStub = stubGetPeerHostInfo.call(this);
+  var getPeerHostInfoStub = stubGetPeerHostInfo(this);
 
   var notificationClient =
     new ThaliNotificationClient(globals.peerPoolInterfaceStub,
@@ -262,7 +260,7 @@ test('Received beacons with no values for us', tape.sinonTest(function (t) {
     new ThaliNotificationClient(globals.peerPoolInterface,
       globals.targetDeviceKeyExchangeObjects[0]);
 
-  var getPeerHostInfoStub = stubGetPeerHostInfo.call(this);
+  var getPeerHostInfoStub = stubGetPeerHostInfo(this);
 
   var enqueueStub = this.stub(
     globals.peerPoolInterface,
@@ -379,7 +377,7 @@ test('Resolves an action locally', tape.sinonTest(function (t) {
   // Expected result:
   // Action is getting resolved ok
 
-  var getPeerHostInfoStub = stubGetPeerHostInfo.call(this);
+  var getPeerHostInfoStub = stubGetPeerHostInfo(this);
 
   // Simulates how the peer pool runs actions
   var enqueueStub = this.stub(
@@ -445,7 +443,7 @@ test('Emits error event when peerPool.enqueue throws', tape.sinonTest(function (
   // default several minutes timeout
   t.timeoutAfter(20);
 
-  var getPeerHostInfoStub = stubGetPeerHostInfo.call(this);
+  var getPeerHostInfoStub = stubGetPeerHostInfo(this);
   var peerPool = {
     enqueue: function () {
       throw new Error('oops');
@@ -485,7 +483,7 @@ test('Resolves an action locally using ThaliPeerPoolDefault', tape.sinonTest(fun
   // Expected result:
   // Action is getting resolved ok
 
-  var getPeerHostInfoStub = stubGetPeerHostInfo.call(this);
+  var getPeerHostInfoStub = stubGetPeerHostInfo(this);
 
   var peerPool = new ThaliPeerPoolDefault();
   peerPool.start();
@@ -667,7 +665,7 @@ test('hostaddress is removed when the action is running. ', tape.sinonTest(funct
   };
 
   var enqueueStub = this.stub(globals.peerPoolInterface, 'enqueue', enqueue);
-  var getPeerHostInfoStub = stubGetPeerHostInfo.call(this);
+  var getPeerHostInfoStub = stubGetPeerHostInfo(this);
 
   httpTester.runServer(globals.expressRouter,
     thaliConfig.NOTIFICATION_BEACON_PATH,
@@ -819,7 +817,7 @@ test(
     };
 
     var enqueueStub = this.stub(globals.peerPoolInterface, 'enqueue', enqueue);
-    var getPeerHostInfoStub = stubGetPeerHostInfo.call(this);
+    var getPeerHostInfoStub = stubGetPeerHostInfo(this);
 
     notificationClient.start([globals.sourcePublicKey]);
     notificationClient._peerAvailabilityChanged(globals.TCPEvent);

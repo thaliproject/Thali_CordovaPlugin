@@ -34,15 +34,16 @@ var testObject = {
     logger.debug('test spy method for global sinon sansbox');
   },
   testStubMethod: function () {
-    return 'test stub method for global sinon sansbox'
+    return 'test stub method for global sinon sansbox';
   }
 };
 
 var testSanboxObject = testObject;
 
 test('test sinon sansbox spy', tape.sinonTest(function (t) {
-  this.spy(testObject, 'testSpyMethod');
-  t.equal(testObject.testSpyMethod, testSanboxObject.testSpyMethod,
+  var spy = this.spy(testObject, 'testSpyMethod');
+  testObject.testSpyMethod();
+  t.equal(spy.callCount, 1,
     'test sandbox spy works correctly');
   t.end();
 }));
@@ -55,17 +56,23 @@ test('test sinon sansbox stub', tape.sinonTest(function (t) {
 
 test('test sinon sansbox stub override', tape.sinonTest(function (t) {
   var result = testObject.testStubMethod();
-  var stub = this.stub(testObject, 'testStubMethod', function () { return "test";});
+  var stub = this.stub(testObject, 'testStubMethod', function () { return 'test';});
   t.notEqual(stub(), result, 'test sandbox stub works correctly');
   t.end();
 }));
 
 test('test sinon sansbox mock', tape.sinonTest(function (t) {
   var mock = this.mock(testObject);
-  mock.expects("testStubMethod").twice();
+  mock.expects('testStubMethod').twice();
   testObject.testStubMethod();
   testObject.testStubMethod();
   mock.verify();
+  t.end();
+}));
+
+test('test sinon sansbox restore after test end', tape.sinonTest(function (t) {
+  var result = testObject.testStubMethod();
+  t.equal(result, 'test stub method for global sinon sansbox', 'test restore');
   t.end();
 }));
 

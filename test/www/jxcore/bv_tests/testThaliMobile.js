@@ -3,14 +3,12 @@
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var ThaliMobileNative = require('thali/NextGeneration/thaliMobileNative');
-var USN = require('thali/NextGeneration/utils/usn');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils.js');
 var express = require('express');
 var validations = require('thali/validations');
 var uuid = require('uuid');
-var nodessdp = require('node-ssdp');
 var objectAssign = require('object-assign');
 var randomstring = require('randomstring');
 var logger = require('thali/ThaliLogger')('testThaliMobile');
@@ -285,7 +283,6 @@ test('does not send duplicate availability changes', tape.sinonTest(function (t)
     emitNativePeerAvailability(nativePeer);
     process.nextTick(function () {
       t.equals(spy.callCount, 1, 'should not have been called more than once');
-      ThaliMobile.emitter.emit.restore();
       t.end();
     });
   });
@@ -1401,7 +1398,7 @@ test('#getPeerHostInfo - returns discovered cached native peer and calls ' +
     };
     var resolvedPortNumber = 12345;
 
-    var multiConnectStub = this.stub(
+    this.stub(
       ThaliMobileNativeWrapper,
       '_multiConnect',
       function (peerId) {
@@ -1553,8 +1550,8 @@ test('network changes emitted correctly',
             // TODO Android can send event with 'wifi': 'off' and without
             // 'bssidName' and 'ssidName'.
             // t.equals(networkStatus.wifi, 'off', 'wifi should be off');
-            t.ok(networkStatus.bssidName == null, 'bssid should be null');
-            t.ok(networkStatus.ssidName  == null, 'ssid should be null');
+            t.ok(networkStatus.bssidName === null, 'bssid should be null');
+            t.ok(networkStatus.ssidName  === null, 'ssid should be null');
             resolve();
           }
           ThaliMobile.emitter.once('networkChanged', networkChangedHandler);
@@ -1892,7 +1889,6 @@ test('If a peer is not available (and hence is not in the thaliMobile cache)' +
     function disconnect (peerIdentifier) {
       t.equal(peerIdentifier, somePeerIdentifier, 'Peer still matches');
       t.ok(connectionErrorReceived, 'We got the connection error');
-      ThaliMobileNativeWrapper.disconnect.restore();
       cleanUp();
       return Promise.resolve();
     }
@@ -2091,50 +2087,50 @@ test('#stop should change peers', tape.sinonTest(function (t) {
 
 test('If there are more then PEERS_LIMIT peers presented ' +
   'then `discoveryDOS` event should be emitted', function (t) {
-    var PEERS_LIMIT = 1;
+  var PEERS_LIMIT = 1;
 
-    var CURRENT_MULTI_PEER_CONNECTIVITY_FRAMEWORK_PEERS_LIMIT =
-      ThaliMobile._connectionTypePeersLimits
-        [connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK];
-
-    var CURRENT_BLUETOOTH_PEERS_LIMIT =
-      ThaliMobile._connectionTypePeersLimits[connectionTypes.BLUETOOTH];
-
-    var CURRENT_TCP_NATIVE_PEERS_LIMIT =
-      ThaliMobile._connectionTypePeersLimits[connectionTypes.TCP_NATIVE];
-
+  var CURRENT_MULTI_PEER_CONNECTIVITY_FRAMEWORK_PEERS_LIMIT =
     ThaliMobile._connectionTypePeersLimits
-      [connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = PEERS_LIMIT;
+      [connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK];
+
+  var CURRENT_BLUETOOTH_PEERS_LIMIT =
+    ThaliMobile._connectionTypePeersLimits[connectionTypes.BLUETOOTH];
+
+  var CURRENT_TCP_NATIVE_PEERS_LIMIT =
+    ThaliMobile._connectionTypePeersLimits[connectionTypes.TCP_NATIVE];
+
+  ThaliMobile._connectionTypePeersLimits
+    [connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = PEERS_LIMIT;
+  ThaliMobile._connectionTypePeersLimits[connectionTypes.BLUETOOTH] =
+    PEERS_LIMIT;
+  ThaliMobile._connectionTypePeersLimits[connectionTypes.TCP_NATIVE] =
+    PEERS_LIMIT;
+
+  function finishTest () {
+    ThaliMobile._connectionTypePeersLimits
+      [connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = 
+        CURRENT_MULTI_PEER_CONNECTIVITY_FRAMEWORK_PEERS_LIMIT;
     ThaliMobile._connectionTypePeersLimits[connectionTypes.BLUETOOTH] =
-      PEERS_LIMIT;
-    ThaliMobile._connectionTypePeersLimits[connectionTypes.TCP_NATIVE] =
-      PEERS_LIMIT;
+      CURRENT_BLUETOOTH_PEERS_LIMIT;
+    ThaliMobile._connectionTypePeersLimits[connectionTypes.TCP_NATIVE] = 
+      CURRENT_TCP_NATIVE_PEERS_LIMIT;
+    t.end();
+  }
 
-    function finishTest (connectionType) {
-      ThaliMobile._connectionTypePeersLimits
-        [connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = 
-          CURRENT_MULTI_PEER_CONNECTIVITY_FRAMEWORK_PEERS_LIMIT;
-      ThaliMobile._connectionTypePeersLimits[connectionTypes.BLUETOOTH] =
-        CURRENT_BLUETOOTH_PEERS_LIMIT;
-      ThaliMobile._connectionTypePeersLimits[connectionTypes.TCP_NATIVE] = 
-        CURRENT_TCP_NATIVE_PEERS_LIMIT;
-      t.end();
-    }
-
-    ThaliMobile.start(express.Router())
-      .then(function () {
-        ThaliMobile.emitter.on('discoveryDOS', function (info) {
-          t.ok(info.limit, PEERS_LIMIT, 'DOS limit should be presented');
-          t.ok(info.count, 2, 'Actual number of peers should be presented');
-          finishTest();
-        });
-
-        var nativePeer = generateLowerLevelPeers().nativePeer;
-        var additionalNativePeer = generateLowerLevelPeers().nativePeer;
-
-        emitNativePeerAvailability(nativePeer);
-        emitNativePeerAvailability(additionalNativePeer);
+  ThaliMobile.start(express.Router())
+    .then(function () {
+      ThaliMobile.emitter.on('discoveryDOS', function (info) {
+        t.ok(info.limit, PEERS_LIMIT, 'DOS limit should be presented');
+        t.ok(info.count, 2, 'Actual number of peers should be presented');
+        finishTest();
       });
+
+      var nativePeer = generateLowerLevelPeers().nativePeer;
+      var additionalNativePeer = generateLowerLevelPeers().nativePeer;
+
+      emitNativePeerAvailability(nativePeer);
+      emitNativePeerAvailability(additionalNativePeer);
+    });
 });
 
 if (!tape.coordinated) {

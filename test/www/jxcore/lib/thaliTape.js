@@ -38,5 +38,5 @@ if (typeof jxcore === 'undefined' || typeof Mobile !== 'undefined') {
   exports = require('./SimpleTape');
   exports.coordinated = false;
 }
-exports.sinonTest = require('./SinonTest');
+exports.sinonTest = require('./sinonTest');
 module.exports = exports;

@@ -90,6 +90,8 @@ GlobalVariables.prototype.init = function () {
  */
 GlobalVariables.prototype.kill = function () {
   var self = this;
+  globalVariables.spyStartUpdateAdvertisingAndListening.restore();
+  globalVariables.spyStopAdvertisingAndListening.restore();
   return new Promise(function (resolve, reject) {
     if (self.expressServer) {
       self.expressServer.closeAll(function (error) {
@@ -135,8 +137,6 @@ var test = tape({
   },
   teardown: function (t) {
     globalVariables.kill().then(function () {
-      globalVariables.spyStartUpdateAdvertisingAndListening.restore();
-      globalVariables.spyStopAdvertisingAndListening.restore();
       t.end();
     }).catch(function (failure) {
       t.fail('Server cleaning failed:' + failure);

@@ -40,57 +40,57 @@ var test = tape({
   }
 });
 
-function Mocks(t, sandboxObject) {
+function Mocks(t, sandbox) {
   // All objects should be cloned in order to prevent
   // 'already wrapped' error by 'sinon.spy'.
 
   this.t = t;
 
-  this.express          = sandboxObject.spy(express);
-  this.expressPouchDB   = sandboxObject.spy(expressPouchDB);
-  this.LevelDownPouchDB = sandboxObject.spy(testUtils.getLevelDownPouchDb());
+  this.express          = sandbox.spy(express);
+  this.expressPouchDB   = sandbox.spy(expressPouchDB);
+  this.LevelDownPouchDB = sandbox.spy(testUtils.getLevelDownPouchDb());
 
   this.ThaliMobile = extend({}, ThaliMobile);
 
-  this.MobileStart = sandboxObject.spy(this.ThaliMobile, 'start');
-  this.MobileStop  = sandboxObject.spy(this.ThaliMobile, 'stop');
+  this.MobileStart = sandbox.spy(this.ThaliMobile, 'start');
+  this.MobileStop  = sandbox.spy(this.ThaliMobile, 'stop');
 
-  this.MobileStartLA = sandboxObject.spy(
+  this.MobileStartLA = sandbox.spy(
     this.ThaliMobile, 'startListeningForAdvertisements'
   );
-  this.MobileStartUAA = sandboxObject.spy(
+  this.MobileStartUAA = sandbox.spy(
     this.ThaliMobile, 'startUpdateAdvertisingAndListening'
   );
 
-  this.Notification = sandboxObject.spy(
+  this.Notification = sandbox.spy(
     ThaliSendNotificationBasedOnReplication
   );
   this.Notification.prototype = extend(
     {},
     ThaliSendNotificationBasedOnReplication.prototype
   );
-  this.NotificationStart = sandboxObject.spy(
+  this.NotificationStart = sandbox.spy(
     this.Notification.prototype, 'start'
   );
-  this.NotificationStop = sandboxObject.spy(
+  this.NotificationStop = sandbox.spy(
     this.Notification.prototype, 'stop'
   );
 
-  this.Replication = sandboxObject.spy(
+  this.Replication = sandbox.spy(
     ThaliPullReplicationFromNotification
   );
   this.Replication.prototype = extend(
     {},
     ThaliPullReplicationFromNotification.prototype
   );
-  this.ReplicationStart = sandboxObject.spy(
+  this.ReplicationStart = sandbox.spy(
     this.Replication.prototype, 'start'
   );
-  this.ReplicationStop = sandboxObject.spy(
+  this.ReplicationStop = sandbox.spy(
     this.Replication.prototype, 'stop'
   );
 
-  this.Salti = sandboxObject.spy(Salti);
+  this.Salti = sandbox.spy(Salti);
   this.ThaliManager =
     proxyquire('thali/NextGeneration/thaliManager', {
       './replication/thaliSendNotificationBasedOnReplication':
