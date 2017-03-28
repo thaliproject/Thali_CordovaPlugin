@@ -26,7 +26,6 @@ var Promise = require('lie');
  */
 function PromiseQueue () {
   this._running = false;
-  this._activePromise = null;
   this._tasks = [];
   this._run = this._run.bind(this);
 }
@@ -130,10 +129,9 @@ PromiseQueue.prototype._processQueue = function () {
 PromiseQueue.prototype._run = function () {
   var task = this._tasks.shift();
   if (task) {
-    this._activePromise = task.promise.then(this._run, this._run);
+    task.promise.then(this._run, this._run);
     task.run();
   } else {
-    this._activePromise = null;
     this._running = false;
   }
 };
