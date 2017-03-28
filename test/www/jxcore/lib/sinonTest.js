@@ -4,12 +4,10 @@ var sinon   = require('sinon');
 
 function sinonTest (callback) {
   return function (t) {
-  	var slice = Array.prototype.slice;
-  	var config = sinon.getConfig(sinon.config);
+    var config = sinon.getConfig(sinon.config);
     config.injectInto = config.injectIntoThis && this || config.injectInto;
     var sandbox = sinon.sandbox.create(config);
-    var args = slice.call(arguments);
-    var result;
+    var args = Array.prototype.slice.call(arguments);
     var ok;
 
     if (typeof t.end === 'function') {
@@ -24,14 +22,9 @@ function sinonTest (callback) {
           sandbox.verifyAndRestore();
         }
       });
-  	}
-
-    try {
-      result = callback.apply(this, args.concat(sandbox.args));
-    } catch (e) {
-      t.fail(e);
     }
-    return result;
+
+    return callback.apply(this, args.concat(sandbox.args));
   };
 }
 
