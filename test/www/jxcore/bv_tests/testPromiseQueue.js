@@ -5,9 +5,9 @@ var PromiseQueue = require('thali/NextGeneration/promiseQueue');
 var currentUnhandledRejectionHandler = null;
 
 function unhandledRejectionHandler(t) {
-  return function (error, self) {
+  return function (error, promise) {
     t.fail('Got an unhandled rejection error: ' + error + ', ' +
-      JSON.stringify(self));
+      JSON.stringify(promise));
   };
 }
 
@@ -224,6 +224,36 @@ test('queues handled independently', function (t) {
   .then(function () {
     t.ok(true, 'all short operations completed before the long resolves');
     clearTimeout(longOperationTimeout);
+    t.end();
+  });
+});
+
+test('enqueued function are always executed asynchronously', function (t) {
+  var promiseQueue = new PromiseQueue();
+  var called = 0;
+  var promise = promiseQueue.enqueue(function (resolve) {
+    called++;
+    resolve();
+  });
+  t.equal(called, 0, 'executor is not called here');
+  promise.then(function () {
+    t.equal(called, 1, 'executors is called');
+    t.end();
+  });
+});
+
+test('exceptions in the executor are properly handled', function (t) {
+  var promiseQueue = new PromiseQueue();
+  var expectedError = new Error('oops');
+  var promise = promiseQueue.enqueue(function () {
+    throw expectedError;
+  });
+
+  promise.then(function () {
+    t.fail('should not succeed');
+  }).catch(function (error) {
+    t.equal(error, expectedError, 'got expected error');
+  }).then(function () {
     t.end();
   });
 });
