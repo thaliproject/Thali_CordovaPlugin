@@ -12,7 +12,6 @@ var net = require('net');
 var nodessdp = require('node-ssdp');
 var express = require('express');
 var uuid = require('uuid');
-var sinon = require('sinon');
 var randomstring = require('randomstring');
 var Promise = require('bluebird');
 
@@ -27,7 +26,6 @@ var logger = require('thali/ThaliLogger')('testThaliWifiInfrastructure');
 
 
 var wifiInfrastructure = new ThaliWifiInfrastructure();
-var connectionTypes = ThaliMobileNativeWrapper.connectionTypes;
 
 var pskIdentity = 'I am an id!';
 var pskKey = new Buffer('And I am a secret!!!!');
@@ -247,11 +245,11 @@ test('messages with invalid location or USN should be ignored', function (t) {
 });
 
 test('Delayed own message are still ignored after advertisement has been ' +
-'toggled on and off several times', function (t) {
-  var sandbox = sinon.sandbox.create();
+'toggled on and off several times', tape.sinonTest(function (t) {
+  var self = this;
 
   var HISTORY_SIZE = 4;
-  sandbox.stub(thaliConfig, 'SSDP_OWN_PEERS_HISTORY_SIZE', HISTORY_SIZE);
+  self.stub(thaliConfig, 'SSDP_OWN_PEERS_HISTORY_SIZE', HISTORY_SIZE);
 
   function captureMessages (callback) {
     var captureSize = HISTORY_SIZE * 2; // capture both alive and bye messages
@@ -260,7 +258,7 @@ test('Delayed own message are still ignored after advertisement has been ' +
     });
     var capturedMessages = [];
 
-    sandbox.stub(
+    self.stub(
       wifiInfrastructure._getSSDPServer(),
       '_send',
       function (message) {
@@ -293,14 +291,13 @@ test('Delayed own message are still ignored after advertisement has been ' +
   }
 
   captureMessages(function (messages) {
-    sandbox.restore();
     var allMessagesIgnored = messages.every(function (message) {
       return !wifiInfrastructure.listener._handleMessage(message);
     });
     t.ok(allMessagesIgnored, 'all captured messages are not handled');
     t.end();
   });
-});
+}));
 
 test('verify that Thali-specific messages are filtered correctly',
 function (t) {
@@ -548,11 +545,11 @@ test('calls correct starts when network changes',
   function () {
     return !platform.isAndroid;
   },
-  function (t) {
+  tape.sinonTest(function (t) {
     var listeningStartSpy =
-      sinon.spy(wifiInfrastructure.listener, 'start');
+      this.spy(wifiInfrastructure.listener, 'start');
     var advertisingStartSpy =
-      sinon.spy(wifiInfrastructure.advertiser, 'start');
+      this.spy(wifiInfrastructure.advertiser, 'start');
 
     testUtils.ensureWifi(false)
       .then(function () {
@@ -601,11 +598,9 @@ test('calls correct starts when network changes',
         t.fail(err);
       })
       .then(function () {
-        listeningStartSpy.restore();
-        advertisingStartSpy.restore();
         t.end();
       });
-  }
+  })
 );
 
 test('does not get peer changes from self', function (t) {
@@ -649,10 +644,10 @@ test('Make sure we turn on and off the Android multicast locks',
   function () {
     return !platform.isAndroid;
   },
-  function (t) {
-    var lockSpy = sinon.spy(ThaliMobileNativeWrapper,
+  tape.sinonTest(function (t) {
+    var lockSpy = this.spy(ThaliMobileNativeWrapper,
       'lockAndroidWifiMulticast');
-    var unlockSpy = sinon.spy(ThaliMobileNativeWrapper,
+    var unlockSpy = this.spy(ThaliMobileNativeWrapper,
       'unlockAndroidWifiMulticast');
     wifiInfrastructure.startListeningForAdvertisements()
       .then(function () {
@@ -670,16 +665,16 @@ test('Make sure we turn on and off the Android multicast locks',
       .then(function () {
         t.end();
       });
-  });
+  }));
 
 test('Make sure we do not use Android locks when we are not on Android',
   function () {
     return platform.isAndroid;
   },
-  function (t) {
-    var lockSpy = sinon.spy(ThaliMobileNativeWrapper,
+  tape.sinonTest(function (t) {
+    var lockSpy = this.spy(ThaliMobileNativeWrapper,
       'lockAndroidWifiMulticast');
-    var unlockSpy = sinon.spy(ThaliMobileNativeWrapper,
+    var unlockSpy = this.spy(ThaliMobileNativeWrapper,
       'unlockAndroidWifiMulticast');
     wifiInfrastructure.startListeningForAdvertisements()
       .then(function () {
@@ -697,24 +692,26 @@ test('Make sure we do not use Android locks when we are not on Android',
       .then(function () {
         t.end();
       });
-  });
+  }));
 
-test('functions are run from a queue in the right order', function (t) {
-  var firstSpy = sinon.spy();
-  var secondSpy = sinon.spy();
-  var thirdSpy = sinon.spy();
-  wifiInfrastructure.startUpdateAdvertisingAndListening().then(firstSpy);
-  wifiInfrastructure.stop().then(secondSpy);
+test('functions are run from a queue in the right order',
+  tape.sinonTest(function (t) {
+    var firstSpy = this.spy();
+    var secondSpy = this.spy();
+    var thirdSpy = this.spy();
+    wifiInfrastructure.startUpdateAdvertisingAndListening().then(firstSpy);
+    wifiInfrastructure.stop().then(secondSpy);
 
-  wifiInfrastructure.start()
-  .then(function () {
-    thirdSpy();
-    t.ok(firstSpy.calledBefore(secondSpy) &&
-         secondSpy.calledBefore(thirdSpy),
-         'call order must match');
-    t.end();
-  });
-});
+    wifiInfrastructure.start()
+    .then(function () {
+      thirdSpy();
+      t.ok(firstSpy.calledBefore(secondSpy) &&
+           secondSpy.calledBefore(thirdSpy),
+           'call order must match');
+      t.end();
+    });
+  })
+);
 
 test(
   'Discovered peer should be removed if no availability updates ' +
@@ -747,7 +744,7 @@ test(
           if (peer.peerIdentifier !== peerIdentifier) {
             return;
           }
-          //peer should not be available
+          // peer should not be available
           t.equal(peer.portNumber, null, 'port is null');
           t.equal(peer.hostAddress, null, 'host is null');
 
@@ -813,14 +810,12 @@ test('#stop should clear watchers', function (t) {
 });
 
 test('wifi peer is marked unavailable if announcements stop',
-  function (t) {
-    // Store the original threshold so that it can be restored
-    // at the end of the test.
-    var originalThreshold = thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD;
+  tape.sinonTest(function (t) {
     // Make the threshold a bit shorter so that the test doesn't
     // have to wait for so long.
-    thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD =
-      thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 2;
+    var threshold = thaliConfig.SSDP_ADVERTISEMENT_INTERVAL * 2;
+    this.stub(thaliConfig, 'TCP_PEER_UNAVAILABILITY_THRESHOLD', threshold);
+       
     var testPeerIdentifier = uuid.v4();
     var testServerHostAddress = randomstring.generate({
       charset: 'hex', // to get lowercase chars for the host address
@@ -841,7 +836,7 @@ test('wifi peer is marked unavailable if announcements stop',
       generation: 0
     }));
 
-    var spy = sinon.spy();
+    var spy = this.spy();
     var peerAvailable = false;
     var availabilityChangedHandler = function (peer) {
       if (peer.peerIdentifier !== testPeerIdentifier) {
@@ -859,7 +854,6 @@ test('wifi peer is marked unavailable if announcements stop',
         wifiInfrastructure.removeListener('wifiPeerAvailabilityChanged',
           availabilityChangedHandler);
 
-        thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD = originalThreshold;
         testServer.stop();
         t.end();
       }
@@ -873,7 +867,7 @@ test('wifi peer is marked unavailable if announcements stop',
         // Handler above should get called.
       });
     });
-  }
+  })
 );
 
 // From here onwards, tests only work on mocked up desktop
@@ -882,31 +876,33 @@ if (platform._isRealMobile) {
   return;
 }
 
-test('network changes are ignored while stopping', function (t) {
-  var realNetworkStatus = null;
-  var wifiOffNetworkStatus = {
-    wifi: 'off',
-  };
-  var spy = null;
-  wifiInfrastructure.startListeningForAdvertisements()
-    .then(function () {
-      return ThaliMobileNativeWrapper.getNonTCPNetworkStatus();
-    })
-    .then(function (networkStatus) {
-      realNetworkStatus = networkStatus;
-      wifiInfrastructure.stop();
-      spy = sinon.spy(wifiInfrastructure, 'startListeningForAdvertisements');
-      ThaliMobileNativeWrapper.emitter
-        .emit('networkChangedNonTCP', wifiOffNetworkStatus);
-      ThaliMobileNativeWrapper.emitter
-        .emit('networkChangedNonTCP', realNetworkStatus);
-      return Promise.delay(0);
-    }).then(function () {
-      t.equals(spy.callCount, 0, 'should not be called');
-      spy.restore();
-      t.end();
-    });
-});
+test('network changes are ignored while stopping',
+  tape.sinonTest(function (t) {
+    var self = this;
+    var realNetworkStatus = null;
+    var wifiOffNetworkStatus = {
+      wifi: 'off',
+    };
+    var spy = null;
+    wifiInfrastructure.startListeningForAdvertisements()
+      .then(function () {
+        return ThaliMobileNativeWrapper.getNonTCPNetworkStatus();
+      })
+      .then(function (networkStatus) {
+        realNetworkStatus = networkStatus;
+        wifiInfrastructure.stop();
+        spy = self.spy(wifiInfrastructure, 'startListeningForAdvertisements');
+        ThaliMobileNativeWrapper.emitter
+          .emit('networkChangedNonTCP', wifiOffNetworkStatus);
+        ThaliMobileNativeWrapper.emitter
+          .emit('networkChangedNonTCP', realNetworkStatus);
+        return Promise.delay(0);
+      }).then(function () {
+        t.equals(spy.callCount, 0, 'should not be called');
+        t.end();
+      });
+  })
+);
 
 var tryStartingFunctionWhileWifiOff = function (t, functionName, keyName) {
   wifiInfrastructure.stop()
@@ -990,9 +986,9 @@ function (t) {
 });
 
 test('SSDP server should not restart after Wifi Client changed generation',
-  function (t) {
+  tape.sinonTest(function (t) {
     var advertisingEndSpy =
-      sinon.spy(wifiInfrastructure.advertiser._server, 'stop');
+      this.spy(wifiInfrastructure.advertiser._server, 'stop');
     wifiInfrastructure.startListeningForAdvertisements()
       .then(function () {
         return wifiInfrastructure.startUpdateAdvertisingAndListening();
@@ -1007,10 +1003,9 @@ test('SSDP server should not restart after Wifi Client changed generation',
         t.fail(err);
       })
       .then(function () {
-        advertisingEndSpy.restore();
         t.end();
       });
-  }
+  })
 );
 
 test('startUpdateAdvertisingAndListening does not send ssdp:byebye notifications', function (t) {
@@ -1072,6 +1067,6 @@ test('startUpdateAdvertisingAndListening does not send ssdp:byebye notifications
     // some USN value should be advertised.
     wifiInfrastructure.startUpdateAdvertisingAndListening().then(function () {
       peerIdentifier = wifiInfrastructure._getCurrentPeer().peerIdentifier;
-    })
+    });
   });
 });

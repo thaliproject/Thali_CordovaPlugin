@@ -3,7 +3,6 @@
 var tape      = require('../lib/thaliTape');
 
 var Promise = require('bluebird');
-var sinon   = require('sinon');
 var express = require('express');
 
 var ThaliMobile              = require('thali/NextGeneration/thaliMobile');
@@ -20,16 +19,11 @@ function callArg(arg) {
   arg();
 }
 
-var sandbox = null;
-
 var test = tape({
   setup: function (t) {
-    sandbox = sinon.sandbox.create();
     t.end();
   },
   teardown: function (t) {
-    sandbox.restore();
-    sandbox = null;
     t.end();
   }
 });
@@ -39,7 +33,7 @@ test(
   function () {
     return global.NETWORK_TYPE !== networkTypes.WIFI;
   },
-  function (t) {
+  tape.sinonTest(function (t) {
     function toggleWifi(value) {
       ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
         wifi:               value? 'on' : 'off',
@@ -53,13 +47,13 @@ test(
 
     var wifiInfrastructure = new ThaliWifiInfrastructure();
     var serverStartSpy =
-      sandbox.spy(wifiInfrastructure._getSSDPServer(), 'start');
+      this.spy(wifiInfrastructure._getSSDPServer(), 'start');
     var serverStopSpy  =
-      sandbox.spy(wifiInfrastructure._getSSDPServer(), 'stop');
+      this.spy(wifiInfrastructure._getSSDPServer(), 'stop');
     var clientStartSpy =
-      sandbox.spy(wifiInfrastructure._getSSDPClient(), 'start');
+      this.spy(wifiInfrastructure._getSSDPClient(), 'start');
     var clientStopSpy  =
-      sandbox.spy(wifiInfrastructure._getSSDPClient(), 'stop');
+      this.spy(wifiInfrastructure._getSSDPClient(), 'stop');
 
     wifiInfrastructure.start(express.Router(), pskIdToSecret)
       .then(function () {
@@ -101,7 +95,7 @@ test(
           'should not be in started state');
         t.end();
       });
-  }
+  })
 );
 
 function changeBssid (value) {
@@ -152,15 +146,15 @@ test(
   function () {
     return global.NETWORK_TYPE !== networkTypes.WIFI;
   },
-  function (t) {
+  tape.sinonTest(function (t) {
     var wifiInfrastructure = new ThaliWifiInfrastructure();
     var ssdpServer = wifiInfrastructure._getSSDPServer();
     var ssdpClient = wifiInfrastructure._getSSDPClient();
     var stubs = {
-      serverStart: sandbox.stub(ssdpServer, 'start', callArg),
-      serverStop: sandbox.stub(ssdpServer, 'stop', callArg),
-      clientStart: sandbox.stub(ssdpClient, 'start', callArg),
-      clientStop: sandbox.stub(ssdpClient, 'stop', callArg)
+      serverStart: this.stub(ssdpServer, 'start', callArg),
+      serverStop: this.stub(ssdpServer, 'stop', callArg),
+      clientStart: this.stub(ssdpClient, 'start', callArg),
+      clientStop: this.stub(ssdpClient, 'stop', callArg)
     };
     var context = { t: t, stubs: stubs };
     var testBssid = testBssidChangeReaction.bind(null, context);
@@ -198,7 +192,7 @@ test(
           'should not be in started state');
         t.end();
       });
-  }
+  })
 );
 
 test(
@@ -207,15 +201,15 @@ test(
   function () {
     return global.NETWORK_TYPE !== networkTypes.WIFI;
   },
-  function (t) {
+  tape.sinonTest(function (t) {
     var wifiInfrastructure = new ThaliWifiInfrastructure();
     var ssdpServer = wifiInfrastructure._getSSDPServer();
     var ssdpClient = wifiInfrastructure._getSSDPClient();
     var stubs = {
-      serverStart: sandbox.stub(ssdpServer, 'start', callArg),
-      serverStop: sandbox.stub(ssdpServer, 'stop', callArg),
-      clientStart: sandbox.stub(ssdpClient, 'start', callArg),
-      clientStop: sandbox.stub(ssdpClient, 'stop', callArg)
+      serverStart: this.stub(ssdpServer, 'start', callArg),
+      serverStop: this.stub(ssdpServer, 'stop', callArg),
+      clientStart: this.stub(ssdpClient, 'start', callArg),
+      clientStop: this.stub(ssdpClient, 'stop', callArg)
     };
     var context = { t: t, stubs: stubs };
     var testBssid = testBssidChangeReaction.bind(null, context);
@@ -244,5 +238,5 @@ test(
           'should not be in started state');
         t.end();
       });
-  }
+  })
 );
