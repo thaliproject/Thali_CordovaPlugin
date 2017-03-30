@@ -263,9 +263,18 @@ extension PeerAvailability {
   }
 
   fileprivate func handleMultiConnectResolved(withSyncValue value: String, port: UInt16?,
-                                                        error: Error?) {
-    let errorValue = error != nil ? errorDescription(error!) : nil
-    let listeningPort = port != nil ? NSNumber(value: port! as UInt16) : nil
+                                              error: Error?) {
+    var errorValue: NSObject = NSNull()
+    var listeningPort: NSObject = NSNull()
+    
+    if let error = error {
+      errorValue = error.localizedDescription as NSString
+    }
+    
+    if let port = port {
+      listeningPort = NSNumber(value: port as UInt16)
+    }
+
     delegate?.context(self,
                       didResolveMultiConnectWithSyncValue: value,
                       error: errorValue as NSObject?,
@@ -276,7 +285,7 @@ extension PeerAvailability {
                                                                   error: Error?) {
     let parameters = [
       "peerIdentifier" : identifier,
-      "error" : error != nil ? errorDescription(error!) : nil
+      "error" : error?.localizedDescription
     ]
     delegate?.context(self, didFailMultiConnectConnectionWith: jsonValue(parameters as AnyObject))
   }
@@ -461,11 +470,4 @@ extension AppContext: CBCentralManagerDelegate {
   @objc open static let startListeningForAdvertisements: String =
   "startListeningForAdvertisements"
   @objc open static let disconnect: String = "disconnect"
-}
-
-func errorDescription(_ error: Error) -> String {
-  if let thaliCoreError = error as? ThaliCoreError {
-    return thaliCoreError.rawValue
-  }
-  return (error as NSError).localizedDescription
 }
