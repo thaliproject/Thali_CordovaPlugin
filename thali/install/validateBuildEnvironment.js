@@ -33,7 +33,7 @@ const versions =
   cordova: '6.4.0',
   java: '1.8.0_102',
   git: '2.10.0',
-  swiftlint: '0.16.1',
+  swiftlint: '0.17.0',
   carthage: '0.20.0',
   sinopiaNode: ' ',
   sinopiaJxCore: ' '
