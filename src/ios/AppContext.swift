@@ -364,7 +364,7 @@ extension PeerAvailability {
       guard self.bluetoothState == .on || NetworkReachability().isWiFiEnabled()
         else {
           self.handleMultiConnectConnectionFailure(withIdentifier: identifierString,
-                                                   error: ThaliCoreError.RadioTurnedOff)
+                                                   error: ThaliCoreError.radioTurnedOff)
           return
       }
       self.browserManager.connectToPeer(identifierString, syncValue: syncValue) {
