@@ -7,7 +7,7 @@
   "target": "all",
   "priority": "normal",
   "csname": {
-    "android": "com.test.thalitest",
+    "android": "com.rockwellautomation.thalitest",
     "ios": "com.test.thalitest"
   },
   "timeout": 1400,
