@@ -30,15 +30,14 @@ module.exports.getPromiseQueue = function () {
   return promiseQueue;
 };
 
-function promiseResultSuccessOrFailure (promise) {
-  return promise.then(function (success) {
-    return success;
-  }).catch(function (failure) {
-    // This turns the catch into a normal 'then' response so no matter
-    // what the promise outputs the result will always be a resolve
-    return failure;
-  });
-}
+var muteRejection = (function () {
+  function returnNull () { return null; }
+  function returnArg (arg) { return arg; }
+
+  return function muteRejection (promise) {
+    return promise.then(returnNull).catch(returnArg);
+  };
+}());
 
 function getCombinedResult (results) {
   return {
@@ -67,7 +66,7 @@ function getMethodIfExists (target, method) {
   }
   return function () {
     var args = arguments;
-    return promiseResultSuccessOrFailure(target[method].apply(target, args));
+    return muteRejection(target[method].apply(target, args));
   };
 }
 
@@ -259,7 +258,6 @@ module.exports.isStarted = function () {
 module.exports.stop = function () {
   return promiseQueue.enqueue(function (resolve) {
     resetThaliMobileState();
-    removeAllAvailabilityWatchersFromPeers();
     Object.getOwnPropertyNames(connectionTypes)
       .forEach(function (connectionKey) {
         var connectionType = connectionTypes[connectionKey];
@@ -1060,7 +1058,6 @@ function handlePeer (peer) {
       return;
     }
   }
-
   if (peer.peerAvailable) {
     changeCachedPeerAvailable(peer);
   } else {
@@ -1120,7 +1117,7 @@ var handleRecreatedPeer = function (nativePeer) {
         });
     }
   }
-}
+};
 
 ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
 function (nativePeer) {
@@ -1162,106 +1159,18 @@ thaliWifiInfrastructure.on('wifiPeerAvailabilityChanged', function (wifiPeer) {
   handlePeer(peer);
 });
 
-// TODO: move watchers to the separate module
-var peerAvailabilityWatchers = {};
-peerAvailabilityWatchers[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] =
-  {};
-peerAvailabilityWatchers[connectionTypes.BLUETOOTH] = {};
-peerAvailabilityWatchers[connectionTypes.TCP_NATIVE] = {};
-
-module.exports._peerAvailabilityWatchers = peerAvailabilityWatchers;
-
-function isAvailabilityWatcherForPeerExist (peer) {
-  var connectionType = peer.connectionType;
-  var peerIdentifier = peer.peerIdentifier;
-  var peerAvailabilityWatchersByConnectionType =
-    peerAvailabilityWatchers[connectionType];
-
-  return !!(peerAvailabilityWatchersByConnectionType &&
-  peerAvailabilityWatchersByConnectionType[peerIdentifier]);
-}
-
-function watchForPeerAvailability (peer) {
-  var peerIdentifier = peer.peerIdentifier;
-  var connectionType = peer.connectionType;
-
-  var now = Date.now();
-  var unavailabilityThreshold =
-    connectionType === connectionTypes.TCP_NATIVE ?
-      thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD :
-      thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
-
-  // If the time from the latest availability advertisement doesn't
-  // exceed the threshold, no need to do anything.
-  if (peer.availableSince + unavailabilityThreshold > now) {
-    return;
-  }
-
-  changeCachedPeerUnavailable(peer);
-  emitPeerUnavailable(peerIdentifier, connectionType);
-}
-
-function addAvailabilityWatcherToPeerIfNotExist (peer) {
-  if (isAvailabilityWatcherForPeerExist(peer)) {
-    return;
-  }
-
-  var connectionType = peer.connectionType;
-  var peerIdentifier = peer.peerIdentifier;
-  var unavailabilityThreshold =
-    connectionType === connectionTypes.TCP_NATIVE ?
-    thaliConfig.TCP_PEER_UNAVAILABILITY_THRESHOLD :
-    thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD;
-
-  // No reason to check peer availability
-  // more then once per unavailability threshold
-  peerAvailabilityWatchers[connectionType][peerIdentifier] =
-    setInterval(watchForPeerAvailability, unavailabilityThreshold, peer);
-}
-
-function removeAvailabilityWatcherFromPeerIfExists (peer) {
-  if (!isAvailabilityWatcherForPeerExist(peer)) {
-    return;
-  }
-
-  var connectionType = peer.connectionType;
-  var peerIdentifier = peer.peerIdentifier;
-
-  var interval = peerAvailabilityWatchers[connectionType][peerIdentifier];
-
-  clearInterval(interval);
-  delete peerAvailabilityWatchers[connectionType][peerIdentifier];
-}
-
-var removeAllAvailabilityWatchersFromPeersByConnectionType =
-  function (connectionType) {
-    var peersByConnectionType = peerAvailabilityWatchers[connectionType];
-
-    Object.keys(peersByConnectionType)
-      .forEach(function (peerIdentifier) {
-        var assumingPeer = {
-          peerIdentifier: peerIdentifier,
-          connectionType: connectionType
-        };
-
-        removeAvailabilityWatcherFromPeerIfExists(assumingPeer);
-      });
-  };
-
-function removeAllAvailabilityWatchersFromPeers () {
-  Object.keys(peerAvailabilityWatchers)
-    .forEach(removeAllAvailabilityWatchersFromPeersByConnectionType);
-}
 
 function changeCachedPeerUnavailable (peer) {
-  removeAvailabilityWatcherFromPeerIfExists(peer);
   delete peerAvailabilities[peer.connectionType][peer.peerIdentifier];
 }
 
 function changeCachedPeerAvailable (peer) {
   var cachedPeer = JSON.parse(JSON.stringify(peer));
-  peerAvailabilities[peer.connectionType][peer.peerIdentifier] = cachedPeer;
-  addAvailabilityWatcherToPeerIfNotExist(cachedPeer);
+  var peerIdentifier = peer.peerIdentifier;
+  var connectionType = peer.connectionType;
+  peerAvailabilities[connectionType][peerIdentifier] = cachedPeer;
+
+  emitIfConnectionTypePeersLimitReached(connectionType);
 }
 
 function changePeersUnavailable (connectionType) {
@@ -1426,49 +1335,6 @@ function handleNetworkChanged (networkChangedValue) {
     // peers unavailable.
     changePeersUnavailable(connectionTypes.TCP_NATIVE);
   }
-
-  var radioEnabled =
-    networkChangedValue.wifi === 'on' ||
-    networkChangedValue.bluetooth === 'on' ||
-    networkChangedValue.bluetoothLowEnergy === 'on';
-
-  if (!radioEnabled) {
-    return;
-  }
-
-  // At least some radio was enabled so try to start whatever can be potentially
-  // started as soon as possible.
-  var enqueuedStart = promiseQueue.enqueueAtTop(function (resolve, reject) {
-    var args = thaliMobileStates.startArguments;
-    start(args.router, args.pskIdToSecret, args.networkType)
-      .then(resolve, reject);
-  });
-
-  promiseResultSuccessOrFailure(enqueuedStart).then(function () {
-    var checkErrors = function (operation, combinedResult) {
-      Object.keys(combinedResult).forEach(function (resultType) {
-        if (combinedResult[resultType] !== null) {
-          logger.info('Failed operation %s with error: ' +
-                      combinedResult[resultType], operation);
-        }
-      });
-    };
-    if (thaliMobileStates.listening) {
-      promiseQueue.enqueueAtTop(function (resolve, reject) {
-        module.exports._startListeningForAdvertisements().then(resolve, reject);
-      }).then(function (combinedResult) {
-        checkErrors('startListeningForAdvertisements', combinedResult);
-      });
-    }
-    if (thaliMobileStates.advertising) {
-      promiseQueue.enqueueAtTop(function (resolve, reject) {
-        module.exports._startUpdateAdvertisingAndListening()
-          .then(resolve, reject);
-      }).then(function (combinedResult) {
-        checkErrors('startUpdateAdvertisingAndListening', combinedResult);
-      });
-    }
-  });
 }
 
 function handleNetworkChangedNonTCP (networkChangedValue) {
@@ -1528,3 +1394,46 @@ thaliWifiInfrastructure
  * @fires module:thaliMobile.event:discoveryDOS
  */
 module.exports.emitter = new EventEmitter();
+
+var connectionTypePeersLimits = {};
+connectionTypePeersLimits[connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] =
+  thaliConfig.MULTI_PEER_CONNECTIVITY_FRAMEWORK_PEERS_LIMIT;
+connectionTypePeersLimits[connectionTypes.BLUETOOTH] =
+  thaliConfig.BLUETOOTH_PEERS_LIMIT;
+connectionTypePeersLimits[connectionTypes.TCP_NATIVE] =
+  thaliConfig.TCP_NATIVE_PEERS_LIMIT;
+
+module.exports._connectionTypePeersLimits = connectionTypePeersLimits;
+
+var emitIfConnectionTypePeersLimitReached = function (connectionType) {
+  var connectionTypePeers = peerAvailabilities[connectionType];
+  var connectionTypePeersCount = Object.keys(connectionTypePeers).length;
+  var peersLimit = connectionTypePeersLimits[connectionType];
+  if (connectionTypePeersCount > peersLimit) {
+    module.exports.emitter
+      .emit(connectionType + '-PeersLimitReached', {
+        limit: peersLimit,
+        count: connectionTypePeersCount
+      });
+  }
+};
+
+var emitDiscoveryDOS = function (dosInfo) {
+  module.exports.emitter.emit('discoveryDOS', dosInfo);
+};
+
+Object.keys(connectionTypes)
+  .forEach(function (key) {
+    var connectionType = connectionTypes[key];
+
+    module.exports.emitter.on(connectionType + '-PeersLimitReached',
+      function (info) {
+        emitDiscoveryDOS({
+          connectionType: connectionType,
+          limit: info.limit,
+          count: info.count
+        });
+      });
+  });
+
+

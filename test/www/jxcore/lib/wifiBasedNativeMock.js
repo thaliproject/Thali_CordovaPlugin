@@ -278,6 +278,13 @@ MobileCallInstance.prototype.startListeningForAdvertisements =
 
 MobileCallInstance.prototype._startListeningForAdvertisements =
   function (callback) {
+    var btOff =
+      currentNetworkStatus.bluetooth !== 'on' ||
+      currentNetworkStatus.bluetoothLowEnergy !== 'on';
+    if (btOff) {
+      callback('Radio Turned Off');
+      return;
+    }
     this.thaliWifiInfrastructure.startListeningForAdvertisements()
     .then(function () {
       startListeningForAdvertisementsIsActive = true;
@@ -365,6 +372,13 @@ MobileCallInstance.prototype.startUpdateAdvertisingAndListening =
 MobileCallInstance.prototype._startUpdateAdvertisingAndListening =
 function (portNumber, callback) {
   var self = this;
+  var btOff =
+    currentNetworkStatus.bluetooth !== 'on' ||
+    currentNetworkStatus.bluetoothLowEnergy !== 'on';
+  if (btOff) {
+    callback('Radio Turned Off');
+    return;
+  }
   var doStart = function () {
     self.thaliWifiInfrastructure.startUpdateAdvertisingAndListening()
     .then(function () {
@@ -380,8 +394,9 @@ function (portNumber, callback) {
     createAndStartProxyRelayServer(portNumber, 'Incoming connection relay')
       .then(function (server) {
         incomingConnectionsServer = server;
-        self.thaliWifiInfrastructure.advertisedPortOverride =
-          incomingConnectionsServer.address().port;
+        self.thaliWifiInfrastructure._overrideAdvertisedPort(
+          incomingConnectionsServer.address().port
+        );
         doStart();
       });
   }
@@ -1184,7 +1199,7 @@ function wifiPeerAvailabilityChanged(platform, thaliWifiInfrastructure) {
         peerIdentifier: peerIdentifier,
         hostAddress: '127.0.0.1',
         generation: generation,
-        portNumber: thaliWifiInfrastructure.advertisedPortOverride
+        portNumber: thaliWifiInfrastructure._getOverridenAdvertisedPort()
       });
   };
 }

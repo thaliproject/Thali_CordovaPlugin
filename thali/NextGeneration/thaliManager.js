@@ -208,33 +208,17 @@ ThaliManager.prototype.stop = function () {
   );
   self.state = ThaliManager.STATES.STOPPING;
 
-  logger.debug('stopping thaliPeerPoolInterface');
-  self._stoppingPromise = self._thaliPeerPoolInterface.stop()
-    .then(function () {
-      logger.debug('stopping thaliPullReplicationFromNotification');
-      return self._thaliPullReplicationFromNotification.stop();
-    })
-    .then(function () {
-      logger.debug('stopping thaliSendNotificationBasedOnReplication');
-      return self._thaliSendNotificationBasedOnReplication.stop();
-    })
-    .then(function () {
-      logger.debug('stopping advertising and listening');
-      return ThaliMobile.stopAdvertisingAndListening();
-    })
-    .then(function () {
-      logger.debug('stopping listening for advertisements');
-      return ThaliMobile.stopListeningForAdvertisements();
-    })
-    .then(function () {
-      logger.debug('stopping ThaliMobile');
-      return ThaliMobile.stop();
-    })
-    .then(function () {
-      self.state = ThaliManager.STATES.STOPPED;
-      self._stoppingPromise = undefined;
-      return true;
-    });
+  logger.debug('stopping everything');
+  self._stoppingPromise = Promise.all([
+    ThaliMobile.stop(),
+    this._thaliPeerPoolInterface.stop(),
+    this._thaliPullReplicationFromNotification.stop(),
+    this._thaliSendNotificationBasedOnReplication.stop(),
+  ]).then(function () {
+    self.state = ThaliManager.STATES.STOPPED;
+    self._stoppingPromise = undefined;
+    return true;
+  });
 
   return self._stoppingPromise;
 };

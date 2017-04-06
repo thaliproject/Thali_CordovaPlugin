@@ -240,65 +240,67 @@ function connectToListenerSendMessageGetResponseLength(t, port, request,
 }
 
 test('Can connect to a remote peer', function (t) {
-  var connecting = false;
+  setTimeout(function () {
+    var connecting = false;
 
-  var echoServer = net.createServer(function (socket) {
-    socket.pipe(socket);
-  });
-
-  echoServer = makeIntoCloseAllServer(echoServer);
-  serverToBeClosed = echoServer;
-
-  function onConnectSuccess(err, connection) {
-    // Called if we successfully connect to to a peer
-    logger.info(connection);
-
-    t.ok(connection.hasOwnProperty('listeningPort'),
-      'Must have listeningPort');
-    t.ok(typeof connection.listeningPort === 'number',
-      'listeningPort must be a number');
-
-    // A check if any of our old reverse connection or please connect code
-    // is still hiding around.
-    t.ok(connection.listeningPort !== 0, 'listening port should not be 0');
-
-    t.end();
-  }
-
-  function onConnectFailure () {
-    t.fail('Connect failed!');
-    t.end();
-  }
-
-  echoServer.listen(0, function () {
-    var applicationPort = echoServer.address().port;
-
-    Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
-      logger.info('Received peerAvailabilityChanged with peers: ' +
-        JSON.stringify(peers)
-      );
-      peers.forEach(function (peer) {
-        if (peer.peerAvailable && !connecting) {
-          connecting = true;
-          thaliMobileNativeTestUtils.connectToPeer(peer)
-            .then(function (connection) {
-              onConnectSuccess(null, connection, peer);
-            })
-            .catch(function (error) {
-              onConnectFailure(error, null, peer);
-            });
-        }
-      });
+    var echoServer = net.createServer(function (socket) {
+      socket.pipe(socket);
     });
 
-    Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort,
-    function (err) {
-      t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
-      Mobile('startListeningForAdvertisements').callNative(function (err) {
-        t.notOk(err, 'Can call startListeningForAdvertisements without error');
+    echoServer = makeIntoCloseAllServer(echoServer);
+    serverToBeClosed = echoServer;
+
+    function onConnectSuccess(err, connection) {
+      // Called if we successfully connect to to a peer
+      logger.info(connection);
+
+      t.ok(connection.hasOwnProperty('listeningPort'),
+        'Must have listeningPort');
+      t.ok(typeof connection.listeningPort === 'number',
+        'listeningPort must be a number');
+
+      // A check if any of our old reverse connection or please connect code
+      // is still hiding around.
+      t.ok(connection.listeningPort !== 0, 'listening port should not be 0');
+
+      t.end();
+    }
+
+    function onConnectFailure () {
+      t.fail('Connect failed!');
+      t.end();
+    }
+
+    echoServer.listen(0, function () {
+      var applicationPort = echoServer.address().port;
+
+      Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
+        logger.info('Received peerAvailabilityChanged with peers: ' +
+          JSON.stringify(peers)
+        );
+        peers.forEach(function (peer) {
+          if (peer.peerAvailable && !connecting) {
+            connecting = true;
+            thaliMobileNativeTestUtils.connectToPeer(peer)
+              .then(function (connection) {
+                onConnectSuccess(null, connection, peer);
+              })
+              .catch(function (error) {
+                onConnectFailure(error, null, peer);
+              });
+          }
+        });
+      });
+
+      Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort,
+      function (err) {
+        t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+        Mobile('startListeningForAdvertisements').callNative(function (err) {
+          t.notOk(err, 'Can call startListeningForAdvertisements without error');
+        });
       });
     });
-  });
+  }, 5000);
 });
 
 test('Can shift large amounts of data', function (t) {
@@ -878,5 +880,55 @@ function (t) {
 
   thaliMobileNativeTestUtils.startAndListen(t, pretendLocalMux, function (peers) {
     boundListener.listener(peers);
+  });
+});
+
+test('discoveryAdvertisingStateUpdateNonTCP is called', function (t) {
+  var callCount = 0;
+  Mobile('discoveryAdvertisingStateUpdateNonTCP').registerToNative(
+    function (state) {
+      callCount++;
+      switch (callCount) {
+        case 1:
+          t.equal(state.discoveryActive, true,
+            'discoveryActive should be false');
+          t.equal(state.advertisingActive, false,
+            'advertisingActive should be true');
+          Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
+            t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+          });
+          break;
+        case 2:
+          t.equal(state.discoveryActive, true,
+            'discoveryActive should be false');
+          t.equal(state.advertisingActive, true,
+            'advertisingActive should be true');
+          Mobile('stopListeningForAdvertisements').callNative(function (err) {
+            t.notOk(err, 'Can call stopListeningForAdvertisements without error');
+          });
+          break;
+        case 3:
+          t.equal(state.discoveryActive, false,
+            'discoveryActive should be false');
+          t.equal(state.advertisingActive, true,
+            'advertisingActive should be true');
+          Mobile('stopAdvertisingAndListening').callNative(function (err) {
+            t.notOk(err, 'Can call stopAdvertisingAndListening without error');
+          });
+          break;
+        case 4:
+          t.equal(state.discoveryActive, false,
+            'discoveryActive should be false');
+          t.equal(state.advertisingActive, false,
+            'advertisingActive should be true');
+          t.end();
+          break;
+        default:
+          break;
+      }
+  });
+
+  Mobile('startListeningForAdvertisements').callNative(function (err) {
+    t.notOk(err, 'Can call startListeningForAdvertisements without error');
   });
 });

@@ -15,6 +15,12 @@ var states = {
   started: false
 };
 
+var targetStates = {
+  started: false,
+  advertising: false,
+  listening: false
+};
+
 // We have to keep track of discovered peers to make sure
 // 'listenerRecreatedAfterFailureHandler' event uses the same generation after
 // connection was recreated
@@ -47,6 +53,10 @@ module.exports._setServersManager = function (serversManager) {
 
 module.exports._isStarted = function () {
   return states.started;
+};
+
+module.exports._getPromiseQueue = function () {
+  return gPromiseQueue;
 };
 
 // Turns off a warning that would otherwise go off on Mobile
@@ -282,6 +292,7 @@ function stopCreateAndStartServersManager() {
  */
 // jscs:enable jsDoc
 module.exports.start = function (router, pskIdToSecret) {
+  targetStates.started = true;
   return gPromiseQueue.enqueue(function (resolve, reject) {
     if (states.started) {
       return reject(new Error('Call Stop!'));
@@ -408,10 +419,12 @@ function stopNative() {
  */
 
 module.exports.stop = function () {
+  targetStates.started = false;
+  targetStates.listening = false;
+  targetStates.advertising = false;
   return gPromiseQueue.enqueue(stop);
 };
 
-/* eslint-disable max-len */
 /**
  * This method instructs the native layer to discover what other devices are
  * within range using the platform's non-TCP P2P capabilities. When a device is
@@ -436,7 +449,7 @@ module.exports.stop = function () {
  * @throws {Error}
  */
 module.exports.startListeningForAdvertisements = function () {
-/* eslint-enable max-len */
+  targetStates.listening = true;
   return gPromiseQueue.enqueue(function (resolve, reject) {
     if (!states.started) {
       return reject(new Error('Call Start!'));
@@ -469,6 +482,7 @@ module.exports.startListeningForAdvertisements = function () {
  * @returns {Promise<?Error>}
  */
 module.exports.stopListeningForAdvertisements = function () {
+  targetStates.listening = false;
   return gPromiseQueue.enqueue(function (resolve, reject) {
     Mobile('stopListeningForAdvertisements').callNative(function (error) {
       if (error) {
@@ -480,7 +494,6 @@ module.exports.stopListeningForAdvertisements = function () {
   });
 };
 
-/* eslint-disable max-len */
 /**
  * This method has two separate but related functions. It's first function is to
  * begin advertising the Thali peer's presence to other peers. The second
@@ -548,8 +561,8 @@ module.exports.stopListeningForAdvertisements = function () {
  * @public
  * @returns {Promise<?Error>}
  */
-/* eslint-enable max-len */
 module.exports.startUpdateAdvertisingAndListening = function () {
+  targetStates.advertising = true;
   return gPromiseQueue.enqueue(function (resolve, reject) {
     if (!states.started) {
       return reject(new Error('Call Start!'));
@@ -589,6 +602,7 @@ module.exports.startUpdateAdvertisingAndListening = function () {
  * @returns {Promise<?Error>}
  */
 module.exports.stopAdvertisingAndListening = function () {
+  targetStates.advertising = false;
   return gPromiseQueue.enqueue(function (resolve, reject) {
     Mobile('stopAdvertisingAndListening').callNative(function (error) {
       if (error) {
@@ -738,15 +752,16 @@ module.exports._terminateConnection = function (incomingConnectionId) {
  * a null result.
  */
 module.exports._disconnect = function (peerIdentifier) {
-  return gPromiseQueue.enqueue(function (resolve, reject) {
-    Mobile('disconnect').callNative(peerIdentifier, function (errorMsg) {
-      if (errorMsg) {
-        reject(new Error(errorMsg));
-      } else {
-        resolve();
-      }
+  return gPromiseQueue
+    .enqueue(function (resolve, reject) {
+      Mobile('disconnect').callNative(peerIdentifier, function (errorMsg) {
+        if (errorMsg) {
+          reject(new Error(errorMsg));
+        } else {
+          resolve();
+        }
+      });
     });
-  });
 };
 
 /**
@@ -969,7 +984,6 @@ module.exports.unlockAndroidWifiMulticast = function () {
  * always be null for `multiConnect`.
  */
 
-/* eslint-disable max-len */
 /**
  * This event MAY start firing as soon as either of the start methods is called.
  * Start listening for advertisements obviously looks for new peers but in some
@@ -994,7 +1008,7 @@ module.exports.unlockAndroidWifiMulticast = function () {
  * @type {Object}
  * @property {nonTCPPeerAvailabilityChanged} peer
  */
-/* eslint-enable max-len */
+
 var peerAvailabilityChangedQueue = new PromiseQueue();
 function handlePeerAvailabilityChanged (peer) {
   logger.debug('Received peer availability changed event with ' +
@@ -1061,6 +1075,40 @@ function handlePeerAvailabilityChanged (peer) {
 
 module.exports._handlePeerAvailabilityChanged = handlePeerAvailabilityChanged;
 
+function handleNetworkChanges (newStatus) {
+  var oldStatus = gNonTcpNetworkStatus;
+
+  var someRadioEnabled = oldStatus ?
+    ['wifi', 'bluetooth', 'bluetoothLowEnergy'].some(function (radio) {
+      return (newStatus[radio] === 'on' && oldStatus[radio] !== 'on');
+    }) :
+    true;
+
+  if (!someRadioEnabled) {
+    return;
+  }
+
+  // At least some radio was enabled so try to start whatever can be potentially
+  // started as soon as possible.
+
+  if (targetStates.started) {
+    if (targetStates.listening) {
+      module.exports.startListeningForAdvertisements()
+        .catch(function (error) {
+          logger.warn('Failed startListeningForAdvertisements with error ' +
+            error.message);
+        });
+    }
+    if (targetStates.advertising) {
+      module.exports.startUpdateAdvertisingAndListening()
+        .catch(function (error) {
+          logger.warn('Failed startUpdateAdvertisingAndListening with error ' +
+            error.message);
+        });
+    }
+  }
+}
+
 function getPeerPort(peer) {
   return gServersManager ?
     gServersManager.createPeerListener(peer.peerIdentifier) :
@@ -1090,7 +1138,6 @@ function recreatePeer(peerIdentifier) {
   handlePeerAvailabilityChanged(peerAvailable);
 }
 
-/* eslint-disable max-len */
 /**
  * This is used whenever discovery or advertising starts or stops. Since it's
  * possible for these to be stopped (in particular) due to events outside of
@@ -1107,7 +1154,6 @@ function recreatePeer(peerIdentifier) {
  * @type {Object}
  * @property {module:thaliMobileNative~discoveryAdvertisingStateUpdate} discoveryAdvertisingStateUpdateValue
  */
-/* eslint-enable max-len */
 
 /**
  * Provides a notification when the network's state changes as well as when our
@@ -1247,6 +1293,7 @@ module.exports._registerToNative = function () {
     // The value needs to be assigned here to gNonTcpNetworkStatus
     // so that {@link module:thaliMobileNativeWrapper:getNonTCPNetworkStatus}
     // can return it.
+    handleNetworkChanges(networkChangedValue);
     gNonTcpNetworkStatus = networkChangedValue;
     module.exports.emitter.emit('networkChangedNonTCP', gNonTcpNetworkStatus);
   });

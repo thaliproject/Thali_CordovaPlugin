@@ -1,5 +1,4 @@
 'use strict';
-
 /*
 Thali unit test implementation of tape.
 Highly inspired by wrapping-tape.
@@ -39,5 +38,5 @@ if (typeof jxcore === 'undefined' || typeof Mobile !== 'undefined') {
   exports = require('./SimpleTape');
   exports.coordinated = false;
 }
-
+exports.sinonTest = require('./sinonTest');
 module.exports = exports;

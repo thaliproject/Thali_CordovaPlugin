@@ -1,4 +1,4 @@
-{
+module.exports = {
   "env": {
     "node": true
   },
@@ -33,7 +33,6 @@
     ],
     "no-new": 2,
     "no-extra-semi": 2,
-    "no-extra-parens": 2,
     "no-use-before-define": [
       2,
       {
@@ -59,8 +58,9 @@
       2,
       {
         "ignoreTrailingComments": true,
+        "ignoreUrls": true,
         "ignoreStrings": true,
-        "ignoreUrls": true
+        "ignorePattern": getMaxLenPatterns()
       }
     ],
     "camelcase": [
@@ -121,4 +121,32 @@
       "single"
     ]
   }
+};
+
+function getMaxLenPatterns() {
+  var patterns = [
+    // /**
+    //  * @param {type} identifier
+    //  */
+    /^\s+?\* @(param|arg|argument|prop|property) \{.+?\} (\[.+?\]|[\w\d_\.\[\]]+)$/,
+
+    // /**
+    //  * {@link location}
+    //  */
+    /^\s+?\* \{@link .+?\}$/,
+
+    // /**
+    //  * @function functionName
+    //  * @function external:"Mobile('realyLongMobileMethod')".registerToNative
+    //  */
+    /^\s+?\* @(function|func|method) \S+$/,
+
+    // /**
+    //  * | cell1 | cell2 |
+    //  */
+    /^\s+?\* \|.*\|$/
+  ];
+
+  return patterns.map(re => `(${re.source})`).join('|');
 }
+

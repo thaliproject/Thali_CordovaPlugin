@@ -190,7 +190,6 @@ module.exports = function (self) {
           '<-> Mux - %d - error %s', localIncomingConnectionId, err);
       });
 
-      incoming.setTimeout(thaliConfig.NON_TCP_PEER_UNAVAILABILITY_THRESHOLD);
       incoming.on('timeout', function () {
         logger.debug('incoming - incoming Android TCP/IP client connection ' +
           '<-> Mux - %d - incoming socket timeout', localIncomingConnectionId);

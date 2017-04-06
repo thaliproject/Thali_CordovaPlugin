@@ -53,10 +53,6 @@ var test = tape({
 });
 
 test('Make sure peerDictionaryKey is reasonable', function (t) {
-  var thaliPullReplicationFromNotification =
-    new ThaliPullReplicationFromNotification(LevelDownPouchDB,
-      testUtils.getRandomPouchDBName(), {}, devicePublicPrivateKey);
-
   var key1 =
     ThaliPullReplicationFromNotification._getPeerDictionaryKey({
       connectionType: 'foo',
@@ -87,7 +83,7 @@ test('Make sure peerDictionaryKey is reasonable', function (t) {
   t.end();
 });
 
-test('Make sure start works', function (t) {
+test('Make sure start works', tape.sinonTest(function (t) {
   var bufferArray = [];
 
   var thaliPullReplicationFromNotification =
@@ -100,7 +96,7 @@ test('Make sure start works', function (t) {
 
   var thaliNotificationClient =
     new ThaliNotificationClient({}, devicePublicPrivateKey);
-  var mockThaliNotificationClient = sinon.mock(thaliNotificationClient);
+  var mockThaliNotificationClient = this.mock(thaliNotificationClient);
   mockThaliNotificationClient
     .expects('start').exactly(1).withArgs(bufferArray);
   mockThaliNotificationClient.expects('on').exactly(1)
@@ -123,9 +119,9 @@ test('Make sure start works', function (t) {
   thaliPullReplicationFromNotification.start(bufferArray);
 
   t.end();
-});
+}));
 
-test('Make sure stop works', function (t) {
+test('Make sure stop works', tape.sinonTest(function (t) {
   var thaliPullReplicationFromNotification =
     new ThaliPullReplicationFromNotification(
       LevelDownPouchDB,
@@ -152,7 +148,7 @@ test('Make sure stop works', function (t) {
   bufferArray = [new Buffer('foo')];
   thaliNotificationClient =
     new ThaliNotificationClient({}, devicePublicPrivateKey);
-  mockThaliNotificationClient = sinon.mock(thaliNotificationClient);
+  mockThaliNotificationClient = this.mock(thaliNotificationClient);
   mockThaliNotificationClient
     .expects('start').exactly(1).withArgs(bufferArray);
   mockThaliNotificationClient.expects('on').exactly(1)
@@ -171,7 +167,7 @@ test('Make sure stop works', function (t) {
 
   thaliNotificationClient =
     new ThaliNotificationClient({}, devicePublicPrivateKey);
-  mockThaliNotificationClient = sinon.mock(thaliNotificationClient);
+  mockThaliNotificationClient = this.mock(thaliNotificationClient);
   mockThaliNotificationClient
     .expects('stop').exactly(1);
   mockThaliNotificationClient.expects('removeListener').exactly(1)
@@ -182,10 +178,10 @@ test('Make sure stop works', function (t) {
     thaliNotificationClient;
 
   var action1 = new PeerAction();
-  actionSpy1 = sinon.spy(action1, 'kill');
+  actionSpy1 = this.spy(action1, 'kill');
 
   var action2 = new PeerAction();
-  actionSpy2 = sinon.spy(action2, 'kill');
+  actionSpy2 = this.spy(action2, 'kill');
 
   thaliPullReplicationFromNotification._peerDictionary.foo = action1;
   thaliPullReplicationFromNotification._peerDictionary.bar = action2;
@@ -240,6 +236,37 @@ test('Make sure stop works', function (t) {
       t.end();
     });
   });
+}));
+
+test('Emits error event when peerPool.enqueue throws', function (t) {
+  t.timeoutAfter(20);
+
+  var peerPool = {
+    enqueue: function () {
+      throw new Error('oops');
+    }
+  };
+
+  var thaliPullReplicationFromNotification =
+    new ThaliPullReplicationFromNotification(
+      LevelDownPouchDB,
+      testUtils.getRandomPouchDBName(),
+      peerPool,
+      devicePublicPrivateKey
+    );
+
+  thaliPullReplicationFromNotification.once('error', function (error) {
+    t.equal(error.message, 'oops', 'Correct error');
+    thaliPullReplicationFromNotification.stop();
+    t.end();
+  });
+
+  // simulate event receiving to trigger action enqueueing
+  thaliPullReplicationFromNotification._peerAdvertisesDataForUsHandler({
+    connectionType: 'x',
+    keyId: 'y',
+    portNumber: 9999
+  });
 });
 
 function matchEntryInDictionary(t, thaliPullReplicationFromNotification, fakeAd,
@@ -271,11 +298,11 @@ function checkPeerCreation(t, dictionaryEntries,
     'public keys match');
 }
 
-test('Simple peer event', function (t) {
+test('Simple peer event', tape.sinonTest(function (t) {
   var fakePool = {
-    enqueue: sinon.spy(),
-    start: sinon.spy(),
-    stop: sinon.spy()
+    enqueue: this.spy(),
+    start: this.spy(),
+    stop: this.spy()
   };
 
   var listener = null;
@@ -333,13 +360,12 @@ test('Simple peer event', function (t) {
   }
   inherits(MockThaliReplicationPeerAction, ThaliReplicationPeerAction);
 
-  var ProxiesPullReplication = proxyquire.noCallThru()
-    .load(
-      'thali/NextGeneration/replication/thaliPullReplicationFromNotification',
-      {
-        './thaliReplicationPeerAction': MockThaliReplicationPeerAction
-      }
-    );
+  var ProxiesPullReplication = proxyquire.noCallThru().load(
+    'thali/NextGeneration/replication/thaliPullReplicationFromNotification',
+    {
+      './thaliReplicationPeerAction': MockThaliReplicationPeerAction
+    }
+  );
 
   var thaliPullReplicationFromNotification =
     new ProxiesPullReplication(LevelDownPouchDB, fakeDbName, fakePool,
@@ -364,8 +390,8 @@ test('Simple peer event', function (t) {
   listener(fakeAd);
   var firstAction = peerActions[0];
   checkPeerCreation(t, 1,
-    thaliPullReplicationFromNotification, fakePool.enqueue.getCall(0), firstAction,
-    fakeAd, fakeDbName);
+    thaliPullReplicationFromNotification, fakePool.enqueue.getCall(0),
+    firstAction, fakeAd, fakeDbName);
 
   // Start second action just to make sure it gets added
   var fakeAd2 = {
@@ -431,4 +457,4 @@ test('Simple peer event', function (t) {
 
     t.end();
   });
-});
+}));

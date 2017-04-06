@@ -3,9 +3,9 @@
 var tape = require('../lib/thaliTape');
 var platform = require('thali/NextGeneration/utils/platform');
 var Promise = require('lie');
+var logger = require('thali/ThaliLogger')('testTests');
 
 var customData = 'custom data';
-
 var test = tape({
   setup: function (t) {
     if (tape.coordinated) {
@@ -28,6 +28,53 @@ test('another', function (t) {
   t.ok(true, 'sane');
   t.end();
 });
+
+var testObject = {
+  testSpyMethod: function() {
+    logger.debug('test spy method for global sinon sansbox');
+  },
+  testStubMethod: function () {
+    return 'test stub method for global sinon sansbox';
+  }
+};
+
+var testSanboxObject = testObject;
+
+test('test sinon sansbox spy', tape.sinonTest(function (t) {
+  var spy = this.spy(testObject, 'testSpyMethod');
+  testObject.testSpyMethod();
+  t.equal(spy.callCount, 1,
+    'test sandbox spy works correctly');
+  t.end();
+}));
+
+test('test sinon sansbox stub', tape.sinonTest(function (t) {
+  var callback = this.stub().returns(42);
+  t.equal(callback(), 42, 'test sandbox stub works correctly');
+  t.end();
+}));
+
+test('test sinon sansbox stub override', tape.sinonTest(function (t) {
+  var result = testObject.testStubMethod();
+  var stub = this.stub(testObject, 'testStubMethod', function () { return 'test';});
+  t.notEqual(stub(), result, 'test sandbox stub works correctly');
+  t.end();
+}));
+
+test('test sinon sansbox mock', tape.sinonTest(function (t) {
+  var mock = this.mock(testObject);
+  mock.expects('testStubMethod').twice();
+  testObject.testStubMethod();
+  testObject.testStubMethod();
+  mock.verify();
+  t.end();
+}));
+
+test('test sinon sansbox restore after test end', tape.sinonTest(function (t) {
+  var result = testObject.testStubMethod();
+  t.equal(result, 'test stub method for global sinon sansbox', 'test restore');
+  t.end();
+}));
 
 if (!tape.coordinated) {
   return;

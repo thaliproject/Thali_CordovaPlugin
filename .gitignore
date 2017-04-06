@@ -32,6 +32,10 @@ test/www/jxcore/server-address.js
 build/
 DerivedData/
 
+## Carthage
+lib/ios/Carthage/Build
+lib/ios/Carthage/Checkouts
+
 ## Various settings
 *.pbxuser
 !default.pbxuser

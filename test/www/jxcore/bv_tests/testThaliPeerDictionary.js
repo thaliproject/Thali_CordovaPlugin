@@ -1,7 +1,6 @@
 'use strict';
 var tape = require('../lib/thaliTape');
 var crypto = require('crypto');
-var sinon = require('sinon');
 
 var PeerDictionary =
   require('thali/NextGeneration/notification/thaliPeerDictionary');
@@ -278,7 +277,7 @@ test('WAITING entries are removed before CONTROLLED_BY_POOL state entry.',
   });
 
 test('When CONTROLLED_BY_POOL entry is removed and kill is called.',
-  function (t) {
+  tape.sinonTest(function (t) {
     var dictionary = new PeerDictionary.PeerDictionary();
 
     var entryControlledByPool = createEntry(PEER1_1,
@@ -287,7 +286,7 @@ test('When CONTROLLED_BY_POOL entry is removed and kill is called.',
     dictionary.addUpdateEntry(PEER1_1, entryControlledByPool);
 
     var spyKill =
-      sinon.spy(entryControlledByPool.notificationAction, 'kill');
+      this.spy(entryControlledByPool.notificationAction, 'kill');
 
     addEntries(dictionary, 'waiting_', 0,
       PeerDictionary.peerState.CONTROLLED_BY_POOL,
@@ -299,7 +298,8 @@ test('When CONTROLLED_BY_POOL entry is removed and kill is called.',
       'Size should be MAXSIZE');
 
     t.end();
-  });
+  })
+);
 
 
 

@@ -10,8 +10,6 @@ set -euo pipefail
 
 trap 'log_error $LINENO' ERR
 
-TEST_PROJECT_NAME=ThaliTest
-
 # The first argument must be the name of the test file to make into the app.js
 # The second argument is optional and specifies a string with an IP address to
 # manually set the coordination server's address to.
@@ -21,13 +19,15 @@ TEST_PROJECT_NAME=ThaliTest
 cd `dirname $0`
 cd ../..
 REPO_ROOT_DIR=$(pwd)
-TEST_PROJECT_ROOT_DIR=${REPO_ROOT_DIR}/../${TEST_PROJECT_NAME}
+PROJECT_NAME=${THALI_TEST_PROJECT_NAME:-ThaliTest}
+PROJECT_ROOT_DIR=${REPO_ROOT_DIR}/../${PROJECT_NAME}
+PROJECT_ID=${THALI_TEST_PROJECT_ID:-com.thaliproject.thalitest}
 
 # Prepares test project
 prepare_project()
 {
   echo ""
-  echo "start preparing ${TEST_PROJECT_NAME} Cordova project"
+  echo "start preparing ${PROJECT_NAME} Cordova project"
 
   IPADDRESS=${1:-}
   npm install --no-optional --production --prefix $REPO_ROOT_DIR/thali/install
@@ -37,34 +37,37 @@ prepare_project()
   npm install --no-optional
   node generateServerAddress.js $IPADDRESS
   cd $REPO_ROOT_DIR/..
-  cordova create $TEST_PROJECT_NAME com.test.thalitest $TEST_PROJECT_NAME
-  mkdir -p $TEST_PROJECT_NAME/thaliDontCheckIn/localdev
+  cordova create $PROJECT_NAME $PROJECT_ID $PROJECT_NAME
+  mkdir -p $PROJECT_ROOT_DIR/thaliDontCheckIn/localdev
 
   if is_minigw_platform; then
       # The thali package might be installed as link and there will
       # be troubles later on if this link is tried to be copied so
       # remove it here.
       rm -rf $REPO_ROOT_DIR/test/www/jxcore/node_modules/thali
-      cp -R $REPO_ROOT_DIR/test/www/ $TEST_PROJECT_NAME/
+      cp -R $REPO_ROOT_DIR/test/www/ $PROJECT_ROOT_DIR/
   else
-      rsync -a --no-links $REPO_ROOT_DIR/test/www/ $TEST_PROJECT_NAME/www
+      rsync -a --no-links $REPO_ROOT_DIR/test/www/ $PROJECT_ROOT_DIR/www
   fi
 
+  echo "start installing SSDPReplacer"
   cd $REPO_ROOT_DIR/thali/install/SSDPReplacer
   npm install --no-optional
-  cd $REPO_ROOT_DIR/../$TEST_PROJECT_NAME
+  cd $PROJECT_ROOT_DIR
   cordova plugin add $REPO_ROOT_DIR/thali/install/SSDPReplacer
+  echo "end installing SSDPReplacer"
+  echo ""
 
-  echo "end preparing ${TEST_PROJECT_NAME} Cordova project"
+  echo "end preparing ${PROJECT_NAME} Cordova project"
   echo ""
 }
 
 install_thali()
 {
   echo ""
-  echo "start installing Thali into ${TEST_PROJECT_NAME}"
+  echo "start installing Thali into ${PROJECT_NAME}"
 
-  cd $TEST_PROJECT_ROOT_DIR/www/jxcore
+  cd $PROJECT_ROOT_DIR/www/jxcore
   node installCustomPouchDB.js
   jx install $REPO_ROOT_DIR/thali --save --no-optional
   find . -name "*.gz" -delete
@@ -99,9 +102,9 @@ install_thali()
 add_android_platform()
 {
   echo ""
-  echo "start adding Android platform into ${TEST_PROJECT_NAME}"
+  echo "start adding Android platform into ${PROJECT_NAME}"
 
-  cd $TEST_PROJECT_ROOT_DIR
+  cd $PROJECT_ROOT_DIR
 
   cordova platform add android
 
@@ -115,13 +118,13 @@ add_android_platform()
 build_android()
 {
   echo ""
-  echo "start building ${TEST_PROJECT_NAME} Android app"
+  echo "start building ${PROJECT_NAME} Android app"
 
-  cd $TEST_PROJECT_ROOT_DIR
+  cd $PROJECT_ROOT_DIR
 
   cordova build android --release --device
 
-  echo "end building ${TEST_PROJECT_NAME} Android app"
+  echo "end building ${PROJECT_NAME} Android app"
   echo ""
 }
 
@@ -130,9 +133,9 @@ add_ios_platform_if_possible()
 {
   if is_darwin_platform; then
     echo ""
-    echo "start adding iOS platform into ${TEST_PROJECT_NAME}"
+    echo "start adding iOS platform into ${PROJECT_NAME}"
 
-    cd $TEST_PROJECT_ROOT_DIR
+    cd $PROJECT_ROOT_DIR
 
     cordova platform add ios
 
@@ -150,11 +153,13 @@ add_ios_platform_if_possible()
 # Builds iOS platform when we're running on macOS
 build_ios_if_possible()
 {
+  local IOS_PROJECT_DIR=$PROJECT_ROOT_DIR/platforms/ios
+
   if is_darwin_platform; then
     echo ""
-    echo "start building ${TEST_PROJECT_NAME} iOS app"
+    echo "start building ${PROJECT_NAME} iOS app"
 
-    cd $TEST_PROJECT_ROOT_DIR
+    cd $PROJECT_ROOT_DIR
 
     # cordova really doesn't have any flexibility in making builds via CLAIM
     # they're using their xcconfig that doesn't work in our case
@@ -172,26 +177,21 @@ build_ios_if_possible()
 
     cordova prepare ios --device
 
-    TEST_PROJECT_DIR=$TEST_PROJECT_ROOT_DIR/platforms/ios
-    TEST_PROJECT_PATH=$TEST_PROJECT_DIR/$TEST_PROJECT_NAME.xcodeproj
-
-    echo ""
-    echo "building project: ${TEST_PROJECT_PATH}"
-
     (\
-    cd $TEST_PROJECT_DIR && \
+    cd $IOS_PROJECT_DIR && \
     xcodebuild \
       -xcconfig $REPO_ROOT_DIR/thali/install/ios/build-ci.xcconfig \
-      -project $TEST_PROJECT_NAME.xcodeproj \
-      -target $TEST_PROJECT_NAME \
+      -workspace $PROJECT_NAME.xcworkspace \
+      -scheme $PROJECT_NAME \
       -configuration Debug \
-      -destination 'platform=iOS' \
+      -sdk 'iphoneos' \
       build \
-      CONFIGURATION_BUILD_DIR="${TEST_PROJECT_DIR}/build/device" \
-      SHARED_PRECOMPS_DIR="${TEST_PROJECT_DIR}/build/sharedpch" \
+      CONFIGURATION_BUILD_DIR="${IOS_PROJECT_DIR}/build/device" \
+      SHARED_PRECOMPS_DIR="${IOS_PROJECT_DIR}/build/sharedpch" \
+      DEVELOPMENT_TEAM="${THALI_TEST_DEVELOPMENT_TEAM:-3648SALNRR}" \
     )
 
-    echo "end building ${TEST_PROJECT_NAME} iOS app"
+    echo "end building ${PROJECT_NAME} iOS app"
     echo ""
   fi
 }

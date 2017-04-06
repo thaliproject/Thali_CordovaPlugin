@@ -10,7 +10,6 @@ var Promise = require('lie');
 var thaliMobile = require('thali/NextGeneration/thaliMobile');
 var proxyquire = require('proxyquire');
 var networkTypes = require('thali/NextGeneration/thaliMobile').networkTypes;
-var sinon = require('sinon');
 var ThaliNotificationAction = require('thali/NextGeneration/notification/thaliNotificationAction');
 var ThaliReplicationAction = require('thali/NextGeneration/replication/thaliReplicationPeerAction');
 
@@ -24,7 +23,8 @@ var test = tape({
   setup: function (t) {
     var ProxyPool =
       proxyquire('thali/NextGeneration/thaliPeerPool/thaliPeerPoolOneAtATime',
-        { '../thaliMobileNativeWrapper': {
+        {
+          '../thaliMobileNativeWrapper': {
             _getServersManager: function () {
               return {
                 terminateOutgoingConnection: function () {
@@ -33,7 +33,7 @@ var test = tape({
               };
             }
           }
-    });
+        });
     testThaliPeerPoolOneAtATime = new ProxyPool();
     t.end();
   },
@@ -110,36 +110,40 @@ TestPeerAction.prototype.kill = function () {
 
 function didNotCall(t, connectionType, actionType, errMessagePrefix) {
   var action = new TestPeerAction('foo', connectionType, actionType, t);
-  var startSpy = sinon.spy(action, 'start');
-  var killSpy = sinon.spy(action, 'kill');
+  var startSpy = this.spy(action, 'start');
+  var killSpy = this.spy(action, 'kill');
   testThaliPeerPoolOneAtATime.start();
-  var enqueueResult = testThaliPeerPoolOneAtATime.enqueue(action);
-  t.ok(enqueueResult.message.indexOf(errMessagePrefix) ===
-    0, 'Got right error');
+  t.throws(
+    function () {
+      testThaliPeerPoolOneAtATime.enqueue(action);
+    },
+    new RegExp('^Error: ' + errMessagePrefix),
+    'Got right error'
+  );
   t.notOk(startSpy.called, 'Start should not be called');
   t.ok(killSpy.called, 'Kill should have been called at least once');
   t.end();
 }
 
-test('We reject unrecognized connection type', function (t) {
-  didNotCall(t, 'bar', 'blah', 'Got unrecognized connection type: ');
-});
+test('We reject unrecognized connection type', tape.sinonTest(function (t) {
+  didNotCall.call(this, t, 'bar', 'blah', 'Got unrecognized connection type: ');
+}));
 
 test('We reject unrecognized action type', function () {
   return global.NETWORK_TYPE !== networkTypes.NATIVE;
-}, function (t) {
-  didNotCall(t, connectionTypes.BLUETOOTH, 'blah',
+}, tape.sinonTest(function (t) {
+  didNotCall.call(this, t, connectionTypes.BLUETOOTH, 'blah',
     'Got unsupported action type: ');
-});
+}));
 
 test('One action on bluetooth',
   function () {
     return global.NETWORK_TYPE !== networkTypes.NATIVE;
   },
-  function (t) {
+  tape.sinonTest(function (t) {
     var action = new TestPeerAction('peerID', connectionTypes.BLUETOOTH,
         ThaliNotificationAction.ACTION_TYPE, t);
-    var killSpy = sinon.spy(action, 'kill');
+    var killSpy = this.spy(action, 'kill');
     testThaliPeerPoolOneAtATime.start();
     t.notOk(testThaliPeerPoolOneAtATime.enqueue(action), 'Got null');
     action.startPromise
@@ -160,18 +164,19 @@ test('One action on bluetooth',
       .then(function () {
         t.end();
       });
-  });
+  })
+);
 
 test('Two notification actions',
   function () {
     return global.NETWORK_TYPE !== networkTypes.NATIVE;
-  }, function (t) {
+  }, tape.sinonTest(function (t) {
     var action1 = new TestPeerAction('peerId1', connectionTypes.BLUETOOTH,
       ThaliNotificationAction.ACTION_TYPE, t);
-    var killSpy1 = sinon.spy(action1, 'kill');
+    var killSpy1 = this.spy(action1, 'kill');
     var action2 = new TestPeerAction('peerId2', connectionTypes.BLUETOOTH,
       ThaliNotificationAction.ACTION_TYPE, t);
-    var killSpy2 = sinon.spy(action2, 'kill');
+    var killSpy2 = this.spy(action2, 'kill');
     testThaliPeerPoolOneAtATime.start();
     t.notOk(testThaliPeerPoolOneAtATime.enqueue(action1), 'Got Null');
     t.notOk(testThaliPeerPoolOneAtATime.enqueue(action2), 'Got another null');
@@ -213,7 +218,7 @@ test('Two notification actions',
       .then(function () {
         t.end();
       });
-  });
+  }));
 
 test('replicateThroughProblems', function (t) {
   function FakeReplication(failureResult, loggingDescription, peerId) {
@@ -273,28 +278,28 @@ test('replicateThroughProblems', function (t) {
     .then(function (result) {
       t.notOk(result, 'should have gotten null');
       return testThaliPeerPoolOneAtATime.
-      _replicateThroughProblems(noActivityTimeOut);
+        _replicateThroughProblems(noActivityTimeOut);
     }).then(function (result) {
-    t.notOk(result, 'Should have stopped nicely');
-    return testThaliPeerPoolOneAtATime._replicateThroughProblems(
-      failureButNotAvailable);
-  }).then(function (result) {
-    t.notOk(result, 'Still looking for null');
-    thaliMobile.
-      _peerAvailabilities[failureButNotAvailable.getConnectionType()].fake =
-    {};
-    return testThaliPeerPoolOneAtATime._replicateThroughProblems(
-                                      failureButAvailable);
-  }).then(function (result) {
-    t.notOk(result, 'Yup, another null');
-    t.equal(failureButAvailable._cloneCounter, 1, 'We cloned!');
-  }).catch(function (err) {
-    t.fail('Failed with ' + err);
-  }).then(function () {
-    delete thaliMobile.
-      _peerAvailabilities[failureButNotAvailable.getConnectionType()].fake;
-    t.end();
-  });
+      t.notOk(result, 'Should have stopped nicely');
+      return testThaliPeerPoolOneAtATime._replicateThroughProblems(
+        failureButNotAvailable);
+    }).then(function (result) {
+      t.notOk(result, 'Still looking for null');
+      thaliMobile.
+        _peerAvailabilities[failureButNotAvailable.getConnectionType()].fake =
+        {};
+      return testThaliPeerPoolOneAtATime._replicateThroughProblems(
+        failureButAvailable);
+    }).then(function (result) {
+      t.notOk(result, 'Yup, another null');
+      t.equal(failureButAvailable._cloneCounter, 1, 'We cloned!');
+    }).catch(function (err) {
+      t.fail('Failed with ' + err);
+    }).then(function () {
+      delete thaliMobile.
+        _peerAvailabilities[failureButNotAvailable.getConnectionType()].fake;
+      t.end();
+    });
 });
 
 
@@ -304,14 +309,15 @@ test('Replication goes first',
   }, function (t) {
     var notificationAction = new TestPeerAction('notificationAction',
       connectionTypes.BLUETOOTH, ThaliNotificationAction.ACTION_TYPE, t);
-    notificationAction.actionBeforeStartReturn = function () {
-      t.notOk(testThaliPeerPoolOneAtATime.enqueue(replicationAction), 'Null 3');
-      return Promise.resolve();
-    };
     var replicationAction = new TestPeerAction('replicationAction',
       connectionTypes.BLUETOOTH, ThaliReplicationAction.ACTION_TYPE, t);
     var notificationAction2 = new TestPeerAction('notificationAction',
       connectionTypes.BLUETOOTH, ThaliNotificationAction.ACTION_TYPE, t);
+
+    notificationAction.actionBeforeStartReturn = function () {
+      t.notOk(testThaliPeerPoolOneAtATime.enqueue(replicationAction), 'Null 3');
+      return Promise.resolve();
+    };
 
     testThaliPeerPoolOneAtATime.start();
     t.notOk(testThaliPeerPoolOneAtATime.enqueue(notificationAction), 'Null 1');
@@ -429,8 +435,14 @@ test('wifi allows many parallel non-replication actions', function (t) {
   };
 
   testThaliPeerPoolOneAtATime.start();
-  t.notOk(testThaliPeerPoolOneAtATime.enqueue(action1), 'First null');
-  t.notOk(testThaliPeerPoolOneAtATime.enqueue(action2), 'Second null');
+
+  t.doesNotThrow(function () {
+    testThaliPeerPoolOneAtATime.enqueue(action1);
+  }, 'First does not throw');
+  t.doesNotThrow(function () {
+    testThaliPeerPoolOneAtATime.enqueue(action2);
+  }, 'Second does not throw');
+
   action1.startPromise
     .then(function () {
       return action2.startPromise;
@@ -460,22 +472,22 @@ test('wifi allows no more than 2 simultaneous replication actions for same ' +
   var action3Killed = false;
   var goOnKilledDone = false;
   var goOnKilled = new Promise(function (resolve) {
-      function check() {
-        if (goOnKilledDone) {
-          return;
-        }
-        if (action1Started && action2Started && !action3Started &&
-            !action1Killed && !action2Killed && action3Killed) {
-          resolve(true);
-          goOnKilledDone = true;
-          return;
-        }
-        setTimeout(function () {
-          check();
-        }, 100);
+    function check() {
+      if (goOnKilledDone) {
+        return;
       }
-      check();
-    });
+      if (action1Started && action2Started && !action3Started &&
+        !action1Killed && !action2Killed && action3Killed) {
+        resolve(true);
+        goOnKilledDone = true;
+        return;
+      }
+      setTimeout(function () {
+        check();
+      }, 100);
+    }
+    check();
+  });
 
   action1.actionBeforeStartReturn = function () {
     action1Started = true;
@@ -514,8 +526,14 @@ test('wifi allows no more than 2 simultaneous replication actions for same ' +
   };
 
   testThaliPeerPoolOneAtATime.start();
-  t.notOk(testThaliPeerPoolOneAtATime.enqueue(action1), 'First null');
-  t.notOk(testThaliPeerPoolOneAtATime.enqueue(action2), 'second null');
-  t.notOk(testThaliPeerPoolOneAtATime.enqueue(action3), 'third null');
+  t.doesNotThrow(function () {
+    testThaliPeerPoolOneAtATime.enqueue(action1);
+  }, 'first ok');
+  t.doesNotThrow(function () {
+    testThaliPeerPoolOneAtATime.enqueue(action2);
+  }, 'second ok');
+  t.doesNotThrow(function () {
+    testThaliPeerPoolOneAtATime.enqueue(action3);
+  }, 'third ok');
 
 });
