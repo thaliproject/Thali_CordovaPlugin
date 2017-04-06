@@ -1536,7 +1536,7 @@ test('network changes emitted correctly',
       // iOS does not support toggleWifi
       platform.isIOS ||
       global.NETWORK_TYPE !== ThaliMobile.networkTypes.WIFI ||
-      global.NETWORK_TYPE      !== ThaliMobile.networkTypes.BOTH
+      global.NETWORK_TYPE !== ThaliMobile.networkTypes.BOTH
     );
   },
   function (t) {
