@@ -128,6 +128,83 @@ test('Can call stopUpdateAdvertisingAndListening twice without start and ' +
   });
 });
 
+test('Can shift data via parallel connections', function (t) {
+  var dataLength = 22;
+
+  var formatPrintableData = function (data) {
+    return data;
+  };
+
+  var server = net.createServer(function (socket) {
+    var ended = false;
+    var buffer = '';
+    socket.on('data', function (chunk) {
+      buffer += chunk.toString();
+
+      // when received all data, send it back
+      if (buffer.length === dataLength) {
+        var rawData = new Buffer(buffer);
+        socket.write(rawData, function () {
+          logger.debug('Server data flushed');
+        });
+        ended = true;
+      }
+    });
+    socket.on('error', function (error) {
+      t.fail(error.message);
+    });
+  });
+  server = makeIntoCloseAllServer(server);
+  serverToBeClosed = server;
+
+  function shiftData(sock, exchangeData) {
+    return new Promise(function (resolve, reject) {
+      sock.on('error', function (error) {
+        reject(error);
+      });
+
+      var receivedData = '';
+      sock.on('data', function (chunk) {
+        receivedData += chunk.toString();
+        if (receivedData === exchangeData) {
+          sock.end();
+        }
+      });
+      sock.on('end', function () {
+        t.equal(receivedData, exchangeData, 'got the same data back');
+        resolve();
+      });
+
+      var rawData = new Buffer(exchangeData);
+      sock.write(rawData, function () {
+        logger.debug('Client data flushed');
+      });
+    });
+  }
+
+  server.listen(0, function () {
+    var port = server.address().port;
+    findPeerAndConnect(port).then(function (info) {
+      var nativePort = info.connection.listeningPort;
+      return Promise.all([
+        connect(net, { port: nativePort }),
+        connect(net, { port: nativePort }),
+        connect(net, { port: nativePort }),
+      ]);
+    }).then(function (sockets) {
+      return Promise.all(sockets.map(function (socket, index) {
+        var string =  'small amount of data ' + index;
+        t.equal(string.length, dataLength, 'correct string length');
+        return shiftData(socket, string);
+      }));
+    })
+    .catch(t.fail)
+    .then(function () {
+      t.end();
+    });
+  });
+});
+
 if (!tape.coordinated) {
   return;
 }
