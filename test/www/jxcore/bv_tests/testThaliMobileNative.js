@@ -128,15 +128,61 @@ test('Can call stopUpdateAdvertisingAndListening twice without start and ' +
   });
 });
 
+function findPeerAndConnect(advertisingPort) {
+  return new Promise(function (resolve, reject) {
+    var connecting = false;
+    Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
+      peers.forEach(function (peer) {
+        if (peer.peerAvailable && !connecting) {
+          connecting = true;
+          thaliMobileNativeTestUtils.connectToPeer(peer)
+            .then(function (connection) {
+              resolve({
+                connection: connection,
+                peer: peer
+              });
+            })
+            .catch(function (error) {
+              error.peer = peer;
+              reject(error);
+            });
+        }
+      });
+    });
+    Mobile('startUpdateAdvertisingAndListening')
+      .callNative(advertisingPort, function (err) {        
+        if (err) {          
+          return reject(err);        
+        }        
+        Mobile('startListeningForAdvertisements').callNative(function (err) {          
+          if (err) {            
+            return reject(err);          
+          }        
+        });      
+      });
+  });
+}
+
+function connect(module, options) {
+  return new Promise(function (resolve, reject) {
+    var connectErrorHandler = function (error) {
+      console.log('Connection to the %d port on localhost failed: %s', options.port, error.stack);
+      reject(error);
+    };
+    console.log('Connecting to the localhost:%d', options.port);
+    var client = module.connect(options, function () {
+      client.removeListener('error', connectErrorHandler);
+      console.log('Connected to the localhost:%d', options.port);
+      resolve(client);
+    });
+    client.once('error', connectErrorHandler);
+  });
+}
+
 test('Can shift data via parallel connections', function (t) {
   var dataLength = 22;
 
-  var formatPrintableData = function (data) {
-    return data;
-  };
-
   var server = net.createServer(function (socket) {
-    var ended = false;
     var buffer = '';
     socket.on('data', function (chunk) {
       buffer += chunk.toString();
@@ -147,7 +193,6 @@ test('Can shift data via parallel connections', function (t) {
         socket.write(rawData, function () {
           logger.debug('Server data flushed');
         });
-        ended = true;
       }
     });
     socket.on('error', function (error) {
@@ -955,9 +1000,10 @@ function (t) {
     t.end();
   });
 
-  thaliMobileNativeTestUtils.startAndListen(t, pretendLocalMux, function (peers) {
-    boundListener.listener(peers);
-  });
+  thaliMobileNativeTestUtils.startAndListen(t, pretendLocalMux,
+    function (peers) {
+      boundListener.listener(peers);
+    });
 });
 
 test('discoveryAdvertisingStateUpdateNonTCP is called', function (t) {
@@ -1003,7 +1049,7 @@ test('discoveryAdvertisingStateUpdateNonTCP is called', function (t) {
         default:
           break;
       }
-  });
+    });
 
   Mobile('startListeningForAdvertisements').callNative(function (err) {
     t.notOk(err, 'Can call startListeningForAdvertisements without error');
