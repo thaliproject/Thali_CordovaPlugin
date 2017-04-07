@@ -581,10 +581,12 @@ CoordinatedClient.getData = function (data) {
 CoordinatedClient.prototype.unexpectedResult = function (result) {
   var error;
   if (result.ok) {
-    error = new Error();
+    error = new Error('An unexpected result was received with status OK ' +
+      'after the test was finished');
   } else {
     error = result.error;
   }
+  logger.debug('unexpected result, result name: \'%s\'', result.name);
   logger.error(
     'unexpected result, error: \'%s\', stack: \'%s\', original result: \'%s\'',
     String(error), error ? error.stack : null, JSON.stringify(result)
