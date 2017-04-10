@@ -33,6 +33,17 @@ var argv = parseargv(process.argv.slice(2), {
   string: ['test', 'filter']
 });
 
+var fs = require('fs');
+try {
+  var stat = fs.statSync(__dirname + '/logs');
+  if (!stat.isDirectory()) {
+    console.log('logs must be a directory');
+    process.exit(1);
+  }
+} catch (e) {
+  fs.mkdirSync('logs');
+}
+
 var spawnedInstanceCount = argv.instanceCount;
 if (spawnedInstanceCount === -1) {
   spawnedInstanceCount = DEFAULT_INSTANCE_COUNT;
@@ -69,10 +80,14 @@ var logInstanceOutput = function (data, instanceId) {
 
 var setListeners = function (instance, instanceId) {
   instanceLogs[instanceId] = '';
+  var ended = false;
+  var file = require('fs')
+    .createWriteStream('logs/' + instanceId + '.log', 'utf8');
 
   instance.stdout
   .on('data', function (data) {
     logInstanceOutput(data, instanceId);
+    ended || file.write(data);
 
     if (data.indexOf('PROCESS_ON_EXIT_') >= 0) {
       if (data.indexOf('PROCESS_ON_EXIT_FAILED') >= 0) {
@@ -94,14 +109,18 @@ var setListeners = function (instance, instanceId) {
   instance.stderr
   .on('data', function (data) {
     logInstanceOutput(data, instanceId);
+    ended || file.write(data);
   });
   instance.on('error', function (err) {
     var error = 'Error : ' + err + '\n' + err.stack;
     logInstanceOutput(error, instanceId);
+    ended || file.write(error);
   });
   instance.on('exit', function (code, signal) {
     var codeAndSignal = 'Exit code: ' + code + '. Exit signal: ' + signal;
     logInstanceOutput(codeAndSignal, instanceId);
+    ended = true;
+    file.end(codeAndSignal);
   });
 };
 

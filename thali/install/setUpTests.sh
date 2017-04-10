@@ -31,7 +31,7 @@ prepare_project()
 
   IPADDRESS=${1:-}
   npm install --no-optional --production --prefix $REPO_ROOT_DIR/thali/install
-  node $REPO_ROOT_DIR/thali/install/validateBuildEnvironment.js
+#node $REPO_ROOT_DIR/thali/install/validateBuildEnvironment.js
 
   cd $REPO_ROOT_DIR/test/TestServer
   npm install --no-optional
@@ -188,7 +188,7 @@ build_ios_if_possible()
       build \
       CONFIGURATION_BUILD_DIR="${IOS_PROJECT_DIR}/build/device" \
       SHARED_PRECOMPS_DIR="${IOS_PROJECT_DIR}/build/sharedpch" \
-      DEVELOPMENT_TEAM="${THALI_TEST_DEVELOPMENT_TEAM:-3648SALNRR}" \
+      DEVELOPMENT_TEAM="${TEST_DEVELOPMENT_TEAM:-65Y83XEN2Z}" \
     )
 
     echo "end building ${PROJECT_NAME} iOS app"
@@ -199,11 +199,18 @@ build_ios_if_possible()
 # Please note that functions order is important
 IPADDRESS=${2:-}
 prepare_project ${IPADDRESS}
-add_android_platform
+#add_android_platform
 add_ios_platform_if_possible
 install_thali $1 ${IPADDRESS}
-build_android
+#build_android
 build_ios_if_possible
+
+echo "init git repo for ThaliTest"
+cd $PROJECT_ROOT_DIR
+git init
+git checkout -b master
+git add ./
+git commit -m 'Initial commit'
 
 echo "Remember to start the test coordination server by running jx index.js"
 echo "end setUpTests.sh"

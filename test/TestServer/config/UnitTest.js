@@ -13,7 +13,7 @@ module.exports = {
   },
   minDevices: {
     // This is a list of desired platforms.
-    ios: 3,
+    ios: 2,
     android: 3,
     desktop: 3
   },
