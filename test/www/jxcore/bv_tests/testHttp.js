@@ -8,6 +8,7 @@ var ThaliMobileNativeWrapper =
   require('thali/NextGeneration/thaliMobileNativeWrapper');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var platform = require('thali/NextGeneration/utils/platform');
+var randomString = require('randomstring');
 
 var router = function () {};
 
@@ -206,11 +207,27 @@ test('Multiple coordinated request ios native',
     global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
   },
   function (t) {
+    var firstReply = randomString.generate(2000);
+    var secondReply = randomString.generate(30);
+    var thirdReply = randomString.generate(3000);
+    var reply;
     var total = t.participants.length - 1;
     var find = peerFinder();
 
     var server = http.createServer(function (request, response) {
-      var reply = request.method + ' ' + request.url;
+      switch (request.url) {
+        case '/path0':
+          reply = firstReply;
+          break;
+        case '/path1':
+          reply = secondReply;
+          break;
+        case '/path2':
+          reply = thirdReply;
+          break;
+        default:
+          t.end;
+      }
       response.end(reply);
     });
 
@@ -248,9 +265,9 @@ test('Multiple coordinated request ios native',
       })
       .then(function (responses) {
         responses.forEach(function (r) {
-          t.equal(r[0].toString(), 'GET /path0');
-          t.equal(r[1].toString(), 'GET /path1');
-          t.equal(r[2].toString(), 'GET /path2');
+          t.equal(r[0].toString(), firstReply);
+          t.equal(r[1].toString(), secondReply);
+          t.equal(r[2].toString(), thirdReply);
         });
       })
       .catch(t.fail)
