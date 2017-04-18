@@ -1117,7 +1117,7 @@ var handleRecreatedPeer = function (nativePeer) {
         });
     }
   }
-}
+};
 
 ThaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent',
 function (nativePeer) {
@@ -1416,7 +1416,7 @@ var emitIfConnectionTypePeersLimitReached = function (connectionType) {
         count: connectionTypePeersCount
       });
   }
-}
+};
 
 var emitDiscoveryDOS = function (dosInfo) {
   module.exports.emitter.emit('discoveryDOS', dosInfo);
@@ -1433,7 +1433,7 @@ Object.keys(connectionTypes)
           limit: info.limit,
           count: info.count
         });
-      })
+      });
   });
 
 

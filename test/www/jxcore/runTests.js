@@ -13,6 +13,12 @@ if (!process.env.SSDP_NT) {
     length: 'http://www.thaliproject.org/ssdp'.length
   });
 }
+// Override sinon timers 
+// issue https://github.com/thaliproject/jxcore/issues/86
+var sinon = require('sinon');
+sinon.config = {
+  useFakeTimers: false
+};
 
 var thaliTape = require('./lib/thaliTape');
 var testUtils = require('./lib/testUtils');

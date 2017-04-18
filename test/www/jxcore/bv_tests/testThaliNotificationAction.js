@@ -2,7 +2,6 @@
 var tape = require('../lib/thaliTape');
 var express = require('express');
 var crypto = require('crypto');
-var sinon = require('sinon');
 var Promise = require('lie');
 var testUtils = require('../lib/testUtils.js');
 var httpTester = require('../lib/httpTester.js');
@@ -109,11 +108,8 @@ var addressBookCallback = function (unencryptedKeyId) {
   return null;
 };
 
-var sandbox = null;
-
 var test = tape({
   setup: function (t) {
-    sandbox = sinon.sandbox.create();
     globals = new GlobalVariables();
     globals.init()
       .then(function () {
@@ -125,7 +121,6 @@ var test = tape({
       });
   },
   teardown: function (t) {
-    sandbox.restore();
     globals.kill()
       .then(function () {
         t.end();
@@ -137,14 +132,14 @@ var test = tape({
   }
 });
 
-test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
+test('Test BEACONS_RETRIEVED_AND_PARSED locally', tape.sinonTest(function (t) {
   t.plan(8);
 
   httpTester.runServer(globals.expressRouter,
     thaliConfig.NOTIFICATION_BEACON_PATH,
     200, globals.preambleAndBeacons, 1);
 
-  sandbox.stub(ThaliMobile, 'getPeerHostInfo')
+  this.stub(ThaliMobile, 'getPeerHostInfo')
     .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
     .returns(Promise.resolve(globals.testPeerHostInfo));
 
@@ -190,15 +185,15 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', function (t) {
     .catch(function (failure) {
       t.fail(failure.stack);
     });
-});
+}));
 
-test('Test HTTP_BAD_RESPONSE locally', function (t) {
+test('Test HTTP_BAD_RESPONSE locally', tape.sinonTest(function (t) {
   t.plan(2);
 
   httpTester.runServer(globals.expressRouter,
     thaliConfig.NOTIFICATION_BEACON_PATH, 503, 'hello', 1);
 
-  sandbox.stub(ThaliMobile, 'getPeerHostInfo')
+  this.stub(ThaliMobile, 'getPeerHostInfo')
     .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
     .returns(Promise.resolve(globals.testPeerHostInfo));
 
@@ -226,15 +221,15 @@ test('Test HTTP_BAD_RESPONSE locally', function (t) {
     .catch(function (err) {
       t.fail('Test failed:' + err.message);
     });
-});
+}));
 
-test('Test NETWORK_PROBLEM locally', function (t) {
+test('Test NETWORK_PROBLEM locally', tape.sinonTest(function (t) {
   t.plan(2);
 
   testUtils.makeDomainUnresolvable('unresolvable_domain');
   globals.testPeerHostInfo.hostAddress = 'unresolvable_domain';
 
-  sandbox.stub(ThaliMobile, 'getPeerHostInfo')
+  this.stub(ThaliMobile, 'getPeerHostInfo')
     .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
     .returns(Promise.resolve(globals.testPeerHostInfo));
 
@@ -266,14 +261,14 @@ test('Test NETWORK_PROBLEM locally', function (t) {
         'reject reason should be: Could not establish TCP connection'
       );
     });
-});
+}));
 
-test('Action fails when getPeerHostInfo fails', function (t) {
+test('Action fails when getPeerHostInfo fails', tape.sinonTest(function (t) {
   t.plan(2);
 
   var errorMessage = 'Unspecified error';
 
-  sandbox.stub(
+  this.stub(
     ThaliMobile,
     'getPeerHostInfo',
     function () {
@@ -304,16 +299,16 @@ test('Action fails when getPeerHostInfo fails', function (t) {
     }).catch(function (err) {
       t.equals(err.message, errorMessage, 'correct error message');
     });
-});
+}));
 
-test('Call the start two times', function (t) {
+test('Call the start two times', tape.sinonTest(function (t) {
   t.plan(3);
 
   httpTester.runServer(globals.expressRouter,
     thaliConfig.NOTIFICATION_BEACON_PATH,
     200, globals.preambleAndBeacons, 1);
 
-  sandbox.stub(ThaliMobile, 'getPeerHostInfo')
+  this.stub(ThaliMobile, 'getPeerHostInfo')
     .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
     .returns(Promise.resolve(globals.testPeerHostInfo));
 
@@ -350,12 +345,12 @@ test('Call the start two times', function (t) {
     .catch(function (err) {
       t.equals(err.message, ThaliPeerAction.DOUBLE_START, 'Call start once');
     });
-});
+}));
 
-test('Call the kill before calling the start', function (t) {
+test('Call the kill before calling the start', tape.sinonTest(function (t) {
   t.plan(2);
 
-  sandbox.stub(ThaliMobile, 'getPeerHostInfo')
+  this.stub(ThaliMobile, 'getPeerHostInfo')
     .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
     .returns(Promise.resolve(globals.testPeerHostInfo));
 
@@ -382,9 +377,9 @@ test('Call the kill before calling the start', function (t) {
       t.equals(err.message, ThaliPeerAction.START_AFTER_KILLED,
         'Start after killed');
     });
-});
+}));
 
-test('Call the kill immediately after the start', function (t) {
+test('Call the kill immediately after the start', tape.sinonTest(function (t) {
   t.plan(2);
 
   // Sets 2000 milliseconds delay for request handling.
@@ -393,7 +388,7 @@ test('Call the kill immediately after the start', function (t) {
 
   globals.testPeerHostInfo.suggestedTCPTimeout = 1;
 
-  sandbox.stub(ThaliMobile, 'getPeerHostInfo')
+  this.stub(ThaliMobile, 'getPeerHostInfo')
     .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
     .returns(Promise.resolve(globals.testPeerHostInfo));
 
@@ -424,106 +419,10 @@ test('Call the kill immediately after the start', function (t) {
     });
 
   act.kill();
-});
+}));
 
-test('Call the kill while waiting a response from the server', function (t) {
-  t.plan(2);
-
-  // Sets 10000 milliseconds delay for request handling.
-  httpTester.runServer(globals.expressRouter, '/NotificationBeacons', 503,
-    'hello', 1, 10000);
-
-  // Sets 10000 milliseconds TCP timeout.
-  globals.testPeerHostInfo.suggestedTCPTimeout = 10000;
-
-  sandbox.stub(ThaliMobile, 'getPeerHostInfo')
-    .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
-    .returns(Promise.resolve(globals.testPeerHostInfo));
-
-  var act = new NotificationAction(
-    globals.testPeer,
-    globals.targetDeviceKeyExchangeObjects[0],
-    addressBookCallback,
-    TCP_NATIVE
-  );
-
-  act.eventEmitter.once(
-    NotificationAction.Events.Resolved,
-    function (_, res) {
-      t.equals(
-        res, NotificationAction.ActionResolution.KILLED,
-        'Should be KILLED'
-      );
-    }
-  );
-
-  act.start(globals.actionAgent)
-    .then(function (res) {
-      t.equals(
-        res,
-        null,
-        'must return null after successful kill');
-    })
-    .catch(function (err) {
-      t.fail('Test failed:' + err);
-    });
-
-  // This kills the action after 2 seconds. This should give enough time to
-  // establish a HTTP connection in slow devices but since the server waits
-  // 10 seconds before it answers we end up killing the connection when the
-  // client is waiting the server to answer.
-
-  setTimeout( function () {
-    act.kill();
-  }, 2000);
-});
-
-test('Test to exceed the max content size locally', function (t) {
-  t.plan(2);
-
-  var buffer = new Buffer(1024);
-  buffer.fill('h');
-
-  httpTester.runServer(globals.expressRouter,
-    thaliConfig.NOTIFICATION_BEACON_PATH,
-    200, buffer, 1+NotificationAction.MAX_CONTENT_SIZE_IN_BYTES/1024);
-
-  // Sets 10000 milliseconds TCP timeout.
-  globals.testPeerHostInfo.suggestedTCPTimeout = 10000;
-
-  sandbox.stub(ThaliMobile, 'getPeerHostInfo')
-    .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
-    .returns(Promise.resolve(globals.testPeerHostInfo));
-
-  var act = new NotificationAction(
-    globals.testPeer,
-    globals.targetDeviceKeyExchangeObjects[0],
-    addressBookCallback,
-    TCP_NATIVE
-  );
-
-  act.eventEmitter.once(
-    NotificationAction.Events.Resolved,
-    function (_, res) {
-      t.equals(
-        res, NotificationAction.ActionResolution.HTTP_BAD_RESPONSE,
-        'HTTP_BAD_RESPONSE should be response when content size is exceeded'
-      );
-    }
-  );
-
-  act.start(globals.actionAgent)
-    .then(function (res) {
-      t.equals(res, null, 'must return null after successful call');
-    })
-    .catch(function (failure) {
-      t.fail('Test failed:' + failure);
-    });
-});
-
-test('Close the server socket while the client is waiting a response ' +
-  'from the server. Local test.',
-  function (t) {
+test('Call the kill while waiting a response from the server',
+  tape.sinonTest(function (t) {
     t.plan(2);
 
     // Sets 10000 milliseconds delay for request handling.
@@ -533,7 +432,107 @@ test('Close the server socket while the client is waiting a response ' +
     // Sets 10000 milliseconds TCP timeout.
     globals.testPeerHostInfo.suggestedTCPTimeout = 10000;
 
-    sandbox.stub(ThaliMobile, 'getPeerHostInfo')
+    this.stub(ThaliMobile, 'getPeerHostInfo')
+      .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
+      .returns(Promise.resolve(globals.testPeerHostInfo));
+
+    var act = new NotificationAction(
+      globals.testPeer,
+      globals.targetDeviceKeyExchangeObjects[0],
+      addressBookCallback,
+      TCP_NATIVE
+    );
+
+    act.eventEmitter.once(
+      NotificationAction.Events.Resolved,
+      function (_, res) {
+        t.equals(
+          res, NotificationAction.ActionResolution.KILLED,
+          'Should be KILLED'
+        );
+      }
+    );
+
+    act.start(globals.actionAgent)
+      .then(function (res) {
+        t.equals(
+          res,
+          null,
+          'must return null after successful kill');
+      })
+      .catch(function (err) {
+        t.fail('Test failed:' + err);
+      });
+
+    // This kills the action after 2 seconds. This should give enough time to
+    // establish a HTTP connection in slow devices but since the server waits
+    // 10 seconds before it answers we end up killing the connection when the
+    // client is waiting the server to answer.
+
+    setTimeout( function () {
+      act.kill();
+    }, 2000);
+  })
+);
+
+test('Test to exceed the max content size locally',
+  tape.sinonTest(function (t) {
+    t.plan(2);
+
+    var buffer = new Buffer(1024);
+    buffer.fill('h');
+
+    httpTester.runServer(globals.expressRouter,
+      thaliConfig.NOTIFICATION_BEACON_PATH,
+      200, buffer, 1+NotificationAction.MAX_CONTENT_SIZE_IN_BYTES/1024);
+
+    // Sets 10000 milliseconds TCP timeout.
+    globals.testPeerHostInfo.suggestedTCPTimeout = 10000;
+
+    this.stub(ThaliMobile, 'getPeerHostInfo')
+      .withArgs(globals.testPeer.peerIdentifier, globals.testPeer.connectionType)
+      .returns(Promise.resolve(globals.testPeerHostInfo));
+
+    var act = new NotificationAction(
+      globals.testPeer,
+      globals.targetDeviceKeyExchangeObjects[0],
+      addressBookCallback,
+      TCP_NATIVE
+    );
+
+    act.eventEmitter.once(
+      NotificationAction.Events.Resolved,
+      function (_, res) {
+        t.equals(
+          res, NotificationAction.ActionResolution.HTTP_BAD_RESPONSE,
+          'HTTP_BAD_RESPONSE should be response when content size is exceeded'
+        );
+      }
+    );
+
+    act.start(globals.actionAgent)
+      .then(function (res) {
+        t.equals(res, null, 'must return null after successful call');
+      })
+      .catch(function (failure) {
+        t.fail('Test failed:' + failure);
+      });
+  })
+);
+
+test('Close the server socket while the client is waiting a response ' +
+  'from the server. Local test.',
+  tape.sinonTest(function (t) {
+    t.plan(2);
+
+    // Sets 10000 milliseconds delay for request handling.
+    httpTester.runServer(globals.expressRouter, '/NotificationBeacons', 503,
+      'hello', 1, 10000);
+
+    // Sets 10000 milliseconds TCP timeout.
+    globals.testPeerHostInfo.suggestedTCPTimeout = 10000;
+
+    this.stub(ThaliMobile, 'getPeerHostInfo')
       .withArgs(
         globals.testPeer.peerIdentifier,
         globals.testPeer.connectionType
@@ -579,11 +578,12 @@ test('Close the server socket while the client is waiting a response ' +
         globals.expressServer = null;
       });
     }, 2000);
-  });
+  })
+);
 
 test('Close the client socket while the client is waiting a response ' +
   'from the server. Local test.',
-  function (t) {
+  tape.sinonTest(function (t) {
     t.plan(2);
 
     // Sets 10000 milliseconds delay for request handling.
@@ -593,7 +593,7 @@ test('Close the client socket while the client is waiting a response ' +
     // Sets 10000 milliseconds TCP timeout.
     globals.testPeerHostInfo.suggestedTCPTimeout = 10000;
 
-    sandbox.stub(ThaliMobile, 'getPeerHostInfo')
+    this.stub(ThaliMobile, 'getPeerHostInfo')
       .withArgs(
         globals.testPeer.peerIdentifier,
         globals.testPeer.connectionType
@@ -639,4 +639,5 @@ test('Close the client socket while the client is waiting a response ' +
         });
       });
     }, 2000);
-  });
+  })
+);

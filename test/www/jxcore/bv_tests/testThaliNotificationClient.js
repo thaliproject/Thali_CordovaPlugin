@@ -2,7 +2,6 @@
 var tape = require('../lib/thaliTape');
 var express = require('express');
 var crypto = require('crypto');
-var sinon = require('sinon');
 var Promise = require('bluebird');
 var http = require('http');
 var httpTester = require('../lib/httpTester.js');
@@ -147,8 +146,8 @@ var test = tape({
   }
 });
 
-function stubGetPeerHostInfo() {
-  return sinon.stub(
+function stubGetPeerHostInfo(sandbox) {
+  return sandbox.stub(
     ThaliMobile,
     'getPeerHostInfo',
     function (peerIdentifier, connectionType) {
@@ -157,7 +156,7 @@ function stubGetPeerHostInfo() {
   );
 }
 
-test('Add two Peers.', function (t) {
+test('Add two Peers.', tape.sinonTest(function (t) {
 
   // Scenario:
   // 1. Event: connectionType is BLUETOOTH
@@ -165,8 +164,7 @@ test('Add two Peers.', function (t) {
 
   // Expected result:
   // Two peers are added into the dictionary
-
-  var getPeerHostInfoStub = stubGetPeerHostInfo();
+  var getPeerHostInfoStub = stubGetPeerHostInfo(this);
 
   var notificationClient =
     new ThaliNotificationClient(globals.peerPoolInterfaceStub,
@@ -222,19 +220,17 @@ test('Add two Peers.', function (t) {
   );
 
   notificationClient.stop();
-  getPeerHostInfoStub.restore();
   t.end();
-});
+}));
 
-test('TCP_NATIVE peer loses DNS', function (t) {
+test('TCP_NATIVE peer loses DNS', tape.sinonTest(function (t) {
 
   // Scenario:
   // 1. Event: connectionType is TCP_NATIVE, hostaddress is set
   // 2. Event: connectionType is TCP_NATIVE, hostaddress is not set
 
   // Expected result: Peer will be removed from the dictionary
-
-  var getPeerHostInfoStub = stubGetPeerHostInfo();
+  var getPeerHostInfoStub = stubGetPeerHostInfo(this);
 
   var notificationClient =
     new ThaliNotificationClient(globals.peerPoolInterfaceStub,
@@ -256,18 +252,17 @@ test('TCP_NATIVE peer loses DNS', function (t) {
     'notification peer dictionary does not contain any peers');
 
   notificationClient.stop();
-  getPeerHostInfoStub.restore();
   t.end();
-});
+}));
 
-test('Received beacons with no values for us', function (t) {
+test('Received beacons with no values for us', tape.sinonTest(function (t) {
   var notificationClient =
     new ThaliNotificationClient(globals.peerPoolInterface,
       globals.targetDeviceKeyExchangeObjects[0]);
 
-  var getPeerHostInfoStub = stubGetPeerHostInfo();
+  var getPeerHostInfoStub = stubGetPeerHostInfo(this);
 
-  var enqueueStub = sinon.stub(
+  var enqueueStub = this.stub(
     globals.peerPoolInterface,
     'enqueue',
     function (action) {
@@ -311,9 +306,6 @@ test('Received beacons with no values for us', function (t) {
   }
 
   var finalizeTest = function (err) {
-    getPeerHostInfoStub.restore();
-    enqueueStub.restore();
-
     notificationClient.removeListener(
       notificationClient.Events.PeerAdvertisesDataForUs,
       notificationHandler
@@ -323,60 +315,61 @@ test('Received beacons with no values for us', function (t) {
 
   // New peer with TCP connection
   notificationClient._peerAvailabilityChanged(globals.TCPEvent);
-});
+}));
 
-test('Notification action killed with a superseded', function (t) {
-  var notificationClient =
-    new ThaliNotificationClient(globals.peerPoolInterface,
-      globals.targetDeviceKeyExchangeObjects[0]);
+test('Notification action killed with a superseded', 
+  tape.sinonTest(function (t) {
+    var notificationClient =
+      new ThaliNotificationClient(globals.peerPoolInterface,
+        globals.targetDeviceKeyExchangeObjects[0]);
 
-  var peerPoolInterface = globals.peerPoolInterface;
-  var enqueue = function (action) {
-    setImmediate(function () {
-      action.killSuperseded();
-      // Give the system a chance to fire any promises or events in case the
-      // logic isn't working right.
+    var peerPoolInterface = globals.peerPoolInterface;
+    var enqueue = function (action) {
       setImmediate(function () {
-        var entry = notificationClient.peerDictionary.get({
-          peerIdentifier: action.getPeerIdentifier(),
-          generation: action.getPeerGeneration(),
+        action.killSuperseded();
+        // Give the system a chance to fire any promises or events in case the
+        // logic isn't working right.
+        setImmediate(function () {
+          var entry = notificationClient.peerDictionary.get({
+            peerIdentifier: action.getPeerIdentifier(),
+            generation: action.getPeerGeneration(),
+          });
+          t.equal(action.getActionState(), PeerAction.actionState.KILLED,
+            'Action should be KILLED');
+          t.equal(entry.peerState, PeerDictionary.peerState.RESOLVED,
+            'Peer state should be RESOLVED');
+
+          notificationClient.removeListener(
+            notificationClient.Events.PeerAdvertisesDataForUs,
+            notificationHandler
+          );
+          t.end();
         });
-        t.equal(action.getActionState(), PeerAction.actionState.KILLED,
-          'Action should be KILLED');
-        t.equal(entry.peerState, PeerDictionary.peerState.RESOLVED,
-          'Peer state should be RESOLVED');
-        peerPoolInterface.enqueue.restore();
-
-        notificationClient.removeListener(
-          notificationClient.Events.PeerAdvertisesDataForUs,
-          notificationHandler
-        );
-        t.end();
       });
-    });
-    return null;
-  };
+      return null;
+    };
 
-  sinon.stub(globals.peerPoolInterface, 'enqueue', enqueue);
+    this.stub(globals.peerPoolInterface, 'enqueue', enqueue);
 
-  var bogusPublicKey =
-    crypto.createECDH(thaliConfig.BEACON_CURVE).generateKeys();
+    var bogusPublicKey =
+      crypto.createECDH(thaliConfig.BEACON_CURVE).generateKeys();
 
-  notificationClient.start([bogusPublicKey]);
+    notificationClient.start([bogusPublicKey]);
 
-  notificationClient.on(
-    notificationClient.Events.PeerAdvertisesDataForUs,
-    notificationHandler
-  );
-  function notificationHandler() {
-    t.fail('We should not have gotten a PeerAdvertisesDataForUs event!');
-  }
+    notificationClient.on(
+      notificationClient.Events.PeerAdvertisesDataForUs,
+      notificationHandler
+    );
+    function notificationHandler() {
+      t.fail('We should not have gotten a PeerAdvertisesDataForUs event!');
+    }
 
-  // New peer with TCP connection
-  notificationClient._peerAvailabilityChanged(globals.TCPEvent);
-});
+    // New peer with TCP connection
+    notificationClient._peerAvailabilityChanged(globals.TCPEvent);
+  })
+);
 
-test('Resolves an action locally', function (t) {
+test('Resolves an action locally', tape.sinonTest(function (t) {
 
   // Scenario:
   // 1. Event: connectionType is TCP_NATIVE, hostaddress is set
@@ -384,10 +377,10 @@ test('Resolves an action locally', function (t) {
   // Expected result:
   // Action is getting resolved ok
 
-  var getPeerHostInfoStub = stubGetPeerHostInfo();
+  var getPeerHostInfoStub = stubGetPeerHostInfo(this);
 
   // Simulates how the peer pool runs actions
-  var enqueueStub = sinon.stub(
+  var enqueueStub = this.stub(
     globals.peerPoolInterface,
     'enqueue',
     function (action) {
@@ -436,23 +429,21 @@ test('Resolves an action locally', function (t) {
         'peerIDs must match');
 
       notificationClient.stop();
-      enqueueStub.restore();
-      getPeerHostInfoStub.restore();
       t.end();
     }
   );
 
   // New peer with TCP connection
   notificationClient._peerAvailabilityChanged(globals.TCPEvent);
-});
+}));
 
-test('Emits error event when peerPool.enqueue throws', function (t) {
+test('Emits error event when peerPool.enqueue throws', tape.sinonTest(function (t) {
 
   // This test should get error event almost instantly. We don't need to wait
   // default several minutes timeout
   t.timeoutAfter(20);
 
-  var getPeerHostInfoStub = stubGetPeerHostInfo();
+  var getPeerHostInfoStub = stubGetPeerHostInfo(this);
   var peerPool = {
     enqueue: function () {
       throw new Error('oops');
@@ -476,16 +467,15 @@ test('Emits error event when peerPool.enqueue throws', function (t) {
   notificationClient.once('error', function (error) {
     t.equal(error.message, 'oops', 'Correct error');
     notificationClient.stop();
-    getPeerHostInfoStub.restore();
     t.end();
   });
 
   // trigger error
   notificationClient._peerAvailabilityChanged(TCPEvent);
 
-});
+}));
 
-test('Resolves an action locally using ThaliPeerPoolDefault', function (t) {
+test('Resolves an action locally using ThaliPeerPoolDefault', tape.sinonTest(function (t) {
 
   // Scenario:
   // 1. Event: connectionType is TCP_NATIVE, hostaddress is set
@@ -493,7 +483,7 @@ test('Resolves an action locally using ThaliPeerPoolDefault', function (t) {
   // Expected result:
   // Action is getting resolved ok
 
-  var getPeerHostInfoStub = stubGetPeerHostInfo();
+  var getPeerHostInfoStub = stubGetPeerHostInfo(this);
 
   var peerPool = new ThaliPeerPoolDefault();
   peerPool.start();
@@ -530,17 +520,15 @@ test('Resolves an action locally using ThaliPeerPoolDefault', function (t) {
         res.peerId,
         globals.TCPEvent.peerIdentifier,
         'peerIds must match');
-
-      getPeerHostInfoStub.restore();
       t.end();
     }
   );
 
   // New peer with TCP connection
   notificationClient._peerAvailabilityChanged(globals.TCPEvent);
-});
+}));
 
-test('Action fails because of a bad hostname.', function (t) {
+test('Action fails because of a bad hostname.', tape.sinonTest(function (t) {
 
   // Scenario:
   // ConnectionType is TCP_NATIVE, host address is having wrong DNS.
@@ -569,7 +557,7 @@ test('Action fails because of a bad hostname.', function (t) {
     suggestedTCPTimeout: 10000
   };
 
-  var getPeerHostInfoStub = sinon.stub(
+  var getPeerHostInfoStub = this.stub(
     ThaliMobile,
     'getPeerHostInfo',
     function (peerIdentifier, connectionType) {
@@ -589,7 +577,7 @@ test('Action fails because of a bad hostname.', function (t) {
   };
 
   // Simulates how peer pool runs actions
-  var enqueueStub = sinon.stub(
+  var enqueueStub = this.stub(
     globals.peerPoolInterface,
     'enqueue',
     function (action) {
@@ -639,8 +627,6 @@ test('Action fails because of a bad hostname.', function (t) {
         'correct final peer state'
       );
     }
-    enqueueStub.restore();
-    getPeerHostInfoStub.restore();
     notificationClient.stop();
     testUtils.restoreUnresolvableDomains();
     t.end();
@@ -650,9 +636,9 @@ test('Action fails because of a bad hostname.', function (t) {
 
   // New peer with TCP connection
   notificationClient._peerAvailabilityChanged(TCPEvent);
-});
+}));
 
-test('hostaddress is removed when the action is running. ', function (t) {
+test('hostaddress is removed when the action is running. ', tape.sinonTest(function (t) {
   var isTestFinished = false;
   // Scenario:
   // 1. Event: connectionType is TCP_NATIVE, peer is available
@@ -678,8 +664,8 @@ test('hostaddress is removed when the action is running. ', function (t) {
       });
   };
 
-  var enqueueStub = sinon.stub(globals.peerPoolInterface, 'enqueue', enqueue);
-  var getPeerHostInfoStub = stubGetPeerHostInfo();
+  var enqueueStub = this.stub(globals.peerPoolInterface, 'enqueue', enqueue);
+  var getPeerHostInfoStub = stubGetPeerHostInfo(this);
 
   httpTester.runServer(globals.expressRouter,
     thaliConfig.NOTIFICATION_BEACON_PATH,
@@ -726,16 +712,13 @@ test('hostaddress is removed when the action is running. ', function (t) {
     t.equal(notificationClient.peerDictionary.size(), 0,
       'peerDictionary should become empty');
     notificationClient.stop();
-    enqueueStub.restore();
-    getPeerHostInfoStub.restore();
 
     t.end();
   }, 2000);
-});
+}));
 
 test('notificationClient does not retry action with BAD_PEER resolution',
-  function (t) {
-    var sandbox = sinon.sandbox.create();
+  tape.sinonTest(function (t) {
     var getPeerHostInfoErrorMessage = 'getPeerHostInfo fail';
     var peerId = globals.TCPEvent.peerIdentifier;
     var generation = globals.TCPEvent.generation;
@@ -744,7 +727,7 @@ test('notificationClient does not retry action with BAD_PEER resolution',
       new ThaliNotificationClient(globals.peerPoolInterface,
         globals.targetDeviceKeyExchangeObjects[0]);
 
-    var actionResolvedSpy = sandbox.spy();
+    var actionResolvedSpy = this.spy();
     var enqueue = function (action) {
       var keepAliveAgent = new http.Agent({ keepAlive: true });
 
@@ -768,13 +751,12 @@ test('notificationClient does not retry action with BAD_PEER resolution',
           'peer state should be RESOLVED');
       })
       .then(function () {
-        sandbox.restore();
         t.end();
       });
     };
 
-    sandbox.stub(globals.peerPoolInterface, 'enqueue', enqueue);
-    sandbox.stub(ThaliMobile, 'getPeerHostInfo',
+    this.stub(globals.peerPoolInterface, 'enqueue', enqueue);
+    this.stub(ThaliMobile, 'getPeerHostInfo',
       function (peerId, connectionType) {
         return Promise.reject(new Error(getPeerHostInfoErrorMessage));
       }
@@ -784,13 +766,13 @@ test('notificationClient does not retry action with BAD_PEER resolution',
 
     // New peer with TCP connection
     notificationClient._peerAvailabilityChanged(globals.TCPEvent);
-  }
+  })
 );
 
 test(
   'notification client correctly handles peer availability changes ' +
   'of the same peer',
-  function (t) {
+  tape.sinonTest(function (t) {
     testUtils.makeDomainUnresolvable('unresolvable_hostname');
     globals.TCPPeerHostInfo.hostAddress = 'unresolvable_hostname';
 
@@ -823,8 +805,6 @@ test(
           setTimeout(function () {
             action.kill();
             t.pass('second action killed');
-            enqueueStub.restore();
-            getPeerHostInfoStub.restore();
             // notificationClient enqueues action and then synchronously updates
             // peerDictionary with enqueued action. If we stop notificationClient
             // inside enqueue stack it will fail.
@@ -836,10 +816,10 @@ test(
       }
     };
 
-    var enqueueStub = sinon.stub(globals.peerPoolInterface, 'enqueue', enqueue);
-    var getPeerHostInfoStub = stubGetPeerHostInfo();
+    var enqueueStub = this.stub(globals.peerPoolInterface, 'enqueue', enqueue);
+    var getPeerHostInfoStub = stubGetPeerHostInfo(this);
 
     notificationClient.start([globals.sourcePublicKey]);
     notificationClient._peerAvailabilityChanged(globals.TCPEvent);
-  }
+  })
 );

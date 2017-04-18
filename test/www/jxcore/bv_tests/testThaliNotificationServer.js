@@ -90,6 +90,8 @@ GlobalVariables.prototype.init = function () {
  */
 GlobalVariables.prototype.kill = function () {
   var self = this;
+  globalVariables.spyStartUpdateAdvertisingAndListening.restore();
+  globalVariables.spyStopAdvertisingAndListening.restore();
   return new Promise(function (resolve, reject) {
     if (self.expressServer) {
       self.expressServer.closeAll(function (error) {

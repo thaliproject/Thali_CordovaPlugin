@@ -8,7 +8,6 @@ if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
 var express = require('express');
 var net = require('net');
 var Promise = require('lie');
-var sinon = require('sinon');
 var testUtils = require('../lib/testUtils.js');
 
 if (typeof Mobile === 'undefined') {
@@ -346,7 +345,7 @@ test('all services are stopped when we call stop', function (t) {
 
 var verifyCallWithArguments = function (t, callName, parameters) {
   var mockServersManager = {};
-  var spy = sinon.spy();
+  var spy = this.spy();
   var serversManagerEquivalentCallName = callName === '_terminateConnection' ?
     'terminateIncomingConnection' : 'terminateOutgoingConnection';
   mockServersManager[serversManagerEquivalentCallName] = function () {
@@ -369,9 +368,9 @@ var verifyCallWithArguments = function (t, callName, parameters) {
 
 test('make sure terminateConnection is properly hooked up',
   testUtils.skipOnIOS,
-  function (t) {
-    verifyCallWithArguments(t, '_terminateConnection', ['connection-id']);
-  }
+  tape.sinonTest(function (t) {
+    verifyCallWithArguments.call(this, t, '_terminateConnection', ['connection-id']);
+  })
 );
 
 test('make sure terminateConnection is return error if we get called on iOS',
@@ -393,9 +392,9 @@ test('make sure terminateConnection is return error if we get called on iOS',
 
 test('make sure terminateListener is properly hooked up',
   testUtils.skipOnIOS,
-  function (t) {
-    verifyCallWithArguments(t, '_terminateListener', ['peer-id', 8080]);
-  }
+  tape.sinonTest(function (t) {
+    verifyCallWithArguments.call(this, t, '_terminateListener', ['peer-id', 8080]);
+  })
 );
 
 test('make sure terminateListener is return error if we get called on iOS',
@@ -848,11 +847,11 @@ test('can still do HTTP requests between peers with coordinator', function (t) {
 
 test('calls correct starts when network changes',
   testUtils.skipOnIOS, // uses toggleBluetooth
-  function (t) {
+  tape.sinonTest(function (t) {
     var listeningSpy =
-      sinon.spy(thaliMobileNativeWrapper, 'startListeningForAdvertisements');
+      this.spy(thaliMobileNativeWrapper, 'startListeningForAdvertisements');
     var advertisingSpy =
-      sinon.spy(thaliMobileNativeWrapper, 'startUpdateAdvertisingAndListening');
+      this.spy(thaliMobileNativeWrapper, 'startUpdateAdvertisingAndListening');
 
     return thaliMobileNativeWrapper.start(express.Router())
       .then(function () {
@@ -905,11 +904,9 @@ test('calls correct starts when network changes',
         return thaliMobileNativeWrapper.stop();
       })
       .then(function () {
-        listeningSpy.restore();
-        advertisingSpy.restore();
         t.end();
       });
-  }
+  })
 );
 
 // The connection cut is implemented as a separate test instead
@@ -1045,13 +1042,13 @@ test('We fire nonTCPPeerAvailabilityChangedEvent with the same generation ' +
     return true;
     // return platform.isIOS
   },
-  function (t) {
+  tape.sinonTest(function (t) {
     trivialEndToEndTest(t, function (peerId) {
       var beforeRecreatePeer = null;
       var afterRecreatePeer = null;
       var isKilled = false;
       var serversManager = thaliMobileNativeWrapper._getServersManager();
-      var smEmitSpy = sinon.spy(serversManager, 'emit');
+      var smEmitSpy = this.spy(serversManager, 'emit');
 
       function finishTest() {
         t.ok(isKilled, 'mux must be destroyed');
@@ -1085,7 +1082,6 @@ test('We fire nonTCPPeerAvailabilityChangedEvent with the same generation ' +
           'nonTCPPeerAvailabilityChangedEvent',
           nonTCPAvailableHandler
         );
-        smEmitSpy.restore();
         t.end();
       }
 
@@ -1118,5 +1114,5 @@ test('We fire nonTCPPeerAvailabilityChangedEvent with the same generation ' +
       thaliMobileNativeWrapper.emitter
         .on('nonTCPPeerAvailabilityChangedEvent', nonTCPAvailableHandler);
     });
-  }
+  })
 );
