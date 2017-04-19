@@ -321,7 +321,7 @@ function connect(module, options) {
   });
 }
 
-function wairForEvent(emitter, event) {
+function waitForEvent(emitter, event) {
   return new Promise(function (resolve) {
     emitter.once(event, resolve);
   });
@@ -470,11 +470,6 @@ test('Can shift data securely', function (t) {
   var connecting = false;
   var exchangeData = 'small amount of data';
 
-  var uuids = t.participants.map(function (p) { return p.uuid; });
-  assert(uuids.length === 2, 'This test requires exactly 2 devices');
-  uuids.sort();
-  var iAmFirst = (tape.uuid === uuids[0]);
-
   var pskKey = new Buffer('psk-key');
   var pskId = 'psk-id';
 
@@ -524,8 +519,6 @@ test('Can shift data securely', function (t) {
   server = makeIntoCloseAllServer(server);
   serverToBeClosed = server;
 
-  var waitForServerEnd = wairForEvent(server, 'CLIENT_DONE');
-
   function shiftData(sock) {
     sock.on('error', function (error) {
       console.log('Client socket error:', error.message, error.stack);
@@ -546,7 +539,7 @@ test('Can shift data securely', function (t) {
     sock.write(rawData, function () {
       logger.debug('Client data flushed');
     });
-    return wairForEvent(sock, 'end');
+    return waitForEvent(sock, 'end');
   }
 
   function startShiftData(port) {
@@ -563,13 +556,8 @@ test('Can shift data securely', function (t) {
 
   function onConnectSuccess(err, connection) {
     var nativePort = connection.listeningPort;
-    var result = (iAmFirst) ?
-      startShiftData(nativePort) :
-      waitForServerEnd.then(function () {
-        return startShiftData(nativePort);
-      });
-    
-    result
+
+    startShiftData(nativePort)
       .catch(t.fail)
       .then(function () {
         t.end();
