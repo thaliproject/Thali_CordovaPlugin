@@ -102,49 +102,57 @@ test('Multiple local http requests', function (t) {
   }).catch(t.fail).then(t.end);
 });
 
-var peerFinder = function () {
-  var peers = {};
-  var eventEmitter = new EventEmitter();
-  var handler = function (peer) {
-    if (peer.peerAvailable) {
-      peers[peer.peerIdentifier] = peer;
-    } else {
-      delete peers[peer.peerIdentifier];
-    }
-    eventEmitter.emit('peerschanged');
-  };
+function PeerFinder () {
+  this.peers = {};
+  this.eventEmitter = new EventEmitter();
+  this._setUpEvent();
+}
 
-  function values(obj) {
-    return Object.keys(obj).map(function (k) { return obj[k]; });
+PeerFinder.prototype._nonTCPPeerAvailabilityHandler = function(peer) {
+  var self = this;
+  if (peer.peerAvailable) {
+    self.peers[peer.peerIdentifier] = peer;
+  } else {
+    delete self.peers[peer.peerIdentifier];
   }
+  self.eventEmitter.emit('peerschanged');
+};
 
-  function find(numberOfPeers) {
-    var keys = Object.keys(peers);
-    if (keys.length >= numberOfPeers) {
-      return Promise.resolve(values(peers));
-    }
-    return new Promise(function (resolve) {
-      eventEmitter.on('peerschanged', function fn () {
-        var keys = Object.keys(peers);
-        if (keys.length >= numberOfPeers) {
-          eventEmitter.removeListener('peerschanged', fn);
-          resolve(values(peers));
-        }
-      });
-    });
-  }
-
+PeerFinder.prototype._setUpEvent = function() {
+  var self = this;
   ThaliMobileNativeWrapper.emitter.on(
-    'nonTCPPeerAvailabilityChangedEvent', handler
+    'nonTCPPeerAvailabilityChangedEvent',
+    self._nonTCPPeerAvailabilityHandler
   );
-  find.cleanup = function () {
-    eventEmitter.removeAllListeners('peerschanged');
-    ThaliMobileNativeWrapper.emitter.removeListener(
-      'nonTCPPeerAvailabilityChangedEvent', handler
-    );
-  };
+};
 
-  return find;
+PeerFinder.prototype._getValues = function(obj) {
+  return Object.keys(obj).map(function (k) { return obj[k]; });
+};
+
+PeerFinder.prototype.find = function(numberOfPeers) {
+  var self = this;
+  var keys = Object.keys(self.peers);
+  if (keys.length >= numberOfPeers) {
+    return Promise.resolve(self._getValues(self.peers));
+  }
+  return new Promise(function (resolve) {
+    self.eventEmitter.on('peerschanged', function fn () {
+      var keys = Object.keys(self.peers);
+      if (keys.length >= numberOfPeers) {
+        self.eventEmitter.removeListener('peerschanged', fn);
+        resolve(self._getValues(self.peers));
+      }
+    });
+  });
+};
+
+PeerFinder.prototype.cleanup = function() {
+  var self = this;
+  self.eventEmitter.removeAllListeners('peerschanged');
+  ThaliMobileNativeWrapper.emitter.removeListener(
+    'nonTCPPeerAvailabilityChangedEvent', self._nonTCPPeerAvailabilityHandler
+  );
 };
 
 test('Single coordinated request ios native',
@@ -154,7 +162,7 @@ test('Single coordinated request ios native',
   },
   function (t) {
     var total = t.participants.length - 1;
-    var find = peerFinder();
+    var peerFinder = new PeerFinder();
 
     var server = http.createServer(function (request, response) {
       var reply = request.method + ' ' + request.url;
@@ -166,7 +174,7 @@ test('Single coordinated request ios native',
     });
     var listenServer = serverIsListening(server, 0);
 
-    var findPeers = find(total);
+    var findPeers = peerFinder.find(total);
 
     Promise.all([ listenNative, listenServer ])
       .then(function (allResponses) {
@@ -196,7 +204,7 @@ test('Single coordinated request ios native',
       })
       .catch(t.fail)
       .then(function () {
-        find.cleanup();
+        peerFinder.cleanup();
         t.end();
       });
   });
@@ -212,7 +220,7 @@ test('Multiple coordinated request ios native',
     var thirdReply = randomString.generate(3000);
     var reply;
     var total = t.participants.length - 1;
-    var find = peerFinder();
+    var peerFinder = new PeerFinder();
 
     var server = http.createServer(function (request, response) {
       switch (request.url) {
@@ -226,7 +234,7 @@ test('Multiple coordinated request ios native',
           reply = thirdReply;
           break;
         default:
-          t.end;
+          t.end();
       }
       response.end(reply);
     });
@@ -236,7 +244,7 @@ test('Multiple coordinated request ios native',
     });
     var listenServer = serverIsListening(server, 0);
 
-    var findPeers = find(total);
+    var findPeers = peerFinder.find(total);
 
     Promise.all([ listenNative, listenServer ])
       .then(function (allResponses) {
@@ -272,7 +280,7 @@ test('Multiple coordinated request ios native',
       })
       .catch(t.fail)
       .then(function () {
-        find.cleanup();
+        peerFinder.cleanup();
         t.end();
       });
   });
