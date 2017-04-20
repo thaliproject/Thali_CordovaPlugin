@@ -105,7 +105,7 @@ test('Multiple local http requests', function (t) {
 function PeerFinder () {
   this.peers = {};
   this.eventEmitter = new EventEmitter();
-  this._setUpEvent();
+  this._setUpEvents();
 }
 
 PeerFinder.prototype._nonTCPPeerAvailabilityHandler = function(peer) {
@@ -118,8 +118,12 @@ PeerFinder.prototype._nonTCPPeerAvailabilityHandler = function(peer) {
   self.eventEmitter.emit('peerschanged');
 };
 
-PeerFinder.prototype._setUpEvent = function() {
+PeerFinder.prototype._setUpEvents = function() {
   var self = this;
+  self._nonTCPPeerAvailabilityHandler = function (peerChangeValue) {
+    self._nonTCPPeerAvailabilityHandler(peerChangeValue);
+  }.bind(self);
+
   ThaliMobileNativeWrapper.emitter.on(
     'nonTCPPeerAvailabilityChangedEvent',
     self._nonTCPPeerAvailabilityHandler

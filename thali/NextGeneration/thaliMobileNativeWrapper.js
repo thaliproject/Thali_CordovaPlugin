@@ -559,6 +559,7 @@ module.exports.stopListeningForAdvertisements = function () {
  * | Call Start! | The object is not in start state. |
  *
  * @public
+ * @param {integer} port Note that it is only intended for testing.
  * @returns {Promise<?Error>}
  */
 module.exports.startUpdateAdvertisingAndListening = function (port) {

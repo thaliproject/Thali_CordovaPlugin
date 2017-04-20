@@ -130,92 +130,6 @@ test('Can call stopUpdateAdvertisingAndListening twice without start and ' +
   });
 });
 
-function pad(s) { return ('0'+s).slice(-2); }
-function pb(b) {
-  var result = 'Buffer <';
-  var l = b.length;
-  for (var i = 0; i < l; i++) {
-    if (i) { result += ' '; }
-    result += pad(b[i].toString(16));
-  }
-  return result + '>';
-}
-
-function createProxyServer(port, tag, reverse) {
-  var log = console.log.bind(console, tag);
-  var f = require('util').format;
-  var SEND = reverse ? '←' : '→';
-  var RECV = reverse ? '→' : '←';
-  var server = net.createServer(function (incomingSocket) {
-    log(f('received incoming connection'));
-    var outgoingSocket = net.connect(port, function () {
-      log(f('created outgoing connection to %d port', port));
-    });
-    outgoingSocket.on('error', function (error) {
-      console.log('OUTGOING SOCKET ERROR:', error.message);
-      incomingSocket.destroy(error);
-    });
-    incomingSocket.on('error', function (error) {
-      console.log('INCOMING SOCKET ERROR:', error.message);
-      outgoingSocket.destroy(error);
-    });
-
-    incomingSocket.on('data', function (data) {
-      log(f('%s %d bytes: %s', RECV, data.length, pb(data)));
-      outgoingSocket.write(data);
-    });
-    incomingSocket.on('end', function () {
-      log(f('%s end', RECV));
-      outgoingSocket.end();
-    });
-
-    outgoingSocket.on('data', function (data) {
-      log(f('%s %d bytes: %s', SEND, data.length, pb(data)));
-      incomingSocket.write(data);
-    });
-    outgoingSocket.on('end', function () {
-      log(f('%s end', SEND));
-      incomingSocket.end();
-    });
-  });
-  return new Promise(function (resolve, reject) {
-    server.listen(0, function () {
-      var proxyPort = server.address().port;
-      log = console.log.bind(console, tag + ' (' + proxyPort + ')');
-      log(f('proxy for 127.0.0.1:%d listens on %d port', port, proxyPort));
-      resolve(server);
-    });
-    server.on('error', reject);
-  });
-}
-
-// test.only('simple', function (t) {
-//   var server = net.createServer(function (socket) {
-//     socket.pipe(socket);
-//   });
-//   server.listen(0, function () {
-//     var port = server.address().port;
-//     createProxyServer(port, 'SRV').then(function (proxyServer) {
-//       var proxyPort = proxyServer.address().port;
-
-//       var cl = net.connect(proxyPort, function () {
-//         console.log('connected to proxy');
-//         var all = 'hello';
-//         var received = '';
-//         cl.on('data', function (data) {
-//           received += data.toString();
-//           if (received.length >= all.length) {
-//             cl.end();
-//             t.equal(received, all);
-//             t.end();
-//           }
-//         });
-//         cl.write(all);
-//       });
-//     });
-//   });
-// });
-
 if (!tape.coordinated) {
   return;
 }
@@ -1383,7 +1297,7 @@ test('discoveryAdvertisingStateUpdateNonTCP is called', function (t) {
         default:
           break;
       }
-  });
+    });
 
   Mobile('startListeningForAdvertisements').callNative(function (err) {
     t.notOk(err, 'Can call startListeningForAdvertisements without error');
