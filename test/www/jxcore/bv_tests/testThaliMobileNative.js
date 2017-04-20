@@ -342,7 +342,6 @@ function shiftData (t, sock, exchangeData) {
       }
     });
     sock.on('end', function () {
-      t.equal(receivedData, exchangeData, 'got the same data back');
       resolve();
     });
 
