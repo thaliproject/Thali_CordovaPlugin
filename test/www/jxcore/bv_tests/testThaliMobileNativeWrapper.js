@@ -918,13 +918,12 @@ test('test to coordinate connection cut',
     return platform._isRealAndroid;
   },
   function (t) {
-    // This cuts connections on Android.
-    testUtils.toggleBluetooth(false)
-    .then(function () {
-      // This cuts connections on iOS.
-      return thaliMobileNativeWrapper.killConnections();
-    })
-    .then(function () {
+    // This cuts connections on Android or iOS
+    var result = platform.isAndroid ?
+      testUtils.toggleBluetooth(false):
+      thaliMobileNativeWrapper.killConnections();
+
+    result.then(function () {
       t.end();
     })
     .catch(function () {
