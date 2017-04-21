@@ -120,9 +120,8 @@ PeerFinder.prototype._nonTCPPeerAvailabilityHandler = function(peer) {
 
 PeerFinder.prototype._setUpEvents = function() {
   var self = this;
-  self._nonTCPPeerAvailabilityHandler = function (peerChangeValue) {
-    self._nonTCPPeerAvailabilityHandler(peerChangeValue);
-  }.bind(self);
+  self._nonTCPPeerAvailabilityHandler = self._nonTCPPeerAvailabilityHandler
+                                                                .bind(self);
 
   ThaliMobileNativeWrapper.emitter.on(
     'nonTCPPeerAvailabilityChangedEvent',
