@@ -8,18 +8,34 @@ var ThaliMobileNativeWrapper =
   require('thali/NextGeneration/thaliMobileNativeWrapper');
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var platform = require('thali/NextGeneration/utils/platform');
-var randomString = require('randomstring');
+var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 
 var router = function () {};
+var httpServer = null;
 
 var test = tape({
   setup: function (t) {
+    httpServer = makeIntoCloseAllServer(http.createServer());
     t.end();
   },
   teardown: function (t) {
-    ThaliMobileNativeWrapper.stop().then(function () {
-      t.end();
-    }).catch(t.end);
+    (httpServer !== null ? httpServer.closeAllPromise() :
+        Promise.resolve())
+      .catch(function (err) {
+        t.fail('httpServer had stop err ' + err);
+      })
+      .then(function () {
+        return ThaliMobileNativeWrapper.stop();
+      })
+      .then(function() {
+        return new Promise(function(res) {
+          setTimeout(function() {
+            res();
+          }, 15000);
+        });
+      })
+      .catch(t.end)
+      .then(t.end);
   }
 });
 
@@ -64,51 +80,13 @@ function makeRequest(hostname, port, method, path, requestData) {
   });
 }
 
-test('Single local http request', function (t) {
-  var server = http.createServer(function (request, response) {
-    var reply = request.method + ' ' + request.url;
-    response.end(reply);
-  });
-
-  serverIsListening(server, 0).then(function () {
-    var port = server.address().port;
-    console.log('listening on %d', port);
-    return makeRequest('127.0.0.1', port, 'GET', '/path');
-  }).then(function (data) {
-    t.equal(data.toString(), 'GET /path');
-    return null;
-  }).catch(t.fail).then(t.end);
-});
-
-test('Multiple local http requests', function (t) {
-  var server = http.createServer(function (request, response) {
-    var reply = request.method + ' ' + request.url;
-    response.end(reply);
-  });
-
-  serverIsListening(server, 0).then( function () {
-    var port = server.address().port;
-    console.log('listening on %d', port);
-    return Promise.all([
-      makeRequest('127.0.0.1', port, 'GET', '/path0'),
-      makeRequest('127.0.0.1', port, 'GET', '/path1'),
-      makeRequest('127.0.0.1', port, 'GET', '/path2'),
-    ]);
-  }).then(function (data) {
-    t.equal(data[0].toString(), 'GET /path0');
-    t.equal(data[1].toString(), 'GET /path1');
-    t.equal(data[2].toString(), 'GET /path2');
-    return null;
-  }).catch(t.fail).then(t.end);
-});
-
 function PeerFinder () {
   this.peers = {};
   this.eventEmitter = new EventEmitter();
   this._setUpEvents();
 }
 
-PeerFinder.prototype._nonTCPPeerAvailabilityHandler = function(peer) {
+PeerFinder.prototype._nonTCPPeerAvailabilityHandler = function (peer) {
   var self = this;
   if (peer.peerAvailable) {
     self.peers[peer.peerIdentifier] = peer;
@@ -118,22 +96,20 @@ PeerFinder.prototype._nonTCPPeerAvailabilityHandler = function(peer) {
   self.eventEmitter.emit('peerschanged');
 };
 
-PeerFinder.prototype._setUpEvents = function() {
+PeerFinder.prototype._setUpEvents = function () {
   var self = this;
-  self._nonTCPPeerAvailabilityHandler = self._nonTCPPeerAvailabilityHandler
-                                                                .bind(self);
 
   ThaliMobileNativeWrapper.emitter.on(
     'nonTCPPeerAvailabilityChangedEvent',
-    self._nonTCPPeerAvailabilityHandler
+    self._nonTCPPeerAvailabilityHandler.bind(self)
   );
 };
 
-PeerFinder.prototype._getValues = function(obj) {
+PeerFinder.prototype._getValues = function (obj) {
   return Object.keys(obj).map(function (k) { return obj[k]; });
 };
 
-PeerFinder.prototype.find = function(numberOfPeers) {
+PeerFinder.prototype.find = function (numberOfPeers) {
   var self = this;
   var keys = Object.keys(self.peers);
   if (keys.length >= numberOfPeers) {
@@ -150,13 +126,29 @@ PeerFinder.prototype.find = function(numberOfPeers) {
   });
 };
 
-PeerFinder.prototype.cleanup = function() {
+PeerFinder.prototype.cleanup = function () {
   var self = this;
   self.eventEmitter.removeAllListeners('peerschanged');
   ThaliMobileNativeWrapper.emitter.removeListener(
     'nonTCPPeerAvailabilityChangedEvent', self._nonTCPPeerAvailabilityHandler
   );
 };
+
+test('Single local http request', function (t) {
+  httpServer.on('request', function (req, res) {
+    var reply = req.method + ' ' + req.url;
+    res.end(reply);
+  });
+
+  serverIsListening(httpServer, 0).then(function () {
+    var port = httpServer.address().port;
+    console.log('listening on %d', port);
+    return makeRequest('127.0.0.1', port, 'GET', '/path');
+  }).then(function (data) {
+    t.equal(data.toString(), 'GET /path');
+    return null;
+  }).catch(t.fail).then(t.end);
+});
 
 test('Single coordinated request ios native',
   function () {
@@ -167,22 +159,21 @@ test('Single coordinated request ios native',
     var total = t.participants.length - 1;
     var peerFinder = new PeerFinder();
 
-    var server = http.createServer(function (request, response) {
-      var reply = request.method + ' ' + request.url;
-      response.end(reply);
+    httpServer.on('request', function (req, res) {
+      var reply = req.method + ' ' + req.url;
+      res.end(reply);
     });
 
     var listenNative = ThaliMobileNativeWrapper.start(router).then(function () {
       return ThaliMobileNativeWrapper.startListeningForAdvertisements();
     });
-    var listenServer = serverIsListening(server, 0);
+    var listenServer = serverIsListening(httpServer, 0);
 
     var findPeers = peerFinder.find(total);
 
     Promise.all([ listenNative, listenServer ])
-      .then(function (allResponses) {
-        var server = allResponses[1];
-        var port = server.address().port;
+      .then(function () {
+        var port = httpServer.address().port;
         console.log('listening on %d', port);
         return ThaliMobileNativeWrapper
           .startUpdateAdvertisingAndListening(port);
@@ -212,21 +203,44 @@ test('Single coordinated request ios native',
       });
   });
 
+test('Multiple local http requests', function (t) {
+  httpServer.on('request', function (req, res) {
+    var reply = req.method + ' ' + req.url;
+    res.end(reply);
+  });
+
+  serverIsListening(httpServer, 0).then(function () {
+    var port = httpServer.address().port;
+    console.log('listening on %d', port);
+    return Promise.all([
+      makeRequest('127.0.0.1', port, 'GET', '/path0'),
+      makeRequest('127.0.0.1', port, 'GET', '/path1'),
+      makeRequest('127.0.0.1', port, 'GET', '/path2'),
+    ]);
+  }).then(function (data) {
+    t.equal(data[0].toString(), 'GET /path0');
+    t.equal(data[1].toString(), 'GET /path1');
+    t.equal(data[2].toString(), 'GET /path2');
+    return null;
+  }).catch(t.fail).then(t.end);
+});
+
 test('Multiple coordinated request ios native',
   function () {
     return platform.isAndroid ||
     global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
   },
   function (t) {
-    var firstReply = randomString.generate(2000);
-    var secondReply = randomString.generate(30);
-    var thirdReply = randomString.generate(3000);
+    var str = 'dummy str';
+    var firstReply = str.repeat(2000);
+    var secondReply = str.repeat(30);
+    var thirdReply = str.repeat(3000);
     var reply;
     var total = t.participants.length - 1;
     var peerFinder = new PeerFinder();
 
-    var server = http.createServer(function (request, response) {
-      switch (request.url) {
+    httpServer.on('request', function (req, res) {
+      switch (req.url) {
         case '/path0':
           reply = firstReply;
           break;
@@ -239,20 +253,19 @@ test('Multiple coordinated request ios native',
         default:
           t.end();
       }
-      response.end(reply);
+      res.end(reply);
     });
 
     var listenNative = ThaliMobileNativeWrapper.start(router).then(function () {
       return ThaliMobileNativeWrapper.startListeningForAdvertisements();
     });
-    var listenServer = serverIsListening(server, 0);
+    var listenServer = serverIsListening(httpServer, 0);
 
     var findPeers = peerFinder.find(total);
 
     Promise.all([ listenNative, listenServer ])
-      .then(function (allResponses) {
-        var server = allResponses[1];
-        var port = server.address().port;
+      .then(function () {
+        var port = httpServer.address().port;
         console.log('listening on %d', port);
         return ThaliMobileNativeWrapper
           .startUpdateAdvertisingAndListening(port);
