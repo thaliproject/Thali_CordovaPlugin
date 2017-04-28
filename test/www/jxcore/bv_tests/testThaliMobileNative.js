@@ -8,7 +8,9 @@ if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI) {
 }
 
 var net = require('net');
+var tls = require('tls');
 var randomString = require('randomstring');
+var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var tape = require('../lib/thaliTape');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var Promise = require('lie');
@@ -168,7 +170,6 @@ test('peerAvailabilityChange is called', function (t) {
   });
 });
 
-
 function connectionDiesClean(t, connection) {
   var errorFired = false;
   var endFired = false;
@@ -301,6 +302,282 @@ test('Can connect to a remote peer', function (t) {
       });
     });
   }, 5000);
+});
+
+function connect(module, options) {
+  return new Promise(function (resolve, reject) {
+    var connectErrorHandler = function (error) {
+      console.log('Connection to the %d port on localhost failed: %s',
+        options.port, error.stack);
+      reject(error);
+    };
+    console.log('Connecting to the localhost:%d', options.port);
+    var client = module.connect(options, function () {
+      client.removeListener('error', connectErrorHandler);
+      console.log('Connected to the localhost:%d', options.port);
+      resolve(client);
+    });
+    client.once('error', connectErrorHandler);
+  });
+}
+
+function waitForEvent(emitter, event) {
+  return new Promise(function (resolve) {
+    emitter.once(event, resolve);
+  });
+}
+
+function shiftData (t, sock, exchangeData) {
+  return new Promise(function (resolve, reject) {
+    sock.on('error', function (error) {
+      console.log('Client socket error:', error.message, error.stack);
+      reject(error);
+    });
+
+    var receivedData = '';
+    sock.on('data', function (chunk) {
+      receivedData += chunk.toString();
+      if (receivedData === exchangeData) {
+        sock.end();
+      }
+    });
+    sock.on('end', function () {
+      t.equal(receivedData, exchangeData, 'got the same data back');
+      resolve();
+    });
+
+    var rawData = new Buffer(exchangeData);
+    logger.debug('Client sends data (%d bytes):',
+      rawData.length);
+    sock.write(rawData, function () {
+      logger.debug('Client data flushed');
+    });
+  });
+}
+
+function createServer (t, dataLength) {
+  return net.createServer(function (socket) {
+    var buffer = '';
+    socket.on('data', function (chunk) {
+      buffer += chunk.toString();
+      logger.debug('Server received (%d bytes):', chunk.length);
+
+      // when received all data, send it back
+      if (buffer.length === dataLength) {
+        logger.debug('Server received all data: %s', buffer);
+
+        var rawData = new Buffer(buffer);
+        logger.debug('Server sends data back to client (%d bytes):',
+          rawData.length);
+        socket.write(rawData, function () {
+          logger.debug('Server data flushed');
+        });
+      }
+    });
+    socket.on('error', function (error) {
+      t.fail(error.message);
+    });
+  });
+} 
+
+function onConnectFailure(t, error) {
+  logger.debug(error);
+  t.fail('Connect failed!');
+  t.end();
+}
+
+test('Can shift data', function (t) {
+  var connecting = false;
+  var exchangeData = 'small amount of data';
+
+  var server = createServer(t, exchangeData.length);
+  server = makeIntoCloseAllServer(server);
+  serverToBeClosed = server;
+
+  function onConnectSuccess(err, connection) {
+    var nativePort = connection.listeningPort;
+    
+    connect(net, { port: nativePort })
+    .then(function (socket) {
+      return shiftData(t, socket, exchangeData);
+    })
+    .catch(t.fail)
+    .then(function () {
+      t.end();
+    });
+  }
+
+  thaliMobileNativeTestUtils.startAndListen(t, server, function (peers) {
+    peers.forEach(function (peer) {
+      if (peer.peerAvailable && !connecting) {
+        connecting = true;
+        thaliMobileNativeTestUtils.connectToPeer(peer)
+          .then(function (connection) {
+            onConnectSuccess(null, connection, peer);
+          })
+          .catch(function (error) {
+            onConnectFailure(t, error, null, peer);
+          });
+      }
+    });
+  });
+});
+
+test('Can shift data via parallel connections', function (t) {
+  var connecting = false;
+  var dataLength = 10000;
+
+  var server = createServer(t, dataLength);
+  server = makeIntoCloseAllServer(server);
+  serverToBeClosed = server;
+
+  function onConnectSuccess(err, connection) {
+    var nativePort = connection.listeningPort;
+    Promise.all([
+      connect(net, { port: nativePort }),
+      connect(net, { port: nativePort }),
+      connect(net, { port: nativePort }),
+    ]).then(function (sockets) {
+      return Promise.all(sockets.map(function (socket) {
+        var string = randomString.generate(dataLength);
+        t.equal(string.length, dataLength, 'correct string length');
+        return shiftData(t, socket, string);
+      }));
+    })
+    .catch(t.fail)
+    .then(function () {
+      t.end();
+    });
+  }
+
+  thaliMobileNativeTestUtils.startAndListen(t, server, function (peers) {
+    peers.forEach(function (peer) {
+      if (peer.peerAvailable && !connecting) {
+        connecting = true;
+        thaliMobileNativeTestUtils.connectToPeer(peer)
+          .then(function (connection) {
+            onConnectSuccess(null, connection, peer);
+          })
+          .catch(function (error) {
+            onConnectFailure(t, error, null, peer);
+          });
+      }
+    });
+  });
+});
+
+test('Can shift data securely', function (t) {
+  var connecting = false;
+  var exchangeData = 'small amount of data';
+
+  var pskKey = new Buffer('psk-key');
+  var pskId = 'psk-id';
+
+  var options = {
+    ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+    pskCallback: function (id) {
+      console.log('Server received psk id: %s', pskId);
+      return id === pskId ? pskKey : null;
+    }
+  };
+
+  var server = tls.createServer(options, function (socket) {
+    var ended = false;
+    var buffer = '';
+    socket.on('data', function (chunk) {
+      buffer += chunk.toString();
+      logger.debug('Server received (%d bytes):',
+        chunk.length);
+
+      // when received all data, send it back
+      if (buffer.length === exchangeData.length) {
+        logger.debug('Server received all data: %s', buffer);
+        var rawData = new Buffer(buffer);
+        logger.debug('Server sends data back to client (%d bytes): ',
+          rawData.length);
+        socket.write(rawData, function () {
+          logger.debug('Server data flushed');
+        });
+        ended = true;
+        socket.end(function () {
+          logger.debug('Server\'s socket stream finished');
+        });
+      }
+    });
+    socket.on('end', function () {
+      // server ends connection, not client
+      if (!ended) {
+        t.fail(new Error('Unexpected end event'));
+        return;
+      }
+      server.emit('CLIENT_DONE');
+    });
+    socket.on('error', function (error) {
+      t.fail(error.message);
+    });
+  });
+  server = makeIntoCloseAllServer(server);
+  serverToBeClosed = server;
+
+  function shiftData(sock) {
+    sock.on('error', function (error) {
+      console.log('Client socket error:', error.message, error.stack);
+      t.fail(error.message);
+    });
+
+    var receivedData = '';
+    sock.on('data', function (chunk) {
+      receivedData += chunk.toString();
+    });
+    sock.on('end', function () {
+      t.equal(receivedData, exchangeData, 'got the same data back');
+    });
+
+    var rawData = new Buffer(exchangeData);
+    logger.debug('Client sends data (%d bytes):',
+      rawData.length);
+    sock.write(rawData, function () {
+      logger.debug('Client data flushed');
+    });
+    return waitForEvent(sock, 'end');
+  }
+
+  function startShiftData(port) {
+    return connect(tls, {
+      port: port,
+      ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+      pskIdentity: pskId,
+      pskKey: pskKey,
+    })
+    .then(function (socket) {
+      return shiftData(socket);
+    });
+  }
+
+  function onConnectSuccess(err, connection) {
+    var nativePort = connection.listeningPort;
+
+    startShiftData(nativePort)
+      .catch(t.fail)
+      .then(function () {
+        t.end();
+      });
+  }
+
+  thaliMobileNativeTestUtils.startAndListen(t, server, function (peers) {
+    peers.forEach(function (peer) {
+      if (peer.peerAvailable && !connecting) {
+        connecting = true;
+        thaliMobileNativeTestUtils.connectToPeer(peer)
+          .then(function (connection) {
+            onConnectSuccess(null, connection, peer);
+          })
+          .catch(function (error) {
+            onConnectFailure(t, error, null, peer);
+          });
+      }
+    });
+  });
 });
 
 test('Can shift large amounts of data', function (t) {
@@ -878,9 +1155,10 @@ function (t) {
     t.end();
   });
 
-  thaliMobileNativeTestUtils.startAndListen(t, pretendLocalMux, function (peers) {
-    boundListener.listener(peers);
-  });
+  thaliMobileNativeTestUtils.startAndListen(t, pretendLocalMux,
+    function (peers) {
+      boundListener.listener(peers);
+    });
 });
 
 test('discoveryAdvertisingStateUpdateNonTCP is called', function (t) {
@@ -926,7 +1204,7 @@ test('discoveryAdvertisingStateUpdateNonTCP is called', function (t) {
         default:
           break;
       }
-  });
+    });
 
   Mobile('startListeningForAdvertisements').callNative(function (err) {
     t.notOk(err, 'Can call startListeningForAdvertisements without error');
