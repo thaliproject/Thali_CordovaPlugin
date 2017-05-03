@@ -231,10 +231,10 @@ test('Multiple coordinated request ios native',
     global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
   },
   function (t) {
-    var str = 'dummy str';
-    var firstReply = str.repeat(2000);
-    var secondReply = str.repeat(30);
-    var thirdReply = str.repeat(3000);
+    var char = 'a';
+    var firstReply = char.repeat(2000);
+    var secondReply = char.repeat(30);
+    var thirdReply = char.repeat(3000);
     var reply;
     var total = t.participants.length - 1;
     var peerFinder = new PeerFinder();
