@@ -358,7 +358,7 @@ function connect(module, options) {
   });
 }
 
-function wairForEvent(emitter, event) {
+function waitForEvent(emitter, event) {
   return new Promise(function (resolve) {
     emitter.once(event, resolve);
   });
@@ -608,7 +608,7 @@ test('Can shift data securely', function (t) {
     });
   });
 
-  var waitForServerEnd = wairForEvent(server, 'CLIENT_DONE');
+  var waitForServerEnd = waitForEvent(server, 'CLIENT_DONE');
 
   function shiftData(sock) {
     sock.on('error', function (error) {
@@ -631,7 +631,7 @@ test('Can shift data securely', function (t) {
     sock.write(rawData, function () {
       console.log('Client data flushed');
     });
-    return wairForEvent(sock, 'end');
+    return waitForEvent(sock, 'end');
   }
 
   function startShiftData(port) {
