@@ -34,7 +34,7 @@ var test = tape({
           }, 15000);
         });
       })
-      .catch(t.end)
+      .catch(t.fail)
       .then(t.end);
   }
 });
