@@ -170,7 +170,6 @@ test('peerAvailabilityChange is called', function (t) {
   });
 });
 
-
 function connectionDiesClean(t, connection) {
   var errorFired = false;
   var endFired = false;
@@ -616,7 +615,6 @@ test('Can shift data securely', function (t) {
       t.fail(error.message);
     });
 
-
     var receivedData = '';
     sock.on('data', function (chunk) {
       receivedData += chunk.toString();
@@ -646,7 +644,7 @@ test('Can shift data securely', function (t) {
     });
   }
 
-
+  
   serverStarted
     .then(function (server) {
       var port = server.address().port;
