@@ -38,8 +38,8 @@
       "compileSdkVersion": "android-25"
     },
     "btconnectorlib2": "0.3.9",
-    "jxcore-cordova": "0.1.10",
-    "jxcore-cordova-url": "http://jxcore.azureedge.net/jxcore-cordova/0.1.10/release/io.jxcore.node.jx"
+    "jxcore-cordova": "0.1.11",
+    "jxcore-cordova-url": "http://jxcore.azureedge.net/jxcore-cordova/0.1.11/release/io.jxcore.node.jx"
   },
   "scripts": {
     "prepublish": "node install/prePublishThaliCordovaPlugin.js",
