@@ -107,6 +107,8 @@ function updateProjectBuildProperties(xcodeProject, buildWithTests) {
     'SWIFT_OPTIMIZATION_LEVEL', '-Owholemodule');
 
   if (buildWithTests) {
+    console.log('buildWithTests:' + buildWithTests);
+
     xcodeProject.removeBuildProperty(
       'OTHER_SWIFT_FLAGS');
     xcodeProject.addBuildProperty('OTHER_SWIFT_FLAGS', '\"-DTEST\"');
@@ -163,9 +165,11 @@ function updateProjectFrameworks(
     path.join(frameworkOutputDir, 'ThaliCore.framework'),
     {customFramework: true, embed: true, link: true, sign: true});
 
-  xcodeProject.addFramework(
-    path.join(frameworkOutputDir, 'SwiftXCTest.framework'),
-    {customFramework: true, embed: true, link: true, sign: true});
+  if (buildWithTests) {
+    xcodeProject.addFramework(
+      path.join(frameworkOutputDir, 'SwiftXCTest.framework'),
+      {customFramework: true, embed: true, link: true, sign: true});
+  }
 
   xcodeProject.addFramework(
     path.join(frameworkOutputDir, 'CocoaAsyncSocket.framework'),
@@ -241,8 +245,9 @@ function addFramework(
 
 function checkoutThaliCoreViaCarthage(cartfileDir, outputDir, buildWithTests) {
   var changeDirCmd = 'cd ' + cartfileDir;
+  var removeCarthageDirCmd = 'rm -rf Carthage/';
   var carthageCmd = 'carthage update --no-build';
-  var checkoutCmd = changeDirCmd + ' && ' + carthageCmd;
+  var checkoutCmd = changeDirCmd + ' && ' + removeCarthageDirCmd + '&&' + carthageCmd;
 
   console.log('Checkouting ThaliCore and its dependencies');
 
