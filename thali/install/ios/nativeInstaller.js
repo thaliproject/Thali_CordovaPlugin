@@ -274,18 +274,18 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
   }
 
   var sdk = 'iphoneos';
-  var projectPath = path.join(projectDir, projectName + '.xcodeproj');
+  var projectPath = path.join(projectDir, projectName + '.xcworkspace');
+  var productPath = path.join(projectDir, "Products");
   var buildDir = path.join(projectDir, 'build');
 
   var buildCmd = 'set -o pipefail && ' +
-    'xcodebuild -project' +
+    'xcodebuild -workspace' +
     ' \"' + projectPath + '\"' +
     ' -scheme ' + '\"' + projectScheme + '\"' +
     ' -configuration ' + projectConfiguration +
     ' -sdk ' + sdk +
     ' ONLY_ACTIVE_ARCH=NO ' +
     ' IPHONEOS_DEPLOYMENT_TARGET=10.0' +
-    ' BUILD_DIR=' + '\"' + buildDir + '\"' +
     ' clean build';
 
   console.log('Building ThaliCore.framework');
@@ -299,7 +299,7 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
     })
     .then(function () {
       var thaliCoreFrameworkBuildDir = path.join(
-        buildDir, projectConfiguration + '-' + sdk, projectName + '.framework');
+        productPath, projectName + '.framework');
       var frameworkOutputDir = path.join(
         outputDir, projectName + '.framework');
 
@@ -307,15 +307,22 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
     })
     .then(function () {
       var cocoaAsyncSocketFrameworkBuildDir = path.join(
-        projectDir, 'Carthage', 'Build', 'iOS', cocoaAsyncSocketFrameworkName + '.framework');
+        productPath, cocoaAsyncSocketFrameworkName + '.framework');
       var frameworkOutputDir = path.join(
         outputDir, cocoaAsyncSocketFrameworkName + '.framework');
 
       return fs.copy(cocoaAsyncSocketFrameworkBuildDir, frameworkOutputDir, { clobber: false });
     })
     .then(function () {
+      if (!buildWithTests) {
+        //Don't cope XCTestFramework if plugin built without tests. XCTestFramework doesn't even exist.
+        return new Promise(function (resolve) {
+          resolve();
+        })
+      }
+
       var swiftXCTestFrameworkBuildDir = path.join(
-        projectDir, 'Carthage', 'Build', 'iOS', XCTestFrameworkName + '.framework');
+        productPath, XCTestFrameworkName + '.framework');
       var frameworkOutputDir = path.join(
         outputDir, XCTestFrameworkName + '.framework');
 
