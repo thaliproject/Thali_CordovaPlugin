@@ -343,6 +343,7 @@ function shiftData (t, sock, exchangeData) {
       }
     });
     sock.on('close', function () {
+      t.equal(receivedData, exchangeData, 'got the same data back');
       resolve();
     });
 
