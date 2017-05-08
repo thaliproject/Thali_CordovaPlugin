@@ -324,7 +324,8 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
     })
     .then(function () {
       var cocoaAsyncSocketFrameworkBuildDir = path.join(
-        projectDir, 'Carthage', 'Build', 'iOS', cocoaAsyncSocketFrameworkName + '.framework');
+        projectDir, 'build', projectConfiguration + '-' + sdk,
+        cocoaAsyncSocketFrameworkName + '.framework');
       var frameworkOutputDir = path.join(
         outputDir, cocoaAsyncSocketFrameworkName + '.framework');
 
@@ -336,7 +337,8 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
     })
     .then(function () {
       var swiftXCTestFrameworkBuildDir = path.join(
-        projectDir, 'Carthage', 'Build', 'iOS', XCTestFrameworkName + '.framework');
+        projectDir, 'build', projectConfiguration + '-' + sdk,
+        XCTestFrameworkName + '.framework');
       var frameworkOutputDir = path.join(
         outputDir, XCTestFrameworkName + '.framework');
 
