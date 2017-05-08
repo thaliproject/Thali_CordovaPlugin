@@ -177,7 +177,7 @@ build_ios_if_possible()
 
     cordova prepare ios --device
 
-    CI_CONFIG="build-ci-no-tests"
+    CI_CONFIG="build-ci-no-tests.xcconfig"
     if [ -f "platforms/ios/unittests" ]
     then
       CI_CONFIG="build-ci.xcconfig"
