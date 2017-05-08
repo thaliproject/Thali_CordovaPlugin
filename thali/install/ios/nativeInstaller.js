@@ -163,15 +163,17 @@ function updateProjectFrameworks(
     path.join(frameworkOutputDir, 'ThaliCore.framework'),
     {customFramework: true, embed: true, link: true, sign: true});
 
-  console.log('Adding SwiftXCTest.framework');
-  xcodeProject.addFramework(
-    path.join(frameworkOutputDir, 'SwiftXCTest.framework'),
-    {customFramework: true, embed: true, link: true, sign: true});
-
   console.log('Adding CocoaAsyncSocket.framework');
   xcodeProject.addFramework(
     path.join(frameworkOutputDir, 'CocoaAsyncSocket.framework'),
     {customFramework: true, embed: true, link: true, sign: true});
+
+  if (buildWithTests) {
+    console.log('Adding SwiftXCTest.framework');
+    xcodeProject.addFramework(
+      path.join(frameworkOutputDir, 'SwiftXCTest.framework'),
+      {customFramework: true, embed: true, link: true, sign: true});
+  }
 }
 
 function updateProjectTestingInfrastructure(
@@ -336,6 +338,14 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
       return fs.copy(cocoaAsyncSocketFrameworkBuildDir, frameworkOutputDir, { clobber: false });
     })
     .then(function () {
+      if (!buildWithTests) {
+        // Don't cope SwiftXCTest framework
+        // if the plugin was built without tests (release mode).
+        return new Promise(function (resolve) {
+          resolve();
+        })
+      }
+
       var swiftXCTestFrameworkBuildDir = path.join(
         projectDir, 'build', projectConfiguration + '-' + sdk,
         XCTestFrameworkName + '.framework');
