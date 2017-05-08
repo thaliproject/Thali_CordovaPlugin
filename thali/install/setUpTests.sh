@@ -177,10 +177,17 @@ build_ios_if_possible()
 
     cordova prepare ios --device
 
+    CI_CONFIG="build-ci-no-tests"
+    if [ -f "platforms/ios/unittests" ]
+    then
+      CI_CONFIG="build-ci.xcconfig"
+    fi
+
+
     (\
     cd $IOS_PROJECT_DIR && \
     xcodebuild \
-      -xcconfig $REPO_ROOT_DIR/thali/install/ios/build-ci.xcconfig \
+      -xcconfig $REPO_ROOT_DIR/thali/install/ios/"${CI_CONFIG}" \
       -workspace $PROJECT_NAME.xcworkspace \
       -scheme $PROJECT_NAME \
       -configuration Debug \
