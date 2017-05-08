@@ -339,10 +339,10 @@ function shiftData (t, sock, exchangeData) {
     sock.on('data', function (chunk) {
       receivedData += chunk.toString();
       if (receivedData === exchangeData) {
-        sock.end();
+        sock.destroy();
       }
     });
-    sock.on('end', function () {
+    sock.on('close', function () {
       resolve();
     });
 
