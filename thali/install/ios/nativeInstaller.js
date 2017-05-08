@@ -251,8 +251,11 @@ function addFramework(
 
 function checkoutThaliCoreViaCarthage(cartfileDir, outputDir, buildWithTests) {
   var cdToCartfileDirCmd = 'cd ' + cartfileDir;
+  var removeCarthageDirCmd = 'rm -rf Carthage/';
   var carthageCmd = 'carthage update --no-build';
-  var checkoutCmd = cdToCartfileDirCmd + ' && ' + carthageCmd;
+  var checkoutCmd = cdToCartfileDirCmd + ' && ' +
+                    removeCarthageDirCmd + ' && ' +
+                    carthageCmd;
 
   console.log('Checkouting ThaliCore and its dependencies via carthage.\n' +
               'Cartfile in: ' + cartfileDir + '\n' +
