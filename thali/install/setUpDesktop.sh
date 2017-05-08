@@ -38,7 +38,7 @@ echo ""
 echo "start installing Thali install"
 cd install
 npm install --no-optional
-#node validateBuildEnvironment.js
+node validateBuildEnvironment.js
 echo "end installing Thali install"
 echo ""
 
