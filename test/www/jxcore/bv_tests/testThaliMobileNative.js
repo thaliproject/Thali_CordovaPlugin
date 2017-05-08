@@ -378,7 +378,7 @@ function createServer (t, dataLength) {
       t.fail(error.message);
     });
   });
-} 
+}
 
 function onConnectFailure(t, error) {
   logger.debug(error);
@@ -396,7 +396,7 @@ test('Can shift data', function (t) {
 
   function onConnectSuccess(err, connection) {
     var nativePort = connection.listeningPort;
-    
+
     connect(net, { port: nativePort })
     .then(function (socket) {
       return shiftData(t, socket, exchangeData);
@@ -429,7 +429,7 @@ test('Can shift data via parallel connections',
   },
   function (t) {
     var connecting = false;
-    var dataLength = 10000;
+    var dataLength = 16 * 1024;
 
     var server = createServer(t, dataLength);
     server = makeIntoCloseAllServer(server);
@@ -472,7 +472,8 @@ test('Can shift data via parallel connections',
 
 test('Can shift data securely', function (t) {
   var connecting = false;
-  var exchangeData = 'small amount of data';
+  var dataSize = 16 * 1024;
+  var exchangeData = randomString.generate(dataSize);
 
   var pskKey = new Buffer('psk-key');
   var pskId = 'psk-id';
@@ -602,7 +603,7 @@ test('Can shift large amounts of data', function (t) {
   echoServer = makeIntoCloseAllServer(echoServer);
   serverToBeClosed = echoServer;
 
-  var dataSize = 4096;
+  var dataSize = 64 * 1024;
   var toSend = randomString.generate(dataSize);
 
   function shiftData(sock) {
