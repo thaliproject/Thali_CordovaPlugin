@@ -985,7 +985,7 @@ test('networkChanged - fires peerAvailabilityChanged event for native peers ' +
 test('networkChanged - fires peerAvailabilityChanged event for native peers ' +
 '(MPCF)',
   function () {
-    return !platform.isIOS;
+    return !platform._isRealIOS;
   },
   function (t) {
     // Scenario:

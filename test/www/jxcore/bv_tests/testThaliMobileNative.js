@@ -20,6 +20,7 @@ var thaliMobileNativeWrapper =
   require('thali/NextGeneration/thaliMobileNativeWrapper');
 
 var logger = require('../lib/testLogger')('testThaliMobileNative');
+var platform = require('thali/NextGeneration/utils/platform');
 
 // jshint -W064
 
@@ -418,8 +419,11 @@ test('Can shift data', function (t) {
     var receivedData = '';
     sock.on('data', function (chunk) {
       receivedData += chunk.toString();
+      if (receivedData === exchangeData) {
+        sock.destroy();
+      }
     });
-    sock.on('end', function () {
+    sock.on('close', function () {
       t.equal(receivedData, exchangeData, 'got the same data back');
       t.end();
     });
@@ -485,60 +489,102 @@ test('Can shift data via parallel connections', function (t) {
       t.fail(error.message);
     });
   });
+}
+
+function onConnectFailure(t, error) {
+  logger.debug(error);
+  t.fail('Connect failed!');
+  t.end();
+}
+
+test('Can shift data', function (t) {
+  var connecting = false;
+  var exchangeData = 'small amount of data';
+
+  var server = createServer(t, exchangeData.length);
   server = makeIntoCloseAllServer(server);
   serverToBeClosed = server;
 
-  function shiftData(sock, exchangeData) {
-    return new Promise(function (resolve, reject) {
-      sock.on('error', function (error) {
-        console.log('Client socket error:', error.message, error.stack);
-        reject(error);
-      });
+  function onConnectSuccess(err, connection) {
+    var nativePort = connection.listeningPort;
 
-      var receivedData = '';
-      sock.on('data', function (chunk) {
-        receivedData += chunk.toString();
-      });
-      sock.on('end', function () {
-        t.equal(receivedData, exchangeData, 'got the same data back');
-        resolve();
-      });
-
-      var rawData = new Buffer(exchangeData);
-      console.log('Client sends data (%d bytes): %s',
-        rawData.length, formatPrintableData(exchangeData));
-      sock.write(rawData, function () {
-        console.log('Client data flushed');
-      });
-    });
-  }
-
-  server.listen(0, function () {
-    var port = server.address().port;
-    findPeerAndConnect(port).then(function (info) {
-      console.log('Native connection established. Peer:', info.peer);
-      var nativePort = info.connection.listeningPort;
-      return Promise.all([
-        connect(net, { port: nativePort }),
-        connect(net, { port: nativePort }),
-        connect(net, { port: nativePort }),
-      ]);
-    }).then(function (sockets) {
-      return Promise.all(sockets.map(function (socket, index) {
-        var string =  'small amount of data ' + index;
-        t.equal(string.length, dataLength, 'correct string length');
-        return shiftData(socket, string);
-      }));
+    connect(net, { port: nativePort })
+    .then(function (socket) {
+      return shiftData(t, socket, exchangeData);
     })
     .catch(t.fail)
     .then(function () {
       t.end();
     });
+  }
+
+  thaliMobileNativeTestUtils.startAndListen(t, server, function (peers) {
+    peers.forEach(function (peer) {
+      if (peer.peerAvailable && !connecting) {
+        connecting = true;
+        thaliMobileNativeTestUtils.connectToPeer(peer)
+          .then(function (connection) {
+            onConnectSuccess(null, connection, peer);
+          })
+          .catch(function (error) {
+            onConnectFailure(t, error, null, peer);
+          });
+      }
+    });
   });
 });
 
+test('Can shift data via parallel connections',
+  function () {
+    return platform.isAndroid;
+  },
+  function (t) {
+    var connecting = false;
+    var dataLength = 16 * 1024;
+
+    var server = createServer(t, dataLength);
+    server = makeIntoCloseAllServer(server);
+    serverToBeClosed = server;
+
+    function onConnectSuccess(err, connection) {
+      var nativePort = connection.listeningPort;
+      Promise.all([
+        connect(net, { port: nativePort }),
+        connect(net, { port: nativePort }),
+        connect(net, { port: nativePort }),
+      ]).then(function (sockets) {
+        return Promise.all(sockets.map(function (socket) {
+          var string = randomString.generate(dataLength);
+          t.equal(string.length, dataLength, 'correct string length');
+          return shiftData(t, socket, string);
+        }));
+      })
+      .catch(t.fail)
+      .then(function () {
+        t.end();
+      });
+    }
+
+    thaliMobileNativeTestUtils.startAndListen(t, server, function (peers) {
+      peers.forEach(function (peer) {
+        if (peer.peerAvailable && !connecting) {
+          connecting = true;
+          thaliMobileNativeTestUtils.connectToPeer(peer)
+            .then(function (connection) {
+              onConnectSuccess(null, connection, peer);
+            })
+            .catch(function (error) {
+              onConnectFailure(t, error, null, peer);
+            });
+        }
+      });
+    });
+  });
+
 test('Can shift data securely', function (t) {
-  var exchangeData = 'small amount of data';
+  var connecting = false;
+  var dataSize = 16 * 1024;
+  var exchangeData = randomString.generate(dataSize);
 
   var uuids = t.participants.map(function (p) { return p.uuid; });
   assert(uuids.length === 2, 'This test requires exactly 2 devices');
@@ -688,7 +734,7 @@ test('Can shift large amounts of data', function (t) {
   echoServer = makeIntoCloseAllServer(echoServer);
   serverToBeClosed = echoServer;
 
-  var dataSize = 4096;
+  var dataSize = 64 * 1024;
   var toSend = randomString.generate(dataSize);
 
   function shiftData(sock) {
