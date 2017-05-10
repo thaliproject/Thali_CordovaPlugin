@@ -342,7 +342,7 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
     })
     .then(function () {
       if (!buildWithTests) {
-        // Don't cope SwiftXCTest framework
+        // Don't copy SwiftXCTest framework
         // if the plugin was built without tests (release mode).
         return new Promise(function (resolve) {
           resolve();
