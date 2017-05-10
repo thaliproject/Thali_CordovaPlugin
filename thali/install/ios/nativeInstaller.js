@@ -209,10 +209,10 @@ function addFramework(
       return buildFramework(
         frameworkProjectDir, frameworkOutputDir, buildWithTests)
         .then(function () {
-          console.log('Building framework is done.');
-          console.log('frameworkProjectDir: ' + frameworkProjectDir);
-          console.log('frameworkOutputDir: ' + frameworkOutputDir);
-          console.log('buildWithTests: ' + buildWithTests);
+          console.log('Building framework is done.\n' +
+                      'Framework project dir: ' + frameworkProjectDir + '\n' +
+                      'Framework output dir: ' + frameworkOutputDir + '\n' +
+                      'Build with tests: ' + buildWithTests);
 
           var pbxProjectPath = path.join(projectPath, 'project.pbxproj');
           var xcodeProject = xcode.project(pbxProjectPath);
