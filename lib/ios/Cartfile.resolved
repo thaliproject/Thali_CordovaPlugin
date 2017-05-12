@@ -1,3 +1,3 @@
 github "robbiehanson/CocoaAsyncSocket" "7.6.0"
 github "thaliproject/swift-corelibs-xctest" "9f415647a545b45d0fd349590788b160e1a67e49"
-github "thaliproject/thali-ios" "6df330dabf7fd2e41d55578652bbc46d221de008"
+github "thaliproject/thali-ios" "0d52b56638369fe6ebbfbfa67bd890010a7bc3b5"

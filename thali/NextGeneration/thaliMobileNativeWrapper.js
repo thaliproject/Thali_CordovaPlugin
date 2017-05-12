@@ -559,18 +559,21 @@ module.exports.stopListeningForAdvertisements = function () {
  * | Call Start! | The object is not in start state. |
  *
  * @public
+ * @param {integer} port Note that it is only intended for testing.
  * @returns {Promise<?Error>}
  */
-module.exports.startUpdateAdvertisingAndListening = function () {
+module.exports.startUpdateAdvertisingAndListening = function (port) {
   targetStates.advertising = true;
   return gPromiseQueue.enqueue(function (resolve, reject) {
     if (!states.started) {
       return reject(new Error('Call Start!'));
     }
 
-    var port = platform.isAndroid ?
-      gServersManagerLocalPort :
-      gRouterServerPort;
+    if (!port) {
+      port = platform.isAndroid ?
+        gServersManagerLocalPort :
+        gRouterServerPort;
+    }
 
     Mobile('startUpdateAdvertisingAndListening').callNative(
       port,

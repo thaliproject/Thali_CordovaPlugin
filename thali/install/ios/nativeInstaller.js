@@ -163,13 +163,17 @@ function updateProjectFrameworks(
     path.join(frameworkOutputDir, 'ThaliCore.framework'),
     {customFramework: true, embed: true, link: true, sign: true});
 
-  xcodeProject.addFramework(
-    path.join(frameworkOutputDir, 'SwiftXCTest.framework'),
-    {customFramework: true, embed: true, link: true, sign: true});
-
+  console.log('Adding CocoaAsyncSocket.framework');
   xcodeProject.addFramework(
     path.join(frameworkOutputDir, 'CocoaAsyncSocket.framework'),
     {customFramework: true, embed: true, link: true, sign: true});
+
+  if (buildWithTests) {
+    console.log('Adding SwiftXCTest.framework');
+    xcodeProject.addFramework(
+      path.join(frameworkOutputDir, 'SwiftXCTest.framework'),
+      {customFramework: true, embed: true, link: true, sign: true});
+  }
 }
 
 function updateProjectTestingInfrastructure(
@@ -198,12 +202,18 @@ function addFramework(
   checkoutThaliCoreViaCarthage(
     frameworkOutputDir, frameworkProjectDir, buildWithTests)
     .then (function () {
-      console.log('Checkouting done!');
+      console.log('Checkouting is successfully done.\n' +
+                  'Results were put into ' + frameworkProjectDir);
 
       // We need to build ThaliCore.framework before embedding it into the project
       return buildFramework(
         frameworkProjectDir, frameworkOutputDir, buildWithTests)
         .then(function () {
+          console.log('Building framework is done.\n' +
+                      'Framework project dir: ' + frameworkProjectDir + '\n' +
+                      'Framework output dir: ' + frameworkOutputDir + '\n' +
+                      'Build with tests: ' + buildWithTests);
+
           var pbxProjectPath = path.join(projectPath, 'project.pbxproj');
           var xcodeProject = xcode.project(pbxProjectPath);
 
@@ -240,11 +250,16 @@ function addFramework(
 };
 
 function checkoutThaliCoreViaCarthage(cartfileDir, outputDir, buildWithTests) {
-  var changeDirCmd = 'cd ' + cartfileDir;
+  var cdToCartfileDirCmd = 'cd ' + cartfileDir;
+  var removeCarthageDirCmd = 'rm -rf Carthage/';
   var carthageCmd = 'carthage update --no-build';
-  var checkoutCmd = changeDirCmd + ' && ' + carthageCmd;
+  var checkoutCmd = cdToCartfileDirCmd + ' && ' +
+                    removeCarthageDirCmd + ' && ' +
+                    carthageCmd;
 
-  console.log('Checkouting ThaliCore and its dependencies');
+  console.log('Checkouting ThaliCore and its dependencies via carthage.\n' +
+              'Cartfile in: ' + cartfileDir + '\n' +
+              'Results will be put into ' + outputDir);
 
   return exec(checkoutCmd, { maxBuffer: 10*1024*1024 } )
     .then(function () {
@@ -268,10 +283,13 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
   var projectConfiguration = 'Release';
 
   if (buildWithTests) {
-    console.log('Building in debug mode');
     projectScheme = 'ThaliCoreCITests';
     projectConfiguration = 'Debug';
   }
+
+  console.log('Building ' + projectName + ' in ' + projectConfiguration + ' mode\n' +
+              'Xcode project dir: ' + projectDir + '\n' +
+              'Framework output dir: ' + outputDir);
 
   var sdk = 'iphoneos';
   var projectPath = path.join(projectDir, projectName + '.xcodeproj');
@@ -288,7 +306,7 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
     ' BUILD_DIR=' + '\"' + buildDir + '\"' +
     ' clean build';
 
-  console.log('Building ThaliCore.framework');
+  console.log('Building ' + projectName + ' framework');
   console.log('Build command:\n' + buildCmd);
 
   // todo: fixed buffer size should be fixed with streaming in #1001
@@ -303,21 +321,43 @@ function buildFramework(projectDir, outputDir, buildWithTests) {
       var frameworkOutputDir = path.join(
         outputDir, projectName + '.framework');
 
+      console.log('Copying:\n' +
+                  'from: ' + thaliCoreFrameworkBuildDir + '\n' +
+                  'to:   ' + frameworkOutputDir);
+
       return fs.copy(thaliCoreFrameworkBuildDir, frameworkOutputDir, { clobber: false });
     })
     .then(function () {
       var cocoaAsyncSocketFrameworkBuildDir = path.join(
-        projectDir, 'Carthage', 'Build', 'iOS', cocoaAsyncSocketFrameworkName + '.framework');
+        projectDir, 'build', projectConfiguration + '-' + sdk,
+        cocoaAsyncSocketFrameworkName + '.framework');
       var frameworkOutputDir = path.join(
         outputDir, cocoaAsyncSocketFrameworkName + '.framework');
+
+        console.log('Copying:\n' +
+                    'from: ' + cocoaAsyncSocketFrameworkBuildDir + '\n' +
+                    'to:   ' + frameworkOutputDir);
 
       return fs.copy(cocoaAsyncSocketFrameworkBuildDir, frameworkOutputDir, { clobber: false });
     })
     .then(function () {
+      if (!buildWithTests) {
+        // Don't copy SwiftXCTest framework
+        // if the plugin was built without tests (release mode).
+        return new Promise(function (resolve) {
+          resolve();
+        })
+      }
+
       var swiftXCTestFrameworkBuildDir = path.join(
-        projectDir, 'Carthage', 'Build', 'iOS', XCTestFrameworkName + '.framework');
+        projectDir, 'build', projectConfiguration + '-' + sdk,
+        XCTestFrameworkName + '.framework');
       var frameworkOutputDir = path.join(
         outputDir, XCTestFrameworkName + '.framework');
+
+        console.log('Copying:\n' +
+                    'from: ' + swiftXCTestFrameworkBuildDir + '\n' +
+                    'to:   ' + frameworkOutputDir);
 
       return fs.copy(swiftXCTestFrameworkBuildDir, frameworkOutputDir, { clobber: false });
     });
