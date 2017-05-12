@@ -150,7 +150,7 @@ test('Single local http request', function (t) {
   }).catch(t.fail).then(t.end);
 });
 
-test('Single coordinated request ios native',
+test.skip('Single coordinated request ios native',
   function () {
     return platform.isAndroid ||
     global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
@@ -225,7 +225,7 @@ test('Multiple local http requests', function (t) {
   }).catch(t.fail).then(t.end);
 });
 
-test('Multiple coordinated request ios native',
+test.skip('Multiple coordinated request ios native',
   function () {
     return platform.isAndroid ||
     global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
