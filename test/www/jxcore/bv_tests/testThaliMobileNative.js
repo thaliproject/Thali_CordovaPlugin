@@ -489,7 +489,7 @@ test('Can shift data via parallel connections', function (t) {
       t.fail(error.message);
     });
   });
-}
+});
 
 function onConnectFailure(t, error) {
   logger.debug(error);
@@ -683,14 +683,13 @@ test('Can shift data securely', function (t) {
       port: port,
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
       pskIdentity: pskId,
-      pskKey: pskKey,
+      pskKey: pskKey
     })
     .then(function (socket) {
       return shiftData(socket);
     });
   }
 
-  
   serverStarted
     .then(function (server) {
       var port = server.address().port;
