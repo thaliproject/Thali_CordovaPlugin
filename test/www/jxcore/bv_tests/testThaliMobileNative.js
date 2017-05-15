@@ -489,7 +489,7 @@ test('Can shift data via parallel connections', function (t) {
       t.fail(error.message);
     });
   });
-}
+});
 
 function onConnectFailure(t, error) {
   logger.debug(error);
@@ -690,7 +690,7 @@ test('Can shift data securely', function (t) {
     });
   }
 
-  
+
   serverStarted
     .then(function (server) {
       var port = server.address().port;
