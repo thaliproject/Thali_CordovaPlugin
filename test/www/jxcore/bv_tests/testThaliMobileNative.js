@@ -683,12 +683,13 @@ test('Can shift data securely', function (t) {
       port: port,
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
       pskIdentity: pskId,
-      pskKey: pskKey
+      pskKey: pskKey,
     })
     .then(function (socket) {
       return shiftData(socket);
     });
   }
+
 
   serverStarted
     .then(function (server) {
