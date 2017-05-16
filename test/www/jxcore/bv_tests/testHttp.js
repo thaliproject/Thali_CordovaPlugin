@@ -15,7 +15,7 @@ var httpServer = null;
 
 var test = tape({
   setup: function (t) {
-    httpServer = makeIntoCloseAllServer(http.createServer());
+    httpServer = makeIntoCloseAllServer(http.createServer(), true);
     t.end();
   },
   teardown: function (t) {
@@ -150,7 +150,7 @@ test('Single local http request', function (t) {
   }).catch(t.fail).then(t.end);
 });
 
-test.skip('Single coordinated request ios native',
+test('Single coordinated request ios native',
   function () {
     return platform.isAndroid ||
     global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
@@ -225,7 +225,7 @@ test('Multiple local http requests', function (t) {
   }).catch(t.fail).then(t.end);
 });
 
-test.skip('Multiple coordinated request ios native',
+test('Multiple coordinated request ios native',
   function () {
     return platform.isAndroid ||
     global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
