@@ -15,7 +15,7 @@ var httpServer = null;
 
 var test = tape({
   setup: function (t) {
-    httpServer = makeIntoCloseAllServer(http.createServer());
+    httpServer = makeIntoCloseAllServer(http.createServer(), true);
     t.end();
   },
   teardown: function (t) {
