@@ -370,7 +370,7 @@ function onConnectFailure(t, error) {
   t.end();
 }
 
-function shiftData(sock, exchangeData) {
+function shiftData(t, sock, exchangeData) {
   return new Promise(function (resolve, reject) {
     sock.on('error', function (error) {
       console.log('Client socket error:', error.message, error.stack);
@@ -386,6 +386,7 @@ function shiftData(sock, exchangeData) {
     });
 
     sock.on('close', function () {
+      t.equal(receivedData, exchangeData, 'got the same data back');
       resolve();
     });
 
@@ -398,35 +399,23 @@ function shiftData(sock, exchangeData) {
   });
 }
 
-function createServer(dataLength, formatPrintableData) {
+function createServer(t, dataLength) {
   return net.createServer(function (socket) {
-    var ended = false;
     var buffer = '';
     socket.on('data', function (chunk) {
       buffer += chunk.toString();
-      console.log('Server received (%d bytes): %s',
-        chunk.length, formatPrintableData(chunk.toString()));
+      logger.debug('Server received (%d bytes):', chunk.length);
 
       // when received all data, send it back
       if (buffer.length === dataLength) {
-        console.log('Server received all data: %s',
-          formatPrintableData(buffer.toString()));
+        logger.debug('Server received all data: %s', buffer);
+
         var rawData = new Buffer(buffer);
-        console.log('Server sends data back to client (%d bytes): %s',
-          rawData.length, formatPrintableData(buffer));
+        logger.debug('Server sends data back to client (%d bytes):',
+          rawData.length);
         socket.write(rawData, function () {
-          console.log('Server data flushed');
+          logger.debug('Server data flushed');
         });
-        ended = true;
-        socket.end(function () {
-          console.log('Server\'s socket stream finished');
-        });
-      }
-    });
-    socket.on('end', function () {
-      // server ends connection, not client
-      if (!ended) {
-        t.fail(new Error('Unexpected end event'));
       }
     });
     socket.on('error', function (error) {
@@ -439,12 +428,7 @@ test('Can shift data', function (t) {
   var connecting = false;
   var exchangeData = 'small amount of data';
 
-  var formatPrintableData = function (data) {
-    var ellipsis = data.length > 40 ? '...' : '';
-    return '<' + data.slice(0, 40) + ellipsis + '>';
-  };
-
-  var server = createServer(exchangeData.length, formatPrintableData);
+  var server = createServer(t, exchangeData.length);
   server = makeIntoCloseAllServer(server);
   serverToBeClosed = server;
 
@@ -453,7 +437,7 @@ test('Can shift data', function (t) {
 
     connect(net, { port: nativePort })
     .then(function (socket) {
-      return shiftData(socket, exchangeData);
+      return shiftData(t, socket, exchangeData);
     })
     .catch(t.fail)
     .then(function () {
@@ -485,11 +469,7 @@ test('Can shift data via parallel connections',
     var connecting = false;
     var dataLength = 16 * 1024;
 
-    var formatPrintableData = function (data) {
-      return data;
-    };
-
-    var server = createServer(dataLength, formatPrintableData);
+    var server = createServer(t, dataLength);
     server = makeIntoCloseAllServer(server);
     serverToBeClosed = server;
 
@@ -503,7 +483,7 @@ test('Can shift data via parallel connections',
         return Promise.all(sockets.map(function (socket) {
           var string = randomString.generate(dataLength);
           t.equal(string.length, dataLength, 'correct string length');
-          return shiftData(socket, string);
+          return shiftData(t, socket, string);
         }));
       })
       .catch(t.fail)
