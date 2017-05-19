@@ -4,7 +4,7 @@
     "ios": "ThaliTest.app",
     "android": "android-release-unsigned.apk"
   },
-  "target": "all",
+  "target": "android",
   "priority": "normal",
   "csname": {
     "android": "com.rockwellautomation.thalitest",
