@@ -364,57 +364,18 @@ function waitForEvent(emitter, event) {
   });
 }
 
-test('Can shift data', function (t) {
-  var exchangeData = 'small amount of data';
+function onConnectFailure(t, error) {
+  logger.debug(error);
+  t.fail('Connect failed!');
+  t.end();
+}
 
-  var formatPrintableData = function (data) {
-    var ellipsis = data.length > 40 ? '...' : '';
-    return '<' + data.slice(0, 40) + ellipsis + '>';
-  };
-
-  var server = net.createServer(function (socket) {
-    var ended = false;
-    var buffer = '';
-    socket.on('data', function (chunk) {
-      buffer += chunk.toString();
-      console.log('Server received (%d bytes): %s',
-        chunk.length, formatPrintableData(chunk.toString()));
-
-      // when received all data, send it back
-      if (buffer.length === exchangeData.length) {
-        console.log('Server received all data: %s',
-          formatPrintableData(buffer.toString()));
-        var rawData = new Buffer(buffer);
-        console.log('Server sends data back to client (%d bytes): %s',
-          rawData.length, formatPrintableData(buffer));
-        socket.write(rawData, function () {
-          console.log('Server data flushed');
-        });
-        ended = true;
-        socket.end(function () {
-          console.log('Server\'s socket stream finished');
-        });
-      }
-    });
-    socket.on('end', function () {
-      // server ends connection, not client
-      if (!ended) {
-        t.fail(new Error('Unexpected end event'));
-      }
-    });
-    socket.on('error', function (error) {
-      t.fail(error.message);
-    });
-  });
-  server = makeIntoCloseAllServer(server);
-  serverToBeClosed = server;
-
-  function shiftData(sock) {
+function shiftData(t, sock, exchangeData) {
+  return new Promise(function (resolve, reject) {
     sock.on('error', function (error) {
       console.log('Client socket error:', error.message, error.stack);
-      t.fail(error.message);
+      reject(error);
     });
-
 
     var receivedData = '';
     sock.on('data', function (chunk) {
@@ -423,78 +384,44 @@ test('Can shift data', function (t) {
         sock.destroy();
       }
     });
+
     sock.on('close', function () {
       t.equal(receivedData, exchangeData, 'got the same data back');
-      t.end();
+      resolve();
     });
 
     var rawData = new Buffer(exchangeData);
-    console.log('Client sends data (%d bytes): %s',
-      rawData.length, formatPrintableData(exchangeData));
+    logger.debug('Client sends data (%d bytes):',
+      rawData.length);
     sock.write(rawData, function () {
-      console.log('Client data flushed');
-    });
-  }
-
-  server.listen(0, function () {
-    var port = server.address().port;
-    findPeerAndConnect(port).then(function (info) {
-      console.log('Native connection established. Peer:', info.peer);
-      var nativePort = info.connection.listeningPort;
-      return connect(net, { port: nativePort });
-    }).then(function (socket) {
-      shiftData(socket);
+      logger.debug('Client data flushed');
     });
   });
-});
+}
 
-test('Can shift data via parallel connections', function (t) {
-  var dataLength = 22;
-
-  var formatPrintableData = function (data) {
-    return data;
-  };
-
-  var server = net.createServer(function (socket) {
-    var ended = false;
+function createServer(t, dataLength) {
+  return net.createServer(function (socket) {
     var buffer = '';
     socket.on('data', function (chunk) {
       buffer += chunk.toString();
-      console.log('Server received (%d bytes): %s',
-        chunk.length, formatPrintableData(chunk.toString()));
+      logger.debug('Server received (%d bytes):', chunk.length);
 
       // when received all data, send it back
       if (buffer.length === dataLength) {
-        console.log('Server received all data: %s',
-          formatPrintableData(buffer.toString()));
+        logger.debug('Server received all data: %s', buffer);
+
         var rawData = new Buffer(buffer);
-        console.log('Server sends data back to client (%d bytes): %s',
-          rawData.length, formatPrintableData(buffer));
+        logger.debug('Server sends data back to client (%d bytes):',
+          rawData.length);
         socket.write(rawData, function () {
-          console.log('Server data flushed');
+          logger.debug('Server data flushed');
         });
-        ended = true;
-        socket.end(function () {
-          console.log('Server\'s socket stream finished');
-        });
-      }
-    });
-    socket.on('end', function () {
-      // server ends connection, not client
-      if (!ended) {
-        t.fail(new Error('Unexpected end event'));
       }
     });
     socket.on('error', function (error) {
       t.fail(error.message);
     });
   });
-});
-
-function onConnectFailure(t, error) {
-  logger.debug(error);
-  t.fail('Connect failed!');
-  t.end();
 }
 
 test('Can shift data', function (t) {
@@ -583,17 +510,7 @@ test('Can shift data via parallel connections',
 
 test('Can shift data securely', function (t) {
   var connecting = false;
-  var dataSize = 16 * 1024;
-  var exchangeData = randomString.generate(dataSize);
-
-  var uuids = t.participants.map(function (p) { return p.uuid; });
-  assert(uuids.length === 2, 'This test requires exactly 2 devices');
-  uuids.sort();
-  var iAmFirst = (tape.uuid === uuids[0]);
-
-  var formatPrintableData = function (data) {
-    return data;
-  };
+  var exchangeData = 'small amount of data';
 
   var pskKey = new Buffer('psk-key');
   var pskId = 'psk-id';
@@ -611,22 +528,21 @@ test('Can shift data securely', function (t) {
     var buffer = '';
     socket.on('data', function (chunk) {
       buffer += chunk.toString();
-      console.log('Server received (%d bytes): %s',
-        chunk.length, formatPrintableData(chunk.toString()));
+      logger.debug('Server received (%d bytes):',
+        chunk.length);
 
       // when received all data, send it back
       if (buffer.length === exchangeData.length) {
-        console.log('Server received all data: %s',
-          formatPrintableData(buffer.toString()));
+        logger.debug('Server received all data: %s', buffer);
         var rawData = new Buffer(buffer);
-        console.log('Server sends data back to client (%d bytes): %s',
-          rawData.length, formatPrintableData(buffer));
+        logger.debug('Server sends data back to client (%d bytes): ',
+          rawData.length);
         socket.write(rawData, function () {
-          console.log('Server data flushed');
+          logger.debug('Server data flushed');
         });
         ended = true;
         socket.end(function () {
-          console.log('Server\'s socket stream finished');
+          logger.debug('Server\'s socket stream finished');
         });
       }
     });
@@ -645,16 +561,6 @@ test('Can shift data securely', function (t) {
   server = makeIntoCloseAllServer(server);
   serverToBeClosed = server;
 
-  var serverStarted = new Promise(function (resolve, reject) {
-    server.once('error', reject);
-    server.listen(0, function () {
-      server.removeListener('error', reject);
-      resolve(server);
-    });
-  });
-
-  var waitForServerEnd = waitForEvent(server, 'CLIENT_DONE');
-
   function shiftData(sock) {
     sock.on('error', function (error) {
       console.log('Client socket error:', error.message, error.stack);
@@ -664,18 +570,21 @@ test('Can shift data securely', function (t) {
     var receivedData = '';
     sock.on('data', function (chunk) {
       receivedData += chunk.toString();
+      if (receivedData === exchangeData) {
+        sock.destroy();
+      }
     });
-    sock.on('end', function () {
+    sock.on('close', function () {
       t.equal(receivedData, exchangeData, 'got the same data back');
     });
 
     var rawData = new Buffer(exchangeData);
-    console.log('Client sends data (%d bytes): %s',
-      rawData.length, formatPrintableData(exchangeData));
+    logger.debug('Client sends data (%d bytes):',
+      rawData.length);
     sock.write(rawData, function () {
-      console.log('Client data flushed');
+      logger.debug('Client data flushed');
     });
-    return waitForEvent(sock, 'end');
+    return waitForEvent(sock, 'close');
   }
 
   function startShiftData(port) {
@@ -683,37 +592,37 @@ test('Can shift data securely', function (t) {
       port: port,
       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
       pskIdentity: pskId,
-      pskKey: pskKey,
+      pskKey: pskKey
     })
-    .then(function (socket) {
-      return shiftData(socket);
-    });
+      .then(function (socket) {
+        return shiftData(socket);
+      });
   }
 
+  function onConnectSuccess(err, connection) {
+    var nativePort = connection.listeningPort;
 
-  serverStarted
-    .then(function (server) {
-      var port = server.address().port;
-      console.log('Test server is listening on the %d port', port);
-      return findPeerAndConnect(port);
-    })
-    .then(function (info) {
-      console.log('Native connection established. Info: %s',
-        JSON.stringify(info, null, 2));
-      var nativePort = info.connection.listeningPort;
-      if (iAmFirst) {
-        return startShiftData(nativePort);
-      }
-      return waitForServerEnd.then(function () {
-        return startShiftData(nativePort);
+    startShiftData(nativePort)
+      .catch(t.fail)
+      .then(function () {
+        t.end();
       });
-    })
-    .catch(function (err) {
-      t.fail(err.message + '\n' + err.stack);
-    })
-    .then(function () {
-      t.end();
+  }
+
+  thaliMobileNativeTestUtils.startAndListen(t, server, function (peers) {
+    peers.forEach(function (peer) {
+      if (peer.peerAvailable && !connecting) {
+        connecting = true;
+        thaliMobileNativeTestUtils.connectToPeer(peer)
+          .then(function (connection) {
+            onConnectSuccess(null, connection, peer);
+          })
+          .catch(function (error) {
+            onConnectFailure(t, error, null, peer);
+          });
+      }
     });
+  });
 });
 
 test('Can shift large amounts of data', function (t) {
@@ -806,7 +715,6 @@ test('Can shift large amounts of data', function (t) {
   });
 
   echoServer.listen(0, function () {
-
     var applicationPort = echoServer.address().port;
 
     Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort,
