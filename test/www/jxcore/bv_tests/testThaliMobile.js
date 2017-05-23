@@ -1082,7 +1082,7 @@ test('networkChanged - fires peerAvailabilityChanged event for native peers ' +
       t.end();
     }
 
-    // Make sure ThaliMobile is started before we begin this test, otherwise emitted event `networkChangedNonTCP`
+    // Make sure ThaliMobile is started before we begin this test, otherwise events `networkChangedNonTCP`
     // will be filtered out.
     ThaliMobile.start(express.Router()).then(function () {
       // Add initial peers
