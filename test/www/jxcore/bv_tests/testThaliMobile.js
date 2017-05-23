@@ -1087,6 +1087,9 @@ test('networkChanged - fires peerAvailabilityChanged event for native peers ' +
     ThaliMobile.start(express.Router()).then(function () {
       // Add initial peers
       emitNativePeerAvailability(testPeers.nativePeer);
+    }).catch(function (err) {
+      t.fail('ThaliMobile couldn\'t be started!');
+      end();
     });
   }
 );
