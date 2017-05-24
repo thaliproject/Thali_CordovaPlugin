@@ -13,11 +13,11 @@ module.exports = {
   },
   minDevices: {
     // This is a list of desired platforms.
-    ios: 3,
+    ios: 2,
     android: 3,
     desktop: 3
   },
   // if 'devices[platform]' is -1 we wont limit the amount of devices.
   // We will wait some amount of time before tests.
-  waiting_for_devices_timeout: 5 * 1000
+  waiting_for_devices_timeout: 6 * 1000
 };

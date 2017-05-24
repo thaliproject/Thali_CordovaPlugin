@@ -70,7 +70,6 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware,
   this._state = CoordinatedClient.states.created;
 
   var serverUrl = 'http://' + serverAddress + ':' + DEFAULT_SERVER_PORT + '/';
-  serverUrl = 'http://192.168.1.150:3000/';
   logger.info('Connecting to coordination server on ' + serverUrl);
   this._io = SocketIOClient(
     serverUrl,
