@@ -72,7 +72,8 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware,
   var serverUrl = 'http://' + serverAddress + ':' + DEFAULT_SERVER_PORT + '/';
   logger.info('Connecting to coordination server on ' + serverUrl);
   this._io = SocketIOClient(
-    serverUrl,
+    //serverUrl,
+    'http://192.168.1.150:3000/',
     {
       reconnection: true,
       reconnectionAttempts: 100,
