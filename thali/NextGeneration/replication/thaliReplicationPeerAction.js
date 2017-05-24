@@ -54,6 +54,7 @@ function ThaliReplicationPeerAction(peerAdvertisesDataForUs,
   this._peerAdvertisesDataForUs = peerAdvertisesDataForUs;
   this._PouchDB = PouchDB;
   this._dbName = dbName;
+  this._remoteDbName = dbName;
   this._ourPublicKey = ourPublicKey;
   this._localSeqManager = null;
   this._cancelReplication = null;
@@ -192,16 +193,20 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
  * the PSK related settings are specified.
  * @returns {Promise<?Error>}
  */
-ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
+ThaliReplicationPeerAction.prototype.start = function (httpAgentPool, options) {
   var self = this;
   this._completed = false;
+
+  if (!!options && !!options.remoteDbName) {
+    self._remoteDbName = options.remoteDbName;
+  }
 
   return ThaliReplicationPeerAction.super_.prototype.start
     .call(this, httpAgentPool)
     .then(function () {
       var remoteUrl = 'https://' + self._peerAdvertisesDataForUs.hostAddress +
         ':' + self._peerAdvertisesDataForUs.portNumber +
-        path.join(thaliConfig.BASE_DB_PATH, self._dbName);
+        path.join(thaliConfig.BASE_DB_PATH, self._remoteDbName);
       var ajaxOptions = {
         ajax : {
           agent: httpAgentPool
