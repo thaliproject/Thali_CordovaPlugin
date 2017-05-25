@@ -466,8 +466,8 @@ test('Make sure clone works', function (t) {
     'same getPeerAdvertisesDataForUs');
   t.equal(clonedAction._PouchDB, originalThaliReplicationAction._PouchDB,
     'Same pouchdB');
-  t.equal(clonedAction._dbName, originalThaliReplicationAction._dbName,
-    'same dbName');
+  t.equal(clonedAction._localDbName, originalThaliReplicationAction._localDbName,
+    'same localDbName');
   t.equal(clonedAction._ourPublicKey,
     originalThaliReplicationAction._ourPublicKey, 'Same public key');
   t.end();

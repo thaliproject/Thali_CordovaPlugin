@@ -39,30 +39,26 @@ var ThaliReplicationPeerAction = require('./thaliReplicationPeerAction');
  * the same peer over two different transports and to then pick which one it
  * prefers (if any, maybe it wants both).
  *
- * BUGBUG: In the interests of time we currently will only support replicating
- * data from a single remote database for all users. This is clearly silly and
- * we should move to a model where each user can have multiple databases
- * specified for them.
- *
  * @public
  * @param {PouchDB} PouchDB The factory we will use to create the database we
  * will replicate all changes to.
- * @param {string} dbName The name of the DB. The name of the remote DB MUST be
+ * @param {string} localDbName The name of the local DB. The name of the remote DB could be either
  * http://[host from discovery]:[port from discovery]/[BASE_DB_PATH]/[name] where name is
- * taken from pouchDB.info's db_name field.
+ * taken from pouchDB.info's db_name field or where name is provided during runtime to
+ * ThaliReplicationPeerAction when it is being started.
  * @param {module:thaliPeerPoolInterface~ThaliPeerPoolInterface} thaliPeerPoolInterface
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized
  * with the local device's public and private keys.
  * @constructor
  */
 function ThaliPullReplicationFromNotification(PouchDB,
-                                              dbName,
+                                              localDbName,
                                               thaliPeerPoolInterface,
                                               ecdhForLocalDevice) {
   EventEmitter.call(this);
 
   assert(PouchDB, 'Must have PouchDB');
-  assert(dbName, 'Must have dbName');
+  assert(localDbName, 'Must have localDbName');
   assert(thaliPeerPoolInterface, 'Must have thaliPeerPoolInterface');
   assert(ecdhForLocalDevice, 'Must have ecdhForLocalDeivce');
 
@@ -71,7 +67,7 @@ function ThaliPullReplicationFromNotification(PouchDB,
   this._thaliPeerPoolInterface = thaliPeerPoolInterface;
   this._publicKey = ecdhForLocalDevice.getPublicKey();
   this._PouchDB = PouchDB;
-  this._dbName = dbName;
+  this._localDbName = localDbName;
   this._boundAdvertiser = this._peerAdvertisesDataForUsHandler.bind(this);
   this._peerDictionary = {};
 
@@ -135,7 +131,7 @@ ThaliPullReplicationFromNotification.prototype._peerAdvertisesDataForUsHandler =
     }
 
     var newAction = new ThaliReplicationPeerAction(
-      peerAdvertisesData, this._PouchDB, this._dbName, this._publicKey
+      peerAdvertisesData, this._PouchDB, this._localDbName, this._publicKey
     );
     assert(
       !this._peerDictionary[key],
