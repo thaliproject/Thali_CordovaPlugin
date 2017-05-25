@@ -26,7 +26,7 @@ var Utils = require('../utils/common.js');
  * use.
  * @param {string} localDbName The name of the DB which is dedicated for local usage.
  * Remote DB url will be created either using localDbName parameter or remoteDbName
- * parameter, which is provided to ThaliReplicationPeerAction.start method during runtime,
+ * parameter, which is provided to {@link module:ThaliReplicationPeerAction.start} during runtime,
  * and appending it to http://[hostAddress]:[portNumber]/[BASE_DB_PATH]/[name] where hostAddress
  * and portNumber are from the peerAdvertisesDataForUs argument.
  * @param {Buffer} ourPublicKey The buffer containing our ECDH public key
@@ -192,8 +192,8 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
  * the PSK related settings are specified.
  * @param {string} remoteDbName The name of remote DB that we will try to replicate
  * with. This parameter is used to create a proper url to remote database. If it is
- * not provided, for example by ThaliPeerPoolInterface custom implementation,
- * we assume that the remote DB name is the same as our local one.
+ * not provided, for example by {@link module:thaliPeerPoolInterface~ThaliPeerPoolInterface}
+ * custom implementation, we assume that the remote DB name is the same as our local one.
  * The reason why it is not provided in constructor is that at the time of creating
  * instance of this object, we simply don't know such information.
  * @returns {Promise<?Error>}

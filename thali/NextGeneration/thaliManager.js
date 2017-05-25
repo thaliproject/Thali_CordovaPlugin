@@ -27,8 +27,9 @@ var assert = require('assert');
  * dbs. Typically this should have PouchDB.defaults set with db to
  * require('leveldown-mobile') and prefix to the path where the application
  * wishes to store the DB.
- * @param {string} localDbName Name of the db that we , both locally and remotely that we are
- * interacting with.
+ * @param {string} localDbName Name of the db that we are interacting with locally.
+ * The remote db name will be resolved either by using this parameter or by using
+ * {string} remoteDbName parameter passed to {@link module:ThaliReplicationPeerAction.start}.
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized with
  * the local device's public and private keys.
  * @param {module:thaliPeerPoolInterface~ThaliPeerPoolInterface} [thaliPeerPoolInterface]

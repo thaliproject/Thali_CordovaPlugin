@@ -45,7 +45,7 @@ var ThaliReplicationPeerAction = require('./thaliReplicationPeerAction');
  * @param {string} localDbName The name of the local DB. The name of the remote DB could be either
  * http://[host from discovery]:[port from discovery]/[BASE_DB_PATH]/[name] where name is
  * taken from pouchDB.info's db_name field or where name is provided during runtime to
- * ThaliReplicationPeerAction when it is being started.
+ * {@link module:ThaliReplicationPeerAction.start} when it is being started.
  * @param {module:thaliPeerPoolInterface~ThaliPeerPoolInterface} thaliPeerPoolInterface
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized
  * with the local device's public and private keys.
