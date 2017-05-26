@@ -190,12 +190,13 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
  * @param {http.Agent} httpAgentPool This is the HTTP connection pool to use
  * when creating HTTP requests related to this action. Note that this is where
  * the PSK related settings are specified.
- * @param {string} remoteDbName The name of remote DB that we will try to replicate
- * with. This parameter is used to create a proper url to remote database. If it is
- * not provided, for example by {@link module:thaliPeerPoolInterface~ThaliPeerPoolInterface}
- * custom implementation, we assume that the remote DB name is the same as our local one.
- * The reason why it is not provided in constructor is that at the time of creating
- * instance of this object, we simply don't know such information.
+ * @param {string} [remoteDbName] Optional parameter that specifies name of remote
+ * DB that we will try to replicate with. This parameter is used to create a proper
+ * url to remote database. If it is not provided, for example by
+ * {@link module:thaliPeerPoolInterface~ThaliPeerPoolInterface} custom implementation,
+ * we assume that the remote DB name is the same as our local one. The reason why it is
+ * not provided in constructor is that at the time of creating instance of this object,
+ * we simply don't know such information.
  * @returns {Promise<?Error>}
  */
 ThaliReplicationPeerAction.prototype.start = function (httpAgentPool, remoteDbName) {
