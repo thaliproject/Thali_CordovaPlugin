@@ -27,6 +27,7 @@ var platform = require('thali/NextGeneration/utils/platform');
 // A variable that can be used to store a server
 // that will get closed in teardown.
 var serverToBeClosed = null;
+var peerIdToBeClosed = "";
 
 var test = tape({
   setup: function (t) {
@@ -51,7 +52,13 @@ var test = tape({
             'Should be able to call stopAdvertisingAndListening in teardown'
           );
           thaliMobileNativeWrapper._registerToNative();
-          t.end();
+          Mobile('disconnect').callNative(peerIdToBeClosed, "0", function (err) {
+            t.notOk(
+              err,
+              'Should be able to call disconnect in teardown'
+            );
+            t.end();
+          });
         });
       });
     });
@@ -252,9 +259,10 @@ test('Can connect to a remote peer', function (t) {
     echoServer = makeIntoCloseAllServer(echoServer);
     serverToBeClosed = echoServer;
 
-    function onConnectSuccess(err, connection) {
+    function onConnectSuccess(err, connection, peer) {
       // Called if we successfully connect to to a peer
       logger.info(connection);
+      peerIdToBeClosed = peer.peerIdentifier;
 
       t.ok(connection.hasOwnProperty('listeningPort'),
         'Must have listeningPort');
@@ -432,8 +440,9 @@ test('Can shift data', function (t) {
   server = makeIntoCloseAllServer(server);
   serverToBeClosed = server;
 
-  function onConnectSuccess(err, connection) {
+  function onConnectSuccess(err, connection, peer) {
     var nativePort = connection.listeningPort;
+    peerIdToBeClosed = peer.peerIdentifier;
 
     connect(net, { port: nativePort })
     .then(function (socket) {
@@ -473,12 +482,13 @@ test('Can shift data via parallel connections',
     server = makeIntoCloseAllServer(server);
     serverToBeClosed = server;
 
-    function onConnectSuccess(err, connection) {
+    function onConnectSuccess(err, connection, peer) {
       var nativePort = connection.listeningPort;
+      peerIdToBeClosed = peer.peerIdentifier;
       Promise.all([
         connect(net, { port: nativePort }),
         connect(net, { port: nativePort }),
-        connect(net, { port: nativePort }),
+        connect(net, { port: nativePort })
       ]).then(function (sockets) {
         return Promise.all(sockets.map(function (socket) {
           var string = randomString.generate(dataLength);
@@ -599,8 +609,9 @@ test('Can shift data securely', function (t) {
       });
   }
 
-  function onConnectSuccess(err, connection) {
+  function onConnectSuccess(err, connection, peer) {
     var nativePort = connection.listeningPort;
+    peerIdToBeClosed = peer.peerIdentifier;
 
     startShiftData(nativePort)
       .catch(t.fail)
@@ -683,8 +694,9 @@ test('Can shift large amounts of data', function (t) {
     sock.write(toSend);
   }
 
-  function onConnectSuccess(err, connection) {
+  function onConnectSuccess(err, connection, peer) {
     var client = null;
+    peerIdToBeClosed = peer.peerIdentifier;
 
     // We're happy here if we make a connection to anyone
     logger.info('Connection info: ' + JSON.stringify(connection));
