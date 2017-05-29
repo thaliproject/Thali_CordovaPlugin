@@ -168,7 +168,11 @@ function iOSConnectToPeer(peer, quitSignal) {
       }
 
       if (error) {
-        return reject(new Error(error));
+        // Connection to a peer failed.
+        // Return a fatal error to avoid retrying connecting to a peer that is not available anymore
+        error = new Error(error);
+        error.isFatal = true;
+        return reject(error);
       }
       if (syncValue !== originalSyncValue) {
         logger.warn(
