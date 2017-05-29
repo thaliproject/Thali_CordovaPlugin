@@ -7,8 +7,8 @@
   "target": "all",
   "priority": "normal",
   "csname": {
-    "android": "com.test.thalitest",
-    "ios": "com.test.thalitest"
+    "android": "com.rockwellautomation.thalitest",
+    "ios": "com.rockwellautomation.thalitest"
   },
   "timeout": 1400,
   "serverScript": "test/TestServer/"
