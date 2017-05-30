@@ -912,12 +912,7 @@ test('calls correct starts when network changes',
 // The connection cut is implemented as a separate test instead
 // of doing it in the middle of the actual test so that the
 // step gets coordinated between peers.
-test('test to coordinate connection cut',
-  function () {
-    // This should be running on Android too but see #1600
-    return platform._isRealAndroid;
-  },
-  function (t) {
+test('test to coordinate connection cut', function (t) {
     // This cuts connections on Android or iOS
     var result = platform.isAndroid ?
       testUtils.toggleBluetooth(false):

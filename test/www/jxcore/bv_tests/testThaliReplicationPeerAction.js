@@ -221,12 +221,7 @@ function matchDocsInChanges(pouchDB, docs, thaliPeerReplicationAction) {
   });
 }
 
-test('Make sure docs replicate',
-  function () {
-    // FIXME: iOS is too slow for this test (#1618)
-    return platform._isRealIOS;
-  },
-  function (t) {
+test('Make sure docs replicate', function (t) {
     testCloseAllServer = testUtils.setUpServer(function (serverPort,
                                                          randomDBName,
                                                          remotePouchDB) {
@@ -275,12 +270,7 @@ test('Make sure docs replicate',
     });
   });
 
-test('Do nothing and make sure we time out',
-  function () {
-    // FIXME: iOS is too slow for this test (#1618)
-    return platform._isRealIOS;
-  },
-  function (t) {
+test('Do nothing and make sure we time out', function (t) {
     function onServerSetUp (serverPort, randomDBName) {
       var thaliReplicationPeerAction = null;
       var notificationForUs = {
@@ -329,12 +319,7 @@ test('Do nothing and make sure we time out',
   }
 );
 
-test('Do something and make sure we time out',
-  function () {
-    // FIXME: iOS is too slow for this test (#1618)
-    return platform._isRealIOS;
-  },
-  function (t) {
+test('Do something and make sure we time out', function (t) {
     function onServerSetUp (serverPort, randomDBName, remotePouchDB) {
       var thaliReplicationPeerAction = null;
       var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();

@@ -119,8 +119,7 @@ test('#_doImmediateSeqUpdate - server always returns 500', function (t) {
   });
 });
 
-function validateRev(t, rev, lastSyncedSequenceNumber, randomDBName, serverPort)
-{
+function validateRev(t, rev, lastSyncedSequenceNumber, randomDBName, serverPort) {
   return httpTester.validateSeqNumber(t, randomDBName, serverPort,
     lastSyncedSequenceNumber, pskId, pskKey, devicePublicKey)
     .then(function (pouchResponse) {
@@ -388,10 +387,8 @@ test('#update - Fail on bad seq value', function (t) {
 test('#update - do we cancel timer properly on an immediate?', function (t) {
   testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName,
                                              remotePouchDB) {
-    // TODO: timeout should be around 1000ms but we set it much larger in order
-    // to make test pass on iOS (#1618).
     localSeqManager =
-      new LocalSeqManager(8000, remotePouchDB, devicePublicKey);
+      new LocalSeqManager(1000, remotePouchDB, devicePublicKey);
     var timerPromise = null;
     var immediatePromise = null;
     var lastSyncedSequenceNumber = 12;
@@ -463,10 +460,8 @@ test('#update - do we wait for blocked update', function (t) {
 function testTimer(t, updateFn) {
   testCloseAllServer = testUtils.setUpServer(function (serverPort, randomDBName,
                                              remotePouchDB) {
-    // TODO: timeout should be around 1000ms but we set it much larger in order
-    // to make test pass on iOS (#1618).
     localSeqManager =
-      new LocalSeqManager(8000, remotePouchDB, devicePublicKey);
+      new LocalSeqManager(1000, remotePouchDB, devicePublicKey);
     var lastSyncedSequenceNumber = 0;
     var firstUpdateTime = Date.now();
     var startTimeForSecondUpdate = null;
