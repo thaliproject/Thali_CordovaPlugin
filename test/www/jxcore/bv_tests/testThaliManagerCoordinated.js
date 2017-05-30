@@ -24,8 +24,7 @@ var ecdhForLocalDevice = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var publicKeyForLocalDevice = ecdhForLocalDevice.generateKeys();
 var publicBase64KeyForLocalDevice = ecdhForLocalDevice.getPublicKey('base64');
 
-// PouchDB name could be the same between peers or could be provided to
-// ThaliReplicationPeerAction.start during runtime.
+// PouchDB name should be the same between peers.
 var DB_NAME = 'ThaliManagerCoordinated';
 
 PouchDB = testUtils.getLevelDownPouchDb();
