@@ -864,9 +864,8 @@ test('calls correct starts when network changes',
               t.fail('Should fail');
             })
             .catch(function (error) { // eslint-disable-line
-              // TODO: enable when (if) #1767 is fixed
-              // t.equals(error.message, 'Radio Turned Off',
-              //   'specific error expected');
+              t.equals(error.message, 'Radio Turned Off',
+                'specific error expected');
             });
         };
         var listen = validateStartResult(
@@ -926,12 +925,7 @@ test('test to coordinate connection cut', function (t) {
     });
   });
 
-test('can do HTTP requests after connections are cut',
-  function () {
-    // This should be running on Android too but see #1600
-    return platform._isRealAndroid;
-  },
-  function (t) {
+test('can do HTTP requests after connections are cut', function (t) {
   // Turn Bluetooth back on so that Android can operate
   // (iOS does not require separate call to operate since
   // killConnections is more like a single-shot thing).
