@@ -241,7 +241,7 @@ function connectToListenerSendMessageGetResponseLength(t, port, request,
   });
 }
 
-test('Can connect to a remote peer', function () { return false}, function (t) {
+test('Can connect to a remote peer', function () { return true}, function (t) {
   setTimeout(function () {
     var connecting = false;
 
@@ -435,7 +435,7 @@ function createServer(dataLength, formatPrintableData) {
   });
 }
 
-test('Can shift data', function () { return false}, function (t) {
+test('Can shift data', function () { return true}, function (t) {
   var connecting = false;
   var exchangeData = 'small amount of data';
 
@@ -477,7 +477,7 @@ test('Can shift data', function () { return false}, function (t) {
   });
 });
 
-test('Can shift data via parallel connections', function () { return false},
+test('Can shift data via parallel connections', function () { return true},
   function () {
     return platform.isAndroid;
   },
@@ -528,7 +528,7 @@ test('Can shift data via parallel connections', function () { return false},
     });
   });
 
-test('Can shift data securely', function () { return false}, function (t) {
+test('Can shift data securely', function () { return true}, function (t) {
   var connecting = false;
   var exchangeData = 'small amount of data';
 
@@ -645,7 +645,7 @@ test('Can shift data securely', function () { return false}, function (t) {
   });
 });
 
-test('Can shift large amounts of data', function () { return false}, function (t) {
+test('Can shift large amounts of data', function () { return true}, function (t) {
   var connecting = false;
 
   var sockets = {};

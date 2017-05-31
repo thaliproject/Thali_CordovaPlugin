@@ -37,7 +37,7 @@ var test = tape({
   }
 });
 
-test('Coordinated replication action test', function () { return false}, function (t) {
+test('Coordinated replication action test', function () { return true}, function (t) {
   var router = express.Router();
   router.use(
     '/db',

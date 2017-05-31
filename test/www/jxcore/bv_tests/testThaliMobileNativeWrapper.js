@@ -837,7 +837,7 @@ function (t) {
   });
 });
 
-test('can do HTTP requests between peers', function () { return false},
+test('can do HTTP requests between peers', function () { return true},
   function (t) {
     endToEndWithStateCheck(t);
 });

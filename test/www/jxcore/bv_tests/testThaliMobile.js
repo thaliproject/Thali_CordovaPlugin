@@ -288,7 +288,7 @@ test('does not send duplicate availability changes', tape.sinonTest(function (t)
   });
 }));
 
-test('can get the network status', function () { return false}, function (t) {
+test('can get the network status', function () { return true}, function (t) {
   ThaliMobile.getNetworkStatus()
   .then(function (networkChangedValue) {
     t.doesNotThrow(function () {
