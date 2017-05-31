@@ -173,7 +173,7 @@ function waitForRemoteDocs(pouchDB, docsToFind) {
   });
 }
 
-test('test write', function (t) {
+test('test write', function () { return false}, function (t) {
   // This function will return all participant's public keys
   // except local 'publicKeyForLocalDevice' one.
   var partnerKeys = testUtils.turnParticipantsIntoBufferArray(

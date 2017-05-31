@@ -192,7 +192,7 @@ function reConnect(t, peerIdentifier, originalListeningPort) {
   });
 }
 
-test('Get same port when trying to connect multiple times on iOS',
+test('Get same port when trying to connect multiple times on iOS', function () { return false},
   function (t) {
     serverToBeClosed = thaliMobileNativeTestUtils.
       getConnectionToOnePeerAndTest(t,

@@ -837,8 +837,9 @@ function (t) {
   });
 });
 
-test('can do HTTP requests between peers', function (t) {
-  endToEndWithStateCheck(t);
+test('can do HTTP requests between peers', function () { return false},
+  function (t) {
+    endToEndWithStateCheck(t);
 });
 
 test('can still do HTTP requests between peers with coordinator', function (t) {
@@ -934,7 +935,8 @@ test('test to coordinate connection cut',
 test('can do HTTP requests after connections are cut',
   function () {
     // This should be running on Android too but see #1600
-    return platform._isRealAndroid;
+    //return platform._isRealAndroid;
+    return false;
   },
   function (t) {
   // Turn Bluetooth back on so that Android can operate

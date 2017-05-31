@@ -288,7 +288,7 @@ test('does not send duplicate availability changes', tape.sinonTest(function (t)
   });
 }));
 
-test('can get the network status', function (t) {
+test('can get the network status', function () { return false}, function (t) {
   ThaliMobile.getNetworkStatus()
   .then(function (networkChangedValue) {
     t.doesNotThrow(function () {
@@ -308,7 +308,7 @@ test('can get the network status', function (t) {
   });
 });
 
-  
+
 test('peerAvailabilityChanged - peer added/removed to/from cache (native)',
   function (t) {
     var nativePeer = generateLowerLevelPeers().nativePeer;
@@ -2106,11 +2106,11 @@ test('If there are more then PEERS_LIMIT peers presented ' +
 
   function finishTest () {
     ThaliMobile._connectionTypePeersLimits
-      [connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = 
+      [connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] =
         CURRENT_MULTI_PEER_CONNECTIVITY_FRAMEWORK_PEERS_LIMIT;
     ThaliMobile._connectionTypePeersLimits[connectionTypes.BLUETOOTH] =
       CURRENT_BLUETOOTH_PEERS_LIMIT;
-    ThaliMobile._connectionTypePeersLimits[connectionTypes.TCP_NATIVE] = 
+    ThaliMobile._connectionTypePeersLimits[connectionTypes.TCP_NATIVE] =
       CURRENT_TCP_NATIVE_PEERS_LIMIT;
     t.end();
   }

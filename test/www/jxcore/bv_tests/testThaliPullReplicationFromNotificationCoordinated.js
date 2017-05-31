@@ -45,7 +45,7 @@ function bufferIndexOf(bufferArray, entryToFind) {
   return -1;
 }
 
-test('Coordinated pull replication from notification test', function (t) {
+test('Coordinated pull replication from notification test', function () { return false}, function (t) {
   var thaliPeerPoolDefault = new ThaliPeerPoolDefault();
   var router = express.Router();
   router.use(
