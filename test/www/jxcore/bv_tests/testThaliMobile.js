@@ -1019,7 +1019,7 @@ test('networkChanged - fires peerAvailabilityChanged event for native peers ' +
     function disableBluetooth() {
       ThaliMobileNativeWrapper.emitter.emit('networkChangedNonTCP', {
         wifi: radioState.ON,
-        bssidName: null,
+        bssidName: '00:00:00:00:00:00',
         bluetoothLowEnergy: radioState.ON,
         bluetooth: radioState.OFF,
         cellular: radioState.ON
@@ -1063,6 +1063,9 @@ test('networkChanged - fires peerAvailabilityChanged event for native peers ' +
             t.fail('Got peerAvailabilityChanged before wifi was disabled');
           }
           t.equals(peerStatus.peerAvailable, false, 'peer became unavailable');
+          break;
+        case 4:
+          t.equals(peerStatus.peerAvailable, false, 'peer became unavailable');
           setImmediate(end);
           break;
         default:
@@ -1079,8 +1082,15 @@ test('networkChanged - fires peerAvailabilityChanged event for native peers ' +
       t.end();
     }
 
-    // Add initial peers
-    emitNativePeerAvailability(testPeers.nativePeer);
+    // Make sure ThaliMobile is started before we begin this test, otherwise events `networkChangedNonTCP`
+    // will be filtered out.
+    ThaliMobile.start(express.Router()).then(function () {
+      // Add initial peers
+      emitNativePeerAvailability(testPeers.nativePeer);
+    }).catch(function (err) {
+      t.fail('ThaliMobile couldn\'t be started!');
+      end();
+    });
   }
 );
 
