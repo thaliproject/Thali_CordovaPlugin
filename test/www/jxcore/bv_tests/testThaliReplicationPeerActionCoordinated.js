@@ -344,7 +344,7 @@ test('Coordinated replication action test - each device has different local db n
     });
 });
 
-test('Coordinated replication action test - should throw error when wrong dbRemoteName is provided', function (t) {
+test('Coordinated replication action test - should throw error when wrong remote db name is provided', function (t) {
   var wrongRemoteDbName = 'testDb';
   var router = express.Router();
   router.use(
