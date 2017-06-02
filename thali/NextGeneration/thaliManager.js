@@ -27,8 +27,9 @@ var assert = require('assert');
  * dbs. Typically this should have PouchDB.defaults set with db to
  * require('leveldown-mobile') and prefix to the path where the application
  * wishes to store the DB.
- * @param {string} dbName Name of the db, both locally and remotely that we are
- * interacting with.
+ * @param {string} localDbName Name of the db that we are interacting with locally.
+ * The remote db name will be resolved either by using this parameter or by using
+ * {string} remoteDbName parameter passed to {@link module:ThaliReplicationPeerAction.start}.
  * @param {Crypto.ECDH} ecdhForLocalDevice A Crypto.ECDH object initialized with
  * the local device's public and private keys.
  * @param {module:thaliPeerPoolInterface~ThaliPeerPoolInterface} [thaliPeerPoolInterface]
@@ -42,7 +43,7 @@ var assert = require('assert');
 function ThaliManager(
   expressPouchDB,
   PouchDB,
-  dbName,
+  localDbName,
   ecdhForLocalDevice,
   thaliPeerPoolInterface,
   networkType
@@ -53,7 +54,7 @@ function ThaliManager(
   this._router.all('*', this._connectionFilter.bind(this));
 
   this._router.all('*', salti(
-    dbName,
+    localDbName,
     ThaliManager._acl,
     this._resolveThaliId.bind(this),
     { dbPrefix: thaliConfig.BASE_DB_PATH }
@@ -66,7 +67,7 @@ function ThaliManager(
         this._router,
         ecdhForLocalDevice,
         thaliConfig.BEACON_MILLISECONDS_TO_EXPIRE,
-        new PouchDB(dbName));
+        new PouchDB(localDbName));
   this._getPskIdToSecret =
     self._thaliSendNotificationBasedOnReplication.getPskIdToSecret();
   this._getPskIdToPublicKey =
@@ -77,7 +78,7 @@ function ThaliManager(
   this._thaliPullReplicationFromNotification =
     new ThaliPullReplicationFromNotification(
         PouchDB,
-        dbName,
+        localDbName,
         thaliPeerPoolInterface,
         ecdhForLocalDevice);
   this._thaliPeerPoolInterface = thaliPeerPoolInterface;

@@ -24,17 +24,17 @@ var Utils = require('../utils/common.js');
  * need for the base class's constructor.
  * @param {PouchDB} PouchDB The PouchDB class constructor we are supposed to
  * use.
- * @param {string} dbName The name of the DB we will use both for local use as
- * well as remote use. Note that we will get the name for the remote database by
- * taking dbName and appending it to http://[hostAddress]:[portNumber]/[BASE_DB_PATH]/
- * [name] where hostAddress and portNumber are from the peerAdvertisesDataForUs
- * argument.
+ * @param {string} localDbName The name of the DB which is dedicated for local usage.
+ * Remote DB url will be created either using localDbName parameter or remoteDbName
+ * parameter, which is provided to {@link module:ThaliReplicationPeerAction.start} during runtime,
+ * and appending it to http://[hostAddress]:[portNumber]/[BASE_DB_PATH]/[name] where hostAddress
+ * and portNumber are from the peerAdvertisesDataForUs argument.
  * @param {Buffer} ourPublicKey The buffer containing our ECDH public key
  * @constructor
  */
 function ThaliReplicationPeerAction(peerAdvertisesDataForUs,
                                     PouchDB,
-                                    dbName,
+                                    localDbName,
                                     ourPublicKey) {
   assert(ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS * 1000 -
     ThaliReplicationPeerAction.PUSH_LAST_SYNC_UPDATE_MILLISECONDS >
@@ -42,7 +42,7 @@ function ThaliReplicationPeerAction(peerAdvertisesDataForUs,
     'that at least one sync update will have gone out before we time out.');
   assert(peerAdvertisesDataForUs, 'there must be peerAdvertisesDataForUs');
   assert(PouchDB, 'there must be PouchDB');
-  assert(dbName, 'there must be dbName');
+  assert(localDbName, 'there must be localDbName');
   assert(ourPublicKey, 'there must be an ourPublicKey');
 
   ThaliReplicationPeerAction.super_.call(this, peerAdvertisesDataForUs.keyId,
@@ -53,7 +53,7 @@ function ThaliReplicationPeerAction(peerAdvertisesDataForUs,
 
   this._peerAdvertisesDataForUs = peerAdvertisesDataForUs;
   this._PouchDB = PouchDB;
-  this._dbName = dbName;
+  this._localDbName = localDbName;
   this._ourPublicKey = ourPublicKey;
   this._localSeqManager = null;
   this._cancelReplication = null;
@@ -107,7 +107,7 @@ ThaliReplicationPeerAction.prototype.getPeerAdvertisesDataForUs = function () {
  */
 ThaliReplicationPeerAction.prototype.clone = function () {
   return new ThaliReplicationPeerAction(this._peerAdvertisesDataForUs,
-    this._PouchDB, this._dbName, this._ourPublicKey);
+    this._PouchDB, this._localDbName, this._ourPublicKey);
 };
 
 /**
@@ -190,9 +190,16 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
  * @param {http.Agent} httpAgentPool This is the HTTP connection pool to use
  * when creating HTTP requests related to this action. Note that this is where
  * the PSK related settings are specified.
+ * @param {string} [remoteDbName] Optional parameter that specifies name of remote
+ * DB that we will try to replicate with. This parameter is used to create a proper
+ * url to remote database. If it is not provided, for example by
+ * {@link module:thaliPeerPoolInterface~ThaliPeerPoolInterface} custom implementation,
+ * we assume that the remote DB name is the same as our local one. The reason why it is
+ * not provided in constructor is that at the time of creating instance of this object,
+ * we simply don't know such information.
  * @returns {Promise<?Error>}
  */
-ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
+ThaliReplicationPeerAction.prototype.start = function (httpAgentPool, remoteDbName) {
   var self = this;
   this._completed = false;
 
@@ -201,7 +208,7 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
     .then(function () {
       var remoteUrl = 'https://' + self._peerAdvertisesDataForUs.hostAddress +
         ':' + self._peerAdvertisesDataForUs.portNumber +
-        path.join(thaliConfig.BASE_DB_PATH, self._dbName);
+        path.join(thaliConfig.BASE_DB_PATH, !!remoteDbName ? remoteDbName : self._localDbName);
       var ajaxOptions = {
         ajax : {
           agent: httpAgentPool
@@ -217,7 +224,7 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool) {
         self._resolve = resolve;
         self._reject = reject;
         self._replicationTimer();
-        self._cancelReplication = remoteDB.replicate.to(self._dbName, {
+        self._cancelReplication = remoteDB.replicate.to(self._localDbName, {
           live: true
         })
         .on('paused', function (err) {
