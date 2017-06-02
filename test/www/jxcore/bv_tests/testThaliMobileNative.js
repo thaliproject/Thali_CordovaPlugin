@@ -30,7 +30,11 @@ var platform = require('thali/NextGeneration/utils/platform');
 var serverToBeClosed = null;
 var peerIdToBeClosed = uuid.v4();
 
-var CONNECT_STATUS = {
+/**
+ * @readonly
+ * @type {{NOT_CONNECTED: string, CONNECTING: string, CONNECTED: string}}
+ */
+var connectStatus = {
   NOT_CONNECTED : 'notConnected',
   CONNECTING : 'connecting',
   CONNECTED : 'connected'
@@ -258,7 +262,7 @@ function connectToListenerSendMessageGetResponseLength(t, port, request,
 
 function executeZombieProofTest (t, server, testFunction) {
   console.log("TEST: execute ZombieProof test");
-  var status = CONNECT_STATUS.NOT_CONNECTED;
+  var status = connectStatus.NOT_CONNECTED;
   var availablePeers = [];
 
   var onConnectSuccess = function (err, connection, peer) {
@@ -268,16 +272,16 @@ function executeZombieProofTest (t, server, testFunction) {
 
   var tryToConnect = function () {
     availablePeers.forEach(function (peer) {
-      if (peer.peerAvailable && status === CONNECT_STATUS.NOT_CONNECTED) {
-        status = CONNECT_STATUS.CONNECTING;
+      if (peer.peerAvailable && status === connectStatus.NOT_CONNECTED) {
+        status = connectStatus.CONNECTING;
         console.log("TEST: connecting to peer:", peer.peerIdentifier);
         thaliMobileNativeTestUtils.connectToPeer(peer)
           .then(function (connection) {
-            status = CONNECT_STATUS.CONNECTED;
+            status = connectStatus.CONNECTED;
             onConnectSuccess(null, connection, peer);
           })
           .catch(function (error) {
-            status = CONNECT_STATUS.NOT_CONNECTED;
+            status = connectStatus.NOT_CONNECTED;
             console.log("TEST: failed to connect to peer:", peer.peerIdentifier);
             // Remove the peer from the availablePeers list in case it is still there
             for (var i = availablePeers.length - 1; i >= 0; i--) {
@@ -310,7 +314,7 @@ function executeZombieProofTest (t, server, testFunction) {
       }
     });
 
-    if (status === CONNECT_STATUS.NOT_CONNECTED && availablePeers.length > 0) {
+    if (status === connectStatus.NOT_CONNECTED && availablePeers.length > 0) {
       tryToConnect();
     }
   }
