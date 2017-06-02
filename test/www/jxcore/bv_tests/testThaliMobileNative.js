@@ -30,6 +30,12 @@ var platform = require('thali/NextGeneration/utils/platform');
 var serverToBeClosed = null;
 var peerIdToBeClosed = uuid.v4();
 
+var CONNECT_STATUS = {
+  NOT_CONNECTED : 'notConnected',
+  CONNECTING : 'connecting',
+  CONNECTED : 'connected'
+};
+
 var test = tape({
   setup: function (t) {
     serverToBeClosed = {
@@ -251,8 +257,8 @@ function connectToListenerSendMessageGetResponseLength(t, port, request,
 }
 
 function executeZombieProofTest (t, server, testFunction) {
-  console.log("TEST: execute test");
-  var status = 'notConnected';
+  console.log("TEST: execute ZombieProof test");
+  var status = CONNECT_STATUS.NOT_CONNECTED;
   var availablePeers = [];
 
   var onConnectSuccess = function (err, connection, peer) {
@@ -262,16 +268,16 @@ function executeZombieProofTest (t, server, testFunction) {
 
   var tryToConnect = function () {
     availablePeers.forEach(function (peer) {
-      if (peer.peerAvailable && status == 'notConnected') {
-        status = 'connecting';
+      if (peer.peerAvailable && status === CONNECT_STATUS.NOT_CONNECTED) {
+        status = CONNECT_STATUS.CONNECTING;
         console.log("TEST: connecting to peer:", peer.peerIdentifier);
         thaliMobileNativeTestUtils.connectToPeer(peer)
           .then(function (connection) {
-            status = 'connected';
+            status = CONNECT_STATUS.CONNECTED;
             onConnectSuccess(null, connection, peer);
           })
           .catch(function (error) {
-            status = 'notConnected';
+            status = CONNECT_STATUS.NOT_CONNECTED;
             console.log("TEST: failed to connect to peer:", peer.peerIdentifier);
             // Remove the peer from the availablePeers list in case it is still there
             for (var i = availablePeers.length - 1; i >= 0; i--) {
@@ -304,7 +310,7 @@ function executeZombieProofTest (t, server, testFunction) {
       }
     });
 
-    if (status == 'notConnected' && availablePeers.length > 0) {
+    if (status === CONNECT_STATUS.NOT_CONNECTED && availablePeers.length > 0) {
       tryToConnect();
     }
   }
