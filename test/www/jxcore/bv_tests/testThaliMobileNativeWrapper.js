@@ -43,6 +43,7 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
+    thaliMobileNativeWrapper.emitter.removeAllListeners();
     thaliMobileNativeWrapper.stop()
     .then(function () {
       t.equals(thaliMobileNativeWrapper._isStarted(), false,
@@ -201,8 +202,8 @@ function executeZombieProofTest (t, testFunction) {
     });
   };
 
-  function peerAvailabilityChanged(peers) {
-    console.log("TEST: peerAvailabilityChangedHandler invoked");
+  function nonTCPPeerAvailabilityChangedHandler(peers) {
+    console.log("TEST: nonTCPPeerAvailabilityChangedHandler invoked");
     peers.forEach(function (peer) {
       if (peer.peerAvailable == true) {
         // Add the peer to the availablePeers list
@@ -225,7 +226,7 @@ function executeZombieProofTest (t, testFunction) {
   }
 
   thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent', function(peers) {
-    peerAvailabilityChanged([peers]);
+    nonTCPPeerAvailabilityChangedHandler([peers]);
   });
 }
 

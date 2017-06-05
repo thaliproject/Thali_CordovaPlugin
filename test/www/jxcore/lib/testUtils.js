@@ -19,6 +19,7 @@ var notificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var express = require('express');
 var fs = require('fs-extra-promise');
+var thaliMobileNativeTestUtils = require('./thaliMobileNativeTestUtils');
 
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
@@ -689,7 +690,7 @@ module.exports.runTestOnAllParticipants = function (
       }
 
       completed = true;
-      resolve();
+      resolve(notificationForUs);
     }
 
     function fail(notificationForUs, error) {
@@ -697,7 +698,7 @@ module.exports.runTestOnAllParticipants = function (
       var count = participantCount[publicKey];
       if (completed || count === -1) {
         logger.warn('error ignored: \'%s\' ', String(error));
-        return Promise.resolve();
+        return Promise.resolve(notificationForUs);
       }
 
       count ++;
@@ -708,7 +709,7 @@ module.exports.runTestOnAllParticipants = function (
 
         logger.error('got error: \'%s\' ', String(error));
         reject(error);
-        return Promise.resolve(error);
+        return Promise.resolve(notificationForUs, error);
       }
 
       logger.warn('error ignored: \'%s\' ', String(error));
@@ -721,7 +722,7 @@ module.exports.runTestOnAllParticipants = function (
 
     function createTask(notificationForUs) {
       if (completed) {
-        return Promise.resolve();
+        return Promise.resolve(notificationForUs);
       }
 
       return testToRun(notificationForUs)
@@ -742,6 +743,7 @@ module.exports.runTestOnAllParticipants = function (
       participantTask[publicKey].cancel();
       participantTask[publicKey] = createTask(notificationForUs);
     };
+
     thaliNotificationClient.on(
       thaliNotificationClient.Events.PeerAdvertisesDataForUs,
       notificationHandler

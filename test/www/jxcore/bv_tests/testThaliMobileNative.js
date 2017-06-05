@@ -50,6 +50,7 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
+    thaliMobileNativeWrapper._registerToNative();
     thaliMobileNativeTestUtils.multiConnectEmitter.removeAllListeners();
     serverToBeClosed.closeAll(function () {
       Mobile('stopListeningForAdvertisements').callNative(function (err) {
@@ -263,12 +264,12 @@ function connectToListenerSendMessageGetResponseLength(t, port, request,
 }
 
 function executeZombieProofTest (t, server, testFunction) {
-  logger.debug("TEST: execute ZombieProof test");
+  console.log("TEST: execute ZombieProof test");
   var status = connectStatus.NOT_CONNECTED;
   var availablePeers = [];
 
   var onConnectSuccess = function (err, connection, peer) {
-    logger.debug("TEST: onConnectSuccess");
+    console.log("TEST: onConnectSuccess");
     testFunction(err, connection, peer);
   };
 
@@ -276,7 +277,7 @@ function executeZombieProofTest (t, server, testFunction) {
     availablePeers.forEach(function (peer) {
       if (peer.peerAvailable && status === connectStatus.NOT_CONNECTED) {
         status = connectStatus.CONNECTING;
-        logger.debug("TEST: connecting to peer:", peer.peerIdentifier);
+        console.log("TEST: connecting to peer:", peer.peerIdentifier);
         thaliMobileNativeTestUtils.connectToPeer(peer)
           .then(function (connection) {
             status = connectStatus.CONNECTED;
@@ -284,7 +285,7 @@ function executeZombieProofTest (t, server, testFunction) {
           })
           .catch(function (error) {
             status = connectStatus.NOT_CONNECTED;
-            logger.debug("TEST: failed to connect to peer:", peer.peerIdentifier);
+            console.log("TEST: failed to connect to peer:", peer.peerIdentifier);
             // Remove the peer from the availablePeers list in case it is still there
             for (var i = availablePeers.length - 1; i >= 0; i--) {
               if (availablePeers[i].peerIdentifier === peer.peerIdentifier) {
@@ -299,18 +300,18 @@ function executeZombieProofTest (t, server, testFunction) {
   };
 
   function peerAvailabilityChanged(peers) {
-    logger.debug("TEST: peerAvailabilityChangedHandler invoked");
+    console.log("TEST: peerAvailabilityChangedHandler invoked");
     peers.forEach(function (peer) {
       if (peer.peerAvailable == true) {
         // Add the peer to the availablePeers list
         availablePeers.push(peer);
-        logger.debug("TEST: peer added:", peer);
+        console.log("TEST: peer added:", peer);
       } else {
         // Remove the peer from the availablePeers list
         for (var i = availablePeers.length - 1; i >= 0; i--) {
           if (availablePeers[i].peerIdentifier === peer.peerIdentifier) {
             availablePeers.splice(i, 1);
-            logger.debug("TEST: peer removed:", peer);
+            console.log("TEST: peer removed:", peer);
           }
         }
       }
@@ -448,33 +449,37 @@ test('Can shift data', function (t) {
   });
 });
 
-test('Can shift data via parallel connections', function (t) {
-   var dataLength = 16 * 1024;
+test('Can shift data via parallel connections',
+  function () {
+    return platform.isAndroid;
+  },
+  function (t) {
+    var dataLength = 16 * 1024;
 
-   var server = createServer(t, dataLength);
-   server = makeIntoCloseAllServer(server);
-   serverToBeClosed = server;
+    var server = createServer(t, dataLength);
+    server = makeIntoCloseAllServer(server);
+    serverToBeClosed = server;
 
-  executeZombieProofTest(t, server, function (err, connection, peer) {
-     peerIdToBeClosed = peer.peerIdentifier;
-     var nativePort = connection.listeningPort;
-     Promise.all([
-       connect(net, { port: nativePort }),
-       connect(net, { port: nativePort }),
-       connect(net, { port: nativePort })
-     ]).then(function (sockets) {
-       return Promise.all(sockets.map(function (socket) {
-         var string = randomString.generate(dataLength);
-         t.equal(string.length, dataLength, 'correct string length');
-         return shiftData(t, socket, string);
-       }));
-     })
-       .catch(t.fail)
-       .then(function () {
-         t.end();
-       });
-   });
- });
+    executeZombieProofTest(t, server, function (err, connection, peer) {
+      peerIdToBeClosed = peer.peerIdentifier;
+      var nativePort = connection.listeningPort;
+      Promise.all([
+        connect(net, {port: nativePort}),
+        connect(net, {port: nativePort}),
+        connect(net, {port: nativePort})
+      ]).then(function (sockets) {
+        return Promise.all(sockets.map(function (socket) {
+          var string = randomString.generate(dataLength);
+          t.equal(string.length, dataLength, 'correct string length');
+          return shiftData(t, socket, string);
+        }));
+      })
+        .catch(t.fail)
+        .then(function () {
+          t.end();
+        });
+    });
+  });
 
 test('Can shift data securely', function (t) {
  var exchangeData = 'small amount of data';

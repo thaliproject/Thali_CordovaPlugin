@@ -5,6 +5,7 @@ var express        = require('express');
 var expressPouchDB = require('express-pouchdb');
 var ForeverAgent   = require('forever-agent');
 var Promise        = require('bluebird');
+var uuid           = require('node-uuid');
 
 var tape      = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils');
@@ -15,6 +16,7 @@ var ThaliNotificationServer    = require('thali/NextGeneration/notification/thal
 var ThaliNotificationClient    = require('thali/NextGeneration/notification/thaliNotificationClient');
 var ThaliPeerPoolDefault       = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 var ThaliReplicationPeerAction = require('thali/NextGeneration/replication/thaliReplicationPeerAction');
+var platform                   = require('thali/NextGeneration/utils/platform');
 
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var devicePublicKey        = devicePublicPrivateKey.generateKeys();
@@ -30,6 +32,8 @@ var LOCAL_DB_NAME          = 'repActionTest';
 var EXPIRATION_TIMEOUT     = 60 * 60 * 1000;
 var ERROR_NO_DB_FILE       = 'no_db_file';
 
+var peerIdToBeClosed       = uuid.v4();
+
 if (!tape.coordinated) {
   return;
 }
@@ -44,7 +48,17 @@ var test = tape({
     if (localPouchDB) {
       localPouchDB.destroy();
     }
-    t.end();
+    if (!platform.isAndroid) {
+      Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
+        t.notOk(
+          err,
+          'Should be able to call disconnect in teardown'
+        );
+        t.end();
+      });
+    } else {
+      t.end();
+    }
   }
 });
 
@@ -139,10 +153,11 @@ test('Coordinated replication action test - each device has the same local db na
       }
     )
   })
-
-  .then(function () {
-    return t.sync();
-  })
+    .then(function (notificationForUs) {
+      peerIdToBeClosed = notificationForUs.peerId;
+      console.log('PeerIdToBeClosed: ', peerIdToBeClosed);
+      return t.sync();
+    })
 
   .then(function () {
     // We are simulating thaliPullReplicationFromNotification.stop() and
@@ -290,7 +305,9 @@ test('Coordinated replication action test - each device has different local db n
       )
     })
 
-    .then(function () {
+    .then(function (notificationForUs) {
+      peerIdToBeClosed = notificationForUs.peerId;
+      console.log('PeerIdToBeClosed: ', peerIdToBeClosed);
       return t.sync();
     })
 
@@ -400,14 +417,16 @@ test('Coordinated replication action test - should throw error when wrong remote
               })
               .catch(function (error) {
                 t.equals(error.reason, ERROR_NO_DB_FILE, 'error should be \'no_db_file\'');
-                resolve(true);
+                resolve(thaliReplicationPeerAction);
               });
           });
         }
       )
     })
 
-    .then(function () {
+    .then(function (notificationForUs) {
+      peerIdToBeClosed = notificationForUs.peerId;
+      console.log('PeerIdToBeClosed: ', peerIdToBeClosed);
       return t.sync();
     })
 
