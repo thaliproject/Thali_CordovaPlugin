@@ -145,7 +145,6 @@ test('multiConnect properly fails on legal but non-existent peerID',
 
 test('cannot call multiConnect with invalid syncValue',
   function (t) {
-    var connectReturned = false;
     var invalidSyncValue = /I am not a string/;
     Mobile('startListeningForAdvertisements').callNative(function (err) {
       t.notOk(err, 'No error on starting');
@@ -157,19 +156,11 @@ test('cannot call multiConnect with invalid syncValue',
         });
     });
   });
-//TODO - fix failing test. The disconnect method should not throw badParameters exception
-test('disconnect doesn\'t fail on bad peer id', function () { return true }, function (t) {
-  Mobile('disconnect').callNative('foo', function(err) {
-    t.notOk(err, 'No error');
-    // Giving failure callback a chance to mess things up
-    setImmediate(function () {
+
+test('cannot call disconnect with invalid peer id', function (t) {
+  Mobile('disconnect').callNative('foo', function (error) {
+      t.equal(error, 'Bad parameters', 'Got right error');
       t.end();
-    });
-  });
-  thaliMobileNativeTestUtils.multiConnectEmitter
-    .on('multiConnectConnectionFailure', function (peerIdentifier, error) {
-      t.fail('We shouldn\'t get a failure callback - peerID: ' +
-        peerIdentifier + ', error: ' + error);
     });
 });
 
