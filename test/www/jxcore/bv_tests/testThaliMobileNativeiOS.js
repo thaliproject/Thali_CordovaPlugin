@@ -157,7 +157,7 @@ test('cannot call multiConnect with invalid syncValue',
         });
     });
   });
-//TODO - fix failing test
+//TODO - fix failing test. The disconnect method should not throw badParameters exception
 test('disconnect doesn\'t fail on bad peer id', function () { return true }, function (t) {
   Mobile('disconnect').callNative('foo', function(err) {
     t.notOk(err, 'No error');
@@ -173,9 +173,8 @@ test('disconnect doesn\'t fail on bad peer id', function () { return true }, fun
     });
 });
 
-//TODO - fix failing test
-test('disconnect doesn\'t fail on plausible but bogus peer ID', function () { return true }, function (t) {
-  var peerId = nodeUuid.v4() + ':' + 0;
+test('disconnect doesn\'t fail on plausible but bogus peer ID', function (t) {
+  var peerId = nodeUuid.v4();
   Mobile('disconnect').callNative(peerId, function(err) {
     t.notOk(err, 'No error');
     // Giving failure callback a chance to mess things up
