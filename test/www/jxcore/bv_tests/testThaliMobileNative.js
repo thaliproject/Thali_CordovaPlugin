@@ -42,6 +42,7 @@ var connectStatus = {
 
 var test = tape({
   setup: function (t) {
+    thaliMobileNativeWrapper._registerToNative();
     serverToBeClosed = {
       closeAll: function (callback) {
         callback();
@@ -50,7 +51,6 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    thaliMobileNativeWrapper._registerToNative();
     thaliMobileNativeTestUtils.multiConnectEmitter.removeAllListeners();
     serverToBeClosed.closeAll(function () {
       Mobile('stopListeningForAdvertisements').callNative(function (err) {
@@ -591,7 +591,7 @@ test('Can shift large amounts of data', function (t) {
    });
    sockets[socket.remotePort] = socket;
  });
-  server = makeIntoCloseAllServer(server);
+ server = makeIntoCloseAllServer(server);
  serverToBeClosed = server;
 
  var dataSize = 64 * 1024;
