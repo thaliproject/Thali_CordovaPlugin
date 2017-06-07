@@ -22,7 +22,7 @@ var validations = require('thali/validations');
 var tape = require('../lib/thaliTape');
 var uuid = require('node-uuid');
 
-var peerIdToBeClosed = uuid.v4();
+var peerIdsToBeClosed = [];
 
 /**
  * @readonly
@@ -42,22 +42,22 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    thaliMobileNativeWrapper.emitter.removeAllListeners();
     thaliMobileNativeWrapper.stop()
       .then(function () {
         t.equals(thaliMobileNativeWrapper._isStarted(), false,
           'must be stopped');
         if (!platform.isAndroid) {
-          Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
-            t.notOk(
-              err,
-              'Should be able to call disconnect in teardown'
-            );
-            t.end();
+          peerIdsToBeClosed.forEach(function (peerIdToBeClosed) {
+            Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
+              t.notOk(
+                err,
+                'Should be able to call disconnect in teardown'
+              );
+            });
           });
-        } else {
-          t.end();
         }
+        peerIdsToBeClosed = [];
+        t.end();
       })
       .catch(function (err) {
         t.fail('teardown failed with ' + JSON.stringify(err));
@@ -247,6 +247,8 @@ function trivialEndToEndTestScaffold(t, pskIdtoSecret, pskIdentity, pskKey,
     .then(function () {
       executeZombieProofTest(t, function (err, connection, peer) {
         var end = function (peerId, fail) {
+          peerIdsToBeClosed.push(peer.peerIdentifier);
+
           return callback ? callback(peerId, fail) : t.end();
         };
 
@@ -254,7 +256,6 @@ function trivialEndToEndTestScaffold(t, pskIdtoSecret, pskIdentity, pskKey,
           .then(function (response) {
             t.equal(response, testData,
               'response body should match testData');
-            peerIdToBeClosed = peer.peerIdentifier;
             end(response.peerId);
           })
           .catch(function (error) {
@@ -262,7 +263,7 @@ function trivialEndToEndTestScaffold(t, pskIdtoSecret, pskIdentity, pskKey,
             end(null, error);
           });
       });
-    });
+  });
 }
 
 var pskIdentity = 'I am me!';

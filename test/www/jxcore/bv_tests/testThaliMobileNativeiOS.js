@@ -2,7 +2,7 @@
 
 // Issue #419
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
-var Platform = require('thali/NextGeneration/utils/platform');
+var platform = require('thali/NextGeneration/utils/platform');
 var nodeUuid = require('node-uuid');
 var net = require('net');
 var thaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils');
@@ -12,7 +12,7 @@ var thaliMobileNativeWrapper =
 var logger = require('../lib/testLogger')('testThaliMobileNativeiOS');
 var Promise = require('lie');
 if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
-    !Platform.isIOS) {
+    !platform.isIOS) {
   return;
 }
 
@@ -21,7 +21,7 @@ var tape = require('../lib/thaliTape');
 
 var uuid = require('node-uuid');
 
-var peerIdToBeClosed = uuid.v4();
+var peerIdsToBeClosed = [];
 
 /**
  * @readonly
@@ -41,6 +41,7 @@ var serverToBeClosed = null;
 
 var test = tape({
   setup: function (t) {
+    thaliMobileNativeWrapper._registerToNative();
     serverToBeClosed = {
       closeAll: function (callback) {
         callback();
@@ -61,14 +62,18 @@ var test = tape({
             err,
             'Should be able to call stopAdvertisingAndListening in teardown'
           );
-          Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
-            t.notOk(
-              err,
-              'Should be able to call disconnect in teardown'
-            );
-            thaliMobileNativeWrapper._registerToNative();
-            t.end();
-          });
+          if (!platform.isAndroid) {
+            peerIdsToBeClosed.forEach(function (peerIdToBeClosed) {
+              Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
+                t.notOk(
+                  err,
+                  'Should be able to call disconnect in teardown'
+                );
+              });
+            });
+          }
+          peerIdsToBeClosed = [];
+          t.end();
         });
       });
     });
@@ -212,7 +217,6 @@ function executeZombieProofTest (t, server, testFunction) {
   var onConnectSuccess = function (err, connection, peer) {
     logger.debug("TEST: onConnectSuccess");
     testFunction(err, connection, peer);
-    connectTest(connectionCallback.listeningPort, currentTestPeer);
   };
 
   var tryToConnect = function () {
@@ -276,7 +280,7 @@ test('Get same port when trying to connect multiple times on iOS',
     serverToBeClosed = server;
 
     executeZombieProofTest(t, server, function (err, currentConnection, currentTestPeer) {
-        peerIdToBeClosed = currentTestPeer.peerIdentifier;
+      peerIdsToBeClosed.push(currentTestPeer.peerIdentifier);
         var listeningPort = currentConnection.listeningPort;
         var connection = net.connect(listeningPort,
           function () {

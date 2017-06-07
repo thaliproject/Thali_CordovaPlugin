@@ -28,7 +28,7 @@ var platform = require('thali/NextGeneration/utils/platform');
 // A variable that can be used to store a server
 // that will get closed in teardown.
 var serverToBeClosed = null;
-var peerIdToBeClosed = uuid.v4();
+var peerIdsToBeClosed = [];
 
 /**
  * @readonly
@@ -64,16 +64,17 @@ var test = tape({
             'Should be able to call stopAdvertisingAndListening in teardown'
           );
           if (!platform.isAndroid) {
-            Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
-              t.notOk(
-                err,
-                'Should be able to call disconnect in teardown'
-              );
-              t.end();
+            peerIdsToBeClosed.forEach(function (peerIdToBeClosed) {
+              Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
+                t.notOk(
+                  err,
+                  'Should be able to call disconnect in teardown'
+                );
+              });
             });
-          } else {
-            t.end();
           }
+          peerIdsToBeClosed = [];
+          t.end();
         });
       });
     });
@@ -335,7 +336,7 @@ test('Can connect to a remote peer', function (t) {
   executeZombieProofTest(t, server, function (err, connection, peer) {
     // Called if we successfully connect to to a peer
     logger.info(connection);
-    peerIdToBeClosed = peer.peerIdentifier;
+    peerIdsToBeClosed.push(peer.peerIdentifier);
 
     t.ok(connection.hasOwnProperty('listeningPort'),
       'Must have listeningPort');
@@ -435,7 +436,7 @@ test('Can shift data', function (t) {
   serverToBeClosed = server;
 
   executeZombieProofTest(t, server, function (err, connection, peer) {
-    peerIdToBeClosed = peer.peerIdentifier;
+    peerIdsToBeClosed.push(peer.peerIdentifier);
     var nativePort = connection.listeningPort;
 
     connect(net, { port: nativePort })
@@ -461,7 +462,7 @@ test('Can shift data via parallel connections',
     serverToBeClosed = server;
 
     executeZombieProofTest(t, server, function (err, connection, peer) {
-      peerIdToBeClosed = peer.peerIdentifier;
+      peerIdsToBeClosed.push(peer.peerIdentifier);
       var nativePort = connection.listeningPort;
       Promise.all([
         connect(net, {port: nativePort}),
@@ -560,7 +561,7 @@ test('Can shift data securely', function (t) {
  }
 
   executeZombieProofTest(t, server, function(err, connection, peer) {
-   peerIdToBeClosed = peer.peerIdentifier;
+   peerIdsToBeClosed.push(peer.peerIdentifier);
 
    return connect(tls, {
      port: connection.listeningPort,
@@ -636,7 +637,7 @@ test('Can shift large amounts of data', function (t) {
 
   executeZombieProofTest(t, server, function (err, connection, peer) {
    var client = null;
-   peerIdToBeClosed = peer.peerIdentifier;
+   peerIdsToBeClosed.push(peer.peerIdentifier);
 
    // We're happy here if we make a connection to anyone
    logger.info('Connection info: ' + JSON.stringify(connection));
