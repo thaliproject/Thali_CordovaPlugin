@@ -19,9 +19,23 @@ var notificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var express = require('express');
 var fs = require('fs-extra-promise');
+var thaliMobileNativeTestUtils = require('./thaliMobileNativeTestUtils');
+var thaliMobileNativeWrapper =
+  require('thali/NextGeneration/thaliMobileNativeWrapper');
 
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
+
+/**
+ * @readonly
+ * @type {{NOT_CONNECTED: string, CONNECTING: string, CONNECTED: string}}
+ */
+var connectStatus = {
+  NOT_CONNECTED : 'notConnected',
+  CONNECTING : 'connecting',
+  CONNECTED : 'connected'
+};
+
 
 function toggleBluetooth (value) {
   if (typeof Mobile === 'undefined') {
@@ -639,6 +653,77 @@ module.exports.startServerInfrastructure =
       });
   };
 
+module.exports.runZombieProofTest = function executeZombieProofTest (t, testFunction) {
+  return new Promise(function (resolve, reject) {
+    console.log("TEST: execute ZombieProof test");
+    var status = connectStatus.NOT_CONNECTED;
+    var availablePeers = [];
+
+    var onConnectSuccess = function (err, connection, peer) {
+      console.log("TEST: onConnectSuccess");
+
+      testFunction(err, connection, peer)
+        .then(function() {
+          resolve();
+        }).catch(function (err) {
+          reject(err);
+        });
+    };
+
+    var tryToConnect = function () {
+      availablePeers.forEach(function (peer) {
+        if (peer.peerAvailable && status === connectStatus.NOT_CONNECTED) {
+          status = connectStatus.CONNECTING;
+          console.log("TEST: connecting to peer:", peer.peerIdentifier);
+          thaliMobileNativeTestUtils.connectToPeer(peer)
+            .then(function (connection) {
+              status = connectStatus.CONNECTED;
+              onConnectSuccess(null, connection, peer);
+            })
+            .catch(function (error) {
+              status = connectStatus.NOT_CONNECTED;
+              console.log("TEST: failed to connect to peer:", peer.peerIdentifier);
+              // Remove the peer from the availablePeers list in case it is still there
+              for (var i = availablePeers.length - 1; i >= 0; i--) {
+                if (availablePeers[i].peerIdentifier === peer.peerIdentifier) {
+                  availablePeers.splice(i, 1);
+                  console.log("TEST: peer removed:", peer.peerIdentifier);
+                }
+              }
+              tryToConnect();
+            });
+        }
+      });
+    };
+
+    function peerAvailabilityChangedHandler(peers) {
+      console.log("TEST: peerAvailabilityChanged invoked");
+      peers.forEach(function (peer) {
+        if (peer.peerAvailable == true) {
+          // Add the peer to the availablePeers list
+          availablePeers.push(peer);
+          console.log("TEST: peer added:", peer);
+        } else {
+          // Remove the peer from the availablePeers list
+          for (var i = availablePeers.length - 1; i >= 0; i--) {
+            if (availablePeers[i].peerIdentifier === peer.peerIdentifier) {
+              availablePeers.splice(i, 1);
+              console.log("TEST: peer removed:", peer);
+            }
+          }
+        }
+      });
+
+      if (status === connectStatus.NOT_CONNECTED && availablePeers.length > 0) {
+        tryToConnect();
+      }
+    }
+
+    Mobile('peerAvailabilityChanged')
+      .registerToNative(peerAvailabilityChangedHandler);
+  });
+};
+
 module.exports.runTestOnAllParticipants = function (
   t, router,
   thaliNotificationClient,
@@ -689,7 +774,7 @@ module.exports.runTestOnAllParticipants = function (
       }
 
       completed = true;
-      resolve();
+      resolve(notificationForUs);
     }
 
     function fail(notificationForUs, error) {
@@ -697,7 +782,7 @@ module.exports.runTestOnAllParticipants = function (
       var count = participantCount[publicKey];
       if (completed || count === -1) {
         logger.warn('error ignored: \'%s\' ', String(error));
-        return Promise.resolve();
+        return Promise.resolve(notificationForUs);
       }
 
       count ++;
@@ -708,7 +793,7 @@ module.exports.runTestOnAllParticipants = function (
 
         logger.error('got error: \'%s\' ', String(error));
         reject(error);
-        return Promise.resolve(error);
+        return Promise.resolve(notificationForUs, error);
       }
 
       logger.warn('error ignored: \'%s\' ', String(error));
@@ -721,7 +806,7 @@ module.exports.runTestOnAllParticipants = function (
 
     function createTask(notificationForUs) {
       if (completed) {
-        return Promise.resolve();
+        return Promise.resolve(notificationForUs);
       }
 
       return testToRun(notificationForUs)
@@ -742,6 +827,7 @@ module.exports.runTestOnAllParticipants = function (
       participantTask[publicKey].cancel();
       participantTask[publicKey] = createTask(notificationForUs);
     };
+
     thaliNotificationClient.on(
       thaliNotificationClient.Events.PeerAdvertisesDataForUs,
       notificationHandler

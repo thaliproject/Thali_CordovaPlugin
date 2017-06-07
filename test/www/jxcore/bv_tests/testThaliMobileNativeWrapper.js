@@ -34,7 +34,6 @@ var connectStatus = {
   CONNECTED : 'connected'
 };
 
-
 var test = tape({
   setup: function (t) {
     // Make sure right handlers are registered in case
@@ -43,26 +42,27 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
+    thaliMobileNativeWrapper.emitter.removeAllListeners();
     thaliMobileNativeWrapper.stop()
-    .then(function () {
-      t.equals(thaliMobileNativeWrapper._isStarted(), false,
-        'must be stopped');
-      if (!platform.isAndroid) {
-        Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
-          t.notOk(
-            err,
-            'Should be able to call disconnect in teardown'
-          );
+      .then(function () {
+        t.equals(thaliMobileNativeWrapper._isStarted(), false,
+          'must be stopped');
+        if (!platform.isAndroid) {
+          Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
+            t.notOk(
+              err,
+              'Should be able to call disconnect in teardown'
+            );
+            t.end();
+          });
+        } else {
           t.end();
-        });
-      } else {
+        }
+      })
+      .catch(function (err) {
+        t.fail('teardown failed with ' + JSON.stringify(err));
         t.end();
-      }
-    })
-    .catch(function (err) {
-      t.fail('teardown failed with ' + JSON.stringify(err));
-      t.end();
-    });
+      });
   }
 });
 
@@ -201,8 +201,8 @@ function executeZombieProofTest (t, testFunction) {
     });
   };
 
-  function peerAvailabilityChanged(peers) {
-    console.log("TEST: peerAvailabilityChangedHandler invoked");
+  function nonTCPPeerAvailabilityChangedHandler(peers) {
+    console.log("TEST: nonTCPPeerAvailabilityChangedHandler invoked");
     peers.forEach(function (peer) {
       if (peer.peerAvailable == true) {
         // Add the peer to the availablePeers list
@@ -225,7 +225,7 @@ function executeZombieProofTest (t, testFunction) {
   }
 
   thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent', function(peers) {
-    peerAvailabilityChanged([peers]);
+    nonTCPPeerAvailabilityChangedHandler([peers]);
   });
 }
 

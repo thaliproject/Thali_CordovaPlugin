@@ -5,16 +5,15 @@ var express        = require('express');
 var expressPouchDB = require('express-pouchdb');
 var ForeverAgent   = require('forever-agent');
 var Promise        = require('bluebird');
+var uuid           = require('node-uuid');
 
 var tape      = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils');
 
 var thaliConfig                = require('thali/NextGeneration/thaliConfig');
-var ThaliMobile                = require('thali/NextGeneration/thaliMobile');
-var ThaliNotificationServer    = require('thali/NextGeneration/notification/thaliNotificationServer');
-var ThaliNotificationClient    = require('thali/NextGeneration/notification/thaliNotificationClient');
-var ThaliPeerPoolDefault       = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 var ThaliReplicationPeerAction = require('thali/NextGeneration/replication/thaliReplicationPeerAction');
+var platform                   = require('thali/NextGeneration/utils/platform');
+var thaliMobileNativeWrapper   = require('thali/NextGeneration/thaliMobileNativeWrapper');
 
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var devicePublicKey        = devicePublicPrivateKey.generateKeys();
@@ -30,6 +29,8 @@ var LOCAL_DB_NAME          = 'repActionTest';
 var EXPIRATION_TIMEOUT     = 60 * 60 * 1000;
 var ERROR_NO_DB_FILE       = 'no_db_file';
 
+var peerIdToBeClosed       = uuid.v4();
+
 if (!tape.coordinated) {
   return;
 }
@@ -40,11 +41,24 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    // Make sure we won't get any document conflicts during tests.
-    if (localPouchDB) {
+    // Make sure we won't get any conflicts
+    if (!localPouchDB) {
       localPouchDB.destroy();
     }
-    t.end();
+    thaliMobileNativeWrapper.stop()
+      .then(function () {
+        if (!platform.isAndroid) {
+          Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
+            t.notOk(
+              err,
+              'Should be able to call disconnect in teardown'
+            );
+            t.end();
+          });
+        } else {
+          t.end();
+        }
+      });
   }
 });
 
@@ -56,142 +70,118 @@ test('Coordinated replication action test - each device has the same local db na
       mode: 'minimumForPouchDB'
     })
   );
-  var thaliNotificationServer = new ThaliNotificationServer(
-    router, devicePublicPrivateKey, EXPIRATION_TIMEOUT
-  );
-  var peerPool = new ThaliPeerPoolDefault();
-  peerPool.start();
-  var thaliNotificationClient = new ThaliNotificationClient(
-    peerPool, devicePublicPrivateKey
-  );
+
+  var pskIdentity = 'I am me!';
+  var pskKey = new Buffer('I am a reasonable long string');
   var peerActions = [];
 
-  localPouchDB = new TestPouchDB(LOCAL_DB_NAME);
+  function localPouchDBPromise(docId) {
+    return new Promise(function (resolve, reject) {
+      localPouchDB = new TestPouchDB(LOCAL_DB_NAME);
+      localPouchDB.put({
+        _id: docId
+      }).then(function () {
+        resolve();
+      }).catch(function (error) {
+        reject(error);
+      });
+    });
+  }
 
-  localPouchDB.put({
-    _id: JSON.stringify(devicePublicKey.toJSON())
-  })
-  .then(function () {
-    return testUtils.runTestOnAllParticipants(
-      t, router,
-      thaliNotificationClient,
-      thaliNotificationServer,
-      ThaliMobile,
-      devicePublicKey,
-      function (notificationForUs) {
-        var thaliReplicationPeerAction = new ThaliReplicationPeerAction(
-          notificationForUs, TestPouchDB, LOCAL_DB_NAME, devicePublicKey
-        );
-        peerActions.push(thaliReplicationPeerAction);
+  thaliMobileNativeWrapper.start(router, pskKey)
+    .then(function () {
+      return thaliMobileNativeWrapper.startListeningForAdvertisements();
+    })
+    .then(function () {
+      return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
+    })
+    .then(function () {
+      return testUtils.runZombieProofTest(
+        t, function (err, connection, peer) {
+          return new Promise(function (resolve, reject) {
+            localPouchDBPromise(peer.peerIdentifier)
+              .then(function () {
+                peer.pskKey = pskKey;
+                peer.pskIdentity = pskIdentity;
+                peer.hostAddress = '127.0.0.1';
+                peer.portNumber = connection.listeningPort;
 
-        return new Promise(function (resolve, reject) {
-          var changes = localPouchDB.changes({
-            since: 0,
-            live: true
-          });
+                var thaliReplicationPeerAction = new ThaliReplicationPeerAction(
+                  peer, TestPouchDB, LOCAL_DB_NAME, devicePublicKey
+                );
+                peerActions.push(thaliReplicationPeerAction);
 
-          var exited = false;
-          var resultError = null;
-          function exit(error) {
-            if (exited) {
-              return;
-            }
-            exited = true;
+                var exited = false;
+                var resultError = null;
+                var changes = localPouchDB.changes({
+                  since: 0,
+                  live: true
+                }).on('change', function (change) {
+                  // note that the test might pass before we even start replicating
+                  // because we already have the record from someone else, that's
+                  // fine. We still guarantee at least one replication ran on each
+                  // device.
+                  if (peer.peerIdentifier === change.id) {
+                    exit();
+                  }
+                }).on('error', function (error) {
+                  reject(error);
+                }).on('complete', function () {
+                  peerIdToBeClosed = peer.peerIdentifier;
 
-            resultError = error;
-            changes.cancel();
-          }
+                  if (resultError) {
+                    reject(resultError);
+                  } else {
+                    resolve();
+                  }
+                });
 
-          changes.on('change', function (change) {
-            var bufferRemoteId = new Buffer(JSON.parse(change.id));
-            // note that the test might pass before we even start replicating
-            // because we already have the record from someone else, that's
-            // fine. We still guarantee at least one replication ran on each
-            // device.
-            if (Buffer.compare(notificationForUs.keyId, bufferRemoteId) === 0) {
-              exit();
-            }
-          })
-          .on('error', function (error) {
-            reject(error);
-          })
-          .on('complete', function () {
-            if (resultError) {
-              reject(resultError);
-            } else {
-              resolve();
-            }
-          });
+                function exit(error) {
+                  if (exited) {
+                    return;
+                  }
+                  exited = true;
 
-          var httpAgentPool = new ForeverAgent.SSL({
-            rejectUnauthorized: false,
-            maxSockets: 8,
-            ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-            pskIdentity: thaliReplicationPeerAction.getPskIdentity(),
-            pskKey: thaliReplicationPeerAction.getPskKey()
-          });
+                  resultError = error;
+                  changes.cancel();
+                }
 
-          thaliReplicationPeerAction.start(httpAgentPool)
-          .catch(function (error) {
-            exit(error);
+                var httpAgentPool = new ForeverAgent.SSL({
+                  rejectUnauthorized: false,
+                  maxSockets: 8,
+                  ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+                  pskIdentity: peer.pskIdentity,
+                  pskKey: peer.pskKey
+                });
+
+                thaliReplicationPeerAction.start(httpAgentPool)
+                  .catch(function (error) {
+                    peerIdToBeClosed = peer.peerIdentifier;
+                    exit(error);
+                  });
+              });
           });
         });
-      }
-    )
-  })
-
-  .then(function () {
-    return t.sync();
-  })
-
-  .then(function () {
-    // We are simulating thaliPullReplicationFromNotification.stop() and
-    // thaliPeerPoolDefault.stop()
-    thaliNotificationClient.stop();
-    var promises = peerActions.map(function (peerAction) {
-      peerAction.kill();
-      return peerAction.waitUntilKilled();
+    })
+    .then(function () {
+      var promises = peerActions.map(function (peerAction) {
+        peerAction.kill();
+        return peerAction.waitUntilKilled();
+      });
+      return Promise.all(promises);
+    })
+    .then(function () {
+      return t.sync();
+    })
+    .then(function () {
+      t.pass('passed');
+    })
+    .catch(function (error) {
+      t.fail('failed with ' + error.toString());
+    })
+    .then(function () {
+      t.end();
     });
-    return Promise.all(promises);
-  })
-  .then(function () {
-    // https://github.com/thaliproject/Thali_CordovaPlugin/issues/1138
-    // workaround for ECONNREFUSED and ECONNRESET from 'request.js' in
-    // 'pouchdb'.
-    return t.sync();
-  })
-  .then(function () {
-    return thaliNotificationServer.stop();
-  })
-  .then(function () {
-    return ThaliMobile.stop();
-  })
-  .then(function (combinedResult) {
-    if (
-      combinedResult.wifiResult   !== null ||
-      combinedResult.nativeResult !== null
-    ) {
-      return Promise.reject(
-        new Error(
-          'Had a failure in ThaliMobile.start - ',
-          JSON.stringify(combinedResult)
-        )
-      );
-    }
-  })
-
-  .then(function () {
-    return Promise.resolve();
-  })
-  .then(function () {
-    t.pass('passed');
-  })
-  .catch(function (error) {
-    t.fail('failed with ' + error.toString());
-  })
-  .then(function () {
-    t.end();
-  });
 });
 
 test('Coordinated replication action test - each device has different local db name', function (t) {
@@ -290,7 +280,9 @@ test('Coordinated replication action test - each device has different local db n
       )
     })
 
-    .then(function () {
+    .then(function (notificationForUs) {
+      peerIdToBeClosed = notificationForUs.peerId;
+      console.log('PeerIdToBeClosed: ', peerIdToBeClosed);
       return t.sync();
     })
 
@@ -400,14 +392,16 @@ test('Coordinated replication action test - should throw error when wrong remote
               })
               .catch(function (error) {
                 t.equals(error.reason, ERROR_NO_DB_FILE, 'error should be \'no_db_file\'');
-                resolve(true);
+                resolve(thaliReplicationPeerAction);
               });
           });
         }
       )
     })
 
-    .then(function () {
+    .then(function (notificationForUs) {
+      peerIdToBeClosed = notificationForUs.peerId;
+      console.log('PeerIdToBeClosed: ', peerIdToBeClosed);
       return t.sync();
     })
 
