@@ -30,16 +30,6 @@ var platform = require('thali/NextGeneration/utils/platform');
 var serverToBeClosed = null;
 var peerIdsToBeClosed = [];
 
-/**
- * @readonly
- * @type {{NOT_CONNECTED: string, CONNECTING: string, CONNECTED: string}}
- */
-var connectStatus = {
-  NOT_CONNECTED : 'notConnected',
-  CONNECTING : 'connecting',
-  CONNECTED : 'connected'
-};
-
 var test = tape({
   setup: function (t) {
     thaliMobileNativeWrapper._registerToNative();
