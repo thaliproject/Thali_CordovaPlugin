@@ -112,7 +112,7 @@ test('Coordinated replication action test - each device has the same local db na
               }
               exited = true;
 
-              peerIdsToBeClosed.push(thaliReplicationPeerAction.getPeerIdentifier());
+              peerIdsToBeClosed.push(notificationForUs.peerId);
               resultError = error;
               changes.cancel();
             }
@@ -259,7 +259,7 @@ test('Coordinated replication action test - each device has different local db n
               }
               exited = true;
 
-              peerIdsToBeClosed.push(thaliReplicationPeerAction.getPeerIdentifier());
+              peerIdsToBeClosed.push(notificationForUs.peerId);
               resultError = error;
               changes.cancel();
             }
@@ -410,14 +410,14 @@ test('Coordinated replication action test - should throw error when wrong remote
             // This should be rejected since we provided non existing remote db
             thaliReplicationPeerAction.start(httpAgentPool, wrongRemoteDbName)
               .then(function() {
-                peerIdsToBeClosed.push(thaliReplicationPeerAction.getPeerIdentifier());
+                peerIdsToBeClosed.push(notificationForUs.peerId);
 
                 var error = 'we should not be able to replicate with db that doesn\'t exist';
                 t.fail(error);
                 reject(new Error(error));
               })
               .catch(function (error) {
-                peerIdsToBeClosed.push(thaliReplicationPeerAction.getPeerIdentifier());
+                peerIdsToBeClosed.push(notificationForUs.peerId);
 
                 t.equals(error.reason, ERROR_NO_DB_FILE, 'error should be \'no_db_file\'');
                 resolve(true);
