@@ -24,16 +24,6 @@ var uuid = require('node-uuid');
 
 var peerIdsToBeClosed = [];
 
-/**
- * @readonly
- * @type {{NOT_CONNECTED: string, CONNECTING: string, CONNECTED: string}}
- */
-var connectStatus = {
-  NOT_CONNECTED : 'notConnected',
-  CONNECTING : 'connecting',
-  CONNECTED : 'connected'
-};
-
 var test = tape({
   setup: function (t) {
     // Make sure right handlers are registered in case
@@ -165,70 +155,6 @@ test('error returned with bad router', function (t) {
   });
 });
 
-function executeZombieProofTest (t, testFunction) {
-  console.log("TEST: execute ZombieProof test");
-  var status = connectStatus.NOT_CONNECTED;
-  var availablePeers = [];
-
-  var onConnectSuccess = function (err, connection, peer) {
-    console.log("TEST: onConnectSuccess");
-    testFunction(err, connection, peer);
-  };
-
-  var tryToConnect = function () {
-    availablePeers.forEach(function (peer) {
-      if (peer.peerAvailable && status === connectStatus.NOT_CONNECTED) {
-        status = connectStatus.CONNECTING;
-        console.log("TEST: connecting to peer:", peer.peerIdentifier);
-        thaliMobileNativeTestUtils.connectToPeer(peer)
-          .then(function (connection) {
-            status = connectStatus.CONNECTED;
-            onConnectSuccess(null, connection, peer);
-          })
-          .catch(function (error) {
-            status = connectStatus.NOT_CONNECTED;
-            console.log("TEST: failed to connect to peer:", peer.peerIdentifier);
-            // Remove the peer from the availablePeers list in case it is still there
-            for (var i = availablePeers.length - 1; i >= 0; i--) {
-              if (availablePeers[i].peerIdentifier === peer.peerIdentifier) {
-                availablePeers.splice(i, 1);
-                console.log("TEST: peer removed:", peer.peerIdentifier);
-              }
-            }
-            tryToConnect();
-          });
-      }
-    });
-  };
-
-  function nonTCPPeerAvailabilityChangedHandler(peers) {
-    console.log("TEST: nonTCPPeerAvailabilityChangedHandler invoked");
-    peers.forEach(function (peer) {
-      if (peer.peerAvailable == true) {
-        // Add the peer to the availablePeers list
-        availablePeers.push(peer);
-        console.log("TEST: peer added:", peer);
-      } else {
-        // Remove the peer from the availablePeers list
-        for (var i = availablePeers.length - 1; i >= 0; i--) {
-          if (availablePeers[i].peerIdentifier === peer.peerIdentifier) {
-            availablePeers.splice(i, 1);
-            console.log("TEST: peer removed:", peer);
-          }
-        }
-      }
-    });
-
-    if (status === connectStatus.NOT_CONNECTED && availablePeers.length > 0) {
-      tryToConnect();
-    }
-  }
-
-  thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent', function(peers) {
-    nonTCPPeerAvailabilityChangedHandler([peers]);
-  });
-}
-
 var testPath = '/test';
 function trivialEndToEndTestScaffold(t, pskIdtoSecret, pskIdentity, pskKey,
                                      testData, callback) {
@@ -237,33 +163,30 @@ function trivialEndToEndTestScaffold(t, pskIdtoSecret, pskIdentity, pskKey,
     res.send(testData);
   });
 
+  var end = function (peerId, fail) {
+    peerIdsToBeClosed.push(peerId);
+
+    return callback ? callback(peerId, fail) : t.end();
+  };
+
+  thaliMobileNativeTestUtils.getSamePeerWithRetry(testPath, pskIdentity, pskKey)
+    .then(function (response) {
+      t.equal(response.httpResponseBody, testData,
+        'response body should match testData');
+      end(response.peerId);
+    })
+    .catch(function (error) {
+      t.fail('fail in trivialEndtoEndTestScaffold - ' + error);
+      end(null, error);
+    });
+
   thaliMobileNativeWrapper.start(router, pskIdtoSecret)
     .then(function () {
       return thaliMobileNativeWrapper.startListeningForAdvertisements();
     })
     .then(function () {
       return thaliMobileNativeWrapper.startUpdateAdvertisingAndListening();
-    })
-    .then(function () {
-      executeZombieProofTest(t, function (err, connection, peer) {
-        var end = function (peerId, fail) {
-          peerIdsToBeClosed.push(peer.peerIdentifier);
-
-          return callback ? callback(peerId, fail) : t.end();
-        };
-
-        testUtils.get('127.0.0.1', connection.listeningPort, testPath, pskIdentity, pskKey)
-          .then(function (response) {
-            t.equal(response, testData,
-              'response body should match testData');
-            end(response.peerId);
-          })
-          .catch(function (error) {
-            t.fail('fail in trivialEndtoEndTestScaffold - ' + error);
-            end(null, error);
-          });
-      });
-  });
+    });
 }
 
 var pskIdentity = 'I am me!';
@@ -1099,7 +1022,7 @@ test('We provide notification when a listener dies and we recreate it',
         }*/
       }
 
-      testUtils.getSamePeerWithRetry(testPath, pskIdentity, pskKey, peerId)
+      thaliMobileNativeTestUtils.getSamePeerWithRetry(testPath, pskIdentity, pskKey, peerId)
         .then(function (response) {
           t.equal(response.httpResponseBody, testData,
             'recreate - response body should match testData');

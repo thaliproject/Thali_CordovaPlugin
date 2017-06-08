@@ -23,16 +23,6 @@ var uuid = require('node-uuid');
 
 var peerIdsToBeClosed = [];
 
-/**
- * @readonly
- * @type {{NOT_CONNECTED: string, CONNECTING: string, CONNECTED: string}}
- */
-var connectStatus = {
-  NOT_CONNECTED : 'notConnected',
-  CONNECTING : 'connecting',
-  CONNECTED : 'connected'
-};
-
 // jshint -W064
 
 // A variable that can be used to store a server
@@ -209,68 +199,6 @@ function reConnect(t, peerIdentifier, originalListeningPort) {
   });
 }
 
-function executeZombieProofTest (t, server, testFunction) {
-  logger.debug("TEST: execute ZombieProof test");
-  var status = connectStatus.NOT_CONNECTED;
-  var availablePeers = [];
-
-  var onConnectSuccess = function (err, connection, peer) {
-    logger.debug("TEST: onConnectSuccess");
-    testFunction(err, connection, peer);
-  };
-
-  var tryToConnect = function () {
-    availablePeers.forEach(function (peer) {
-      if (peer.peerAvailable && status === connectStatus.NOT_CONNECTED) {
-        status = connectStatus.CONNECTING;
-        logger.debug("TEST: connecting to peer:", peer.peerIdentifier);
-        thaliMobileNativeTestUtils.connectToPeer(peer)
-          .then(function (connection) {
-            status = connectStatus.CONNECTED;
-            onConnectSuccess(null, connection, peer);
-          })
-          .catch(function (error) {
-            status = connectStatus.NOT_CONNECTED;
-            logger.debug("TEST: failed to connect to peer:", peer.peerIdentifier);
-            // Remove the peer from the availablePeers list in case it is still there
-            for (var i = availablePeers.length - 1; i >= 0; i--) {
-              if (availablePeers[i].peerIdentifier === peer.peerIdentifier) {
-                availablePeers.splice(i, 1);
-                logger.debug("TEST: peer removed:", peer.peerIdentifier);
-              }
-            }
-            tryToConnect();
-          });
-      }
-    });
-  };
-
-  function peerAvailabilityChanged(peers) {
-    logger.debug("TEST: peerAvailabilityChangedHandler invoked");
-    peers.forEach(function (peer) {
-      if (peer.peerAvailable == true) {
-        // Add the peer to the availablePeers list
-        availablePeers.push(peer);
-        logger.debug("TEST: peer added:", peer);
-      } else {
-        // Remove the peer from the availablePeers list
-        for (var i = availablePeers.length - 1; i >= 0; i--) {
-          if (availablePeers[i].peerIdentifier === peer.peerIdentifier) {
-            availablePeers.splice(i, 1);
-            logger.debug("TEST: peer removed:", peer);
-          }
-        }
-      }
-    });
-
-    if (status === connectStatus.NOT_CONNECTED && availablePeers.length > 0) {
-      tryToConnect();
-    }
-  }
-
-  thaliMobileNativeTestUtils.startAndListen(t, server, peerAvailabilityChanged);
-}
-
 test('Get same port when trying to connect multiple times on iOS',
   function (t) {
     var server = net.createServer(function (socket) {
@@ -279,8 +207,9 @@ test('Get same port when trying to connect multiple times on iOS',
     server = makeIntoCloseAllServer(server);
     serverToBeClosed = server;
 
-    executeZombieProofTest(t, server, function (err, currentConnection, currentTestPeer) {
-      peerIdsToBeClosed.push(currentTestPeer.peerIdentifier);
+    thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
+      function (err, currentConnection, currentTestPeer) {
+        peerIdsToBeClosed.push(currentTestPeer.peerIdentifier);
         var listeningPort = currentConnection.listeningPort;
         var connection = net.connect(listeningPort,
           function () {
@@ -292,8 +221,8 @@ test('Get same port when trying to connect multiple times on iOS',
                 return reConnect(t, currentTestPeer.peerIdentifier,
                   listeningPort);
               }).then(function () {
-                t.end();
-              });
+              t.end();
+            });
 
           });
         connection.on('error', function (err) {
