@@ -158,6 +158,9 @@ test('error returned with bad router', function (t) {
 var testPath = '/test';
 function trivialEndToEndTestScaffold(t, pskIdtoSecret, pskIdentity, pskKey,
                                      testData, callback) {
+  var total = t.participants.length - 1;
+  var counter = 0;
+
   var router = express.Router();
   router.get(testPath, function (req, res) {
     res.send(testData);
@@ -165,7 +168,7 @@ function trivialEndToEndTestScaffold(t, pskIdtoSecret, pskIdentity, pskKey,
 
   var end = function (peerId, fail) {
     peerIdsToBeClosed.push(peerId);
-    return callback ? callback(peerId, fail) : t.end();
+    return callback ? callback(peerId, fail) : ++counter === total ? t.end() : t.pass();
   };
 
   thaliMobileNativeTestUtils.getSamePeerWithRetry(testPath, pskIdentity, pskKey)

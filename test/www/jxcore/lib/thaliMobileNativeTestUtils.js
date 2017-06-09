@@ -378,12 +378,14 @@ module.exports.getSamePeerWithRetry = getSamePeerWithRetry;
  * This function is responsible for execution of test function requiring connection to the other peer.
  * It assures that the connection is not established with the zombie advertiser. In case of the connection error
  * it checks if there are other peers available beside the one already tried.
+ * TODO: We could collect available peers and after that fire test function for every one to avoid
+ * not coordinated behaviour like one peer will finish before another
  * @param {object} t test object.
  * @param {net.Server} server Server object
  * @param {function} testFunction
  */
 function executeZombieProofTest (t, server, testFunction) {
-  var status = connectStatus.NOT_CONNECTED;
+  //var status = connectStatus.NOT_CONNECTED;
   var availablePeers = [];
 
   function removeFromAvailablePeers(peer) {
@@ -397,17 +399,20 @@ function executeZombieProofTest (t, server, testFunction) {
   }
 
   function tryToConnect() {
-    availablePeers.forEach(function (peer) {
+    availablePeers.forEach(function (record) {
+      var peer = record.peer;
+      var status = record.status;
+
       if (peer.peerAvailable && status === connectStatus.NOT_CONNECTED) {
-        status = connectStatus.CONNECTING;
+        record.status = connectStatus.CONNECTING;
 
         connectToPeer(peer)
           .then(function (connection) {
-            status = connectStatus.CONNECTED;
+            record.status = connectStatus.CONNECTED;
             testFunction(null, connection, peer);
           })
           .catch(function (error) {
-            status = connectStatus.NOT_CONNECTED;
+            record.status = connectStatus.NOT_CONNECTED;
             // Remove the peer from the availablePeers list in case it is still there
             removeFromAvailablePeers(peer);
             tryToConnect();
@@ -426,13 +431,14 @@ function executeZombieProofTest (t, server, testFunction) {
       return;
     }
 
-    availablePeers.push(peer);
+    availablePeers.push({
+      peer: peer,
+      status: connectStatus.NOT_CONNECTED
+    });
 
     logger.debug('We got a peer ' + JSON.stringify(peer));
 
-    if (status === connectStatus.NOT_CONNECTED && availablePeers.length > 0) {
-      tryToConnect();
-    }
+    tryToConnect();
   }
 
   startAndListen(t, server, peerAvailabilityChangedHandler);

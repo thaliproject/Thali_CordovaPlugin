@@ -9,9 +9,11 @@ var ThaliMobileNativeWrapper =
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var platform = require('thali/NextGeneration/utils/platform');
 var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
+var thaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils');
 
-var router = function () {};
 var httpServer = null;
+
+var peerIdsToBeClosed = [];
 
 var test = tape({
   setup: function (t) {
@@ -19,22 +21,23 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
+    if (!platform.isAndroid) {
+      peerIdsToBeClosed.forEach(function (peerIdToBeClosed) {
+        Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
+          t.notOk(
+            err,
+            'Should be able to call disconnect in teardown'
+          );
+        });
+      });
+    }
+    peerIdsToBeClosed = [];
+
     (httpServer !== null ? httpServer.closeAllPromise() :
-        Promise.resolve())
+      Promise.resolve())
       .catch(function (err) {
         t.fail('httpServer had stop err ' + err);
       })
-      .then(function () {
-        return ThaliMobileNativeWrapper.stop();
-      })
-      .then(function() {
-        return new Promise(function(res) {
-          setTimeout(function() {
-            res();
-          }, 15000);
-        });
-      })
-      .catch(t.fail)
       .then(t.end);
   }
 });
@@ -153,54 +156,27 @@ test('Single local http request', function (t) {
 test('Single coordinated request ios native',
   function () {
     return platform.isAndroid ||
-    global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
+      global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
   },
   function (t) {
     var total = t.participants.length - 1;
-    var peerFinder = new PeerFinder();
+    var counter = 0;
 
     httpServer.on('request', function (req, res) {
       var reply = req.method + ' ' + req.url;
       res.end(reply);
     });
 
-    var listenNative = ThaliMobileNativeWrapper.start(router).then(function () {
-      return ThaliMobileNativeWrapper.startListeningForAdvertisements();
+    thaliMobileNativeTestUtils.executeZombieProofTest(t, httpServer, function (err, connection, peer) {
+      makeRequest('127.0.0.1', httpServer.address().port, 'GET', '/path')
+        .then(function (response) {
+          peerIdsToBeClosed.push(peer.peerIdentifier);
+          t.equal(response.toString(), 'GET /path');
+
+          ++counter === total ? t.end() : t.pass();
+        })
+        .catch(t.fail)
     });
-    var listenServer = serverIsListening(httpServer, 0);
-
-    var findPeers = peerFinder.find(total);
-
-    Promise.all([ listenNative, listenServer ])
-      .then(function () {
-        var port = httpServer.address().port;
-        console.log('listening on %d', port);
-        return ThaliMobileNativeWrapper
-          .startUpdateAdvertisingAndListening(port);
-      })
-      .then(function () {
-        return findPeers;
-      })
-      .then(function (peers) {
-        return Promise.all(peers.map(function (peer) {
-          return ThaliMobileNativeWrapper._multiConnect(peer.peerIdentifier);
-        }));
-      })
-      .then(function (ports) {
-        return Promise.all(ports.map(function (port) {
-          return makeRequest('127.0.0.1', port, 'GET', '/path');
-        }));
-      })
-      .then(function (responses) {
-        responses.forEach(function (r) {
-          t.equal(r.toString(), 'GET /path');
-        });
-      })
-      .catch(t.fail)
-      .then(function () {
-        peerFinder.cleanup();
-        t.end();
-      });
   });
 
 test('Multiple local http requests', function (t) {
@@ -231,13 +207,14 @@ test('Multiple coordinated request ios native',
     global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
   },
   function (t) {
-    var char = 'a';
-    var firstReply = char.repeat(2000);
-    var secondReply = char.repeat(30);
-    var thirdReply = char.repeat(3000);
+    var firstReply = 'firstReply';
+    var secondReply = 'secondReply';
+    var thirdReply = 'thirdReply';
+    var expectedReplies = [ firstReply, secondReply, thirdReply ];
+
     var reply;
     var total = t.participants.length - 1;
-    var peerFinder = new PeerFinder();
+    var counter = 0;
 
     httpServer.on('request', function (req, res) {
       switch (req.url) {
@@ -256,47 +233,17 @@ test('Multiple coordinated request ios native',
       res.end(reply);
     });
 
-    var listenNative = ThaliMobileNativeWrapper.start(router).then(function () {
-      return ThaliMobileNativeWrapper.startListeningForAdvertisements();
+    thaliMobileNativeTestUtils.executeZombieProofTest(t, httpServer, function (err, connection, peer) {
+      var localCounter = counter;
+
+      makeRequest('127.0.0.1', httpServer.address().port, 'GET', '/path' + localCounter)
+        .then(function (response) {
+
+          peerIdsToBeClosed.push(peer.peerIdentifier);
+          t.equal(response.toString(), expectedReplies[localCounter]);
+
+          ++counter === total ? t.end() : t.pass();
+        })
+        .catch(t.fail);
     });
-    var listenServer = serverIsListening(httpServer, 0);
-
-    var findPeers = peerFinder.find(total);
-
-    Promise.all([ listenNative, listenServer ])
-      .then(function () {
-        var port = httpServer.address().port;
-        console.log('listening on %d', port);
-        return ThaliMobileNativeWrapper
-          .startUpdateAdvertisingAndListening(port);
-      })
-      .then(function () {
-        return findPeers;
-      })
-      .then(function (peers) {
-        return Promise.all(peers.map(function (peer) {
-          return ThaliMobileNativeWrapper._multiConnect(peer.peerIdentifier);
-        }));
-      })
-      .then(function (ports) {
-        return Promise.all(ports.map(function (port) {
-          return Promise.all([
-            makeRequest('127.0.0.1', port, 'GET', '/path0'),
-            makeRequest('127.0.0.1', port, 'GET', '/path1'),
-            makeRequest('127.0.0.1', port, 'GET', '/path2'),
-          ]);
-        }));
-      })
-      .then(function (responses) {
-        responses.forEach(function (r) {
-          t.equal(r[0].toString(), firstReply);
-          t.equal(r[1].toString(), secondReply);
-          t.equal(r[2].toString(), thirdReply);
-        });
-      })
-      .catch(t.fail)
-      .then(function () {
-        peerFinder.cleanup();
-        t.end();
-      });
   });
