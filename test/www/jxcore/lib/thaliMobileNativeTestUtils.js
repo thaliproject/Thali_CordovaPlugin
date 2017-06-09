@@ -385,7 +385,6 @@ module.exports.getSamePeerWithRetry = getSamePeerWithRetry;
  * @param {function} testFunction
  */
 function executeZombieProofTest (t, server, testFunction) {
-  //var status = connectStatus.NOT_CONNECTED;
   var availablePeers = [];
 
   function removeFromAvailablePeers(peer) {
