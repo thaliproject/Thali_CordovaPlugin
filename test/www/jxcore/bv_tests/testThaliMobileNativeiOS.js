@@ -18,9 +18,7 @@ if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
 
 var randomString = require('randomstring');
 var tape = require('../lib/thaliTape');
-
 var uuid = require('node-uuid');
-
 var peerIdsToBeClosed = [];
 
 // jshint -W064

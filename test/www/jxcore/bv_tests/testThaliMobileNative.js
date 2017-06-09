@@ -72,76 +72,76 @@ var test = tape({
 });
 
 test('Can call start/stopListeningForAdvertisements', function (t) {
- Mobile('startListeningForAdvertisements').callNative(function (err) {
-   t.notOk(err, 'Can call startListeningForAdvertisements without error');
-   Mobile('stopListeningForAdvertisements').callNative(function (err) {
-     t.notOk(err, 'Can call stopListeningForAdvertisements without error');
-     t.end();
-   });
- });
+  Mobile('startListeningForAdvertisements').callNative(function (err) {
+    t.notOk(err, 'Can call startListeningForAdvertisements without error');
+    Mobile('stopListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err, 'Can call stopListeningForAdvertisements without error');
+      t.end();
+    });
+  });
 });
 
 test('Calling startListeningForAdvertisements twice is NOT an error',
 function (t) {
- Mobile('startListeningForAdvertisements').callNative(function (err) {
-   t.notOk(err, 'Can call startListeningForAdvertisements without error');
-   Mobile('startListeningForAdvertisements').callNative(function (err) {
-     t.notOk(
-       err,
+  Mobile('startListeningForAdvertisements').callNative(function (err) {
+    t.notOk(err, 'Can call startListeningForAdvertisements without error');
+    Mobile('startListeningForAdvertisements').callNative(function (err) {
+      t.notOk(
+        err,
        'Can call startListeningForAdvertisements twice without error'
-     );
-     t.end();
-   });
- });
+      );
+      t.end();
+    });
+  });
 });
 
 test('Calling stopListeningForAdvertisements without calling start is NOT ' +
- 'an error', function (t) {
- Mobile('stopListeningForAdvertisements').callNative(function (err) {
-   t.notOk(err, 'Can call stopListeningForAdvertisements without error');
-   Mobile('stopListeningForAdvertisements').callNative(function (err) {
-     t.notOk(err, 'Can call stopListeningForAdvertisements without error');
-     t.end();
-   });
- });
+  'an error', function (t) {
+  Mobile('stopListeningForAdvertisements').callNative(function (err) {
+    t.notOk(err, 'Can call stopListeningForAdvertisements without error');
+    Mobile('stopListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err, 'Can call stopListeningForAdvertisements without error');
+      t.end();
+    });
+  });
 });
 
 test('Can call start/stopUpdateAdvertisingAndListening', function (t) {
- Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
-   t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
-   Mobile('stopAdvertisingAndListening').callNative(function (err) {
-     t.notOk(
-       err, 'Can call stopAdvertisingAndListening without error'
-     );
-     t.end();
-   });
- });
+  Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
+    t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+    Mobile('stopAdvertisingAndListening').callNative(function (err) {
+      t.notOk(
+        err, 'Can call stopAdvertisingAndListening without error'
+      );
+      t.end();
+    });
+  });
 });
 
 test('Calling startUpdateAdvertisingAndListening twice is NOT an error',
 function (t) {
- Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
-   t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
-   Mobile('startUpdateAdvertisingAndListening').callNative(4243,
-   function (err) {
-     t.notOk(
-       err,
-       'Can call startUpdateAdvertisingAndListening twice without error'
-     );
-     t.end();
-   });
- });
+  Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
+    t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+    Mobile('startUpdateAdvertisingAndListening').callNative(4243,
+      function (err) {
+        t.notOk(
+          err,
+          'Can call startUpdateAdvertisingAndListening twice without error'
+        );
+        t.end();
+      });
+  });
 });
 
 test('Can call stopUpdateAdvertisingAndListening twice without start and ' +
- 'it is not an error', function (t) {
- Mobile('stopAdvertisingAndListening').callNative(function (err) {
-   t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+  'it is not an error', function (t) {
    Mobile('stopAdvertisingAndListening').callNative(function (err) {
-     t.notOk(err, 'Can call stopAdvertisingAndListening without error');
-     t.end();
-   });
- });
+    t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
+    Mobile('stopAdvertisingAndListening').callNative(function (err) {
+      t.notOk(err, 'Can call stopAdvertisingAndListening without error');
+      t.end();
+    });
+  });
 });
 
 if (!tape.coordinated) {
@@ -149,39 +149,38 @@ if (!tape.coordinated) {
 }
 
 test('peerAvailabilityChange is called', function (t) {
- var complete = false;
- Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
-   if (!complete)
-   {
-     t.ok(peers instanceof Array, 'peers must be an array');
-     t.ok(peers.length !== 0, 'peers must not be zero-length');
+  var complete = false;
+  Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
+    if (!complete) {
+      t.ok(peers instanceof Array, 'peers must be an array');
+      t.ok(peers.length !== 0, 'peers must not be zero-length');
 
-     var peer = peers[0];
-     var keys = Object.keys(peer);
-     var expectedKeys = ['peerIdentifier', 'peerAvailable', 'generation'];
+      var peer = peers[0];
+      var keys = Object.keys(peer);
+      var expectedKeys = ['peerIdentifier', 'peerAvailable', 'generation'];
 
-     keys.sort();
-     expectedKeys.sort();
+      keys.sort();
+      expectedKeys.sort();
 
-     t.deepEqual(keys, expectedKeys,
-       'peer must have only peerIdentifier, peerAvailable and generation ' +
-       'properties');
-     t.ok(typeof peer.peerIdentifier === 'string',
-       'peerIdentifier must be a string');
-     t.ok(typeof peer.generation === 'number',
-       'generation must be a number');
+      t.deepEqual(keys, expectedKeys,
+        'peer must have only peerIdentifier, peerAvailable and generation ' +
+        'properties');
+      t.ok(typeof peer.peerIdentifier === 'string',
+        'peerIdentifier must be a string');
+      t.ok(typeof peer.generation === 'number',
+        'generation must be a number');
 
-     complete = true;
-     t.end();
-   }
+      complete = true;
+      t.end();
+    }
  });
 
- Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
-   t.notOk(err, 'Can call startUpdateAdvertisingAndListeningwithout error');
-   Mobile('startListeningForAdvertisements').callNative(function (err) {
-     t.notOk(err, 'Can call startListeningForAdvertisements without error');
-   });
- });
+  Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
+    t.notOk(err, 'Can call startUpdateAdvertisingAndListeningwithout error');
+    Mobile('startListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err, 'Can call startListeningForAdvertisements without error');
+    });
+  });
 });
 
 function connectionDiesClean(t, connection) {
@@ -249,7 +248,7 @@ function connectToListenerSendMessageGetResponseLength(t, port, request,
     });
     connection.on('error', function (err) {
       rejectWithError('Got error in ' +
-      'connectToListenerSendMessageGetResponseAndThen - ' + err);
+        'connectToListenerSendMessageGetResponseAndThen - ' + err);
     });
   });
 }
@@ -501,14 +500,14 @@ test('Can shift data securely', function (t) {
         pskIdentity: pskId,
         pskKey: pskKey
       })
-        .then(function (socket) {
-          return shiftData(socket);
-        })
-        .catch(t.fail)
-        .then(function () {
-          t.end();
-        });
- });
+      .then(function (socket) {
+        return shiftData(socket);
+      })
+      .catch(t.fail)
+      .then(function () {
+        t.end();
+      });
+  });
 });
 
 test('Can shift large amounts of data', function (t) {
@@ -592,63 +591,63 @@ function findSmallestParticipant(participants) {
 }
 
 test('We do not emit peerAvailabilityChanged events until one of the start ' +
- 'methods is called', function (t) {
- // the node with the smallest UUID will be the one who waits 2 seconds
- // before listening for advertisements and making sure it gets some.
- // Everyone else will just start advertising immediately and end the
- // test (waiting for the smallest peer ID to end when it sees the
- // announcements and thus close)
- var smallest = findSmallestParticipant(t.participants);
+  'methods is called', function (t) {
+  // the node with the smallest UUID will be the one who waits 2 seconds
+  // before listening for advertisements and making sure it gets some.
+  // Everyone else will just start advertising immediately and end the
+  // test (waiting for the smallest peer ID to end when it sees the
+  // announcements and thus close)
+  var smallest = findSmallestParticipant(t.participants);
 
- if (tape.uuid !== smallest) {
-   Mobile('startListeningForAdvertisements').callNative(function (err) {
-     t.notOk(err, 'We should start listening fine');
-     Mobile('startUpdateAdvertisingAndListening').callNative(4242,
-       function (err) {
-         t.notOk(err, 'We should start updating fine');
-         t.end();
-       });
-   });
-   return;
- }
+  if (tape.uuid !== smallest) {
+    Mobile('startListeningForAdvertisements').callNative(function (err) {
+      t.notOk(err, 'We should start listening fine');
+      Mobile('startUpdateAdvertisingAndListening').callNative(4242,
+        function (err) {
+          t.notOk(err, 'We should start updating fine');
+          t.end();
+        });
+    });
+    return;
+  }
 
- var readyToReceiveEvents = false;
- var gotFirstChanged = false;
- Mobile('peerAvailabilityChanged').registerToNative(function () {
-   if (!readyToReceiveEvents) {
-     t.fail('We got an availability event too soon');
-   } else {
-     if (!gotFirstChanged) {
-       gotFirstChanged = true;
-       // Stop listening, give some time for any in queue ads to drain and
-       // then check we aren't getting any further ads
-       Mobile('stopAdvertisingAndListening').callNative(function (err) {
-         t.notOk(err, 'stop ads worked');
-         Mobile('stopListeningForAdvertisements').callNative(function (err) {
-           t.notOk(err, 'test stop worked');
-           setTimeout(function () {
-             readyToReceiveEvents = false;
-             setTimeout(function () {
-               t.end();
-             }, 2000);
-           }, 1000);
-         });
-       });
-     }
-   }
- });
+  var readyToReceiveEvents = false;
+  var gotFirstChanged = false;
+  Mobile('peerAvailabilityChanged').registerToNative(function () {
+    if (!readyToReceiveEvents) {
+      t.fail('We got an availability event too soon');
+    } else {
+      if (!gotFirstChanged) {
+        gotFirstChanged = true;
+        // Stop listening, give some time for any in queue ads to drain and
+        // then check we aren't getting any further ads
+        Mobile('stopAdvertisingAndListening').callNative(function (err) {
+          t.notOk(err, 'stop ads worked');
+          Mobile('stopListeningForAdvertisements').callNative(function (err) {
+            t.notOk(err, 'test stop worked');
+            setTimeout(function () {
+              readyToReceiveEvents = false;
+              setTimeout(function () {
+                t.end();
+              }, 2000);
+            }, 1000);
+          });
+        });
+      }
+    }
+  });
 
- setTimeout(function () {
-   readyToReceiveEvents = true;
-   // Only calling start update for iOS
-   Mobile('startUpdateAdvertisingAndListening').callNative(4242,
-     function (err) {
-       t.notOk(err, 'Ready to advertise');
-       Mobile('startListeningForAdvertisements').callNative(function (err) {
-         t.notOk(err, 'Ready to listen');
-       });
-     });
- }, 2000);
+  setTimeout(function () {
+    readyToReceiveEvents = true;
+    // Only calling start update for iOS
+    Mobile('startUpdateAdvertisingAndListening').callNative(4242,
+      function (err) {
+        t.notOk(err, 'Ready to advertise');
+        Mobile('startListeningForAdvertisements').callNative(function (err) {
+          t.notOk(err, 'Ready to listen');
+        });
+      });
+  }, 2000);
 });
 
 function QuitSignal() {
@@ -794,7 +793,7 @@ function clientSuccessConnect(t, roundNumber, connection, peersWeSucceededWith)
     var error = null;
 
     t.ok(connection.listeningPort !== 0, 'Just testing if old code managed' +
-    ' to hide out');
+      ' to hide out');
 
     var clientMessage = createMessage(roundNumber.toString());
 
@@ -844,8 +843,8 @@ function verifyPeers(t, hashTable) {
   });
   // Current local participant should be ignored.
   return (
-  notFoundParticipants.length === 1 &&
-  notFoundParticipants[0].uuid === tape.uuid
+    notFoundParticipants.length === 1 &&
+    notFoundParticipants[0].uuid === tape.uuid
   );
 }
 
@@ -969,7 +968,7 @@ function serverRound(t, roundNumber, pretendLocalMux, quitSignal) {
             }
             default: {
               return reject(new Error('validationResult code ' +
-              validationResult));
+                validationResult));
             }
           }
         })

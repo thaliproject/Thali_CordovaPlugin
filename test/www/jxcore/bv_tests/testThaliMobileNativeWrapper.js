@@ -33,26 +33,26 @@ var test = tape({
   },
   teardown: function (t) {
     thaliMobileNativeWrapper.stop()
-      .then(function () {
-        t.equals(thaliMobileNativeWrapper._isStarted(), false,
-          'must be stopped');
-        if (!platform.isAndroid) {
-          peerIdsToBeClosed.forEach(function (peerIdToBeClosed) {
-            Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
-              t.notOk(
-                err,
-                'Should be able to call disconnect in teardown'
-              );
-            });
+    .then(function () {
+      t.equals(thaliMobileNativeWrapper._isStarted(), false,
+        'must be stopped');
+      if (!platform.isAndroid) {
+        peerIdsToBeClosed.forEach(function (peerIdToBeClosed) {
+          Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
+            t.notOk(
+              err,
+              'Should be able to call disconnect in teardown'
+            );
           });
-        }
-        peerIdsToBeClosed = [];
-        t.end();
-      })
-      .catch(function (err) {
-        t.fail('teardown failed with ' + JSON.stringify(err));
-        t.end();
-      });
+        });
+      }
+      peerIdsToBeClosed = [];
+      t.end();
+    })
+    .catch(function (err) {
+      t.fail('teardown failed with ' + JSON.stringify(err));
+      t.end();
+    });
   }
 });
 
@@ -165,7 +165,6 @@ function trivialEndToEndTestScaffold(t, pskIdtoSecret, pskIdentity, pskKey,
 
   var end = function (peerId, fail) {
     peerIdsToBeClosed.push(peerId);
-
     return callback ? callback(peerId, fail) : t.end();
   };
 

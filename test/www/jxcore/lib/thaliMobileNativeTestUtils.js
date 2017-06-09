@@ -374,6 +374,14 @@ function getSamePeerWithRetry(path, pskIdentity, pskKey,
 
 module.exports.getSamePeerWithRetry = getSamePeerWithRetry;
 
+/**
+ * This function is responsible for execution of test function requiring connection to the other peer.
+ * It assures that the connection is not established with the zombie advertiser. In case of the connection error
+ * it checks if there are other peers available beside the one already tried.
+ * @param {object} t test object.
+ * @param {net.Server} server Server object
+ * @param {function} testFunction
+ */
 function executeZombieProofTest (t, server, testFunction) {
   var status = connectStatus.NOT_CONNECTED;
   var availablePeers = [];
