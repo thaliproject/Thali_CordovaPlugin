@@ -254,9 +254,6 @@ function connectToListenerSendMessageGetResponseLength(t, port, request,
 }
 
 test('Can connect to a remote peer', function (t) {
-  var counter = 0;
-  var total = t.participants.length - 1;
-
   var server = net.createServer(function (socket) {
     socket.pipe(socket);
   });
@@ -277,8 +274,7 @@ test('Can connect to a remote peer', function (t) {
       // A check if any of our old reverse connection or please connect code
       // is still hiding around.
       t.ok(connection.listeningPort !== 0, 'listening port should not be 0');
-
-      ++counter === total ? t.end() : t.pass();
+      t.end();
     });
 });
 
@@ -360,9 +356,6 @@ function createServer(t, dataLength) {
 }
 
 test('Can shift data', function (t) {
-  var counter = 0;
-  var total = t.participants.length - 1;
-
   var exchangeData = 'small amount of data';
 
   var server = createServer(t, exchangeData.length);
@@ -379,9 +372,7 @@ test('Can shift data', function (t) {
           return shiftData(t, socket, exchangeData);
         })
         .catch(t.fail)
-        .then(function () {
-          ++counter === total ? t.end() : t.pass();
-        });
+        .then(t.end);
   });
 });
 
@@ -390,9 +381,6 @@ test('Can shift data via parallel connections',
     return platform.isAndroid;
   },
   function (t) {
-    var counter = 0;
-    var total = t.participants.length - 1;
-
     var dataLength = 16 * 1024;
 
     var server = createServer(t, dataLength);
@@ -415,16 +403,11 @@ test('Can shift data via parallel connections',
           }));
         })
           .catch(t.fail)
-          .then(function () {
-            ++counter === total ? t.end() : t.pass();
-          });
+          .then(t.end);
       });
   });
 
 test('Can shift data securely', function (t) {
- var counter = 0;
- var total = t.participants.length - 1;
-
  var exchangeData = 'small amount of data';
 
  var pskKey = new Buffer('psk-key');
@@ -516,16 +499,11 @@ test('Can shift data securely', function (t) {
         return shiftData(socket);
       })
       .catch(t.fail)
-      .then(function () {
-        ++counter === total ? t.end() : t.pass();
-      });
+      .then(t.end);
   });
 });
 
 test('Can shift large amounts of data', function (t) {
- var counter = 0;
- var total = t.participants.length - 1;
-
  var sockets = {};
  var server = net.createServer(function (socket) {
    socket.on('data', function (data) {
@@ -570,10 +548,7 @@ test('Can shift large amounts of data', function (t) {
        if (!done) {
          done = true;
          t.ok(toSend === toRecv, 'received should match sent forward');
-         
-         if (++counter === total) {
-           t.end();
-         }
+         t.end();
        }
        if (data.length) {
          sock.write(data);

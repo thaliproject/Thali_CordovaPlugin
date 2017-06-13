@@ -386,6 +386,7 @@ module.exports.getSamePeerWithRetry = getSamePeerWithRetry;
  */
 function executeZombieProofTest (t, server, testFunction) {
   var availablePeers = [];
+  var status = connectStatus.NOT_CONNECTED;
 
   function removeFromAvailablePeers(peer) {
     var i;
@@ -398,21 +399,17 @@ function executeZombieProofTest (t, server, testFunction) {
   }
 
   function tryToConnect() {
-    availablePeers.forEach(function (record) {
-      var peer = record.peer;
-      var status = record.status;
-
+    availablePeers.forEach(function (peer) {
       if (peer.peerAvailable && status === connectStatus.NOT_CONNECTED) {
-        record.status = connectStatus.CONNECTING;
+        status = connectStatus.CONNECTING;
 
         connectToPeer(peer)
           .then(function (connection) {
-            record.status = connectStatus.CONNECTED;
+            status = connectStatus.CONNECTED;
             testFunction(null, connection, peer);
           })
           .catch(function (error) {
-            record.status = connectStatus.NOT_CONNECTED;
-            // Remove the peer from the availablePeers list in case it is still there
+            status = connectStatus.NOT_CONNECTED;
             removeFromAvailablePeers(peer);
             tryToConnect();
           });
@@ -430,11 +427,7 @@ function executeZombieProofTest (t, server, testFunction) {
       return;
     }
 
-    availablePeers.push({
-      peer: peer,
-      status: connectStatus.NOT_CONNECTED
-    });
-
+    availablePeers.push(peer);
     logger.debug('We got a peer ' + JSON.stringify(peer));
 
     tryToConnect();
@@ -442,6 +435,7 @@ function executeZombieProofTest (t, server, testFunction) {
 
   startAndListen(t, server, peerAvailabilityChangedHandler);
 }
+
 
 module.exports.executeZombieProofTest = executeZombieProofTest;
 

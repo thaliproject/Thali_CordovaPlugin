@@ -199,9 +199,6 @@ function reConnect(t, peerIdentifier, originalListeningPort) {
 
 test('Get same port when trying to connect multiple times on iOS',
   function (t) {
-    var total = t.participants.length - 1;
-    var counter = 0;
-    
     var server = net.createServer(function (socket) {
       socket.pipe(socket);
     });
@@ -221,10 +218,7 @@ test('Get same port when trying to connect multiple times on iOS',
               .then(function () {
                 return reConnect(t, currentTestPeer.peerIdentifier,
                   listeningPort);
-              }).then(function () {
-              ++counter === total ? t.end() : t.pass();
-            });
-
+              }).then(t.end);
           });
         connection.on('error', function (err) {
           t.fail('lost connection because of ' + err);
