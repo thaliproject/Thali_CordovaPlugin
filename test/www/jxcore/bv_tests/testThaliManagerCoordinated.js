@@ -7,6 +7,7 @@ if (!tape.coordinated) {
 
 var testUtils = require('../lib/testUtils.js');
 var logger = require('../lib/testLogger.js')('testThaliManagerCoordinated');
+var platform = require('thali/NextGeneration/utils/platform');
 
 var crypto = require('crypto');
 var Promise = require('bluebird');
@@ -17,6 +18,8 @@ var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var ThaliManager = require('thali/NextGeneration/thaliManager');
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
+var thaliMobileNativeWrapper =
+  require('thali/NextGeneration/thaliMobileNativeWrapper');
 
 // Public key for local device should be passed
 // to the tape 'setup' as 'tape.data'.
@@ -32,19 +35,41 @@ PouchDB = testUtils.getLevelDownPouchDb();
 
 var thaliManager;
 
+var peerIdsToBeClosed = [];
+
 var test = tape({
   setup: function (t) {
+    thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent', nonTcpPeerAvailableChangedListener);
     t.data = publicKeyForLocalDevice.toJSON();
     t.end();
   },
   teardown: function (t) {
     Promise.resolve()
     .then(function () {
+      peerIdsToBeClosed.forEach(function (peerIdToBeClosed) {
+
+      });
+    })
+    .then(function () {
       if (thaliManager) {
         return thaliManager.stop();
       }
     })
     .then(function () {
+      if (!platform.isAndroid) {
+        peerIdsToBeClosed.forEach(function (peerIdToBeClosed) {
+          Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
+            t.notOk(
+              err,
+              'Should be able to call disconnect in teardown'
+            );
+          });
+        });
+      }
+      peerIdsToBeClosed = [];
+
+      thaliMobileNativeWrapper.emitter.removeListener('nonTCPPeerAvailabilityChangedEvent',
+        nonTcpPeerAvailableChangedListener);
       t.end();
     });
   },
@@ -54,6 +79,10 @@ var test = tape({
   testTimeout:      5 * 60 * 1000,
   teardownTimeout:  3 * 60 * 1000
 });
+
+function nonTcpPeerAvailableChangedListener(peer) {
+  peerIdsToBeClosed.push(peer.peerIdentifier);
+}
 
 var DEBUG = false;
 function debug() {

@@ -16,7 +16,6 @@ var ThaliNotificationClient    = require('thali/NextGeneration/notification/thal
 var ThaliPeerPoolDefault       = require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
 var ThaliReplicationPeerAction = require('thali/NextGeneration/replication/thaliReplicationPeerAction');
 
-var platform               = require('thali/NextGeneration/utils/platform');
 var devicePublicPrivateKey = crypto.createECDH(thaliConfig.BEACON_CURVE);
 var devicePublicKey        = devicePublicPrivateKey.generateKeys();
 var TestPouchDB            = testUtils.getLevelDownPouchDb();
@@ -30,8 +29,6 @@ var LOCAL_DB_NAME_BASED_ON_PUBLIC_KEY = devicePublicKey.toString('hex').slice(0,
 var LOCAL_DB_NAME          = 'repActionTest';
 var EXPIRATION_TIMEOUT     = 60 * 60 * 1000;
 var ERROR_NO_DB_FILE       = 'no_db_file';
-
-var peerIdsToBeClosed      = [];
 
 if (!tape.coordinated) {
   return;
@@ -47,17 +44,6 @@ var test = tape({
     if (localPouchDB) {
       localPouchDB.destroy();
     }
-    if (!platform.isAndroid) {
-      peerIdsToBeClosed.forEach(function (peerIdToBeClosed) {
-        Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
-          t.notOk(
-            err,
-            'Should be able to call disconnect in teardown'
-          );
-        });
-      });
-    }
-    peerIdsToBeClosed = [];
     t.end();
   }
 });
@@ -112,7 +98,6 @@ test('Coordinated replication action test - each device has the same local db na
               }
               exited = true;
 
-              peerIdsToBeClosed.push(notificationForUs.peerId);
               resultError = error;
               changes.cancel();
             }
@@ -259,7 +244,6 @@ test('Coordinated replication action test - each device has different local db n
               }
               exited = true;
 
-              peerIdsToBeClosed.push(notificationForUs.peerId);
               resultError = error;
               changes.cancel();
             }
@@ -398,7 +382,6 @@ test('Coordinated replication action test - should throw error when wrong remote
           peerActions.push(thaliReplicationPeerAction);
 
           return new Promise(function (resolve, reject) {
-
             var httpAgentPool = new ForeverAgent.SSL({
               rejectUnauthorized: false,
               maxSockets: 8,
@@ -410,15 +393,11 @@ test('Coordinated replication action test - should throw error when wrong remote
             // This should be rejected since we provided non existing remote db
             thaliReplicationPeerAction.start(httpAgentPool, wrongRemoteDbName)
               .then(function() {
-                peerIdsToBeClosed.push(notificationForUs.peerId);
-
                 var error = 'we should not be able to replicate with db that doesn\'t exist';
                 t.fail(error);
                 reject(new Error(error));
               })
               .catch(function (error) {
-                peerIdsToBeClosed.push(notificationForUs.peerId);
-
                 t.equals(error.reason, ERROR_NO_DB_FILE, 'error should be \'no_db_file\'');
                 resolve(true);
               });
