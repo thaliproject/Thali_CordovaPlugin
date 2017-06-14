@@ -17,8 +17,6 @@ var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var ThaliManager = require('thali/NextGeneration/thaliManager');
 var ThaliPeerPoolDefault =
   require('thali/NextGeneration/thaliPeerPool/thaliPeerPoolDefault');
-var ThaliReplicationPeerAction =
-  require('thali/NextGeneration/replication/thaliReplicationPeerAction');
 
 // Public key for local device should be passed
 // to the tape 'setup' as 'tape.data'.
@@ -33,13 +31,9 @@ var DB_NAME = 'ThaliManagerCoordinated';
 PouchDB = testUtils.getLevelDownPouchDb();
 
 var thaliManager;
-var originalReplicationIdle =
-  ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS;
 
 var test = tape({
   setup: function (t) {
-    // TODO: some requests take up to 15 seconds on iOS devices (see #1618).
-    ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 30;
     t.data = publicKeyForLocalDevice.toJSON();
     t.end();
   },
@@ -51,8 +45,6 @@ var test = tape({
       }
     })
     .then(function () {
-      ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS =
-        originalReplicationIdle;
       t.end();
     });
   },
