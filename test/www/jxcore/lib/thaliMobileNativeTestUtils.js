@@ -331,9 +331,10 @@ function getSamePeerWithRetry(path, pskIdentity, pskKey,
 
           connectToPeer(peer)
             .then(function (connection) {
-              // When we establish multi connect connections, run test.
-              peerID = peer.peerIdentifier;
               status = connectStatus.CONNECTED;
+              // When running on iOS, change peerID to the one we connected with
+              peerID = peer.peerIdentifier;
+              // When we establish multi connect connections, run test.
               callTryAgain(connection.listeningPort);
             })
             .catch(function (error) {
@@ -353,6 +354,10 @@ function getSamePeerWithRetry(path, pskIdentity, pskKey,
       }
 
       availablePeers.push(peer);
+
+      if (!peerID) {
+        peerID = peer.peerIdentifier;
+      }
 
       logger.debug('We got a peer ' + JSON.stringify(peer));
 
