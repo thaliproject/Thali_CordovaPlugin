@@ -206,7 +206,7 @@ test('Get same port when trying to connect multiple times on iOS',
     serverToBeClosed = server;
 
     thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
-      function (err, currentConnection, currentTestPeer) {
+      function (currentConnection, currentTestPeer) {
         peerIdsToBeClosed.push(currentTestPeer.peerIdentifier);
         var listeningPort = currentConnection.listeningPort;
         var connection = net.connect(listeningPort,
