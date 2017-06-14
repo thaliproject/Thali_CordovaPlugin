@@ -261,7 +261,7 @@ test('Can connect to a remote peer', function (t) {
   serverToBeClosed = server;
 
   thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
-    function (err, connection, peer) {
+    function (connection, peer) {
       // Called if we successfully connect to to a peer
       logger.info(connection);
       peerIdsToBeClosed.push(peer.peerIdentifier);
@@ -363,7 +363,7 @@ test('Can shift data', function (t) {
   serverToBeClosed = server;
 
   thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
-    function (err, connection, peer) {
+    function (connection, peer) {
       peerIdsToBeClosed.push(peer.peerIdentifier);
       var nativePort = connection.listeningPort;
 
@@ -390,7 +390,7 @@ test('Can shift data via parallel connections',
     serverToBeClosed = server;
 
     thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
-      function (err, connection, peer) {
+      function (connection, peer) {
         peerIdsToBeClosed.push(peer.peerIdentifier);
         var nativePort = connection.listeningPort;
         Promise.all([
@@ -490,7 +490,7 @@ test('Can shift data securely', function (t) {
  }
 
   thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
-    function (err, connection, peer) {
+    function (connection, peer) {
       peerIdsToBeClosed.push(peer.peerIdentifier);
 
       return connect(tls, {
@@ -566,7 +566,7 @@ test('Can shift large amounts of data', function (t) {
  }
 
   thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
-    function (err, connection, peer) {
+    function (connection, peer) {
       var client = null;
       peerIdsToBeClosed.push(peer.peerIdentifier);
 

@@ -332,6 +332,7 @@ function getSamePeerWithRetry(path, pskIdentity, pskKey,
           connectToPeer(peer)
             .then(function (connection) {
               // When we establish multi connect connections, run test.
+              peerID = peer.peerIdentifier;
               status = connectStatus.CONNECTED;
               callTryAgain(connection.listeningPort);
             })
@@ -354,10 +355,6 @@ function getSamePeerWithRetry(path, pskIdentity, pskKey,
       availablePeers.push(peer);
 
       logger.debug('We got a peer ' + JSON.stringify(peer));
-
-      if (!peerID) {
-        peerID = peer.peerIdentifier;
-      }
 
       if (status === connectStatus.NOT_CONNECTED && availablePeers.length > 0) {
         if (!platform.isAndroid) {
@@ -406,7 +403,7 @@ function executeZombieProofTest (t, server, testFunction) {
         connectToPeer(peer)
           .then(function (connection) {
             status = connectStatus.CONNECTED;
-            testFunction(null, connection, peer);
+            testFunction(connection, peer);
           })
           .catch(function (error) {
             status = connectStatus.NOT_CONNECTED;
