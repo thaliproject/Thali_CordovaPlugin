@@ -1484,7 +1484,9 @@ test('#disconnect fails on wifi peers', function (t) {
           'Got specific error message');
         return null;
       })
-      .then(t.end);
+      .then(function () {
+        t.end();
+      });
   };
 
   ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);

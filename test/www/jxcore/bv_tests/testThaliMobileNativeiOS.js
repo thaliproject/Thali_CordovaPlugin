@@ -218,7 +218,10 @@ test('Get same port when trying to connect multiple times on iOS',
               .then(function () {
                 return reConnect(t, currentTestPeer.peerIdentifier,
                   listeningPort);
-              }).then(t.end);
+              })
+              .then(function () {
+                t.end();
+              });
           });
         connection.on('error', function (err) {
           t.fail('lost connection because of ' + err);

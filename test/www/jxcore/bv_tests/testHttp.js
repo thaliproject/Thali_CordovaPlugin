@@ -38,7 +38,9 @@ var test = tape({
       .catch(function (err) {
         t.fail('httpServer had stop err ' + err);
       })
-      .then(t.end);
+      .then(function () {
+        t.end();
+      });
   }
 });
 
@@ -147,10 +149,15 @@ test('Single local http request', function (t) {
     var port = httpServer.address().port;
     console.log('listening on %d', port);
     return makeRequest('127.0.0.1', port, 'GET', '/path');
-  }).then(function (data) {
-    t.equal(data.toString(), 'GET /path');
-    return null;
-  }).catch(t.fail).then(t.end);
+  })
+    .then(function (data) {
+      t.equal(data.toString(), 'GET /path');
+      return null;
+    })
+    .catch(t.fail)
+    .then(function () {
+      t.end();
+    });
 });
 
 test('Single coordinated request ios native',
@@ -193,12 +200,17 @@ test('Multiple local http requests', function (t) {
       makeRequest('127.0.0.1', port, 'GET', '/path1'),
       makeRequest('127.0.0.1', port, 'GET', '/path2'),
     ]);
-  }).then(function (data) {
-    t.equal(data[0].toString(), 'GET /path0');
-    t.equal(data[1].toString(), 'GET /path1');
-    t.equal(data[2].toString(), 'GET /path2');
-    return null;
-  }).catch(t.fail).then(t.end);
+  })
+    .then(function (data) {
+      t.equal(data[0].toString(), 'GET /path0');
+      t.equal(data[1].toString(), 'GET /path1');
+      t.equal(data[2].toString(), 'GET /path2');
+      return null;
+    })
+    .catch(t.fail)
+    .then(function () {
+      t.end();
+    });
 });
 
 test('Multiple coordinated request ios native',

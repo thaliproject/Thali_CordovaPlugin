@@ -436,7 +436,6 @@ function executeZombieProofTest (t, server, testFunction) {
   startAndListen(t, server, peerAvailabilityChangedHandler);
 }
 
-
 module.exports.executeZombieProofTest = executeZombieProofTest;
 
 function getConnectionToOnePeerAndTest(t, connectTest) {

@@ -372,7 +372,9 @@ test('Can shift data', function (t) {
           return shiftData(t, socket, exchangeData);
         })
         .catch(t.fail)
-        .then(t.end);
+        .then(function () {
+          t.end();
+        });
   });
 });
 
@@ -403,7 +405,9 @@ test('Can shift data via parallel connections',
           }));
         })
           .catch(t.fail)
-          .then(t.end);
+          .then(function () {
+            t.end();
+          });
       });
   });
 
@@ -499,7 +503,9 @@ test('Can shift data securely', function (t) {
         return shiftData(socket);
       })
       .catch(t.fail)
-      .then(t.end);
+      .then(function () {
+        t.end();
+      });
   });
 });
 
