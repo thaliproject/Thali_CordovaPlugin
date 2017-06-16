@@ -3,6 +3,7 @@
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var ThaliMobileNative = require('thali/NextGeneration/thaliMobileNative');
+var thaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils.js');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils.js');
@@ -308,7 +309,6 @@ test('can get the network status', function (t) {
   });
 });
 
-  
 test('peerAvailabilityChanged - peer added/removed to/from cache (native)',
   function (t) {
     var nativePeer = generateLowerLevelPeers().nativePeer;
@@ -2118,11 +2118,11 @@ test('If there are more then PEERS_LIMIT peers presented ' +
 
   function finishTest () {
     ThaliMobile._connectionTypePeersLimits
-      [connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] = 
+      [connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK] =
         CURRENT_MULTI_PEER_CONNECTIVITY_FRAMEWORK_PEERS_LIMIT;
     ThaliMobile._connectionTypePeersLimits[connectionTypes.BLUETOOTH] =
       CURRENT_BLUETOOTH_PEERS_LIMIT;
-    ThaliMobile._connectionTypePeersLimits[connectionTypes.TCP_NATIVE] = 
+    ThaliMobile._connectionTypePeersLimits[connectionTypes.TCP_NATIVE] =
       CURRENT_TCP_NATIVE_PEERS_LIMIT;
     t.end();
   }
@@ -2255,6 +2255,7 @@ test('can get data from all participants',
       }
       remainingParticipants[participant.uuid] = participantState.notRunning;
     });
+
     setupDiscoveryAndFindPeers(t, router, function (peer, done) {
       // Try to get data only from non-TCP peers so that the test
       // works the same way on desktop on CI where Wifi is blocked
@@ -2263,40 +2264,44 @@ test('can get data from all participants',
         return;
       }
 
-      ThaliMobile.getPeerHostInfo(peer.peerIdentifier, peer.connectionType)
-      .then(function (peerHostInfo) {
-        return testUtils.get(
-          peerHostInfo.hostAddress, peerHostInfo.portNumber,
-          uuidPath, pskIdentity, pskKey
-        ).catch(function () {
-          // Ignore request failures. After peer listener recreating we are
-          // getting new peerAvailabilityChanged event and retrying this request
+      thaliMobileNativeTestUtils.connectToPeer(peer)
+        .then(function (connection) {
+          return testUtils.get(
+            '127.0.0.1', connection.listeningPort,
+            uuidPath, pskIdentity, pskKey
+          ).catch(function () {
+            // Ignore request failures. After peer listener recreating we are
+            // getting new peerAvailabilityChanged event and retrying this request
+            return null;
+          });
+        })
+        .catch(function (err) {
+          // Ignore connection failure, probably zombie advertiser
           return null;
-        });
-      })
-      .then(function (uuid) {
-        if (uuid === null) {
-          return;
-        }
-        if (remainingParticipants[uuid] !== participantState.notRunning) {
-          return Promise.resolve(true);
-        }
-        remainingParticipants[uuid] = participantState.finished;
-        var areWeDone = Object.getOwnPropertyNames(remainingParticipants)
-          .every(
-            function (participant) {
-              return remainingParticipants[participant] ===
-                participantState.finished;
-            });
-        if (areWeDone) {
-          t.pass('received all uuids');
+        })
+        .then(function (uuid) {
+          if (uuid === null) {
+            return;
+          }
+          if (remainingParticipants[uuid] !== participantState.notRunning) {
+            return Promise.resolve(true);
+          }
+          remainingParticipants[uuid] = participantState.finished;
+          var areWeDone = Object.getOwnPropertyNames(remainingParticipants)
+            .every(
+              function (participant) {
+                return remainingParticipants[participant] ===
+                  participantState.finished;
+              });
+          if (areWeDone) {
+            t.pass('received all uuids');
+            done();
+          }
+        })
+        .catch(function (error) {
+          t.fail(error);
           done();
-        }
-      })
-      .catch(function (error) {
-        t.fail(error);
-        done();
-      });
+        });
     });
   }
 );
