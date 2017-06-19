@@ -2255,7 +2255,6 @@ test('can get data from all participants',
       }
       remainingParticipants[participant.uuid] = participantState.notRunning;
     });
-
     setupDiscoveryAndFindPeers(t, router, function (peer, done) {
       // Try to get data only from non-TCP peers so that the test
       // works the same way on desktop on CI where Wifi is blocked
@@ -2264,20 +2263,23 @@ test('can get data from all participants',
         return;
       }
 
-      thaliMobileNativeTestUtils.connectToPeer(peer)
-        .then(function (connection) {
+      ThaliMobile.getPeerHostInfo(peer.peerIdentifier, peer.connectionType)
+        .catch(function () {
+          // Connection failure, probably due to zombie issue.
+          return null;
+        })
+        .then(function (peerHostInfo) {
+          if (!peerHostInfo) {
+            return;
+          }
           return testUtils.get(
-            '127.0.0.1', connection.listeningPort,
+            peerHostInfo.hostAddress, peerHostInfo.portNumber,
             uuidPath, pskIdentity, pskKey
           ).catch(function () {
             // Ignore request failures. After peer listener recreating we are
             // getting new peerAvailabilityChanged event and retrying this request
             return null;
           });
-        })
-        .catch(function (err) {
-          // Ignore connection failure, probably zombie advertiser
-          return null;
         })
         .then(function (uuid) {
           if (uuid === null) {

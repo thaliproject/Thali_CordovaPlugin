@@ -174,7 +174,7 @@ test('Single coordinated request ios native',
       res.end(reply);
     });
 
-    thaliMobileNativeTestUtils.executeZombieProofTest(t, httpServer, function (connection, peer) {
+    thaliMobileNativeTestUtils.executeZombieProofTestCoordinated(t, httpServer, function (connection, peer) {
       makeRequest('127.0.0.1', httpServer.address().port, 'GET', '/path')
         .then(function (response) {
           peerIdsToBeClosed.push(peer.peerIdentifier);
@@ -245,7 +245,7 @@ test('Multiple coordinated request ios native',
       res.end(reply);
     });
 
-    thaliMobileNativeTestUtils.executeZombieProofTest(t, httpServer, function (connection, peer) {
+    thaliMobileNativeTestUtils.executeZombieProofTestCoordinated(t, httpServer, function (connection, peer) {
       var localCounter = counter;
 
       makeRequest('127.0.0.1', httpServer.address().port, 'GET', '/path' + localCounter)
