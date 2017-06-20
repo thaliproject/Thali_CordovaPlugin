@@ -29,6 +29,29 @@ test('another', function (t) {
   t.end();
 });
 
+test.skip('skip', function (t) {
+  t.ok(false, 'Should not execute skipped test');
+  t.end();
+});
+
+test.skip('another skip', function () { return false; },
+  function (t) {
+  t.ok(false, 'Should not execute skipped test');
+  t.end();
+});
+
+test.skip('skip with skip function', function () { return true; },
+  function (t) {
+  t.ok(false, 'Should not execute skipped test');
+  t.end();
+});
+
+test('skip function', function () { return true; },
+  function (t) {
+  t.ok(false, 'Should not execute skipped test');
+  t.end();
+});
+
 var testObject = {
   testSpyMethod: function() {
     logger.debug('test spy method for global sinon sansbox');
