@@ -71,15 +71,8 @@ SimpleThaliTape.prototype.only = function () {
   return this.addTest.apply(this, arguments);
 };
 
-SimpleThaliTape.prototype.skip = function (name, canBeSkipped, fun) {
-  if (!fun) {
-    fun = canBeSkipped;
-  }
-  canBeSkipped = function () {
-    return true;
-  };
-
-  return this.addTest.apply(this, [name, canBeSkipped, fun]);
+SimpleThaliTape.prototype.skip = function (name, fun) {
+  return this.addTest.apply(this, [name, function () { return true; }, fun]);
 };
 
 // 'canBeSkipped' is optional argument.
