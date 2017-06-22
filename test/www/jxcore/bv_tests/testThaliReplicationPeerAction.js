@@ -221,6 +221,7 @@ function matchDocsInChanges(pouchDB, docs, thaliPeerReplicationAction) {
   });
 }
 
+
 test('Make sure docs replicate with remote db with same name as local db',
   function (t) {
     testCloseAllServer = testUtils.setUpServer(function (serverPort,
@@ -371,6 +372,7 @@ test('Do nothing and make sure we time out',
     testCloseAllServer = testUtils.setUpServer(onServerSetUp);
   }
 );
+
 
 test('Do something and make sure we time out',
   function (t) {

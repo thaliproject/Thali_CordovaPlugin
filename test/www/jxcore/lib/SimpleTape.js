@@ -40,8 +40,10 @@ function SimpleThaliTape (options) {
 
   // test('name', ...)      -> 'this.addTest('name, ...)'
   // test.only('name', ...) -> 'this.only('name, ...)'
+  // test.skip('name', ...) -> 'this.skip('name, ...)'
   this._handler      = this.addTest.bind(this);
   this._handler.only = this.only.bind(this);
+  this._handler.skip = this.skip.bind(this);
   return this._handler;
 }
 
@@ -67,6 +69,10 @@ SimpleThaliTape.states = {
 SimpleThaliTape.prototype.only = function () {
   this._nextTestOnly = true;
   return this.addTest.apply(this, arguments);
+};
+
+SimpleThaliTape.prototype.skip = function (name, fun) {
+  return this.addTest.apply(this, [name, function () { return true; }, fun]);
 };
 
 // 'canBeSkipped' is optional argument.
