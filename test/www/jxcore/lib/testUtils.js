@@ -452,142 +452,6 @@ module.exports.getWithAgent = function (host, port, path, agent) {
  * @property {string} peerId
  */
 
-/**
- * This function will grab the first peer it can via nonTCPAvailableHandler and
- * will try to issue the GET request. If it fails then it will continue to
- * listen to nonTCPAvailableHandler until it sees a port for the same PeerID
- * and will try the GET again. It will repeat this process if there are
- * failures until the timer runs out.
- *
- * @param {string} path
- * @param {string} pskIdentity
- * @param {Buffer} pskKey
- * @param {?string} [selectedPeerId] This is only used for a single test that
- * needs to reconnect to a known peer, otherwise it is null.
- * @returns {Promise<Error | peerAndBody>}
- */
-module.exports.getSamePeerWithRetry = function (path, pskIdentity, pskKey,
-                                                selectedPeerId) {
-  // We don't load thaliMobileNativeWrapper until after the tests have started
-  // running so we pick up the right version of mobile
-  var thaliMobileNativeWrapper =
-    require('thali/NextGeneration/thaliMobileNativeWrapper');
-  return new Promise(function (resolve, reject) {
-    var retryCount = 0;
-    var MAX_TIME_TO_WAIT_IN_MILLISECONDS = 1000 * 60;
-    var GET_PORT_TIMEOUT = 1000 * 3;
-    var exitCalled = false;
-    var peerID = selectedPeerId;
-    var getRequestPromise = null;
-    var cancelGetPortTimeout = null;
-
-    var timeoutId = setTimeout(function () {
-      exitCall(null, new Error('Timer expired'));
-    }, MAX_TIME_TO_WAIT_IN_MILLISECONDS);
-
-    function exitCall(success, failure) {
-      if (exitCalled) {
-        return;
-      }
-      exitCalled = true;
-      clearTimeout(timeoutId);
-      clearTimeout(cancelGetPortTimeout);
-      thaliMobileNativeWrapper.emitter
-        .removeListener('nonTCPPeerAvailabilityChangedEvent',
-          nonTCPAvailableHandler);
-      return failure ? reject(failure) : resolve(
-        {
-          httpResponseBody: success,
-          peerId: peerID
-        });
-    }
-
-    function tryAgain(portNumber) {
-      ++retryCount;
-      logger.warn('Retry count for getSamePeerWithRetry is ' + retryCount);
-      getRequestPromise = module.exports.get('127.0.0.1',
-                          portNumber, path, pskIdentity, pskKey);
-      getRequestPromise
-        .then(function (result) {
-          exitCall(result);
-        })
-        .catch(function (err) {
-          logger.debug('getSamePeerWithRetry got an error it will retry - ' +
-            err);
-        });
-    }
-
-    function callTryAgain(portNumber) {
-
-      // We have a predefined peerID
-      if (!getRequestPromise) {
-        return tryAgain(portNumber);
-      }
-
-      getRequestPromise
-        .then(function () {
-          // In theory this could maybe happen if a connection somehow got
-          // cut before we were notified of a successful result thus causing
-          // the system to automatically issue a new port, but that is
-          // unlikely
-        })
-        .catch(function (err) {
-          return tryAgain(portNumber, err);
-        });
-    }
-
-    function getPort(record) {
-      return new Promise(function (resolve) {
-        if (platform.isIOS) {
-          thaliMobileNativeWrapper._multiConnect(record.peerIdentifier)
-          .then(function (port) {
-            resolve(port);
-          })
-          .catch(function () {
-            cancelGetPortTimeout = setTimeout(function () {
-              resolve(getPort(record));
-            }, GET_PORT_TIMEOUT);
-          });
-        } else {
-          resolve(record.portNumber);
-        }
-      });
-
-    }
-
-    function nonTCPAvailableHandler(record) {
-      // Ignore peer unavailable events
-      if (!record.peerAvailable) {
-        return;
-      }
-
-      if (peerID && record.peerIdentifier === peerID) {
-        logger.warn('We got a peer unavailable notification for a ' +
-          'peer we are looking for.');
-      }
-
-      if (peerID && record.peerIdentifier !== peerID) {
-        return;
-      }
-
-      logger.debug('We got a peer ' + JSON.stringify(record));
-
-      if (!peerID) {
-        peerID = record.peerIdentifier;
-      }
-
-      getPort(record)
-      .then(function (port) {
-        callTryAgain(port);
-      });
-    }
-
-    thaliMobileNativeWrapper.emitter.on(
-      'nonTCPPeerAvailabilityChangedEvent',
-      nonTCPAvailableHandler);
-  });
-};
-
 module.exports.validateCombinedResult = function (combinedResult) {
   if (combinedResult.wifiResult !== null ||
     combinedResult.nativeResult !== null) {
@@ -689,7 +553,7 @@ module.exports.runTestOnAllParticipants = function (
       }
 
       completed = true;
-      resolve();
+      resolve(notificationForUs);
     }
 
     function fail(notificationForUs, error) {
@@ -697,7 +561,7 @@ module.exports.runTestOnAllParticipants = function (
       var count = participantCount[publicKey];
       if (completed || count === -1) {
         logger.warn('error ignored: \'%s\' ', String(error));
-        return Promise.resolve();
+        return Promise.resolve(notificationForUs);
       }
 
       count ++;
@@ -708,7 +572,7 @@ module.exports.runTestOnAllParticipants = function (
 
         logger.error('got error: \'%s\' ', String(error));
         reject(error);
-        return Promise.resolve(error);
+        return Promise.resolve(notificationForUs, error);
       }
 
       logger.warn('error ignored: \'%s\' ', String(error));
@@ -721,7 +585,7 @@ module.exports.runTestOnAllParticipants = function (
 
     function createTask(notificationForUs) {
       if (completed) {
-        return Promise.resolve();
+        return Promise.resolve(notificationForUs);
       }
 
       return testToRun(notificationForUs)
@@ -742,6 +606,7 @@ module.exports.runTestOnAllParticipants = function (
       participantTask[publicKey].cancel();
       participantTask[publicKey] = createTask(notificationForUs);
     };
+
     thaliNotificationClient.on(
       thaliNotificationClient.Events.PeerAdvertisesDataForUs,
       notificationHandler

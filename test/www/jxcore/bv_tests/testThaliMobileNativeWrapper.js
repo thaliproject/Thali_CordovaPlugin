@@ -17,8 +17,12 @@ if (typeof Mobile === 'undefined') {
 var platform = require('thali/NextGeneration/utils/platform');
 var thaliMobileNativeWrapper =
   require('thali/NextGeneration/thaliMobileNativeWrapper');
+var thaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils');
 var validations = require('thali/validations');
 var tape = require('../lib/thaliTape');
+var uuid = require('node-uuid');
+
+var peerIdsToBeClosed = [];
 
 var test = tape({
   setup: function (t) {
@@ -32,7 +36,17 @@ var test = tape({
     .then(function () {
       t.equals(thaliMobileNativeWrapper._isStarted(), false,
         'must be stopped');
-      thaliMobileNativeWrapper._registerToNative();
+      if (!platform.isAndroid) {
+        peerIdsToBeClosed.forEach(function (peerIdToBeClosed) {
+          Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
+            t.notOk(
+              err,
+              'Should be able to call disconnect in teardown'
+            );
+          });
+        });
+      }
+      peerIdsToBeClosed = [];
       t.end();
     })
     .catch(function (err) {
@@ -150,10 +164,11 @@ function trivialEndToEndTestScaffold(t, pskIdtoSecret, pskIdentity, pskKey,
   });
 
   var end = function (peerId, fail) {
+    peerIdsToBeClosed.push(peerId);
     return callback ? callback(peerId, fail) : t.end();
   };
 
-  testUtils.getSamePeerWithRetry(testPath, pskIdentity, pskKey)
+  thaliMobileNativeTestUtils.getSamePeerWithRetry(testPath, pskIdentity, pskKey)
     .then(function (response) {
       t.equal(response.httpResponseBody, testData,
         'response body should match testData');
@@ -864,9 +879,8 @@ test('calls correct starts when network changes',
               t.fail('Should fail');
             })
             .catch(function (error) { // eslint-disable-line
-              // TODO: enable when (if) #1767 is fixed
-              // t.equals(error.message, 'Radio Turned Off',
-              //   'specific error expected');
+              t.equals(error.message, 'Radio Turned Off',
+                'specific error expected');
             });
         };
         var listen = validateStartResult(
@@ -912,12 +926,7 @@ test('calls correct starts when network changes',
 // The connection cut is implemented as a separate test instead
 // of doing it in the middle of the actual test so that the
 // step gets coordinated between peers.
-test('test to coordinate connection cut',
-  function () {
-    // This should be running on Android too but see #1600
-    return platform._isRealAndroid;
-  },
-  function (t) {
+test('test to coordinate connection cut', function (t) {
     // This cuts connections on Android or iOS
     var result = platform.isAndroid ?
       testUtils.toggleBluetooth(false):
@@ -931,12 +940,7 @@ test('test to coordinate connection cut',
     });
   });
 
-test('can do HTTP requests after connections are cut',
-  function () {
-    // This should be running on Android too but see #1600
-    return platform._isRealAndroid;
-  },
-  function (t) {
+test('can do HTTP requests after connections are cut', function (t) {
   // Turn Bluetooth back on so that Android can operate
   // (iOS does not require separate call to operate since
   // killConnections is more like a single-shot thing).
@@ -1006,7 +1010,7 @@ test('We provide notification when a listener dies and we recreate it',
         }*/
       }
 
-      testUtils.getSamePeerWithRetry(testPath, pskIdentity, pskKey, peerId)
+      thaliMobileNativeTestUtils.getSamePeerWithRetry(testPath, pskIdentity, pskKey, peerId)
         .then(function (response) {
           t.equal(response.httpResponseBody, testData,
             'recreate - response body should match testData');

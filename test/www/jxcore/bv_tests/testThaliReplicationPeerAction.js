@@ -221,11 +221,8 @@ function matchDocsInChanges(pouchDB, docs, thaliPeerReplicationAction) {
   });
 }
 
-test('Make sure docs replicate',
-  function () {
-    // FIXME: iOS is too slow for this test (#1618)
-    return platform._isRealIOS;
-  },
+
+test('Make sure docs replicate with remote db with same name as local db',
   function (t) {
     testCloseAllServer = testUtils.setUpServer(function (serverPort,
                                                          randomDBName,
@@ -275,11 +272,58 @@ test('Make sure docs replicate',
     });
   });
 
+test('Make sure docs replicate with remote db with different name than local db',
+  function (t) {
+    testCloseAllServer = testUtils.setUpServer(function (serverPort,
+                                                         randomRemoteDBName,
+                                                         remotePouchDB) {
+      var thaliReplicationPeerAction = null;
+      var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
+      var localDBName = testUtils.getRandomPouchDBName();
+      var localPouchDB = new DifferentDirectoryPouch(localDBName);
+      createDocs(remotePouchDB, 10)
+        .then(function (docs) {
+          var notificationForUs = {
+            keyId: new Buffer('abcdefg'),
+            portNumber: serverPort,
+            hostAddress: '127.0.0.1',
+            pskIdentifyField: pskId,
+            psk: pskKey,
+            suggestedTCPTimeout: 10000,
+            connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
+          };
+          var promises = [];
+          thaliReplicationPeerAction =
+            new ThaliReplicationPeerAction(notificationForUs,
+              DifferentDirectoryPouch, localDBName,
+              devicePublicKey);
+          promises.push(thaliReplicationPeerAction.start(httpAgentPool, randomRemoteDBName));
+          promises.push(matchDocsInChanges(localPouchDB, docs,
+            thaliReplicationPeerAction));
+          return Promise.all(promises);
+        })
+        .then(function () {
+          return remotePouchDB.info();
+        })
+        .then(function (info) {
+          return httpTester.validateSeqNumber(t, randomRemoteDBName, serverPort,
+            // jscs:disable requireCamelCaseOrUpperCaseIdentifiers
+            info.update_seq, pskId, pskKey, devicePublicKey, null, 10);
+          // jscs:enable requireCamelCaseOrUpperCaseIdentifiers
+        })
+        .then(function () {
+          t.pass('All tests passed!');
+        })
+        .catch(function (err) {
+          t.fail('failed with ' + err);
+        })
+        .then(function () {
+          t.end();
+        });
+    });
+  });
+
 test('Do nothing and make sure we time out',
-  function () {
-    // FIXME: iOS is too slow for this test (#1618)
-    return platform._isRealIOS;
-  },
   function (t) {
     function onServerSetUp (serverPort, randomDBName) {
       var thaliReplicationPeerAction = null;
@@ -329,11 +373,8 @@ test('Do nothing and make sure we time out',
   }
 );
 
+
 test('Do something and make sure we time out',
-  function () {
-    // FIXME: iOS is too slow for this test (#1618)
-    return platform._isRealIOS;
-  },
   function (t) {
     function onServerSetUp (serverPort, randomDBName, remotePouchDB) {
       var thaliReplicationPeerAction = null;
@@ -466,8 +507,8 @@ test('Make sure clone works', function (t) {
     'same getPeerAdvertisesDataForUs');
   t.equal(clonedAction._PouchDB, originalThaliReplicationAction._PouchDB,
     'Same pouchdB');
-  t.equal(clonedAction._dbName, originalThaliReplicationAction._dbName,
-    'same dbName');
+  t.equal(clonedAction._localDbName, originalThaliReplicationAction._localDbName,
+    'same localDbName');
   t.equal(clonedAction._ourPublicKey,
     originalThaliReplicationAction._ourPublicKey, 'Same public key');
   t.end();
