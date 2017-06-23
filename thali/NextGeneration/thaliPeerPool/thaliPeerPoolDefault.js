@@ -118,12 +118,12 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
       logger.debug('We are already replicating');
     }
   } else {
-    logger.debug('Starting notification action with ', peerAction.getPeerIdentifier());
+    logger.debug('Starting notification action with ', peerAction.getPeerIdentifier(), ':', peerAction.getPeerGeneration());
 
     peerAction.start(actionAgent)
       .catch(function (err) {
         if (err.message === 'Could not establish TCP connection' || err.message === 'Connection could not be established') {
-          logger.debug('Killing connection with ', peerAction.getPeerIdentifier(), peerAction.getPeerGeneration());
+          logger.debug('Killing connection with ', peerAction.getPeerIdentifier(), ':', peerAction.getPeerGeneration());
           thaliMobileNativeWrapper.disconnect(peerAction.getPeerIdentifier());
         }
 
