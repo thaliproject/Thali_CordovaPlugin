@@ -57,6 +57,7 @@ function ThaliNotificationAction(peer,
 
   this.eventEmitter = new EventEmitter();
 
+  this._peer = peer;
   this._peerGeneration = peer.generation;
   this._ecdhForLocalDevice = ecdhForLocalDevice;
   this._addressBookCallback = addressBookCallback;
@@ -90,6 +91,17 @@ ThaliNotificationAction.prototype.getPeerGeneration = function () {
 ThaliNotificationAction.prototype.eventEmitter = null;
 
 /**
+ * Creates a new replication action with the same constructor arguments as
+ * this replication action.
+ * @public
+ * @returns {ThaliNotificationAction}
+ */
+ThaliNotificationAction.prototype.clone = function () {
+  return new ThaliNotificationAction(this._peer,
+    this._ecdhForLocalDevice, this._addressBookCallback);
+};
+
+/**
  * Tells the action to start processing. This action makes a HTTP GET request
  * to '/NotificationBeacons' path at a host address and a port number
  * specified in the peerIdentifier object which is passed to the constructor.
@@ -118,7 +130,7 @@ ThaliNotificationAction.prototype.eventEmitter = null;
  * action is done. Note that if kill is called on an action then it MUST still
  * return success with null. After all, kill doesn't reflect a failure
  * of the action but a change in outside circumstances.
-*/
+ */
 ThaliNotificationAction.prototype.start = function (httpAgentPool) {
   var self = this;
 
@@ -171,10 +183,28 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
         // anything in the _complete function because it is the second call to
         // _complete.
         self._httpRequest.on('error', function () {
+          console.log('HTTP request error');
           self._complete(
             ThaliNotificationAction.ActionResolution.NETWORK_PROBLEM,
             null, 'Could not establish TCP connection');
         });
+
+        // Trying to figure out what exactly do here. When this callback is called
+        // error event is also triggered. So the Could not establish TCP connection
+        // should be propagated to peerPool, when we will kill this connection.
+        // But, calling only kill on this action will trigger retries logic.
+        // And when we run out of retries limit, we will mark peer as resolved
+        // so we will not connect to it in future. The entry connects peer id and generation
+        // so if it is old one, we are good here.
+        // We could also just call killSuperseded, which will mark peer as resolved immediately
+        // but I think we should try to retry it couple of times first.
+        // However, sometimes it still doesn't work.
+        // TODO: To be investigated further
+        self._httpRequest.setTimeout(10000, function () {
+          console.log('HTTP request timeout');
+          self.kill();
+        });
+
         self._httpRequest.end();
       });
     });
@@ -228,6 +258,8 @@ ThaliNotificationAction.prototype._responseCallback = function (res) {
   var self = this;
   var data = [];
   var totalReceived = 0;
+
+  console.log ('RESPONSE CALLBACK');
 
   if (res.statusCode !== 200 ||
     res.headers['content-type'] !== 'application/octet-stream') {

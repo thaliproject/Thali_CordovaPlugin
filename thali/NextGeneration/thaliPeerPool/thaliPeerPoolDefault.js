@@ -6,6 +6,9 @@ var thaliConfig = require('../thaliConfig');
 var ForeverAgent = require('forever-agent');
 var logger = require('../../ThaliLogger')('thaliPeerPoolDefault');
 var Utils = require('../utils/common.js');
+var ThaliReplicationPeerAction = require('../replication/thaliReplicationPeerAction');
+var thaliMobileNativeWrapper =
+  require('thali/NextGeneration/thaliMobileNativeWrapper');
 
 /** @module thaliPeerPoolDefault */
 
@@ -74,6 +77,8 @@ ThaliPeerPoolDefault.ERRORS = ThaliPeerPoolInterface.ERRORS;
 ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED =
   'we ignored peer action, because we has been already stopped';
 
+var replicating = false;
+
 ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
   if (this._stopped) {
     peerAction.kill();
@@ -91,17 +96,44 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
     pskIdentity: peerAction.getPskIdentity(),
     pskKey: peerAction.getPskKey()
   });
+  
+  if (peerAction.getActionType() === ThaliReplicationPeerAction.ACTION_TYPE) {
+    if (!replicating) {
+      logger.debug('Starting replication action');
 
-  // We hook our clean up code to kill and it is always legal to call
-  // kill, even if it has already been called. So this ensures that our
-  // cleanup code gets called regardless of how the action ended.
-  peerAction.start(actionAgent)
-    .catch(function (err) {
-      logger.debug('Got err ', Utils.serializePouchError(err));
-    })
-    .then(function () {
-      peerAction.kill();
-    });
+      replicating = true;
+
+      peerAction.start(actionAgent)
+        .catch(function (err) {
+          logger.debug('Replication action error: ', Utils.serializePouchError(err));
+        })
+        .then(function () {
+          logger.debug('Replication action resolved');
+          peerAction.kill();
+          
+          replicating = false;
+        });
+    } else {
+      logger.debug('We are already replicating');
+    }
+  } else {
+    logger.debug('Starting notification action with ', peerAction.getPeerIdentifier());
+    
+    peerAction.start(actionAgent)
+      .catch(function (err) {
+        if (err.message === 'Could not establish TCP connection' || err.message === 'Connection could not be established') {
+          logger.debug('Killing connection with ', peerAction.getPeerIdentifier(), peerAction.getPeerGeneration());
+          thaliMobileNativeWrapper.disconnect(peerAction.getPeerIdentifier());
+        }
+
+        logger.debug('Notification action error: ', Utils.serializePouchError(err));
+      })
+      .then(function () {
+        logger.debug('Notification action resolved');
+        peerAction.kill();
+      });
+  }
+
 
   return result;
 };
