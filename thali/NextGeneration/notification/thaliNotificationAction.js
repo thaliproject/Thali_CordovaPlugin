@@ -57,7 +57,6 @@ function ThaliNotificationAction(peer,
 
   this.eventEmitter = new EventEmitter();
 
-  this._peer = peer;
   this._peerGeneration = peer.generation;
   this._ecdhForLocalDevice = ecdhForLocalDevice;
   this._addressBookCallback = addressBookCallback;
@@ -89,17 +88,6 @@ ThaliNotificationAction.prototype.getPeerGeneration = function () {
  * @type {EventEmitter}
  */
 ThaliNotificationAction.prototype.eventEmitter = null;
-
-/**
- * Creates a new replication action with the same constructor arguments as
- * this replication action.
- * @public
- * @returns {ThaliNotificationAction}
- */
-ThaliNotificationAction.prototype.clone = function () {
-  return new ThaliNotificationAction(this._peer,
-    this._ecdhForLocalDevice, this._addressBookCallback);
-};
 
 /**
  * Tells the action to start processing. This action makes a HTTP GET request
@@ -259,7 +247,7 @@ ThaliNotificationAction.prototype._responseCallback = function (res) {
   var data = [];
   var totalReceived = 0;
 
-  console.log ('RESPONSE CALLBACK');
+  console.log('Http responce callback');
 
   if (res.statusCode !== 200 ||
     res.headers['content-type'] !== 'application/octet-stream') {
