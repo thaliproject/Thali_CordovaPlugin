@@ -78,8 +78,6 @@ ThaliPeerPoolDefault.ERRORS = ThaliPeerPoolInterface.ERRORS;
 ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED =
   'we ignored peer action, because we has been already stopped';
 
-var replicating = false;
-
 ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
   if (this._stopped) {
     peerAction.kill();

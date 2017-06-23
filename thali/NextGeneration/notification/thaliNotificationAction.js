@@ -247,7 +247,7 @@ ThaliNotificationAction.prototype._responseCallback = function (res) {
   var data = [];
   var totalReceived = 0;
 
-  console.log('Http responce callback');
+  console.log('Http response callback');
 
   if (res.statusCode !== 200 ||
     res.headers['content-type'] !== 'application/octet-stream') {
