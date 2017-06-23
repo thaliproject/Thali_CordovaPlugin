@@ -39,14 +39,14 @@ var test = tape({
   },
   teardown: function (t) {
     Promise.resolve()
-      .then(function () {
-        if (thaliManager) {
-          return thaliManager.stop();
-        }
-      })
-      .then(function () {
-        t.end();
-      });
+    .then(function () {
+      if (thaliManager) {
+        return thaliManager.stop();
+      }
+    })
+    .then(function () {
+      t.end();
+    });
   },
   // BLE or Bluetooth can sleep about 30 seconds between operations,
   // we need to increase timeouts (issue #1569).
@@ -130,30 +130,30 @@ function waitForRemoteDocs(pouchDB, docsToFind) {
       live: true,
       include_docs: true
     })
-      .on('change', function (change) {
-        var docIndex = stringifiedDocsToFind.indexOf(turnDocToString(change.doc));
-        if (docIndex !== -1) {
-          // Each doc should match exactly once so once we get a match we remove
-          // the doc from the match list
-          stringifiedDocsToFind.splice(docIndex, 1);
-          if (allDocsFound()) {
-            changesFeed.cancel();
-          }
-        } else {
-          error = new Error('invalid doc');
+    .on('change', function (change) {
+      var docIndex = stringifiedDocsToFind.indexOf(turnDocToString(change.doc));
+      if (docIndex !== -1) {
+        // Each doc should match exactly once so once we get a match we remove
+        // the doc from the match list
+        stringifiedDocsToFind.splice(docIndex, 1);
+        if (allDocsFound()) {
           changesFeed.cancel();
         }
-      })
-      .on('complete', function (info) {
-        if (info.errors && info.errors.length > 0) {
-          error = info.errors[0];
-        }
-        complete();
-      })
-      .on('error', function (err) {
-        error = err;
-        complete();
-      });
+      } else {
+        error = new Error('invalid doc');
+        changesFeed.cancel();
+      }
+    })
+    .on('complete', function (info) {
+      if (info.errors && info.errors.length > 0) {
+        error = info.errors[0];
+      }
+      complete();
+    })
+    .on('error', function (err) {
+      error = err;
+      complete();
+    });
 
     if (DEBUG) {
       var originalEmit = changesFeed.emit;
@@ -181,39 +181,39 @@ test('test write', function (t) {
   };
 
   pouchDB.put(localDoc)
-    .then(function (response) {
-      localDoc._rev = response.rev;
-    })
-    .then(function () {
-      return waitForRemoteDocs(pouchDB, [localDoc]);
-    })
-    .then(function () {
-      t.pass('About to start thali manager');
-      thaliManager = new ThaliManager(
-        ExpressPouchDB,
-        PouchDB,
-        DB_NAME,
-        ecdhForLocalDevice,
-        new ThaliPeerPoolDefault(),
-        global.NETWORK_TYPE
-      );
-      return thaliManager.start(partnerKeys);
-    })
-    .then(function () {
-      t.pass('About to waitForRemoteDocs');
-      var docs = partnerKeys.map(function (partnerKey) {
-        return {
-          _id: partnerKey.toString('base64'),
-          test1: true
-        };
-      });
-      docs.push(localDoc);
-      return waitForRemoteDocs(pouchDB, docs);
-    })
-    .then(function () {
-      t.pass('OK');
-      t.end();
+  .then(function (response) {
+    localDoc._rev = response.rev;
+  })
+  .then(function () {
+    return waitForRemoteDocs(pouchDB, [localDoc]);
+  })
+  .then(function () {
+    t.pass('About to start thali manager');
+    thaliManager = new ThaliManager(
+      ExpressPouchDB,
+      PouchDB,
+      DB_NAME,
+      ecdhForLocalDevice,
+      new ThaliPeerPoolDefault(),
+      global.NETWORK_TYPE
+    );
+    return thaliManager.start(partnerKeys);
+  })
+  .then(function () {
+    t.pass('About to waitForRemoteDocs');
+    var docs = partnerKeys.map(function (partnerKey) {
+      return {
+        _id: partnerKey.toString('base64'),
+        test1: true
+      };
     });
+    docs.push(localDoc);
+    return waitForRemoteDocs(pouchDB, docs);
+  })
+  .then(function () {
+    t.pass('OK');
+    t.end();
+  });
 });
 
 
@@ -277,37 +277,37 @@ function runRepeats(n) {
       var localDoc;
 
       thaliManager.start(partnerKeys)
-        .then(function () {
-          t.pass('ThaliManager started');
-          return pouchDB.get(publicBase64KeyForLocalDevice);
-        })
-        .then(function (response) {
-          t.pass('Local doc retrieved');
-          localDoc = response;
+      .then(function () {
+        t.pass('ThaliManager started');
+        return pouchDB.get(publicBase64KeyForLocalDevice);
+      })
+      .then(function (response) {
+        t.pass('Local doc retrieved');
+        localDoc = response;
 
-          debug('LOCAL DOC:', localDoc);
+        debug('LOCAL DOC:', localDoc);
 
-          // Lets update our doc with new boolean.
-          assignTestFields(n + 1, localDoc);
-          debug('PUTTING UPDATED LOCAL DOC:', localDoc);
-          return pouchDB.put(localDoc);
-        })
-        .then(function () {
-          t.pass('Updated doc saved');
-          debug('Waiting for docs');
-          // now we are waiting to be served
-          return waiter;
-        })
-        .then(function () {
-          t.pass('Got all docs');
-        })
-        .catch(function (error) {
-          t.fail('Got error: ' + error.message);
-          debug(error.stack);
-        })
-        .then(function () {
-          t.end();
-        });
+        // Lets update our doc with new boolean.
+        assignTestFields(n + 1, localDoc);
+        debug('PUTTING UPDATED LOCAL DOC:', localDoc);
+        return pouchDB.put(localDoc);
+      })
+      .then(function () {
+        t.pass('Updated doc saved');
+        debug('Waiting for docs');
+        // now we are waiting to be served
+        return waiter;
+      })
+      .then(function () {
+        t.pass('Got all docs');
+      })
+      .catch(function (error) {
+        t.fail('Got error: ' + error.message);
+        debug(error.stack);
+      })
+      .then(function () {
+        t.end();
+      });
     });
   }
 
