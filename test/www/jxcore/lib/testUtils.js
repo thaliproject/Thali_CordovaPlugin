@@ -553,7 +553,7 @@ module.exports.runTestOnAllParticipants = function (
       }
 
       completed = true;
-      resolve(notificationForUs);
+      resolve();
     }
 
     function fail(notificationForUs, error) {
@@ -561,7 +561,7 @@ module.exports.runTestOnAllParticipants = function (
       var count = participantCount[publicKey];
       if (completed || count === -1) {
         logger.warn('error ignored: \'%s\' ', String(error));
-        return Promise.resolve(notificationForUs);
+        return Promise.resolve();
       }
 
       count ++;
@@ -572,7 +572,7 @@ module.exports.runTestOnAllParticipants = function (
 
         logger.error('got error: \'%s\' ', String(error));
         reject(error);
-        return Promise.resolve(notificationForUs, error);
+        return Promise.resolve(error);
       }
 
       logger.warn('error ignored: \'%s\' ', String(error));
@@ -585,7 +585,7 @@ module.exports.runTestOnAllParticipants = function (
 
     function createTask(notificationForUs) {
       if (completed) {
-        return Promise.resolve(notificationForUs);
+        return Promise.resolve();
       }
 
       return testToRun(notificationForUs)
