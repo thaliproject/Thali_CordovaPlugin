@@ -67,8 +67,8 @@ var thaliMobileNativeWrapper =
  * @constructor
  */
 function ThaliPeerPoolDefault() {
-  this._isAlreadyReplicating = false;
   ThaliPeerPoolDefault.super_.call(this);
+  this._isAlreadyReplicating = false;
   this._stopped = true;
 }
 
