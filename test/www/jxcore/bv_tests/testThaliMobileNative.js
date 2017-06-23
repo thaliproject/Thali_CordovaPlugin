@@ -1234,11 +1234,7 @@ test('discoveryAdvertisingStateUpdateNonTCP is called', function (t) {
 
           promises.push(new Promise(function (resolve, reject) {
             Mobile('stopListeningForAdvertisements').callNative(function (err) {
-              if (!err) {
-                return resolve();
-              } else {
-                return reject('Can call stopListeningForAdvertisements without error')
-              }
+              !err ? resolve() : reject('Can call stopListeningForAdvertisements without error');
             });
           }));
           break;
