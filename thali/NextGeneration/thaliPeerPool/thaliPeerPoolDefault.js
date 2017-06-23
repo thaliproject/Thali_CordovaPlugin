@@ -67,6 +67,7 @@ var thaliMobileNativeWrapper =
  * @constructor
  */
 function ThaliPeerPoolDefault() {
+  this._isAlreadyReplicating = false;
   ThaliPeerPoolDefault.super_.call(this);
   this._stopped = true;
 }
@@ -85,6 +86,8 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
     throw new Error(ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED);
   }
 
+  var self = this;
+
   // Right now we will just allow everything to run parallel.
 
   var result =
@@ -96,12 +99,12 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
     pskIdentity: peerAction.getPskIdentity(),
     pskKey: peerAction.getPskKey()
   });
-  
+
   if (peerAction.getActionType() === ThaliReplicationPeerAction.ACTION_TYPE) {
-    if (!replicating) {
+    if (!self._isAlreadyReplicating) {
       logger.debug('Starting replication action');
 
-      replicating = true;
+      self._isAlreadyReplicating = true;
 
       peerAction.start(actionAgent)
         .catch(function (err) {
@@ -110,15 +113,15 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
         .then(function () {
           logger.debug('Replication action resolved');
           peerAction.kill();
-          
-          replicating = false;
+
+          self._isAlreadyReplicating = false;
         });
     } else {
       logger.debug('We are already replicating');
     }
   } else {
     logger.debug('Starting notification action with ', peerAction.getPeerIdentifier());
-    
+
     peerAction.start(actionAgent)
       .catch(function (err) {
         if (err.message === 'Could not establish TCP connection' || err.message === 'Connection could not be established') {
