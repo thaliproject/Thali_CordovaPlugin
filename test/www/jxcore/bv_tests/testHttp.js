@@ -21,25 +21,25 @@ var test = tape({
     t.end();
   },
   teardown: function (t) {
-    if (!platform.isAndroid) {
-      peerIdsToBeClosed.forEach(function (peerIdToBeClosed) {
-        Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
-          t.notOk(
-            err,
-            'Should be able to call disconnect in teardown'
-          );
-        });
-      });
-    }
-    peerIdsToBeClosed = [];
-
-    (httpServer !== null ? httpServer.closeAllPromise() :
-      Promise.resolve())
+    Promise.resolve()
+      .then(function () {
+        if (!platform.isAndroid) {
+          return thaliMobileNativeTestUtils.killAllMultiConnectConnections(peerIdsToBeClosed);
+        }
+      })
       .catch(function (err) {
-        t.fail('httpServer had stop err ' + err);
+        t.fail(err);
       })
       .then(function () {
-        t.end();
+        (httpServer !== null ? httpServer.closeAllPromise() :
+          Promise.resolve())
+          .catch(function (err) {
+            t.fail('httpServer had stop err ' + err);
+          })
+          .then(function () {
+            peerIdsToBeClosed = [];
+            t.end();
+          });
       });
   }
 });

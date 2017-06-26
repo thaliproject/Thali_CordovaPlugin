@@ -53,18 +53,19 @@ var test = tape({
             err,
             'Should be able to call stopAdvertisingAndListening in teardown'
           );
-          if (!platform.isAndroid) {
-            peerIdsToBeClosed.forEach(function (peerIdToBeClosed) {
-              Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
-                t.notOk(
-                  err,
-                  'Should be able to call disconnect in teardown'
-                );
-              });
+          Promise.resolve()
+            .then(function () {
+              if (!platform.isAndroid) {
+                return thaliMobileNativeTestUtils.killAllMultiConnectConnections(peerIdsToBeClosed);
+              }
+            })
+            .catch(function (err) {
+              t.fail(err);
+            })
+            .then(function () {
+              peerIdsToBeClosed = [];
+              t.end();
             });
-          }
-          peerIdsToBeClosed = [];
-          t.end();
         });
       });
     });

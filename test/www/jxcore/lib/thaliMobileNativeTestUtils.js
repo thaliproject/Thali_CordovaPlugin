@@ -5,12 +5,10 @@ var format = require('util').format;
 var platform = require('thali/NextGeneration/utils/platform');
 var logger = require('../lib/testLogger')('thaliMobileNativeTestUtils');
 var randomString = require('randomstring');
-var Promise = require('lie');
 var makeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
 var Promise = require('bluebird');
 var net = require('net');
-var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
 var testUtils = require('../lib/testUtils.js');
 
@@ -247,21 +245,12 @@ function getSamePeerWithRetry(path, pskIdentity, pskKey,
     var getRequestPromise = null;
     var cancelGetPortTimeout = null;
     var runningTest = false;
+    var peer;
     var availablePeers = [];
 
     var timeoutId = setTimeout(function () {
       exitCall(null, new Error('Timer expired'));
     }, MAX_TIME_TO_WAIT_IN_MILLISECONDS);
-
-    function removeFromAvailablePeers(peer) {
-      var i;
-
-      for (i = availablePeers.length - 1; i >= 0; i--) {
-        if (availablePeers[i].peerIdentifier === peer.peerIdentifier) {
-          availablePeers.splice(i, 1);
-        }
-      }
-    }
 
     function exitCall(success, failure) {
       if (exitCalled) {
@@ -315,9 +304,10 @@ function getSamePeerWithRetry(path, pskIdentity, pskKey,
 
     // In this case this method is only used when we run on iOS.
     function tryToConnect() {
-      availablePeers.forEach(function (peer) {
+      availablePeers.forEach(function (record) {
         if (!runningTest) {
           runningTest = true;
+          peer = record.peer;
 
           connectToPeer(peer)
             .then(function (connection) {
@@ -335,8 +325,10 @@ function getSamePeerWithRetry(path, pskIdentity, pskKey,
               // the end of available peers array, so we will try to connect
               // to other peers first.
               // See #1904.
-              removeFromAvailablePeers(peer);
-              availablePeers.push(peer);
+              removeFromAvailablePeers(availablePeers, peer);
+              availablePeers.push({
+                peer: peer
+              });
 
               tryToConnect();
             });
@@ -346,11 +338,13 @@ function getSamePeerWithRetry(path, pskIdentity, pskKey,
 
     function nonTCPAvailableHandler(peer) {
       if (!peer.peerAvailable) {
-        removeFromAvailablePeers(peer);
+        removeFromAvailablePeers(availablePeers, peer);
         return;
       }
 
-      availablePeers.push(peer);
+      availablePeers.push({
+        peer: peer
+      });
 
       if (!peerID) {
         peerID = peer.peerIdentifier;
@@ -372,6 +366,21 @@ function getSamePeerWithRetry(path, pskIdentity, pskKey,
 module.exports.getSamePeerWithRetry = getSamePeerWithRetry;
 
 /**
+ * Function used to remove specific record from array of available peers.
+ * @param {Array} availablePeers List of available peers
+ * @param {Object} peerToRemove Peer that has to be removed from available peers array.
+ */
+function removeFromAvailablePeers(availablePeers, peerToRemove) {
+  var i;
+
+  for (i = availablePeers.length - 1; i >= 0; i--) {
+    if (availablePeers[i].peer.peerIdentifier === peerToRemove.peerIdentifier) {
+      availablePeers.splice(i, 1);
+    }
+  }
+}
+
+/**
  * This function is responsible for execution of test function requiring connection to the other peer.
  * It assures that the connection is not established with the zombie advertiser. In case of the connection error
  * it checks if there are other peers available beside the one already tried.
@@ -382,20 +391,12 @@ module.exports.getSamePeerWithRetry = getSamePeerWithRetry;
 function executeZombieProofTest (t, server, testFunction) {
   var availablePeers = [];
   var runningTest = false;
-
-  function removeFromAvailablePeers(peer) {
-    var i;
-
-    for (i = availablePeers.length - 1; i >= 0; i--) {
-      if (availablePeers[i].peerIdentifier === peer.peerIdentifier) {
-        availablePeers.splice(i, 1);
-      }
-    }
-  }
+  var peer;
 
   function tryToConnect() {
-    availablePeers.forEach(function (peer) {
+    availablePeers.forEach(function (record) {
       if (!runningTest) {
+        peer = record.peer;
         runningTest = true;
 
         connectToPeer(peer)
@@ -405,8 +406,10 @@ function executeZombieProofTest (t, server, testFunction) {
           .catch(function (error) {
             runningTest = false;
 
-            removeFromAvailablePeers(peer);
-            availablePeers.push(peer);
+            removeFromAvailablePeers(availablePeers, peer);
+            availablePeers.push({
+              peer: peer
+            });
 
             tryToConnect();
           });
@@ -420,11 +423,13 @@ function executeZombieProofTest (t, server, testFunction) {
     var peer = peerAsArray[0];
 
     if (!peer.peerAvailable) {
-      removeFromAvailablePeers(peer);
+      removeFromAvailablePeers(availablePeers, peer);
       return;
     }
 
-    availablePeers.push(peer);
+    availablePeers.push({
+      peer: peer
+    });
 
     logger.debug('We got a peer ' + JSON.stringify(peer));
     tryToConnect();
@@ -443,20 +448,10 @@ module.exports.executeZombieProofTest = executeZombieProofTest;
  * @param {function} testFunction
  */
 function executeZombieProofTestCoordinated (t, server, testFunction) {
-  var availablePeers = [];
-
-  function removeFromAvailablePeers(peer) {
-    var i;
-
-    for (i = availablePeers.length - 1; i >= 0; i--) {
-      if (availablePeers[i].peer.peerIdentifier === peer.peerIdentifier) {
-        availablePeers.splice(i, 1);
-      }
-    }
-  }
+  var availablePeersAndTestingFlags = [];
 
   function tryToConnect() {
-    availablePeers.forEach(function (record) {
+    availablePeersAndTestingFlags.forEach(function (record) {
       var runningTest = record.runningTest;
       var peer = record.peer;
 
@@ -469,9 +464,9 @@ function executeZombieProofTestCoordinated (t, server, testFunction) {
           })
           .catch(function (error) {
             record.runningTest = false;
-            removeFromAvailablePeers(peer);
+            removeFromAvailablePeers(availablePeersAndTestingFlags, peer);
 
-            availablePeers.push(record);
+            availablePeersAndTestingFlags.push(record);
             tryToConnect();
           });
       }
@@ -484,11 +479,11 @@ function executeZombieProofTestCoordinated (t, server, testFunction) {
     var peer = peerAsArray[0];
 
     if (!peer.peerAvailable) {
-      removeFromAvailablePeers(peer);
+      removeFromAvailablePeers(availablePeersAndTestingFlags, peer);
       return;
     }
 
-    availablePeers.push({
+    availablePeersAndTestingFlags.push({
       peer: peer,
       runningTest: false
     });
@@ -549,3 +544,19 @@ function getConnectionToOnePeerAndTest(t, connectTest) {
 }
 
 module.exports.getConnectionToOnePeerAndTest = getConnectionToOnePeerAndTest;
+
+function killAllMultiConnectConnections(peerIdsToBeClosed) {
+  var promises = [];
+
+  peerIdsToBeClosed.forEach(function (peerIdToBeClosed) {
+    promises.push(new Promise(function (resolve, reject) {
+      Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
+        !err ? resolve() : reject('Should be able to call disconnect');
+      });
+    }));
+  });
+
+  return Promise.all(promises);
+}
+
+module.exports.killAllMultiConnectConnections = killAllMultiConnectConnections;

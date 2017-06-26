@@ -33,26 +33,27 @@ var test = tape({
   },
   teardown: function (t) {
     thaliMobileNativeWrapper.stop()
-    .then(function () {
-      t.equals(thaliMobileNativeWrapper._isStarted(), false,
-        'must be stopped');
-      if (!platform.isAndroid) {
-        peerIdsToBeClosed.forEach(function (peerIdToBeClosed) {
-          Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
-            t.notOk(
-              err,
-              'Should be able to call disconnect in teardown'
-            );
+      .then(function () {
+        t.equals(thaliMobileNativeWrapper._isStarted(), false,
+          'must be stopped');
+        Promise.resolve()
+          .then(function () {
+            if (!platform.isAndroid) {
+              return thaliMobileNativeTestUtils.killAllMultiConnectConnections(peerIdsToBeClosed);
+            }
+          })
+          .catch(function (err) {
+            t.fail(err);
+          })
+          .then(function () {
+            peerIdsToBeClosed = [];
+            t.end();
           });
-        });
-      }
-      peerIdsToBeClosed = [];
-      t.end();
-    })
-    .catch(function (err) {
-      t.fail('teardown failed with ' + JSON.stringify(err));
-      t.end();
-    });
+      })
+      .catch(function (err) {
+        t.fail('teardown failed with ' + JSON.stringify(err));
+        t.end();
+      });
   }
 });
 
