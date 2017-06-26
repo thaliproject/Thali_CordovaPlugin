@@ -1059,51 +1059,69 @@ test('Test updating advertising and parallel data transfer',
   });
 
 test('discoveryAdvertisingStateUpdateNonTCP is called', function (t) {
- var callCount = 0;
- Mobile('discoveryAdvertisingStateUpdateNonTCP').registerToNative(
-   function (state) {
-     callCount++;
-     switch (callCount) {
-       case 1:
-         t.equal(state.discoveryActive, true,
-           'discoveryActive should be false');
-         t.equal(state.advertisingActive, false,
-           'advertisingActive should be true');
-         Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
-           t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
-         });
-         break;
-       case 2:
-         t.equal(state.discoveryActive, true,
-           'discoveryActive should be false');
-         t.equal(state.advertisingActive, true,
-           'advertisingActive should be true');
-         Mobile('stopListeningForAdvertisements').callNative(function (err) {
-           t.notOk(err, 'Can call stopListeningForAdvertisements without error');
-         });
-         break;
-       case 3:
-         t.equal(state.discoveryActive, false,
-           'discoveryActive should be false');
-         t.equal(state.advertisingActive, true,
-           'advertisingActive should be true');
-         Mobile('stopAdvertisingAndListening').callNative(function (err) {
-           t.notOk(err, 'Can call stopAdvertisingAndListening without error');
-         });
-         break;
-       case 4:
-         t.equal(state.discoveryActive, false,
-           'discoveryActive should be false');
-         t.equal(state.advertisingActive, false,
-           'advertisingActive should be true');
-         t.end();
-         break;
-       default:
-         break;
-     }
-   });
+  var callCount = 0;
+  var promises = [];
 
- Mobile('startListeningForAdvertisements').callNative(function (err) {
-   t.notOk(err, 'Can call startListeningForAdvertisements without error');
- });
+  Mobile('discoveryAdvertisingStateUpdateNonTCP').registerToNative(
+    function (state) {
+      callCount++;
+      switch (callCount) {
+        case 1:
+          t.equal(state.discoveryActive, true,
+            'discoveryActive should be false');
+          t.equal(state.advertisingActive, false,
+            'advertisingActive should be true');
+
+          promises.push(new Promise(function (resolve, reject) {
+            Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
+              !err ? resolve() : reject('Can call startUpdateAdvertisingAndListening without error');
+            });
+          }));
+          break;
+        case 2:
+          t.equal(state.discoveryActive, true,
+            'discoveryActive should be false');
+          t.equal(state.advertisingActive, true,
+            'advertisingActive should be true');
+
+          promises.push(new Promise(function (resolve, reject) {
+            Mobile('stopListeningForAdvertisements').callNative(function (err) {
+              !err ? resolve() : reject('Can call stopListeningForAdvertisements without error');
+            });
+          }));
+          break;
+        case 3:
+          t.equal(state.discoveryActive, false,
+            'discoveryActive should be false');
+          t.equal(state.advertisingActive, true,
+            'advertisingActive should be true');
+
+          promises.push(new Promise(function (resolve, reject) {
+            Mobile('stopAdvertisingAndListening').callNative(function (err) {
+              !err ? resolve() : reject('Can call stopAdvertisingAndListening without error');
+            });
+          }));
+          break;
+        case 4:
+          t.equal(state.discoveryActive, false,
+            'discoveryActive should be false');
+          t.equal(state.advertisingActive, false,
+            'advertisingActive should be true');
+
+          Promise.all(promises)
+            .catch(function (err) {
+              t.fail(err);
+            })
+            .then(function () {
+              t.end();
+            });
+          break;
+        default:
+          break;
+      }
+    });
+
+  Mobile('startListeningForAdvertisements').callNative(function (err) {
+    t.notOk(err, 'Can call startListeningForAdvertisements without error');
+  });
 });
