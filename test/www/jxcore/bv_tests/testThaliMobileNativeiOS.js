@@ -2,21 +2,24 @@
 
 // Issue #419
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
-var Platform = require('thali/NextGeneration/utils/platform');
+var platform = require('thali/NextGeneration/utils/platform');
 var nodeUuid = require('node-uuid');
 var net = require('net');
 var thaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils');
+var makeIntoCloseAllServer = require('thali/NextGeneration/makeIntoCloseAllServer');
 var thaliMobileNativeWrapper =
   require('thali/NextGeneration/thaliMobileNativeWrapper');
 var logger = require('../lib/testLogger')('testThaliMobileNativeiOS');
 var Promise = require('lie');
 if (global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
-    !Platform.isIOS) {
+    !platform.isIOS) {
   return;
 }
 
 var randomString = require('randomstring');
 var tape = require('../lib/thaliTape');
+var uuid = require('node-uuid');
+var peerIdsToBeClosed = [];
 
 // jshint -W064
 
@@ -26,6 +29,7 @@ var serverToBeClosed = null;
 
 var test = tape({
   setup: function (t) {
+    thaliMobileNativeWrapper._registerToNative();
     serverToBeClosed = {
       closeAll: function (callback) {
         callback();
@@ -46,7 +50,17 @@ var test = tape({
             err,
             'Should be able to call stopAdvertisingAndListening in teardown'
           );
-          thaliMobileNativeWrapper._registerToNative();
+          if (!platform.isAndroid) {
+            peerIdsToBeClosed.forEach(function (peerIdToBeClosed) {
+              Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
+                t.notOk(
+                  err,
+                  'Should be able to call disconnect in teardown'
+                );
+              });
+            });
+          }
+          peerIdsToBeClosed = [];
           t.end();
         });
       });
@@ -124,7 +138,6 @@ test('multiConnect properly fails on legal but non-existent peerID',
 
 test('cannot call multiConnect with invalid syncValue',
   function (t) {
-    var connectReturned = false;
     var invalidSyncValue = /I am not a string/;
     Mobile('startListeningForAdvertisements').callNative(function (err) {
       t.notOk(err, 'No error on starting');
@@ -137,23 +150,15 @@ test('cannot call multiConnect with invalid syncValue',
     });
   });
 
-test('disconnect doesn\'t fail on bad peer id', function (t) {
-  Mobile('disconnect').callNative('foo', function(err) {
-    t.notOk(err, 'No error');
-    // Giving failure callback a chance to mess things up
-    setImmediate(function () {
+test('cannot call disconnect with invalid peer id', function (t) {
+  Mobile('disconnect').callNative('foo', function (error) {
+      t.equal(error, 'Bad parameters', 'Got right error');
       t.end();
-    });
-  });
-  thaliMobileNativeTestUtils.multiConnectEmitter
-    .on('multiConnectConnectionFailure', function (peerIdentifier, error) {
-      t.fail('We shouldn\'t get a failure callback - peerID: ' +
-        peerIdentifier + ', error: ' + error);
     });
 });
 
 test('disconnect doesn\'t fail on plausible but bogus peer ID', function (t) {
-  var peerId = nodeUuid.v4() + ':' + 0;
+  var peerId = nodeUuid.v4();
   Mobile('disconnect').callNative(peerId, function(err) {
     t.notOk(err, 'No error');
     // Giving failure callback a chance to mess things up
@@ -194,26 +199,34 @@ function reConnect(t, peerIdentifier, originalListeningPort) {
 
 test('Get same port when trying to connect multiple times on iOS',
   function (t) {
-    serverToBeClosed = thaliMobileNativeTestUtils.
-      getConnectionToOnePeerAndTest(t,
-        function (listeningPort, currentTestPeer) {
-          var connection = net.connect(listeningPort,
-            function () {
-              // We aren't allowed to have multiple simultaneous outstanding
-              // calls to the same peerID on iOS for multiConnect (or
-              // disconnect) so we have to serialize.
-              reConnect(t, currentTestPeer.peerIdentifier, listeningPort)
-                .then(function () {
-                  return reConnect(t, currentTestPeer.peerIdentifier,
-                                    listeningPort);
-                }).then(function () {
-                  t.end();
-                });
+    var server = net.createServer(function (socket) {
+      socket.pipe(socket);
+    });
+    server = makeIntoCloseAllServer(server);
+    serverToBeClosed = server;
 
-            });
-          connection.on('error', function (err) {
-            t.fail('lost connection because of ' + err);
-            t.end();
+    thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
+      function (currentConnection, currentTestPeer) {
+        peerIdsToBeClosed.push(currentTestPeer.peerIdentifier);
+        var listeningPort = currentConnection.listeningPort;
+        var connection = net.connect(listeningPort,
+          function () {
+            // We aren't allowed to have multiple simultaneous outstanding
+            // calls to the same peerID on iOS for multiConnect (or
+            // disconnect) so we have to serialize.
+            reConnect(t, currentTestPeer.peerIdentifier, listeningPort)
+              .then(function () {
+                return reConnect(t, currentTestPeer.peerIdentifier,
+                  listeningPort);
+              })
+              .then(function () {
+                t.end();
+              });
           });
+        connection.on('error', function (err) {
+          t.fail('lost connection because of ' + err);
+          t.end();
         });
+      }
+    );
   });
