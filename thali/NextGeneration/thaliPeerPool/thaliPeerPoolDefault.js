@@ -69,6 +69,7 @@ var thaliMobileNativeWrapper =
 function ThaliPeerPoolDefault() {
   ThaliPeerPoolDefault.super_.call(this);
   this._isAlreadyReplicating = false;
+  this._activePeers = {};
   this._stopped = true;
 }
 
@@ -118,23 +119,63 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
       logger.debug('We are already replicating');
     }
   } else {
-    logger.debug('Starting notification action with ', peerAction.getPeerIdentifier(), ':', peerAction.getPeerGeneration());
+    var peerId = peerAction.getPeerIdentifier();
 
-    peerAction.start(actionAgent)
-      .catch(function (err) {
-        if (err.message === 'Could not establish TCP connection' || err.message === 'Connection could not be established') {
-          logger.debug('Killing connection with ', peerAction.getPeerIdentifier(), ':', peerAction.getPeerGeneration());
-          thaliMobileNativeWrapper.disconnect(peerAction.getPeerIdentifier());
-        }
+    // Check if we are already running notificationAction with this peer.
+    if (self._activePeers[peerId]) {
+      console.log('Debug 1');
+      // If so, check if current peerAction has higher generation than the one we are currently running.
+      // If so, call killSuperseded on the old one, so the older notificationAction won't be retried and
+      // add the new one for its place.
+      if (peerAction.getPeerGeneration() > self._activePeers[peerId].peerAction.getPeerGeneration()) {
+        console.log('Debug 2');
+        self._activePeers[peerId].peerAction.killSuperseded();
 
-        logger.debug('Notification action error: ', Utils.serializePouchError(err));
-      })
-      .then(function () {
-        logger.debug('Notification action resolved');
-        peerAction.kill();
-      });
+        self._activePeers[peerId] = {
+          peerAction: peerAction,
+          runningNotification: false
+        };
+      }
+    } else {
+      console.log('Debug 3');
+
+      // If we are not running, add to array and start
+      self._activePeers[peerId] = {
+        peerAction: peerAction,
+        runningNotification: false
+      };
+    }
+
+    if (!self._activePeers[peerId].runningNotification) {
+      logger.debug('Starting notification action with ', peerId, ':', peerAction.getPeerGeneration());
+
+      self._activePeers[peerId].runningNotification = true;
+
+      self._activePeers[peerId].peerAction.start(actionAgent)
+        .catch(function (err) {
+          if (err.message === 'Could not establish TCP connection' || err.message === 'Connection could not be established') {
+            logger.debug('Killing connection with ', peerId, ':', peerAction.getPeerGeneration());
+            thaliMobileNativeWrapper.disconnect(peerId);
+          }
+
+          logger.debug('Notification action error: ', Utils.serializePouchError(err));
+        })
+        .then(function () {
+          logger.debug('Notification action resolved');
+
+          if (self._activePeers[peerId] !== null) {
+            self._activePeers[peerId].peerAction.kill();
+            self._activePeers[peerId] = null;
+          }
+        });
+    } else {
+      // If we got here it means that we are already running notificationAction for this peer
+      // with the same generation. We won't get notificationAction with lower generation (I think)
+      self._activePeers[peerId].peerAction.kill();
+      logger.debug('We are already running NotificationAction for ',
+        peerId, ':', peerAction.getPeerGeneration());
+    }
   }
-
 
   return result;
 };

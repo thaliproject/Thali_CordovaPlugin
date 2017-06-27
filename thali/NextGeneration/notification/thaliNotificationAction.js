@@ -190,7 +190,8 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
         // TODO: To be investigated further
         self._httpRequest.setTimeout(10000, function () {
           console.log('HTTP request timeout');
-          self.kill();
+          console.log(self.getPeerIdentifier(), ':', self.getPeerGeneration());
+          self.killSuperseded();
         });
 
         self._httpRequest.end();
@@ -307,6 +308,8 @@ ThaliNotificationAction.prototype._responseCallback = function (res) {
 ThaliNotificationAction.prototype._complete = function (resolution,
                                                         beaconDetails,
                                                         error) {
+  console.log('Resolution: ', resolution);
+
   if (!this._resolution) {
     this._resolution = resolution;
     this._httpRequest && this._httpRequest.abort();

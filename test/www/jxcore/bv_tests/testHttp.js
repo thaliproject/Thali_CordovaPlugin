@@ -18,9 +18,6 @@ var peerIdsToBeClosed = [];
 var test = tape({
   setup: function (t) {
     httpServer = makeIntoCloseAllServer(http.createServer(), true);
-    t.end();
-  },
-  teardown: function (t) {
     Promise.resolve()
       .then(function () {
         if (!platform.isAndroid) {
@@ -31,15 +28,18 @@ var test = tape({
         t.fail(err);
       })
       .then(function () {
-        (httpServer !== null ? httpServer.closeAllPromise() :
-          Promise.resolve())
-          .catch(function (err) {
-            t.fail('httpServer had stop err ' + err);
-          })
-          .then(function () {
-            peerIdsToBeClosed = [];
-            t.end();
-          });
+        peerIdsToBeClosed = [];
+        t.end();
+      });
+  },
+  teardown: function (t) {
+    (httpServer !== null ? httpServer.closeAllPromise() :
+      Promise.resolve())
+      .catch(function (err) {
+        t.fail('httpServer had stop err ' + err);
+      })
+      .then(function () {
+        t.end();
       });
   }
 });

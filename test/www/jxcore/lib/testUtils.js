@@ -19,6 +19,8 @@ var notificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var express = require('express');
 var fs = require('fs-extra-promise');
+var thaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils');
+
 
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
@@ -578,8 +580,14 @@ module.exports.runTestOnAllParticipants = function (
       logger.warn('error ignored: \'%s\' ', String(error));
       return Promise.delay(RETRY_DELAY)
         .then(function () {
-          logger.warn('retry for notification: \'%s\'', JSON.stringify(notificationForUs));
-          return createTask(notificationForUs);
+          logger.warn('disconnecting with peer \'%s\' ', notificationForUs.peerId);
+          return Mobile('disconnect').callNative(notificationForUs.peerId, function () {
+            logger.warn('retry for notification: \'%s\'', JSON.stringify(notificationForUs));
+            return thaliMobileNativeTestUtils.connectToPeer(notificationForUs.peerId)
+              .then(function (connection) {
+                createTask(notificationForUs);
+            });
+          });
         });
     }
 

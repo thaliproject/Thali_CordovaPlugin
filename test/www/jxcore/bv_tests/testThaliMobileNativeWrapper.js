@@ -29,26 +29,26 @@ var test = tape({
     // Make sure right handlers are registered in case
     // some other test has overwritten them.
     thaliMobileNativeWrapper._registerToNative();
-    t.end();
+    Promise.resolve()
+      .then(function () {
+        if (!platform.isAndroid) {
+          return thaliMobileNativeTestUtils.killAllMultiConnectConnections(peerIdsToBeClosed);
+        }
+      })
+      .catch(function (err) {
+        t.fail(err);
+      })
+      .then(function () {
+        peerIdsToBeClosed = [];
+        t.end();
+      });
   },
   teardown: function (t) {
     thaliMobileNativeWrapper.stop()
       .then(function () {
         t.equals(thaliMobileNativeWrapper._isStarted(), false,
           'must be stopped');
-        Promise.resolve()
-          .then(function () {
-            if (!platform.isAndroid) {
-              return thaliMobileNativeTestUtils.killAllMultiConnectConnections(peerIdsToBeClosed);
-            }
-          })
-          .catch(function (err) {
-            t.fail(err);
-          })
-          .then(function () {
-            peerIdsToBeClosed = [];
-            t.end();
-          });
+        t.end();
       })
       .catch(function (err) {
         t.fail('teardown failed with ' + JSON.stringify(err));

@@ -38,7 +38,19 @@ var test = tape({
         callback();
       }
     };
-    t.end();
+    Promise.resolve()
+      .then(function () {
+        if (!platform.isAndroid) {
+          return thaliMobileNativeTestUtils.killAllMultiConnectConnections(peerIdsToBeClosed);
+        }
+      })
+      .catch(function (err) {
+        t.fail(err);
+      })
+      .then(function () {
+        peerIdsToBeClosed = [];
+        t.end();
+      });
   },
   teardown: function (t) {
     thaliMobileNativeTestUtils.multiConnectEmitter.removeAllListeners();
@@ -53,19 +65,7 @@ var test = tape({
             err,
             'Should be able to call stopAdvertisingAndListening in teardown'
           );
-          Promise.resolve()
-            .then(function () {
-              if (!platform.isAndroid) {
-                return thaliMobileNativeTestUtils.killAllMultiConnectConnections(peerIdsToBeClosed);
-              }
-            })
-            .catch(function (err) {
-              t.fail(err);
-            })
-            .then(function () {
-              peerIdsToBeClosed = [];
-              t.end();
-            });
+          t.end();
         });
       });
     });
