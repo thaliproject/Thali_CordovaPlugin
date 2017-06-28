@@ -171,7 +171,7 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
         // anything in the _complete function because it is the second call to
         // _complete.
         self._httpRequest.on('error', function () {
-          console.log('HTTP request error');
+          console.log('HTTP request error with: ', self.getPeerIdentifier(), ':', self.getPeerGeneration());
           self._complete(
             ThaliNotificationAction.ActionResolution.NETWORK_PROBLEM,
             null, 'Could not establish TCP connection');
@@ -181,8 +181,10 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
         // highest generation, so when we fail with this one, we should trigger
         // retry logic, so we call kill.
         self._httpRequest.setTimeout(20000, function () {
-          console.log('HTTP request timeout');
-          console.log(self.getPeerIdentifier(), ':', self.getPeerGeneration());
+          console.log('HTTP request timeout with: ', self.getPeerIdentifier(), ':', self.getPeerGeneration());
+          self._complete(
+            ThaliNotificationAction.ActionResolution.NETWORK_PROBLEM,
+            null, 'Could not establish TCP connection');
           self.kill();
         });
 
