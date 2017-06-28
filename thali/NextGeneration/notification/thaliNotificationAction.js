@@ -177,21 +177,13 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
             null, 'Could not establish TCP connection');
         });
 
-        // Trying to figure out what exactly do here. When this callback is called
-        // error event is also triggered. So the Could not establish TCP connection
-        // should be propagated to peerPool, when we will kill this connection.
-        // But, calling only kill on this action will trigger retries logic.
-        // And when we run out of retries limit, we will mark peer as resolved
-        // so we will not connect to it in future. The entry connects peer id and generation
-        // so if it is old one, we are good here.
-        // We could also just call killSuperseded, which will mark peer as resolved immediately
-        // but I think we should try to retry it couple of times first.
-        // However, sometimes it still doesn't work.
-        // TODO: To be investigated further
-        self._httpRequest.setTimeout(10000, function () {
+        // Current thaliPeerPoolDefault runs only NotificationAction for the latest
+        // highest generation, so when we fail with this one, we should trigger
+        // retry logic, so we call kill.
+        self._httpRequest.setTimeout(20000, function () {
           console.log('HTTP request timeout');
           console.log(self.getPeerIdentifier(), ':', self.getPeerGeneration());
-          self.killSuperseded();
+          self.kill();
         });
 
         self._httpRequest.end();

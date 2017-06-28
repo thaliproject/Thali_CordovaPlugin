@@ -123,12 +123,10 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
 
     // Check if we are already running notificationAction with this peer.
     if (self._activePeers[peerId]) {
-      console.log('Debug 1');
       // If so, check if current peerAction has higher generation than the one we are currently running.
       // If so, call killSuperseded on the old one, so the older notificationAction won't be retried and
       // add the new one for its place.
       if (peerAction.getPeerGeneration() > self._activePeers[peerId].peerAction.getPeerGeneration()) {
-        console.log('Debug 2');
         self._activePeers[peerId].peerAction.killSuperseded();
 
         self._activePeers[peerId] = {
@@ -137,8 +135,6 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
         };
       }
     } else {
-      console.log('Debug 3');
-
       // If we are not running, add to array and start
       self._activePeers[peerId] = {
         peerAction: peerAction,
@@ -171,7 +167,6 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
     } else {
       // If we got here it means that we are already running notificationAction for this peer
       // with the same generation. We won't get notificationAction with lower generation (I think)
-      self._activePeers[peerId].peerAction.kill();
       logger.debug('We are already running NotificationAction for ',
         peerId, ':', peerAction.getPeerGeneration());
     }
