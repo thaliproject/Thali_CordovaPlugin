@@ -126,7 +126,7 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
       // If so, check if current peerAction has higher generation than the one we are currently running.
       // If so, call killSuperseded on the old one, so the older notificationAction won't be retried and
       // add the new one for its place.
-      if (peerAction.getPeerGeneration() > self._activePeers[peerId].peerAction.getPeerGeneration()) {
+      if (peerAction.getPeerGeneration() >= self._activePeers[peerId].peerAction.getPeerGeneration()) {
         self._activePeers[peerId].peerAction.killSuperseded();
 
         self._activePeers[peerId] = {
@@ -143,12 +143,16 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
     }
 
     if (!self._activePeers[peerId].runningNotification) {
+      var tempGeneration = self._activePeers[peerId].peerAction.getPeerGeneration();
+
       logger.debug('Starting notification action with ', peerId, ':', peerAction.getPeerGeneration());
 
       self._activePeers[peerId].runningNotification = true;
 
       self._activePeers[peerId].peerAction.start(actionAgent)
         .catch(function (err) {
+          // When we receive `Peer is unavailable` we don't need to call disconnect, because
+          // this peer is not present anyway and we have no connection with it.
           if (err.message === 'Could not establish TCP connection' || err.message === 'Connection could not be established') {
             logger.debug('Killing connection with ', peerId, ':', peerAction.getPeerGeneration());
             thaliMobileNativeWrapper.disconnect(peerId);
@@ -159,8 +163,10 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
         .then(function () {
           logger.debug('Notification action resolved');
 
-          if (self._activePeers[peerId] !== null) {
-            self._activePeers[peerId].peerAction.kill();
+          // We need to make sure to not delete new record. So we compare generation and
+          // runningNotification flag. However, it still could erase valid record.
+          if (self._activePeers[peerId].peerAction.getPeerGeneration() === tempGeneration &&
+            self._activePeers[peerId].runningNotification) {
             self._activePeers[peerId] = null;
           }
         });

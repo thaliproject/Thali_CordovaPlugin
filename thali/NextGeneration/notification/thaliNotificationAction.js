@@ -132,7 +132,11 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
         self.getConnectionType()
       )
       .catch(function (error) {
-        self._complete(ThaliNotificationAction.ActionResolution.BAD_PEER);
+        if (error.message === 'Peer is unavailable') {
+          self._complete(ThaliNotificationAction.ActionResolution.BAD_PEER);
+        } else {
+          self._complete(ThaliNotificationAction.ActionResolution.KILLED);
+        }
         return Promise.reject(error);
       });
     })
@@ -171,7 +175,7 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
         // anything in the _complete function because it is the second call to
         // _complete.
         self._httpRequest.on('error', function () {
-          console.log('HTTP request error with: ', self.getPeerIdentifier(), ':', self.getPeerGeneration());
+          console.log('ThaliNotificationAction: HTTP request error with: ', self.getPeerIdentifier(), ':', self.getPeerGeneration());
           self._complete(
             ThaliNotificationAction.ActionResolution.NETWORK_PROBLEM,
             null, 'Could not establish TCP connection');
@@ -181,7 +185,7 @@ ThaliNotificationAction.prototype.start = function (httpAgentPool) {
         // highest generation, so when we fail with this one, we should trigger
         // retry logic, so we call kill.
         self._httpRequest.setTimeout(20000, function () {
-          console.log('HTTP request timeout with: ', self.getPeerIdentifier(), ':', self.getPeerGeneration());
+          console.log('ThaliNotificationAction: HTTP request timeout with: ', self.getPeerIdentifier(), ':', self.getPeerGeneration());
           self._complete(
             ThaliNotificationAction.ActionResolution.NETWORK_PROBLEM,
             null, 'Could not establish TCP connection');
@@ -242,7 +246,7 @@ ThaliNotificationAction.prototype._responseCallback = function (res) {
   var data = [];
   var totalReceived = 0;
 
-  console.log('Http response callback');
+  console.log('ThaliNotificationAction: Http response callback: ', self.getPeerIdentifier(), ':', self.getPeerGeneration());
 
   if (res.statusCode !== 200 ||
     res.headers['content-type'] !== 'application/octet-stream') {
@@ -302,9 +306,9 @@ ThaliNotificationAction.prototype._responseCallback = function (res) {
 ThaliNotificationAction.prototype._complete = function (resolution,
                                                         beaconDetails,
                                                         error) {
-  console.log('Resolution: ', resolution);
-
   if (!this._resolution) {
+    console.log('ThaliNotificationAction: Resolution: ', resolution, this.getPeerIdentifier(), ':', this.getPeerGeneration());
+
     this._resolution = resolution;
     this._httpRequest && this._httpRequest.abort();
 
@@ -323,6 +327,8 @@ ThaliNotificationAction.prototype._complete = function (resolution,
     } else if (this._resolve) {
       this._resolve(null);
     }
+  } else {
+    console.log('ThaliNotificationAction: We are already complete with resolution: ', resolution, this.getPeerIdentifier(), ':', this.getPeerGeneration());
   }
 };
 
