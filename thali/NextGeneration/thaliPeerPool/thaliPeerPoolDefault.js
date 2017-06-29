@@ -165,7 +165,8 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
 
           // We need to make sure to not delete new record. So we compare generation and
           // runningNotification flag. However, it still could erase valid record.
-          if (self._activePeers[peerId].peerAction.getPeerGeneration() === tempGeneration &&
+          if (self._activePeers[peerId] &&
+            self._activePeers[peerId].peerAction.getPeerGeneration() === tempGeneration &&
             self._activePeers[peerId].runningNotification) {
             self._activePeers[peerId] = null;
           }
