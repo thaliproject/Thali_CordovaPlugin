@@ -65,6 +65,9 @@ function ThaliPeerPoolOneAtATime() {
   this._stopped = true;
   this._bluetoothSerialPromiseQueue = new PromiseQueue();
   this._wifiReplicationCount = {};
+  this._activePeers = {};
+  this._isAlreadyReplicatingByBT = false;
+  this._resolvedNotificationActionPeerId = '';
 }
 
 util.inherits(ThaliPeerPoolOneAtATime, ThaliPeerPoolInterface);
@@ -155,8 +158,6 @@ ThaliPeerPoolOneAtATime.prototype._wifiEnqueue = function (peerAction) {
   return null;
 };
 
-ThaliPeerPoolOneAtATime.prototype._bluetoothReplicationAction = null;
-
 /**
  * Runs the replication action and if it fails for a reason other than a
  * timeout and if the peer is still available (meaning the connection has not
@@ -212,62 +213,104 @@ ThaliPeerPoolOneAtATime.prototype._replicateThroughProblems =
 // a total of 2 phones is going to be a bit dicey
 ThaliPeerPoolOneAtATime.prototype._bluetoothEnqueue = function (peerAction) {
   var self = this;
-  // This code depends on an evil race condition where if a notification
-  // action successfully retrieves beacons from a peer then before the start
-  // method for that notification action returns we will already have created
-  // a replication action to get the beacons and will have called enqueue. We
-  // depend on that race condition. We will store the replication action when
-  // it comes in but not run it until the notification action that led to
-  // the replication action being generated returns from start.
-  if (peerAction.getActionType() === ThaliReplicationPeerAction.ACTION_TYPE) {
-    if (self._bluetoothReplicationAction) {
-      logger.error('Something VERY bad has happened. We got a second ' +
-        'replication action without having cleared the first!');
-      self._bluetoothReplicationAction.kill();
-    }
 
-    self._bluetoothReplicationAction = peerAction;
+  // If this peer is different than the one we are replicating with,
+  // should we kill connection with it?
+  if (self._isAlreadyReplicatingByBT) {
+    peerAction.kill();
     return null;
   }
 
-  if (peerAction.getActionType() !== ThaliNotificationAction.ACTION_TYPE) {
-    var error = new Error('Got unsupported action type: ' +
-      peerAction.getActionType());
-    logger.error(error.message);
+  return self._replicateThroughProblems(peerAction).then(function() {
+    // When we succeed, kill outgoing connection manually
+    logger.debug('Finished BT replication, terminating connection with: ',
+      peerAction.getPeerAdvertisesDataForUs().peerId);
+
+    // thaliMobileNativeWrapper.disconnect
+    thaliMobileNativeWrapper._getServersManager()
+      .terminateOutgoingConnection(peerAction.getPeerAdvertisesDataForUs().peerId,
+        peerAction.getPeerAdvertisesDataForUs().portNumber);
+
     peerAction.kill();
-    throw error;
+    self._isAlreadyReplicatingByBT = false;
+  });
+};
+
+ThaliPeerPoolOneAtATime.prototype._multiConnectEnqueue = function (peerAction) {
+  logger.debug('Starting MultiConnect replication');
+
+  return this._replicateThroughProblems(peerAction).then(function() {
+    peerAction.kill();
+  });
+};
+
+ThaliPeerPoolOneAtATime.prototype._notificationActionEnqueueNative = function (peerAction) {
+  var peerId = peerAction.getPeerIdentifier();
+
+  // Check if we are already running notificationAction with this peer.
+  if (self._activePeers[peerId]) {
+    // If so, check if current peerAction has higher generation than the one we are currently running.
+    // If so, call killSuperseded on the old one, so the older notificationAction won't be retried and
+    // add the new one for its place.
+    if (peerAction.getPeerGeneration() > self._activePeers[peerId].peerAction.getPeerGeneration()) {
+      self._activePeers[peerId].peerAction.killSuperseded();
+
+      self._activePeers[peerId] = {
+        peerAction: peerAction,
+        runningNotification: false
+      };
+    }
+  } else {
+    // If we are not running, add to array and start
+    self._activePeers[peerId] = {
+      peerAction: peerAction,
+      runningNotification: false
+    };
   }
 
-  self._bluetoothSerialPromiseQueue.enqueue(function (resolve) {
-    return self._startAction(peerAction)
-      .then(function () {
-        if (self._bluetoothReplicationAction) {
-          var replicationAction = self._bluetoothReplicationAction;
-          return self._replicateThroughProblems(
-              self._bluetoothReplicationAction)
-            .then(function () {
-              // Currently replication actions use the remote public key as
-              // the peer ID instead of the Bluetooth MAC. But listeners
-              // in thaliMobileNativeWrapper are indexed by MAC. So use the
-              // MAC from the associated notification action. Yes, we really
-              // should fix this.
-              thaliMobileNativeWrapper._getServersManager()
-                .terminateOutgoingConnection(peerAction.getPeerIdentifier(),
-                  replicationAction.getPeerAdvertisesDataForUs().portNumber);
-              self._bluetoothReplicationAction = null;
-              peerAction.kill();
-              resolve(true);
-              return null;
-            });
+  if (!self._activePeers[peerId].runningNotification) {
+    var tempGeneration = self._activePeers[peerId].peerAction.getPeerGeneration();
+    var portNumber = self._activePeers[peerId].peerAction.portNumber;
+
+    logger.debug('Starting notification action with ', peerId, ':', tempGeneration);
+
+    self._activePeers[peerId].runningNotification = true;
+
+    return self._startAction(self._activePeers[peerId].peerAction)
+      .catch(function (err) {
+        // When we receive `Peer is unavailable` we don't need to call disconnect, because
+        // this peer is not present anyway and we have no connection with it.
+        if (err.message === 'Could not establish TCP connection' ||
+          err.message === 'Connection could not be established') {
+          logger.debug('Killing connection with ', peerId, ':', tempGeneration, 'on port:', portNumber);
+          thaliMobileNativeWrapper.disconnect(peerId, portNumber);
         }
-        peerAction.kill();
-        thaliMobileNativeWrapper._getServersManager()
-          .terminateOutgoingConnection(peerAction.getPeerIdentifier(),
-            peerAction.getConnectionInformation().portNumber);
-        resolve(true);
-        return null;
+
+        logger.debug('Notification action error: ', logger.debug(JSON.stringify(err)));
+      })
+      .then(function () {
+        logger.debug('Notification action resolved');
+
+        // We need to make sure to not delete new record. So we compare generation and
+        // runningNotification flag. However, it still could erase valid record.
+        if (self._activePeers[peerId] &&
+          self._activePeers[peerId].peerAction.getPeerGeneration() === tempGeneration &&
+          self._activePeers[peerId].runningNotification) {
+          self._activePeers[peerId] = null;
+        }
       });
-  });
+  } else {
+    // If we got here it means that we are already running notificationAction for this peer
+    // with the same generation. We won't get notificationAction with lower generation (I think)
+    logger.debug('We are already running NotificationAction for ',
+      peerId, ':', peerAction.getPeerGeneration());
+    return null;
+  }
+};
+
+ThaliPeerPoolOneAtATime.prototype._notificationActionEnqueueTCP = function (peerAction) {
+  var self = this;
+  return self._startAction(peerAction);
 };
 
 ThaliPeerPoolOneAtATime.prototype.enqueue = function (peerAction) {
@@ -275,13 +318,25 @@ ThaliPeerPoolOneAtATime.prototype.enqueue = function (peerAction) {
     peerAction.kill();
     throw new Error(ThaliPeerPoolOneAtATime.ERRORS.ENQUEUE_WHEN_STOPPED);
   }
+
+  if (peerAction.getActionType() !== ThaliReplicationPeerAction.ACTION_TYPE) {
+    if (peerAction.getConnectionType() === thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE) {
+      return this._notificationActionEnqueueTCP(peerAction);
+    } else {
+      return this._notificationActionEnqueueNative(peerAction);
+    }
+  }
+
   ThaliPeerPoolOneAtATime.super_.prototype.enqueue.apply(this, arguments);
 
   switch (peerAction.getConnectionType()) {
     // MPCF is here because right now master doesn't really know how to set
     // the mock type to anything but Android
     case thaliMobileNativeWrapper.connectionTypes
-      .MULTI_PEER_CONNECTIVITY_FRAMEWORK:
+      .MULTI_PEER_CONNECTIVITY_FRAMEWORK: {
+      this._multiConnectEnqueue(peerAction);
+      break;
+    }
     case thaliMobileNativeWrapper.connectionTypes.BLUETOOTH: {
       this._bluetoothEnqueue(peerAction);
       break;

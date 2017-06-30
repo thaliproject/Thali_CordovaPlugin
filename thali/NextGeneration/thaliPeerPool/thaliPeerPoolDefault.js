@@ -6,9 +6,6 @@ var thaliConfig = require('../thaliConfig');
 var ForeverAgent = require('forever-agent');
 var logger = require('../../ThaliLogger')('thaliPeerPoolDefault');
 var Utils = require('../utils/common.js');
-var ThaliReplicationPeerAction = require('../replication/thaliReplicationPeerAction');
-var thaliMobileNativeWrapper =
-  require('thali/NextGeneration/thaliMobileNativeWrapper');
 
 /** @module thaliPeerPoolDefault */
 
@@ -68,8 +65,6 @@ var thaliMobileNativeWrapper =
  */
 function ThaliPeerPoolDefault() {
   ThaliPeerPoolDefault.super_.call(this);
-  this._isAlreadyReplicating = false;
-  this._activePeers = {};
   this._stopped = true;
 }
 
@@ -85,8 +80,6 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
     throw new Error(ThaliPeerPoolDefault.ERRORS.ENQUEUE_WHEN_STOPPED);
   }
 
-  var self = this;
-
   // Right now we will just allow everything to run parallel.
 
   var result =
@@ -99,85 +92,16 @@ ThaliPeerPoolDefault.prototype.enqueue = function (peerAction) {
     pskKey: peerAction.getPskKey()
   });
 
-  if (peerAction.getActionType() === ThaliReplicationPeerAction.ACTION_TYPE) {
-    if (!self._isAlreadyReplicating) {
-      logger.debug('Starting replication action');
-
-      self._isAlreadyReplicating = true;
-
-      peerAction.start(actionAgent)
-        .catch(function (err) {
-          logger.debug('Replication action error: ', Utils.serializePouchError(err));
-        })
-        .then(function () {
-          logger.debug('Replication action resolved');
-          peerAction.kill();
-
-          self._isAlreadyReplicating = false;
-        });
-    } else {
-      logger.debug('We are already replicating');
-    }
-  } else {
-    var peerId = peerAction.getPeerIdentifier();
-
-    // Check if we are already running notificationAction with this peer.
-    if (self._activePeers[peerId]) {
-      // If so, check if current peerAction has higher generation than the one we are currently running.
-      // If so, call killSuperseded on the old one, so the older notificationAction won't be retried and
-      // add the new one for its place.
-      if (peerAction.getPeerGeneration() >= self._activePeers[peerId].peerAction.getPeerGeneration()) {
-        self._activePeers[peerId].peerAction.killSuperseded();
-
-        self._activePeers[peerId] = {
-          peerAction: peerAction,
-          runningNotification: false
-        };
-      }
-    } else {
-      // If we are not running, add to array and start
-      self._activePeers[peerId] = {
-        peerAction: peerAction,
-        runningNotification: false
-      };
-    }
-
-    if (!self._activePeers[peerId].runningNotification) {
-      var tempGeneration = self._activePeers[peerId].peerAction.getPeerGeneration();
-
-      logger.debug('Starting notification action with ', peerId, ':', peerAction.getPeerGeneration());
-
-      self._activePeers[peerId].runningNotification = true;
-
-      self._activePeers[peerId].peerAction.start(actionAgent)
-        .catch(function (err) {
-          // When we receive `Peer is unavailable` we don't need to call disconnect, because
-          // this peer is not present anyway and we have no connection with it.
-          if (err.message === 'Could not establish TCP connection' || err.message === 'Connection could not be established') {
-            logger.debug('Killing connection with ', peerId, ':', peerAction.getPeerGeneration());
-            thaliMobileNativeWrapper.disconnect(peerId);
-          }
-
-          logger.debug('Notification action error: ', Utils.serializePouchError(err));
-        })
-        .then(function () {
-          logger.debug('Notification action resolved');
-
-          // We need to make sure to not delete new record. So we compare generation and
-          // runningNotification flag. However, it still could erase valid record.
-          if (self._activePeers[peerId] &&
-            self._activePeers[peerId].peerAction.getPeerGeneration() === tempGeneration &&
-            self._activePeers[peerId].runningNotification) {
-            self._activePeers[peerId] = null;
-          }
-        });
-    } else {
-      // If we got here it means that we are already running notificationAction for this peer
-      // with the same generation. We won't get notificationAction with lower generation (I think)
-      logger.debug('We are already running NotificationAction for ',
-        peerId, ':', peerAction.getPeerGeneration());
-    }
-  }
+  // We hook our clean up code to kill and it is always legal to call
+  // kill, even if it has already been called. So this ensures that our
+  // cleanup code gets called regardless of how the action ended.
+  peerAction.start(actionAgent)
+    .catch(function (err) {
+      logger.debug('Got err ', Utils.serializePouchError(err));
+    })
+    .then(function () {
+      peerAction.kill();
+    });
 
   return result;
 };
