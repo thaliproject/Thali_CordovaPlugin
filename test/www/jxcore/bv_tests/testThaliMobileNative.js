@@ -412,103 +412,124 @@ test('Can shift data via parallel connections',
       });
   });
 
-test('Can shift data securely', function (t) {
- var exchangeData = 'small amount of data';
+  test('Can shift data securely', function (t) {
+   var dataSize = 16 * 1024;
+   var exchangeData = randomString.generate(dataSize);
 
- var pskKey = new Buffer('psk-key');
- var pskId = 'psk-id';
+   var uuids = t.participants.map(function (p) { return p.uuid; });
+   assert(uuids.length === 2, 'This test requires exactly 2 devices');
+   uuids.sort();
+   var iAmFirst = (tape.uuid === uuids[0]);
 
- var options = {
-   ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-   pskCallback: function (id) {
-     console.log('Server received psk id: %s', pskId);
-     return id === pskId ? pskKey : null;
+   var pskKey = new Buffer('psk-key');
+   var pskId = 'psk-id';
+
+   var options = {
+     ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+     pskCallback: function (id) {
+       console.log('Server received psk id: %s', pskId);
+       return id === pskId ? pskKey : null;
+     }
+   };
+
+   var server = tls.createServer(options, function (socket) {
+     var ended = false;
+     var buffer = '';
+     socket.on('data', function (chunk) {
+       buffer += chunk.toString();
+       logger.debug('Server received (%d bytes):',
+         chunk.length);
+
+       // when received all data, send it back
+       if (buffer.length === exchangeData.length) {
+         logger.debug('Server received all data: %s', buffer);
+         var rawData = new Buffer(buffer);
+         logger.debug('Server sends data back to client (%d bytes): ',
+           rawData.length);
+         socket.write(rawData, function () {
+           logger.debug('Server data flushed');
+         });
+         ended = true;
+         socket.end(function () {
+           logger.debug('Server\'s socket stream finished');
+         });
+       }
+     });
+     socket.on('end', function () {
+       // server ends connection, not client
+       if (!ended) {
+         t.fail(new Error('Unexpected end event'));
+         return;
+       }
+       server.emit('CLIENT_DONE');
+     });
+     socket.on('error', function (error) {
+       t.fail(error.message);
+     });
+   });
+
+   server = makeIntoCloseAllServer(server);
+   serverToBeClosed = server;
+
+   var waitForServerEnd = waitForEvent(server, 'CLIENT_DONE');
+
+   function shiftData(sock) {
+     sock.on('error', function (error) {
+       console.log('Client socket error:', error.message, error.stack);
+       t.fail(error.message);
+     });
+
+     var receivedData = '';
+     sock.on('data', function (chunk) {
+       receivedData += chunk.toString();
+     });
+     sock.on('end', function () {
+       t.equal(receivedData, exchangeData, 'got the same data back');
+     });
+
+     var rawData = new Buffer(exchangeData);
+     logger.debug('Client sends data (%d bytes):',
+       rawData.length);
+     sock.write(rawData, function () {
+       logger.debug('Client data flushed');
+     });
+     return waitForEvent(sock, 'end');
    }
- };
 
- var server = tls.createServer(options, function (socket) {
-   var ended = false;
-   var buffer = '';
-   socket.on('data', function (chunk) {
-     buffer += chunk.toString();
-     logger.debug('Server received (%d bytes):',
-       chunk.length);
-
-     // when received all data, send it back
-     if (buffer.length === exchangeData.length) {
-       logger.debug('Server received all data: %s', buffer);
-       var rawData = new Buffer(buffer);
-       logger.debug('Server sends data back to client (%d bytes): ',
-         rawData.length);
-       socket.write(rawData, function () {
-         logger.debug('Server data flushed');
+   function startShiftData(port) {
+     return connect(tls, {
+       port: port,
+       ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+       pskIdentity: pskId,
+       pskKey: pskKey
+     })
+       .then(function (socket) {
+         return shiftData(socket);
        });
-       ended = true;
-       socket.end(function () {
-         logger.debug('Server\'s socket stream finished');
-       });
-     }
-   });
-   socket.on('end', function () {
-     // server ends connection, not client
-     if (!ended) {
-       t.fail(new Error('Unexpected end event'));
-       return;
-     }
-     server.emit('CLIENT_DONE');
-   });
-   socket.on('error', function (error) {
-     t.fail(error.message);
-   });
- });
- server = makeIntoCloseAllServer(server);
- serverToBeClosed = server;
+   }
 
- function shiftData(sock) {
-   sock.on('error', function (error) {
-     console.log('Client socket error:', error.message, error.stack);
-     t.fail(error.message);
-   });
+    thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
+      function (connection, peer) {
+        peerIdsToBeClosed.push(peer.peerIdentifier);
 
-   var receivedData = '';
-   sock.on('data', function (chunk) {
-     receivedData += chunk.toString();
-     if (receivedData === exchangeData) {
-       sock.destroy();
-     }
-   });
-   sock.on('close', function () {
-     t.equal(receivedData, exchangeData, 'got the same data back');
-   });
-
-   var rawData = new Buffer(exchangeData);
-   logger.debug('Client sends data (%d bytes):',
-     rawData.length);
-   sock.write(rawData, function () {
-     logger.debug('Client data flushed');
-   });
-   return waitForEvent(sock, 'close');
- }
-
-  thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
-    function (connection, peer) {
-      peerIdsToBeClosed.push(peer.peerIdentifier);
-
-      return connect(tls, {
-        port: connection.listeningPort,
-        ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-        pskIdentity: pskId,
-        pskKey: pskKey
-      })
-      .then(function (socket) {
-        return shiftData(socket);
-      })
-      .catch(t.fail)
-      .then(function () {
-        t.end();
-      });
+        Promise.resolve()
+          .then(function () {
+            if (iAmFirst) {
+              return startShiftData(connection.listeningPort)
+                .then(function () {
+                  return waitForServerEnd;
+                });
+            }
+            return waitForServerEnd.then(function () {
+              return startShiftData(connection.listeningPort);
+            })
+          })
+          .catch(t.fail)
+          .then(function () {
+            t.end();
+          });
+    });
   });
-});
 
 test('Can shift large amounts of data', function (t) {
  var sockets = {};
