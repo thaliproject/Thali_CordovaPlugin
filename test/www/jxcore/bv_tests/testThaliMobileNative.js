@@ -494,6 +494,11 @@ test('Can shift data securely', function (t) {
 
   function clientDonePromise() {
     return new Promise(function (resolve, reject) {
+      // It may happen that the server has already received all data
+      // but we didn't set listener yet. So we use additional variable
+      // that will tell us if server has already finished.
+      // If isClientDone is not set to true, we set up our listener
+      // and when server ends, it will emit 'CLIENT_DONE' event.
       if (isClientDone) {
         resolve();
       } else {
