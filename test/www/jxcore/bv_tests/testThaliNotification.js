@@ -82,6 +82,8 @@ var GlobalVariables = function () {
 
 };
 
+var notificationServer, notificationClient;
+
 var test = tape({
   setup: function (t) {
     globals = new GlobalVariables();
@@ -93,6 +95,9 @@ var test = tape({
   teardown: function (t) {
     thaliMobile.stop();
     // Clears timeout
+    notificationClient.stop();
+    notificationServer.stop();
+
     var summary =
       'Participants:' + globals.numberOfParticipants +
       ' Peers Replied to us:' + countNonZeroItems(globals.peerRepliedToUs)+
@@ -214,11 +219,11 @@ test('Client to server request coordinated', function (t) {
   peerPool.start();
 
   // Initialize the ThaliNotificationClient
-  var notificationClient =
+  notificationClient =
     new ThaliNotificationClient(peerPool, globals.ecdh);
 
   // Initializes ThaliNotificationServer
-  var notificationServer = new ThaliNotificationServer(
+  notificationServer = new ThaliNotificationServer(
     globals.expressRouter, globals.ecdh, 90000);
 
   getPskIdToPublicKey = notificationServer.getPskIdToPublicKey();
@@ -257,6 +262,7 @@ test('Client to server request coordinated', function (t) {
 
       var publicKeyHash = NotificationBeacons.createPublicKeyHash(res.keyId);
       globals.peerAdvertisesDataForUsEvents[publicKeyHash]++;
+
       initiateHttpsRequestToPeer(res, 1);
     });
 
@@ -266,29 +272,18 @@ test('Client to server request coordinated', function (t) {
     if(checkSuccess() || ++intervalRounds > 24) {
       // Test has been completed successfully or we have hit the time limit
       clearInterval(globals.testInterval);
-      thaliMobile.stopListeningForAdvertisements().then(function () {
-        notificationClient.stop();
-        notificationServer.stop().then(function () {
 
-          t.ok(allDictionaryItemsNonZero(globals.peerRepliedToUs),
-            'Peer made successful https requests to all peers');
+      t.ok(allDictionaryItemsNonZero(globals.peerRepliedToUs),
+        'Peer made successful https requests to all peers');
 
-          t.ok(allDictionaryItemsNonZero(globals.peerRequestedUs),
-            'Peer received right amount of https requests');
+      t.ok(allDictionaryItemsNonZero(globals.peerRequestedUs),
+        'Peer received right amount of https requests');
 
-          t.ok(globals.failedPskIdentityCount === 0,
-            'HTTPS server received zero PSK Identities. Count:' +
-            globals.failedPskIdentityCount);
+      t.ok(globals.failedPskIdentityCount === 0,
+        'HTTPS server received zero PSK Identities. Count:' +
+        globals.failedPskIdentityCount);
 
-          t.end();
-        }).catch(function (failure) {
-          t.fail('Stopping the server failed:' + failure);
-          t.end();
-        });
-      }).catch(function (failure) {
-        t.fail('Failed to call stopListeningForAdvertisements:' + failure);
-        t.end();
-      });
+      t.end();
     }
   }, 5000);
 
