@@ -263,19 +263,20 @@ test('Can connect to a remote peer', function (t) {
 
   thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
     function (connection, peer) {
-      // Called if we successfully connect to to a peer
-      logger.info(connection);
-      peerIdsToBeClosed.push(peer.peerIdentifier);
+      return new Promise(function (resolve, reject) {
+        logger.info(connection);
+        peerIdsToBeClosed.push(peer.peerIdentifier);
 
-      t.ok(connection.hasOwnProperty('listeningPort'),
-        'Must have listeningPort');
-      t.ok(typeof connection.listeningPort === 'number',
-        'listeningPort must be a number');
+        t.ok(connection.hasOwnProperty('listeningPort'),
+          'Must have listeningPort');
+        t.ok(typeof connection.listeningPort === 'number',
+          'listeningPort must be a number');
 
-      // A check if any of our old reverse connection or please connect code
-      // is still hiding around.
-      t.ok(connection.listeningPort !== 0, 'listening port should not be 0');
-      t.end();
+        // A check if any of our old reverse connection or please connect code
+        // is still hiding around.
+        t.ok(connection.listeningPort !== 0, 'listening port should not be 0');
+        resolve();
+      });
     });
 });
 
@@ -359,17 +360,19 @@ test('Can shift data', function (t) {
 
   thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
     function (connection, peer) {
-      peerIdsToBeClosed.push(peer.peerIdentifier);
-      var nativePort = connection.listeningPort;
+      return new Promise(function (resolve, reject) {
+        peerIdsToBeClosed.push(peer.peerIdentifier);
+        var nativePort = connection.listeningPort;
 
-      connect(net, {port: nativePort})
-        .then(function (socket) {
-          return shiftData(t, socket, exchangeData);
-        })
-        .catch(t.fail)
-        .then(function () {
-          t.end();
-        });
+        connect(net, {port: nativePort})
+          .then(function (socket) {
+            return shiftData(t, socket, exchangeData);
+          })
+          .catch(t.fail)
+          .then(function () {
+            resolve();
+          });
+      });
   });
 });
 
@@ -386,23 +389,25 @@ test('Can shift data via parallel connections',
 
     thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
       function (connection, peer) {
-        peerIdsToBeClosed.push(peer.peerIdentifier);
-        var nativePort = connection.listeningPort;
-        Promise.all([
-          connect(net, {port: nativePort}),
-          connect(net, {port: nativePort}),
-          connect(net, {port: nativePort})
-        ]).then(function (sockets) {
-          return Promise.all(sockets.map(function (socket) {
-            var string = randomString.generate(dataLength);
-            t.equal(string.length, dataLength, 'correct string length');
-            return shiftData(t, socket, string);
-          }));
-        })
-          .catch(t.fail)
-          .then(function () {
-            t.end();
-          });
+        return new Promise(function (resolve, reject) {
+          peerIdsToBeClosed.push(peer.peerIdentifier);
+          var nativePort = connection.listeningPort;
+          Promise.all([
+            connect(net, {port: nativePort}),
+            connect(net, {port: nativePort}),
+            connect(net, {port: nativePort})
+          ]).then(function (sockets) {
+            return Promise.all(sockets.map(function (socket) {
+              var string = randomString.generate(dataLength);
+              t.equal(string.length, dataLength, 'correct string length');
+              return shiftData(t, socket, string);
+            }));
+          })
+            .catch(t.fail)
+            .then(function () {
+              resolve();
+            });
+        });
       });
   });
 
@@ -457,91 +462,98 @@ test('Can shift data securely', function (t) {
 
   thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
     function (connection, peer) {
-      peerIdsToBeClosed.push(peer.peerIdentifier);
+      return new Promise(function (resolve, reject) {
+        peerIdsToBeClosed.push(peer.peerIdentifier);
+        var nativePort = connection.listeningPort;
 
-      return connect(tls, {
-        port: connection.listeningPort,
-        ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-        pskIdentity: pskId,
-        pskKey: pskKey
-      })
-        .then(function (socket) {
-          return shiftData(t, socket, exchangeData);
+        connect(tls, {
+          port: nativePort,
+          ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+          pskIdentity: pskId,
+          pskKey: pskKey
         })
-        .catch(t.fail)
-        .then(function () {
-          t.end();
-        });
+          .then(function (socket) {
+            return shiftData(t, socket, exchangeData);
+          })
+          .catch(t.fail)
+          .then(function () {
+            resolve();
+          });
+      });
     });
 });
 
 test('Can shift large amounts of data', function (t) {
  var sockets = {};
- var server = net.createServer(function (socket) {
-   socket.on('data', function (data) {
-     socket.write(data);
-   });
-   socket.on('end', socket.end);
-   socket.on('error', function (error) {
-     logger.warn('Error on echo server socket: ' + error);
-     t.fail();
-   });
-   sockets[socket.remotePort] = socket;
- });
+ // var server = net.createServer(function (socket) {
+ //   socket.on('data', function (data) {
+ //     socket.write(data);
+ //   });
+ //   socket.on('end', socket.end);
+ //   socket.on('error', function (error) {
+ //     logger.warn('Error on echo server socket: ' + error);
+ //     t.fail();
+ //   });
+ //   sockets[socket.remotePort] = socket;
+ // });
+
+
+ var dataSize = 64 * 1024;
+ var exchangeData = randomString.generate(dataSize);
+
+ var server = createServer(t, exchangeData.length);
  server = makeIntoCloseAllServer(server);
  serverToBeClosed = server;
 
- var dataSize = 64 * 1024;
- var toSend = randomString.generate(dataSize);
-
- function shiftData(sock) {
-
-   sock.on('error', function (error) {
-     logger.warn('Error on client socket: ' + error);
-     t.fail();
-   });
-
-   var toRecv = '';
-
-   var done = false;
-   sock.on('data', function (data) {
-     var remaining = dataSize - toRecv.length;
-
-     if (remaining >= data.length) {
-       toRecv += data.toString();
-       data = data.slice(0, 0);
-     }
-     else {
-       toRecv += data.toString('utf8', 0, remaining);
-       data = data.slice(remaining);
-     }
-
-     if (toRecv.length === dataSize) {
-       if (!done) {
-         done = true;
-         t.ok(toSend === toRecv, 'received should match sent forward');
-         t.end();
-       }
-       if (data.length) {
-         sock.write(data);
-       }
-     }
-   });
-
-   sock.write(toSend);
- }
+ // function shiftData(sock) {
+ //   sock.on('error', function (error) {
+ //     logger.warn('Error on client socket: ' + error);
+ //     t.fail();
+ //   });
+ //
+ //   var toRecv = '';
+ //
+ //   var done = false;
+ //   sock.on('data', function (data) {
+ //     var remaining = dataSize - toRecv.length;
+ //
+ //     if (remaining >= data.length) {
+ //       toRecv += data.toString();
+ //       data = data.slice(0, 0);
+ //     }
+ //     else {
+ //       toRecv += data.toString('utf8', 0, remaining);
+ //       data = data.slice(remaining);
+ //     }
+ //
+ //     if (toRecv.length === dataSize) {
+ //       if (!done) {
+ //         done = true;
+ //         t.ok(toSend === toRecv, 'received should match sent forward');
+ //         t.end();
+ //       }
+ //       if (data.length) {
+ //         sock.write(data);
+ //       }
+ //     }
+ //   });
+ //
+ //   sock.write(toSend);
+ // }
 
   thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
     function (connection, peer) {
-      var client = null;
       peerIdsToBeClosed.push(peer.peerIdentifier);
+      var nativePort = connection.listeningPort;
 
-      // We're happy here if we make a connection to anyone
-      logger.info('Connection info: ' + JSON.stringify(connection));
-      client = net.connect(connection.listeningPort, function () {
-        logger.info('Connected to the ' + connection.listeningPort);
-        shiftData(client);
-      });
+      connect(net, {port: nativePort})
+        .then(function (socket) {
+          return shiftData(t, socket, exchangeData);
+        })
+        .catch(t.fail)
+        .then(function () {
+          resolve();
+        });
  });
 });
 
