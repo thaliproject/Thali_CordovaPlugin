@@ -296,12 +296,6 @@ function connect(module, options) {
   });
 }
 
-function waitForEvent(emitter, event) {
-  return new Promise(function (resolve) {
-    emitter.once(event, resolve);
-  });
-}
-
 function shiftData(t, sock, exchangeData) {
   return new Promise(function (resolve, reject) {
     sock.on('error', function (error) {
@@ -413,21 +407,7 @@ test('Can shift data via parallel connections',
   });
 
 test('Can shift data securely', function (t) {
-  var uuids = t.participants.map(function (p) {
-    return p.uuid;
-  });
-
-  if (uuids.length !== 2) {
-    t.skip('This test requires exactly 2 devices');
-    t.end();
-    return;
-  }
-
-  uuids.sort();
-
-  var iAmFirst = (tape.uuid === uuids[0]);
   var exchangeData = 'small amount of data';
-  var isClientDone = false;
 
   var pskKey = new Buffer('psk-key');
   var pskId = 'psk-id';
@@ -464,67 +444,29 @@ test('Can shift data securely', function (t) {
       }
     });
     socket.on('end', function () {
-      // server ends connection, not client
       if (!ended) {
         t.fail(new Error('Unexpected end event'));
-        return;
       }
-      isClientDone = true;
-      server.emit('CLIENT_DONE');
     });
     socket.on('error', function (error) {
       t.fail(error.message);
     });
   });
-
   server = makeIntoCloseAllServer(server);
   serverToBeClosed = server;
-
-  function startShiftData(port) {
-    return connect(tls, {
-      port: port,
-      ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-      pskIdentity: pskId,
-      pskKey: pskKey
-    })
-      .then(function (socket) {
-        return shiftData(t, socket, exchangeData);
-      });
-  }
-
-  function clientDonePromise() {
-    return new Promise(function (resolve, reject) {
-      // It may happen that the server has already received all data
-      // but we didn't set listener yet. So we use additional variable
-      // that will tell us if server has already finished.
-      // If isClientDone is not set to true, we set up our listener
-      // and when server ends, it will emit 'CLIENT_DONE' event.
-      if (isClientDone) {
-        resolve();
-      } else {
-        server.on('CLIENT_DONE', function () {
-          resolve();
-        });
-      }
-    });
-  }
 
   thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
     function (connection, peer) {
       peerIdsToBeClosed.push(peer.peerIdentifier);
 
-      Promise.resolve()
-        .then(function () {
-          if (iAmFirst) {
-            return startShiftData(connection.listeningPort)
-              .then(function () {
-                return clientDonePromise();
-              });
-          }
-          return clientDonePromise()
-            .then(function () {
-              return startShiftData(connection.listeningPort);
-            });
+      return connect(tls, {
+        port: connection.listeningPort,
+        ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+        pskIdentity: pskId,
+        pskKey: pskKey
+      })
+        .then(function (socket) {
+          return shiftData(t, socket, exchangeData);
         })
         .catch(t.fail)
         .then(function () {
