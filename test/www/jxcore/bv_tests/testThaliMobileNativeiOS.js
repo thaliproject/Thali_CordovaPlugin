@@ -208,26 +208,29 @@ test('Get same port when trying to connect multiple times on iOS',
 
     thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
       function (currentConnection, currentTestPeer) {
-        peerIdsToBeClosed.push(currentTestPeer.peerIdentifier);
-        var listeningPort = currentConnection.listeningPort;
-        var connection = net.connect(listeningPort,
-          function () {
-            // We aren't allowed to have multiple simultaneous outstanding
-            // calls to the same peerID on iOS for multiConnect (or
-            // disconnect) so we have to serialize.
-            reConnect(t, currentTestPeer.peerIdentifier, listeningPort)
-              .then(function () {
-                return reConnect(t, currentTestPeer.peerIdentifier,
-                  listeningPort);
-              })
-              .then(function () {
-                t.end();
-              });
+        return new Promise(function (resolve, reject) {
+          peerIdsToBeClosed.push(currentTestPeer.peerIdentifier);
+          var listeningPort = currentConnection.listeningPort;
+          var connection = net.connect(listeningPort,
+            function () {
+              // We aren't allowed to have multiple simultaneous outstanding
+              // calls to the same peerID on iOS for multiConnect (or
+              // disconnect) so we have to serialize.
+              reConnect(t, currentTestPeer.peerIdentifier, listeningPort)
+                .then(function () {
+                  return reConnect(t, currentTestPeer.peerIdentifier,
+                    listeningPort);
+                })
+                .then(function () {
+                  resolve();
+                });
+            });
+          connection.on('error', function (err) {
+            t.fail('lost connection because of ' + err);
+            reject();
           });
-        connection.on('error', function (err) {
-          t.fail('lost connection because of ' + err);
-          t.end();
         });
       }
     );
   });
+
