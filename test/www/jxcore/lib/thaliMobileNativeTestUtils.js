@@ -397,6 +397,7 @@ function executeZombieProofTest (t, server, testFunction) {
   
   function tryToConnect() {
     testTimeout = setTimeout(function () {
+      logger.debug('Test timeout reached. Restarting test.');
       tryToConnectRetries++;
       
       if (tryToConnectRetries > 5) {

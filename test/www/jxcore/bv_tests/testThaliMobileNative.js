@@ -484,77 +484,29 @@ test('Can shift data securely', function (t) {
 });
 
 test('Can shift large amounts of data', function (t) {
- var sockets = {};
- // var server = net.createServer(function (socket) {
- //   socket.on('data', function (data) {
- //     socket.write(data);
- //   });
- //   socket.on('end', socket.end);
- //   socket.on('error', function (error) {
- //     logger.warn('Error on echo server socket: ' + error);
- //     t.fail();
- //   });
- //   sockets[socket.remotePort] = socket;
- // });
+  var dataSize = 64 * 1024;
+  var exchangeData = randomString.generate(dataSize);
 
-
- var dataSize = 64 * 1024;
- var exchangeData = randomString.generate(dataSize);
-
- var server = createServer(t, exchangeData.length);
- server = makeIntoCloseAllServer(server);
- serverToBeClosed = server;
-
- // function shiftData(sock) {
- //   sock.on('error', function (error) {
- //     logger.warn('Error on client socket: ' + error);
- //     t.fail();
- //   });
- //
- //   var toRecv = '';
- //
- //   var done = false;
- //   sock.on('data', function (data) {
- //     var remaining = dataSize - toRecv.length;
- //
- //     if (remaining >= data.length) {
- //       toRecv += data.toString();
- //       data = data.slice(0, 0);
- //     }
- //     else {
- //       toRecv += data.toString('utf8', 0, remaining);
- //       data = data.slice(remaining);
- //     }
- //
- //     if (toRecv.length === dataSize) {
- //       if (!done) {
- //         done = true;
- //         t.ok(toSend === toRecv, 'received should match sent forward');
- //         t.end();
- //       }
- //       if (data.length) {
- //         sock.write(data);
- //       }
- //     }
- //   });
- //
- //   sock.write(toSend);
- // }
+  var server = createServer(t, exchangeData.length);
+  server = makeIntoCloseAllServer(server);
+  serverToBeClosed = server;
 
   thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
     function (connection, peer) {
-      peerIdsToBeClosed.push(peer.peerIdentifier);
-      var nativePort = connection.listeningPort;
+      return new Promise(function (resolve, reject) {
+        peerIdsToBeClosed.push(peer.peerIdentifier);
+        var nativePort = connection.listeningPort;
 
-      connect(net, {port: nativePort})
-        .then(function (socket) {
-          return shiftData(t, socket, exchangeData);
-        })
-        .catch(t.fail)
-        .then(function () {
-          resolve();
-        });
- });
+        connect(net, {port: nativePort})
+          .then(function (socket) {
+            return shiftData(t, socket, exchangeData);
+          })
+          .catch(t.fail)
+          .then(function () {
+            resolve();
+          });
+      });
+    });
 });
 
 function findSmallestParticipant(participants) {
