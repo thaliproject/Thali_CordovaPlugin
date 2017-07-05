@@ -392,14 +392,18 @@ function executeZombieProofTest (t, server, testFunction) {
   var availablePeers = [];
   var runningTest = false;
   var peer;
-  var testTimeout;
+  var testTimeout = null;
   var tryToConnectRetries = 0;
-  
+
   function tryToConnect() {
+    if (testTimeout) {
+      clearTimeout(testTimeout);
+    }
+
     testTimeout = setTimeout(function () {
       logger.debug('Test timeout reached. Restarting test.');
       tryToConnectRetries++;
-      
+
       if (tryToConnectRetries > 5) {
         t.fail('Too many test retries!')
       } else {
@@ -407,7 +411,7 @@ function executeZombieProofTest (t, server, testFunction) {
         tryToConnect();
       }
     }, 30000);
-    
+
     availablePeers.forEach(function (record) {
       if (!runningTest) {
         peer = record.peer;
@@ -418,6 +422,8 @@ function executeZombieProofTest (t, server, testFunction) {
             testFunction(connection, peer)
               .then(function () {
                 clearTimeout(testTimeout);
+                testTimeout = null;
+
                 t.end();
               });
           })
