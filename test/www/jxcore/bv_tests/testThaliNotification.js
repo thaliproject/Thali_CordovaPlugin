@@ -15,6 +15,8 @@ var ThaliPeerPoolDefault =
 var NotificationBeacons =
   require('thali/NextGeneration/notification/thaliNotificationBeacons');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
+var thaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils');
+var Promise = require('lie');
 
 var testUtils = require('../lib/testUtils');
 var logger    = require('../lib/testLogger')('testThaliNotification');
@@ -107,13 +109,7 @@ var test = tape({
   }
 });
 
-function initiateHttpsRequestToPeer(peerDetails, requestNumber){
-
-  // 3 times is max that we try to reconnect
-  if (requestNumber++ > 3) {
-    return;
-  }
-
+function initiateHttpsRequestToPeer(peerDetails){
   var options = {
     method: 'GET',
     hostname: peerDetails.hostAddress,
@@ -126,40 +122,36 @@ function initiateHttpsRequestToPeer(peerDetails, requestNumber){
     ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS
   };
 
-  var requestSuccessful = false;
+  return new Promise(function (resolve, reject) {
+    var req = https.request(options, function (res) {
+      var data = [];
 
-  var req = https.request(options, function (res) {
-    var data = [];
+      res.on('data', function (chunk) {
+        data.push(chunk);
+      });
 
-    res.on('data', function (chunk) {
-      data.push(chunk);
-    });
+      res.on('end', function () {
+        if (data) {
+          var buffer = Buffer.concat(data);
+          var textChunk = buffer.toString('utf8');
+          if (textChunk === HELLO) {
+            var publicKeyHash =
+              NotificationBeacons.createPublicKeyHash(peerDetails.keyId);
+            globals.peerRepliedToUs[publicKeyHash]++;
 
-    res.on('end', function () {
-      if (data) {
-        var buffer = Buffer.concat(data);
-        var textChunk = buffer.toString('utf8');
-        if (textChunk === HELLO) {
-          var publicKeyHash =
-            NotificationBeacons.createPublicKeyHash(peerDetails.keyId);
-          globals.peerRepliedToUs[publicKeyHash]++;
-          requestSuccessful = true;
+            resolve();
+          }
         }
-      }
+      });
     });
-  });
 
-  req.on('error', function (err) {
-    logger.warn(err.message);
-  });
+    req.on('error', function (err) {
+      logger.warn(err.message);
+    });
 
-  req.on('close', function (err) {
-    if(!requestSuccessful) {
-      initiateHttpsRequestToPeer(peerDetails, requestNumber);
-    }
-  });
+    req.end();
+  })
 
-  req.end();
 }
 
 if (!tape.coordinated) {
@@ -253,6 +245,38 @@ test('Client to server request coordinated', function (t) {
   globals.expressRouter.get(HELLO_PATH,
     helloWorld);
 
+  var testTimeouts = [];
+
+  function runTest(peer, publicKeyHash) {
+    return new Promise(function (resolve, reject) {
+      // Simulate recreating NotificationAction
+      testTimeouts[publicKeyHash] = setTimeout(function () {
+        logger.warn('Restarting multiConnect.');
+
+        // peerAdvertisesDataForUs doesn't have `peerIdentifier` property,
+        // which is used by `thaliMobileNativeTestUtils.connectToPeer`
+        // so we need to create it.
+        peer.peerIdentifier = peer.peerId;
+
+        thaliMobileNativeTestUtils.connectToPeer(peer)
+          .then(function (connection) {
+            logger.info('Established new connection with port ', connection.listeningPort);
+
+            res.portNumber = connection.listeningPort;
+            runTest(peer, publicKeyHash)
+              .then(function () {
+                resolve();
+              });
+          });
+      }, 30000);
+
+      initiateHttpsRequestToPeer(peer)
+        .then(function () {
+          resolve();
+        });
+    });
+  }
+
   notificationClient.on(notificationClient.Events.PeerAdvertisesDataForUs,
     function (res) {
       var msg = 'PeerAdvertisesDataForUs:' + res.connectionType +
@@ -263,7 +287,10 @@ test('Client to server request coordinated', function (t) {
       var publicKeyHash = NotificationBeacons.createPublicKeyHash(res.keyId);
       globals.peerAdvertisesDataForUsEvents[publicKeyHash]++;
 
-      initiateHttpsRequestToPeer(res, 1);
+      runTest(res, publicKeyHash)
+        .then(function () {
+          clearTimeout(testTimeouts[publicKeyHash]);
+        });
     });
 
   var intervalRounds = 0;
