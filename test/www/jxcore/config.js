@@ -15,6 +15,7 @@ module.exports = {
     'testTests.js',
     'testUsn.js',
     'testNativeMethod.js',
+    'testHttp.js',
     'testThaliMobileNative.js',
     'testThaliMobileNativeAndroid.js',
     'testThaliMobileNativeiOS.js',

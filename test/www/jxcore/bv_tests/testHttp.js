@@ -240,7 +240,7 @@ test('Multiple coordinated request ios native',
           reply = thirdReply;
           break;
         default:
-          t.end();
+          t.fail('Server received wrong request url!');
       }
       res.end(reply);
     });
@@ -250,7 +250,6 @@ test('Multiple coordinated request ios native',
 
       makeRequest('127.0.0.1', httpServer.address().port, 'GET', '/path' + localCounter)
         .then(function (response) {
-
           peerIdsToBeClosed.push(peer.peerIdentifier);
           t.equal(response.toString(), expectedReplies[localCounter]);
 

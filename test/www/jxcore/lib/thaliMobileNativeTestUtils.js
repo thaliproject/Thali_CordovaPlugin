@@ -316,7 +316,7 @@ function getSamePeerWithRetry(path, pskIdentity, pskKey,
               // When we establish multi connect connections, run test.
               callTryAgain(connection.listeningPort);
             })
-            .catch(function (error) {
+            .catch(function (err) {
               runningTest = false;
               // There is a scenario when we might fail to connect to
               // available peer which is NOT a zombie, in that case when
@@ -326,9 +326,14 @@ function getSamePeerWithRetry(path, pskIdentity, pskKey,
               // to other peers first.
               // See #1904.
               removeFromAvailablePeers(availablePeers, peer);
-              availablePeers.push({
-                peer: peer
-              });
+
+              // Don't try to connect if we previously failed with this peer
+              // with `Peer is unavailable`.
+              if (err.message !== 'Peer is unavailable') {
+                availablePeers.push({
+                  peer: peer
+                });
+              }
 
               tryToConnect();
             });
@@ -394,10 +399,15 @@ function executeZombieProofTest (t, server, testFunction) {
   var peer;
   var testTimeout = null;
   var tryToConnectRetries = 0;
+  var areWeDone = false;
 
   function tryToConnect() {
     if (testTimeout) {
       clearTimeout(testTimeout);
+    }
+
+    if (areWeDone) {
+      return;
     }
 
     testTimeout = setTimeout(function () {
@@ -424,16 +434,28 @@ function executeZombieProofTest (t, server, testFunction) {
                 clearTimeout(testTimeout);
                 testTimeout = null;
 
-                t.end();
+                // In case we would fail with timeout with some other peer
+                // we are good if we finished with one. So, we set a flag
+                // and when this function will be called again but we will
+                // be already done with any of peers, return.
+                if (!areWeDone) {
+                  areWeDone = true;
+                  t.end();
+                }
               });
           })
-          .catch(function (error) {
+          .catch(function (err) {
             runningTest = false;
 
             removeFromAvailablePeers(availablePeers, peer);
-            availablePeers.push({
-              peer: peer
-            });
+
+            // Don't try to connect if we previously failed with this peer
+            // with `Peer is unavailable`.
+            if (err.message !== 'Peer is unavailable') {
+              availablePeers.push({
+                peer: peer
+              });
+            }
 
             tryToConnect();
           });
@@ -464,6 +486,18 @@ function executeZombieProofTest (t, server, testFunction) {
 
 module.exports.executeZombieProofTest = executeZombieProofTest;
 
+function checkIfPeerIsAlreadyPresent(peersArray, peer) {
+  var isPeerPresentInArray = false;
+
+  peersArray.forEach(function (record) {
+    if (record.peer.peerIdentifier === peer.peerIdentifier) {
+      isPeerPresentInArray = true;
+    }
+  });
+
+  return isPeerPresentInArray;
+}
+
 /**
  * Same as above, but every peer is treated individually, so we could exchange data
  * with every available peer, not only one.
@@ -486,11 +520,16 @@ function executeZombieProofTestCoordinated (t, server, testFunction) {
           .then(function (connection) {
             testFunction(connection, peer);
           })
-          .catch(function (error) {
+          .catch(function (err) {
             record.runningTest = false;
-            removeFromAvailablePeers(availablePeersAndTestingFlags, peer);
 
-            availablePeersAndTestingFlags.push(record);
+            removeFromAvailablePeers(availablePeersAndTestingFlags, peer);
+            // Don't try to connect if we previously failed with this peer
+            // with `Peer is unavailable`.
+            if (err.message !== 'Peer is unavailable') {
+              availablePeersAndTestingFlags.push(record);
+            }
+
             tryToConnect();
           });
       }
@@ -507,30 +546,22 @@ function executeZombieProofTestCoordinated (t, server, testFunction) {
       return;
     }
 
-    availablePeersAndTestingFlags.push({
-      peer: peer,
-      runningTest: false
-    });
+    // Don't add same peers but with different generations.
+    if (!checkIfPeerIsAlreadyPresent(availablePeersAndTestingFlags, peer)) {
+      availablePeersAndTestingFlags.push({
+        peer: peer,
+        runningTest: false
+      });
+    }
 
     logger.debug('We got a peer ' + JSON.stringify(peer));
     tryToConnect();
   }
-}
 
-startAndListen(t, server, peerAvailabilityChangedHandler);
+  startAndListen(t, server, peerAvailabilityChangedHandler);
 }
 
 module.exports.executeZombieProofTestCoordinated = executeZombieProofTestCoordinated;
-
-function checkIfPeerIsAlreadyPresent(peersArray, peer) {
-  peersArray.forEach(function (record) {
-    if (record.peer.peerIdentifier === peer.peerIdentifier) {
-      return true;
-    }
-  });
-
-  return false;
-}
 
 function getConnectionToOnePeerAndTest(t, connectTest) {
   var echoServer = net.createServer(function (socket) {
