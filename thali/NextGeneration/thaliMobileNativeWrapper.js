@@ -1312,7 +1312,7 @@ module.exports._registerToNative = function () {
         connectionType: connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK
       };
       module.exports.emitter.emit('failedNativeConnection', event);
-      if (failedConnection.error) {
+      if (failedConnection.error === 'Connection could not be established') {
         recreatePeer(failedConnection.peerIdentifier);
       }
     }

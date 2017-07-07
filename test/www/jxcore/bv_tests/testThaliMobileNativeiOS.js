@@ -121,7 +121,7 @@ test('multiConnect properly fails on legal but non-existent peerID',
         t.ok(connectReturned, 'Should only get called after multiConnect ' +
         'returned');
         t.equal(originalSyncValue, syncValue, 'SyncValue matches');
-        t.equal(error, 'Connection could not be established',
+        t.equal(error, 'Peer is unavailable',
           'Got right error');
         t.notOk(listeningPort, 'listeningPort is null');
         t.end();

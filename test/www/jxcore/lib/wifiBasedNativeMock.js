@@ -654,7 +654,7 @@ MobileCallInstance.prototype._connect =
     var peerToConnect = peerAvailabilities[peerIdentifier];
     if (!peerToConnect) {
       setImmediate(function () {
-        callback('Connection could not be established');
+        callback('Peer is unavailable');
       });
       return;
     }
