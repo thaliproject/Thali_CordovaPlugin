@@ -18,6 +18,7 @@ var assert = require('assert');
 var thaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils');
 var thaliMobileNativeWrapper =
   require('thali/NextGeneration/thaliMobileNativeWrapper');
+var uuid = require('node-uuid');
 
 var logger = require('../lib/testLogger')('testThaliMobileNative');
 var platform = require('thali/NextGeneration/utils/platform');
@@ -27,9 +28,11 @@ var platform = require('thali/NextGeneration/utils/platform');
 // A variable that can be used to store a server
 // that will get closed in teardown.
 var serverToBeClosed = null;
+var peerIdsToBeClosed = [];
 
 var test = tape({
   setup: function (t) {
+    thaliMobileNativeWrapper._registerToNative();
     serverToBeClosed = {
       closeAll: function (callback) {
         callback();
@@ -50,8 +53,19 @@ var test = tape({
             err,
             'Should be able to call stopAdvertisingAndListening in teardown'
           );
-          thaliMobileNativeWrapper._registerToNative();
-          t.end();
+          Promise.resolve()
+            .then(function () {
+              if (!platform.isAndroid) {
+                return thaliMobileNativeTestUtils.killAllMultiConnectConnections(peerIdsToBeClosed);
+              }
+            })
+            .catch(function (err) {
+              t.fail(err);
+            })
+            .then(function () {
+              peerIdsToBeClosed = [];
+              t.end();
+            });
         });
       });
     });
@@ -75,7 +89,7 @@ function (t) {
     Mobile('startListeningForAdvertisements').callNative(function (err) {
       t.notOk(
         err,
-        'Can call startListeningForAdvertisements twice without error'
+       'Can call startListeningForAdvertisements twice without error'
       );
       t.end();
     });
@@ -110,19 +124,19 @@ function (t) {
   Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
     t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
     Mobile('startUpdateAdvertisingAndListening').callNative(4243,
-    function (err) {
-      t.notOk(
-        err,
-        'Can call startUpdateAdvertisingAndListening twice without error'
-      );
-      t.end();
-    });
+      function (err) {
+        t.notOk(
+          err,
+          'Can call startUpdateAdvertisingAndListening twice without error'
+        );
+        t.end();
+      });
   });
 });
 
 test('Can call stopUpdateAdvertisingAndListening twice without start and ' +
   'it is not an error', function (t) {
-  Mobile('stopAdvertisingAndListening').callNative(function (err) {
+   Mobile('stopAdvertisingAndListening').callNative(function (err) {
     t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
     Mobile('stopAdvertisingAndListening').callNative(function (err) {
       t.notOk(err, 'Can call stopAdvertisingAndListening without error');
@@ -138,8 +152,7 @@ if (!tape.coordinated) {
 test('peerAvailabilityChange is called', function (t) {
   var complete = false;
   Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
-    if (!complete)
-    {
+    if (!complete) {
       t.ok(peers instanceof Array, 'peers must be an array');
       t.ok(peers.length !== 0, 'peers must not be zero-length');
 
@@ -161,7 +174,7 @@ test('peerAvailabilityChange is called', function (t) {
       complete = true;
       t.end();
     }
-  });
+ });
 
   Mobile('startUpdateAdvertisingAndListening').callNative(4242, function (err) {
     t.notOk(err, 'Can call startUpdateAdvertisingAndListeningwithout error');
@@ -201,8 +214,8 @@ function connectionDiesClean(t, connection) {
 }
 
 function connectToListenerSendMessageGetResponseLength(t, port, request,
-                                                        responseLength,
-                                                        timeout) {
+                                                       responseLength,
+                                                       timeout) {
   return new Promise(function (resolve, reject) {
     var dataResult = null;
     var connection = net.connect(port, function () {
@@ -241,105 +254,31 @@ function connectToListenerSendMessageGetResponseLength(t, port, request,
   });
 }
 
-test('Can connect to a remote peer', function () { return true}, function (t) {
-  setTimeout(function () {
-    var connecting = false;
-
-    var echoServer = net.createServer(function (socket) {
-      socket.pipe(socket);
-    });
-
-    echoServer = makeIntoCloseAllServer(echoServer);
-    serverToBeClosed = echoServer;
-
-    function onConnectSuccess(err, connection) {
-      // Called if we successfully connect to to a peer
-      logger.info(connection);
-
-      t.ok(connection.hasOwnProperty('listeningPort'),
-        'Must have listeningPort');
-      t.ok(typeof connection.listeningPort === 'number',
-        'listeningPort must be a number');
-
-      // A check if any of our old reverse connection or please connect code
-      // is still hiding around.
-      t.ok(connection.listeningPort !== 0, 'listening port should not be 0');
-
-      t.end();
-    }
-
-    function onConnectFailure () {
-      t.fail('Connect failed!');
-      t.end();
-    }
-
-    echoServer.listen(0, function () {
-      var applicationPort = echoServer.address().port;
-
-      Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
-        logger.info('Received peerAvailabilityChanged with peers: ' +
-          JSON.stringify(peers)
-        );
-        peers.forEach(function (peer) {
-          if (peer.peerAvailable && !connecting) {
-            connecting = true;
-            thaliMobileNativeTestUtils.connectToPeer(peer)
-              .then(function (connection) {
-                onConnectSuccess(null, connection, peer);
-              })
-              .catch(function (error) {
-                onConnectFailure(error, null, peer);
-              });
-          }
-        });
-      });
-
-      Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort,
-      function (err) {
-        t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
-        Mobile('startListeningForAdvertisements').callNative(function (err) {
-          t.notOk(err, 'Can call startListeningForAdvertisements without error');
-        });
-      });
-    });
-  }, 5000);
-});
-
-function findPeerAndConnect(advertisingPort) {
-  return new Promise(function (resolve, reject) {
-    var connecting = false;
-
-    Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
-      peers.forEach(function (peer) {
-        if (peer.peerAvailable && !connecting) {
-          connecting = true;
-          thaliMobileNativeTestUtils.connectToPeer(peer)
-            .then(function (connection) {
-              resolve({
-                connection: connection,
-                peer: peer
-              });
-            })
-            .catch(function (error) {
-              error.peer = peer;
-              reject(error);
-            });
-        }
-      });
-    });
-    Mobile('startUpdateAdvertisingAndListening')
-      .callNative(advertisingPort, function (err) {
-        if (err) {
-          return reject(err);
-        }
-        Mobile('startListeningForAdvertisements').callNative(function (err) {
-          if (err) {
-            return reject(err);
-          }
-        });
-      });
+test('Can connect to a remote peer', function (t) {
+  var server = net.createServer(function (socket) {
+    socket.pipe(socket);
   });
-}
+  server = makeIntoCloseAllServer(server);
+  serverToBeClosed = server;
+
+  thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
+    function (connection, peer) {
+      return new Promise(function (resolve, reject) {
+        logger.info(connection);
+        peerIdsToBeClosed.push(peer.peerIdentifier);
+
+        t.ok(connection.hasOwnProperty('listeningPort'),
+          'Must have listeningPort');
+        t.ok(typeof connection.listeningPort === 'number',
+          'listeningPort must be a number');
+
+        // A check if any of our old reverse connection or please connect code
+        // is still hiding around.
+        t.ok(connection.listeningPort !== 0, 'listening port should not be 0');
+        resolve();
+      });
+    });
+});
 
 function connect(module, options) {
   return new Promise(function (resolve, reject) {
@@ -356,18 +295,6 @@ function connect(module, options) {
     });
     client.once('error', connectErrorHandler);
   });
-}
-
-function waitForEvent(emitter, event) {
-  return new Promise(function (resolve) {
-    emitter.once(event, resolve);
-  });
-}
-
-function onConnectFailure(t, error) {
-  logger.debug(error);
-  t.fail('Connect failed!');
-  t.end();
 }
 
 function shiftData(t, sock, exchangeData) {
@@ -424,92 +351,67 @@ function createServer(t, dataLength) {
   });
 }
 
-test('Can shift data', function () { return true}, function (t) {
-  var connecting = false;
+test('Can shift data', function (t) {
   var exchangeData = 'small amount of data';
 
   var server = createServer(t, exchangeData.length);
   server = makeIntoCloseAllServer(server);
   serverToBeClosed = server;
 
-  function onConnectSuccess(err, connection) {
-    var nativePort = connection.listeningPort;
+  thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
+    function (connection, peer) {
+      return new Promise(function (resolve, reject) {
+        peerIdsToBeClosed.push(peer.peerIdentifier);
+        var nativePort = connection.listeningPort;
 
-    connect(net, { port: nativePort })
-    .then(function (socket) {
-      return shiftData(t, socket, exchangeData);
-    })
-    .catch(t.fail)
-    .then(function () {
-      t.end();
-    });
-  }
-
-  thaliMobileNativeTestUtils.startAndListen(t, server, function (peers) {
-    peers.forEach(function (peer) {
-      if (peer.peerAvailable && !connecting) {
-        connecting = true;
-        thaliMobileNativeTestUtils.connectToPeer(peer)
-          .then(function (connection) {
-            onConnectSuccess(null, connection, peer);
+        connect(net, {port: nativePort})
+          .then(function (socket) {
+            return shiftData(t, socket, exchangeData);
           })
-          .catch(function (error) {
-            onConnectFailure(t, error, null, peer);
+          .catch(t.fail)
+          .then(function () {
+            resolve();
           });
-      }
-    });
+      });
   });
 });
 
-test('Can shift data via parallel connections', function () { return true},
+test('Can shift data via parallel connections',
   function () {
     return platform.isAndroid;
   },
   function (t) {
-    var connecting = false;
     var dataLength = 16 * 1024;
 
     var server = createServer(t, dataLength);
     server = makeIntoCloseAllServer(server);
     serverToBeClosed = server;
 
-    function onConnectSuccess(err, connection) {
-      var nativePort = connection.listeningPort;
-      Promise.all([
-        connect(net, { port: nativePort }),
-        connect(net, { port: nativePort }),
-        connect(net, { port: nativePort }),
-      ]).then(function (sockets) {
-        return Promise.all(sockets.map(function (socket) {
-          var string = randomString.generate(dataLength);
-          t.equal(string.length, dataLength, 'correct string length');
-          return shiftData(t, socket, string);
-        }));
-      })
-      .catch(t.fail)
-      .then(function () {
-        t.end();
-      });
-    }
-
-    thaliMobileNativeTestUtils.startAndListen(t, server, function (peers) {
-      peers.forEach(function (peer) {
-        if (peer.peerAvailable && !connecting) {
-          connecting = true;
-          thaliMobileNativeTestUtils.connectToPeer(peer)
-            .then(function (connection) {
-              onConnectSuccess(null, connection, peer);
-            })
-            .catch(function (error) {
-              onConnectFailure(t, error, null, peer);
+    thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
+      function (connection, peer) {
+        return new Promise(function (resolve, reject) {
+          peerIdsToBeClosed.push(peer.peerIdentifier);
+          var nativePort = connection.listeningPort;
+          Promise.all([
+            connect(net, {port: nativePort}),
+            connect(net, {port: nativePort}),
+            connect(net, {port: nativePort})
+          ]).then(function (sockets) {
+            return Promise.all(sockets.map(function (socket) {
+              var string = randomString.generate(dataLength);
+              t.equal(string.length, dataLength, 'correct string length');
+              return shiftData(t, socket, string);
+            }));
+          })
+            .catch(t.fail)
+            .then(function () {
+              resolve();
             });
-        }
+        });
       });
-    });
   });
 
-test('Can shift data securely', function () { return true}, function (t) {
-  var connecting = false;
+test('Can shift data securely', function (t) {
   var exchangeData = 'small amount of data';
 
   var pskKey = new Buffer('psk-key');
@@ -547,12 +449,9 @@ test('Can shift data securely', function () { return true}, function (t) {
       }
     });
     socket.on('end', function () {
-      // server ends connection, not client
       if (!ended) {
         t.fail(new Error('Unexpected end event'));
-        return;
       }
-      server.emit('CLIENT_DONE');
     });
     socket.on('error', function (error) {
       t.fail(error.message);
@@ -561,170 +460,53 @@ test('Can shift data securely', function () { return true}, function (t) {
   server = makeIntoCloseAllServer(server);
   serverToBeClosed = server;
 
-  function shiftData(sock) {
-    sock.on('error', function (error) {
-      console.log('Client socket error:', error.message, error.stack);
-      t.fail(error.message);
-    });
+  thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
+    function (connection, peer) {
+      return new Promise(function (resolve, reject) {
+        peerIdsToBeClosed.push(peer.peerIdentifier);
+        var nativePort = connection.listeningPort;
 
-    var receivedData = '';
-    sock.on('data', function (chunk) {
-      receivedData += chunk.toString();
-      if (receivedData === exchangeData) {
-        sock.destroy();
-      }
-    });
-    sock.on('close', function () {
-      t.equal(receivedData, exchangeData, 'got the same data back');
-    });
-
-    var rawData = new Buffer(exchangeData);
-    logger.debug('Client sends data (%d bytes):',
-      rawData.length);
-    sock.write(rawData, function () {
-      logger.debug('Client data flushed');
-    });
-    return waitForEvent(sock, 'close');
-  }
-
-  function startShiftData(port) {
-    return connect(tls, {
-      port: port,
-      ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
-      pskIdentity: pskId,
-      pskKey: pskKey
-    })
-      .then(function (socket) {
-        return shiftData(socket);
-      });
-  }
-
-  function onConnectSuccess(err, connection) {
-    var nativePort = connection.listeningPort;
-
-    startShiftData(nativePort)
-      .catch(t.fail)
-      .then(function () {
-        t.end();
-      });
-  }
-
-  thaliMobileNativeTestUtils.startAndListen(t, server, function (peers) {
-    peers.forEach(function (peer) {
-      if (peer.peerAvailable && !connecting) {
-        connecting = true;
-        thaliMobileNativeTestUtils.connectToPeer(peer)
-          .then(function (connection) {
-            onConnectSuccess(null, connection, peer);
+        connect(tls, {
+          port: nativePort,
+          ciphers: thaliConfig.SUPPORTED_PSK_CIPHERS,
+          pskIdentity: pskId,
+          pskKey: pskKey
+        })
+          .then(function (socket) {
+            return shiftData(t, socket, exchangeData);
           })
-          .catch(function (error) {
-            onConnectFailure(t, error, null, peer);
+          .catch(t.fail)
+          .then(function () {
+            resolve();
           });
-      }
+      });
     });
-  });
 });
 
-test('Can shift large amounts of data', function () { return true}, function (t) {
-  var connecting = false;
-
-  var sockets = {};
-  var echoServer = net.createServer(function (socket) {
-    socket.on('data', function (data) {
-      socket.write(data);
-    });
-    socket.on('end', socket.end);
-    socket.on('error', function (error) {
-      logger.warn('Error on echo server socket: ' + error);
-      t.fail();
-    });
-    sockets[socket.remotePort] = socket;
-  });
-  echoServer = makeIntoCloseAllServer(echoServer);
-  serverToBeClosed = echoServer;
-
+test('Can shift large amounts of data', function (t) {
   var dataSize = 64 * 1024;
-  var toSend = randomString.generate(dataSize);
+  var exchangeData = randomString.generate(dataSize);
 
-  function shiftData(sock) {
+  var server = createServer(t, exchangeData.length);
+  server = makeIntoCloseAllServer(server);
+  serverToBeClosed = server;
 
-    sock.on('error', function (error) {
-      logger.warn('Error on client socket: ' + error);
-      t.fail();
-    });
+  thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
+    function (connection, peer) {
+      return new Promise(function (resolve, reject) {
+        peerIdsToBeClosed.push(peer.peerIdentifier);
+        var nativePort = connection.listeningPort;
 
-    var toRecv = '';
-
-    var done = false;
-    sock.on('data', function (data) {
-      var remaining = dataSize - toRecv.length;
-
-      if (remaining >= data.length) {
-        toRecv += data.toString();
-        data = data.slice(0, 0);
-      }
-      else {
-        toRecv += data.toString('utf8', 0, remaining);
-        data = data.slice(remaining);
-      }
-
-      if (toRecv.length === dataSize) {
-        if (!done) {
-          done = true;
-          t.ok(toSend === toRecv, 'received should match sent forward');
-          t.end();
-        }
-        if (data.length) {
-          sock.write(data);
-        }
-      }
-    });
-
-    sock.write(toSend);
-  }
-
-  function onConnectSuccess(err, connection) {
-    var client = null;
-
-    // We're happy here if we make a connection to anyone
-    logger.info('Connection info: ' + JSON.stringify(connection));
-    client = net.connect(connection.listeningPort, function () {
-      logger.info('Connected to the ' + connection.listeningPort);
-      shiftData(client);
-    });
-  }
-
-  function onConnectFailure() {
-    t.fail('Connect failed!');
-    t.end();
-  }
-
-  Mobile('peerAvailabilityChanged').registerToNative(function (peers) {
-    peers.forEach(function (peer) {
-      if (peer.peerAvailable && !connecting) {
-        connecting = true;
-        thaliMobileNativeTestUtils.connectToPeer(peer)
-          .then(function (connection) {
-            onConnectSuccess(null, connection, peer);
+        connect(net, {port: nativePort})
+          .then(function (socket) {
+            return shiftData(t, socket, exchangeData);
           })
-          .catch(function (error) {
-            onConnectFailure(error, null, peer);
+          .catch(t.fail)
+          .then(function () {
+            resolve();
           });
-      }
-    });
-  });
-
-  echoServer.listen(0, function () {
-    var applicationPort = echoServer.address().port;
-
-    Mobile('startUpdateAdvertisingAndListening').callNative(applicationPort,
-    function (err) {
-      t.notOk(err, 'Can call startUpdateAdvertisingAndListening without error');
-      Mobile('startListeningForAdvertisements').callNative(function (err) {
-        t.notOk(err, 'Can call startListeningForAdvertisements without error');
       });
     });
-  });
 });
 
 function findSmallestParticipant(participants) {
@@ -945,41 +727,41 @@ function clientSuccessConnect(t, roundNumber, connection, peersWeSucceededWith)
     var clientMessage = createMessage(roundNumber.toString());
 
     connectToListenerSendMessageGetResponseLength(t,
-        connection.listeningPort, clientMessage, messageLength(), 10000)
-        .then(function (dataBuffer) {
-          var connection = dataBuffer.connection;
-          var parsedMessage = parseMessage(dataBuffer);
-          switch (validateServerResponse(t, parsedMessage)) {
-            case validateResponse.NON_FATAL: {
-              connection.destroy();
-              error = new Error('Got non-fatal error, see logs');
-              error.fatal = false;
-              return reject(error);
-            }
-            case validateResponse.OK: {
-              // 'parsedMessage.uuid' may be already in 'peersWeSucceededWith'.
-              // We are just ignoring this case.
-              peersWeSucceededWith[parsedMessage.uuid] = true;
-              resolve();
-              logger.debug('Response validated, calling connection.end');
-              connection.end();
-              break;
-            }
-            default: { // Includes validateResponse.FATAL
-              connection.destroy();
-              error = new Error('Got fatal error, see logs');
-              error.fatal = true;
-              return reject(error);
-            }
+      connection.listeningPort, clientMessage, messageLength(), 10000)
+      .then(function (dataBuffer) {
+        var connection = dataBuffer.connection;
+        var parsedMessage = parseMessage(dataBuffer);
+        switch (validateServerResponse(t, parsedMessage)) {
+          case validateResponse.NON_FATAL: {
+            connection.destroy();
+            error = new Error('Got non-fatal error, see logs');
+            error.fatal = false;
+            return reject(error);
           }
-        })
-        .catch(function (err) {
-          logger.debug('connectToListenerSendMessageGetResponseLength is ' +
-            'returning error due to - ' + err + ' in round ' + roundNumber);
-          err.connection.destroy();
-          err.fatal = false;
-          reject(err);
-        });
+          case validateResponse.OK: {
+            // 'parsedMessage.uuid' may be already in 'peersWeSucceededWith'.
+            // We are just ignoring this case.
+            peersWeSucceededWith[parsedMessage.uuid] = true;
+            resolve();
+            logger.debug('Response validated, calling connection.end');
+            connection.end();
+            break;
+          }
+          default: { // Includes validateResponse.FATAL
+            connection.destroy();
+            error = new Error('Got fatal error, see logs');
+            error.fatal = true;
+            return reject(error);
+          }
+        }
+      })
+      .catch(function (err) {
+        logger.debug('connectToListenerSendMessageGetResponseLength is ' +
+        'returning error due to - ' + err + ' in round ' + roundNumber);
+        err.connection.destroy();
+        err.fatal = false;
+        reject(err);
+      });
   });
 }
 
@@ -1041,7 +823,7 @@ function clientRound(t, roundNumber, boundListener, quitSignal) {
               delete peersWeAreOrHaveResolved[peer.peerIdentifier];
               return Promise.resolve();
             })
-          );
+        );
       });
       Promise.all(peerPromises)
         .then(function () {
@@ -1153,58 +935,58 @@ function setUpPretendLocalMux() {
 }
 
 test('Test updating advertising and parallel data transfer',
-function () {
-  // #984
-  // FIXME: fails on 3 devices
-  return true;
-},
-function (t) {
-  var pretendLocalMux = setUpPretendLocalMux();
-  var clientQuitSignal = new QuitSignal();
-  var serverQuitSignal = new QuitSignal();
+  function () {
+    // #984
+    // FIXME: fails on 3 devices
+    return true;
+  },
+  function (t) {
+    var pretendLocalMux = setUpPretendLocalMux();
+    var clientQuitSignal = new QuitSignal();
+    var serverQuitSignal = new QuitSignal();
 
-  /*
-   * Lets us change our listeners for incoming peer events between rounds.
-   * This is just to avoid having to set up another emitter
-   */
-  var boundListener = {
-    listener: null
-  };
+    /*
+     * Lets us change our listeners for incoming peer events between rounds.
+     * This is just to avoid having to set up another emitter
+     */
+    var boundListener = {
+      listener: null
+    };
 
-  var timeoutId = setTimeout(function () {
-    clientQuitSignal.raiseSignal();
-    serverQuitSignal.raiseSignal();
-    t.fail('Test timed out');
-    t.end();
-  }, 60 * 1000);
+    var timeoutId = setTimeout(function () {
+      clientQuitSignal.raiseSignal();
+      serverQuitSignal.raiseSignal();
+      t.fail('Test timed out');
+      t.end();
+    }, 60 * 1000);
 
-  Promise.all([
-    clientRound(t, 0, boundListener, clientQuitSignal),
-    serverRound(t, 0, pretendLocalMux, serverQuitSignal)
-  ])
-  .then(function () {
-    logger.debug('We made it through round one');
-    clientQuitSignal = new QuitSignal();
-    serverQuitSignal = new QuitSignal();
-    return Promise.all([
-      clientRound(t, 1, boundListener, clientQuitSignal),
-      serverRound(t, 1, pretendLocalMux, serverQuitSignal)
-    ]);
-  })
-  .catch(function (err) {
-    t.fail('Got error ' + err);
-  })
-  .then(function () {
-    clearTimeout(timeoutId);
-    t.end();
+    Promise.all([
+      clientRound(t, 0, boundListener, clientQuitSignal),
+      serverRound(t, 0, pretendLocalMux, serverQuitSignal)
+    ])
+      .then(function () {
+        logger.debug('We made it through round one');
+        clientQuitSignal = new QuitSignal();
+        serverQuitSignal = new QuitSignal();
+        return Promise.all([
+          clientRound(t, 1, boundListener, clientQuitSignal),
+          serverRound(t, 1, pretendLocalMux, serverQuitSignal)
+        ]);
+      })
+      .catch(function (err) {
+        t.fail('Got error ' + err);
+      })
+      .then(function () {
+        clearTimeout(timeoutId);
+        t.end();
+      });
+
+    thaliMobileNativeTestUtils.startAndListen(t, pretendLocalMux,
+      function (peers) {
+        boundListener.listener(peers);
+      }
+    );
   });
-
-  thaliMobileNativeTestUtils.startAndListen(t, pretendLocalMux,
-    function (peers) {
-      boundListener.listener(peers);
-    }
-  );
-});
 
 test('discoveryAdvertisingStateUpdateNonTCP is called', function (t) {
   var callCount = 0;

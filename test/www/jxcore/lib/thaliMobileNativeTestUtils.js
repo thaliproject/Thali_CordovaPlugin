@@ -5,13 +5,12 @@ var format = require('util').format;
 var platform = require('thali/NextGeneration/utils/platform');
 var logger = require('../lib/testLogger')('thaliMobileNativeTestUtils');
 var randomString = require('randomstring');
-var Promise = require('lie');
 var makeIntoCloseAllServer =
   require('thali/NextGeneration/makeIntoCloseAllServer');
 var Promise = require('bluebird');
 var net = require('net');
-var inherits = require('util').inherits;
 var EventEmitter = require('events').EventEmitter;
+var testUtils = require('../lib/testUtils.js');
 
 var ThaliMobileNativeWrapper =
   require('thali/NextGeneration/thaliMobileNativeWrapper.js');
@@ -168,7 +167,11 @@ function iOSConnectToPeer(peer, quitSignal) {
       }
 
       if (error) {
-        return reject(new Error(error));
+        // Connection to a peer failed.
+        // Return a fatal error to avoid retrying connecting to a peer that is not available anymore
+        error = new Error(error);
+        error.isFatal = true;
+        return reject(error);
       }
       if (syncValue !== originalSyncValue) {
         logger.warn(
@@ -214,6 +217,350 @@ function iOSConnectToPeer(peer, quitSignal) {
     });
 }
 
+/**
+ * This function will grab the first peer it can via nonTCPAvailableHandler and
+ * will try to issue the GET request. If it fails then it will continue to
+ * listen to nonTCPAvailableHandler until it sees a port for the same PeerID
+ * and will try the GET again. It will repeat this process if there are
+ * failures until the timer runs out.
+ *
+ * @param {string} path
+ * @param {string} pskIdentity
+ * @param {Buffer} pskKey
+ * @param {?string} [selectedPeerId] This is only used for a single test that
+ * needs to reconnect to a known peer, otherwise it is null.
+ * @returns {Promise<Error | peerAndBody>}
+ */
+function getSamePeerWithRetry(path, pskIdentity, pskKey,
+                              selectedPeerId) {
+  // We don't load thaliMobileNativeWrapper until after the tests have started
+  // running so we pick up the right version of mobile
+  var thaliMobileNativeWrapper =
+    require('thali/NextGeneration/thaliMobileNativeWrapper');
+  return new Promise(function (resolve, reject) {
+    var retryCount = 0;
+    var MAX_TIME_TO_WAIT_IN_MILLISECONDS = 1000 * 60;
+    var exitCalled = false;
+    var peerID = selectedPeerId;
+    var getRequestPromise = null;
+    var cancelGetPortTimeout = null;
+    var runningTest = false;
+    var peer;
+    var availablePeers = [];
+
+    var timeoutId = setTimeout(function () {
+      exitCall(null, new Error('Timer expired'));
+    }, MAX_TIME_TO_WAIT_IN_MILLISECONDS);
+
+    function exitCall(success, failure) {
+      if (exitCalled) {
+        return;
+      }
+      exitCalled = true;
+      clearTimeout(timeoutId);
+      clearTimeout(cancelGetPortTimeout);
+      thaliMobileNativeWrapper.emitter
+        .removeListener('nonTCPPeerAvailabilityChangedEvent',
+          nonTCPAvailableHandler);
+      return failure ? reject(failure) : resolve(
+        {
+          httpResponseBody: success,
+          peerId: peerID
+        });
+    }
+
+    function tryAgain(portNumber) {
+      ++retryCount;
+      logger.warn('Retry count for getSamePeerWithRetry is ' + retryCount);
+      getRequestPromise = testUtils.get('127.0.0.1',
+        portNumber, path, pskIdentity, pskKey);
+      getRequestPromise
+        .then(function (result) {
+          exitCall(result);
+        })
+        .catch(function (err) {
+          logger.debug('getSamePeerWithRetry got an error it will retry - ' +
+            err);
+        });
+    }
+
+    function callTryAgain(portNumber) {
+      // We have a predefined peerID
+      if (!getRequestPromise) {
+        return tryAgain(portNumber);
+      }
+
+      getRequestPromise
+        .then(function () {
+          // In theory this could maybe happen if a connection somehow got
+          // cut before we were notified of a successful result thus causing
+          // the system to automatically issue a new port, but that is
+          // unlikely
+        })
+        .catch(function (err) {
+          return tryAgain(portNumber, err);
+        });
+    }
+
+    // In this case this method is only used when we run on iOS.
+    function tryToConnect() {
+      availablePeers.forEach(function (record) {
+        if (!runningTest) {
+          runningTest = true;
+          peer = record.peer;
+
+          connectToPeer(peer)
+            .then(function (connection) {
+              // When running on iOS, change peerID to the one we connected with
+              peerID = peer.peerIdentifier;
+              // When we establish multi connect connections, run test.
+              callTryAgain(connection.listeningPort);
+            })
+            .catch(function (err) {
+              runningTest = false;
+              // There is a scenario when we might fail to connect to
+              // available peer which is NOT a zombie, in that case when
+              // we delete it from our array, we won't connect to it ever.
+              // So when an error is thrown, move this particular peer to
+              // the end of available peers array, so we will try to connect
+              // to other peers first.
+              // See #1904.
+              removeFromAvailablePeers(availablePeers, peer);
+
+              // Don't try to connect if we previously failed with this peer
+              // with error other than `Connection could not be established`.
+              if (err.message === 'Connection could not be established') {
+                availablePeers.push({
+                  peer: peer
+                });
+              }
+
+              tryToConnect();
+            });
+        }
+      });
+    }
+
+    function nonTCPAvailableHandler(peer) {
+      if (!peer.peerAvailable) {
+        removeFromAvailablePeers(availablePeers, peer);
+        return;
+      }
+
+      availablePeers.push({
+        peer: peer
+      });
+
+      if (!peerID) {
+        peerID = peer.peerIdentifier;
+      }
+
+      logger.debug('We got a peer ' + JSON.stringify(peer));
+
+      if (!platform.isAndroid) {
+        tryToConnect();
+      } else {
+        callTryAgain(peer.portNumber);
+      }
+    }
+
+    thaliMobileNativeWrapper.emitter.on('nonTCPPeerAvailabilityChangedEvent', nonTCPAvailableHandler);
+  });
+}
+
+module.exports.getSamePeerWithRetry = getSamePeerWithRetry;
+
+/**
+ * Function used to remove specific record from array of available peers.
+ * @param {Array} availablePeers List of available peers
+ * @param {Object} peerToRemove Peer that has to be removed from available peers array.
+ */
+function removeFromAvailablePeers(availablePeers, peerToRemove) {
+  var i;
+
+  for (i = availablePeers.length - 1; i >= 0; i--) {
+    if (availablePeers[i].peer.peerIdentifier === peerToRemove.peerIdentifier) {
+      availablePeers.splice(i, 1);
+    }
+  }
+}
+
+/**
+ * This function is responsible for execution of test function requiring connection to the other peer.
+ * It assures that the connection is not established with the zombie advertiser. In case of the connection error
+ * it checks if there are other peers available beside the one already tried.
+ * @param {object} t test object.
+ * @param {net.Server} server Server object
+ * @param {function} testFunction
+ */
+function executeZombieProofTest (t, server, testFunction) {
+  var availablePeers = [];
+  var runningTest = false;
+  var peer;
+  var testTimeout = null;
+  var tryToConnectRetries = 0;
+  var areWeDone = false;
+
+  function tryToConnect() {
+    if (testTimeout) {
+      clearTimeout(testTimeout);
+    }
+
+    if (areWeDone) {
+      return;
+    }
+
+    testTimeout = setTimeout(function () {
+      logger.debug('Test timeout reached. Restarting test.');
+      tryToConnectRetries++;
+
+      if (tryToConnectRetries > 5) {
+        t.fail('Too many test retries!')
+      } else {
+        runningTest = false;
+        tryToConnect();
+      }
+    }, 30000);
+
+    availablePeers.forEach(function (record) {
+      if (!runningTest) {
+        peer = record.peer;
+        runningTest = true;
+
+        connectToPeer(peer)
+          .then(function (connection) {
+            testFunction(connection, peer)
+              .then(function () {
+                clearTimeout(testTimeout);
+                testTimeout = null;
+
+                // In case we would fail with timeout with some other peer
+                // we are good if we finished with one. So, we set a flag
+                // and when this function will be called again but we will
+                // be already done with any of peers, return.
+                if (!areWeDone) {
+                  areWeDone = true;
+                  t.end();
+                }
+              });
+          })
+          .catch(function (err) {
+            runningTest = false;
+
+            removeFromAvailablePeers(availablePeers, peer);
+            // Don't try to connect if we previously failed with this peer
+            // with error other than `Connection could not be established`.
+            if (err.message === 'Connection could not be established') {
+              availablePeers.push({
+                peer: peer
+              });
+            }
+
+            tryToConnect();
+          });
+      }
+    });
+  }
+
+  // The peer we got here is in fact an one element array, so we
+  // have to treat it like array.
+  function peerAvailabilityChangedHandler(peerAsArray) {
+    var peer = peerAsArray[0];
+
+    if (!peer.peerAvailable) {
+      removeFromAvailablePeers(availablePeers, peer);
+      return;
+    }
+
+    availablePeers.push({
+      peer: peer
+    });
+
+    logger.debug('We got a peer ' + JSON.stringify(peer));
+    tryToConnect();
+  }
+
+  startAndListen(t, server, peerAvailabilityChangedHandler);
+}
+
+module.exports.executeZombieProofTest = executeZombieProofTest;
+
+function checkIfPeerIsAlreadyPresent(peersArray, peer) {
+  var isPeerPresentInArray = false;
+
+  peersArray.forEach(function (record) {
+    if (record.peer.peerIdentifier === peer.peerIdentifier) {
+      isPeerPresentInArray = true;
+    }
+  });
+
+  return isPeerPresentInArray;
+}
+
+/**
+ * Same as above, but every peer is treated individually, so we could exchange data
+ * with every available peer, not only one.
+ * @param {object} t test object.
+ * @param {net.Server} server Server object
+ * @param {function} testFunction
+ */
+function executeZombieProofTestCoordinated (t, server, testFunction) {
+  var availablePeersAndTestingFlags = [];
+
+  function tryToConnect() {
+    availablePeersAndTestingFlags.forEach(function (record) {
+      var runningTest = record.runningTest;
+      var peer = record.peer;
+
+      if (!runningTest) {
+        record.runningTest = true;
+
+        connectToPeer(peer)
+          .then(function (connection) {
+            testFunction(connection, peer);
+          })
+          .catch(function (err) {
+            record.runningTest = false;
+            removeFromAvailablePeers(availablePeersAndTestingFlags, peer);
+
+            // Don't try to connect if we previously failed with this peer
+            // with error other than `Connection could not be established`.
+            if (err.message === 'Connection could not be established') {
+              availablePeersAndTestingFlags.push(record);
+            }
+
+            tryToConnect();
+          });
+      }
+    });
+  }
+
+  // The peer we got here is in fact an one element array, so we
+  // have to treat it like array.
+  function peerAvailabilityChangedHandler(peerAsArray) {
+    var peer = peerAsArray[0];
+
+    if (!peer.peerAvailable) {
+      removeFromAvailablePeers(availablePeersAndTestingFlags, peer);
+      return;
+    }
+
+    // Don't add same peers but with different generations.
+    if (!checkIfPeerIsAlreadyPresent(availablePeersAndTestingFlags, peer)) {
+      availablePeersAndTestingFlags.push({
+        peer: peer,
+        runningTest: false
+      });
+    }
+
+    logger.debug('We got a peer ' + JSON.stringify(peer));
+    tryToConnect();
+  }
+
+  startAndListen(t, server, peerAvailabilityChangedHandler);
+}
+
+module.exports.executeZombieProofTestCoordinated = executeZombieProofTestCoordinated;
 
 function getConnectionToOnePeerAndTest(t, connectTest) {
   var echoServer = net.createServer(function (socket) {
@@ -261,3 +608,19 @@ function getConnectionToOnePeerAndTest(t, connectTest) {
 }
 
 module.exports.getConnectionToOnePeerAndTest = getConnectionToOnePeerAndTest;
+
+function killAllMultiConnectConnections(peerIdsToBeClosed) {
+  var promises = [];
+
+  peerIdsToBeClosed.forEach(function (peerIdToBeClosed) {
+    promises.push(new Promise(function (resolve, reject) {
+      Mobile('disconnect').callNative(peerIdToBeClosed, function (err) {
+        !err ? resolve() : reject('Should be able to call disconnect');
+      });
+    }));
+  });
+
+  return Promise.all(promises);
+}
+
+module.exports.killAllMultiConnectConnections = killAllMultiConnectConnections;

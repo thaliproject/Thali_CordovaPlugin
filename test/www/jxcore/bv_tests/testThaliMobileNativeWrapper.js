@@ -17,8 +17,12 @@ if (typeof Mobile === 'undefined') {
 var platform = require('thali/NextGeneration/utils/platform');
 var thaliMobileNativeWrapper =
   require('thali/NextGeneration/thaliMobileNativeWrapper');
+var thaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils');
 var validations = require('thali/validations');
 var tape = require('../lib/thaliTape');
+var uuid = require('node-uuid');
+
+var peerIdsToBeClosed = [];
 
 var test = tape({
   setup: function (t) {
@@ -29,16 +33,27 @@ var test = tape({
   },
   teardown: function (t) {
     thaliMobileNativeWrapper.stop()
-    .then(function () {
-      t.equals(thaliMobileNativeWrapper._isStarted(), false,
-        'must be stopped');
-      thaliMobileNativeWrapper._registerToNative();
-      t.end();
-    })
-    .catch(function (err) {
-      t.fail('teardown failed with ' + JSON.stringify(err));
-      t.end();
-    });
+      .then(function () {
+        t.equals(thaliMobileNativeWrapper._isStarted(), false,
+          'must be stopped');
+        Promise.resolve()
+          .then(function () {
+            if (!platform.isAndroid) {
+              return thaliMobileNativeTestUtils.killAllMultiConnectConnections(peerIdsToBeClosed);
+            }
+          })
+          .catch(function (err) {
+            t.fail(err);
+          })
+          .then(function () {
+            peerIdsToBeClosed = [];
+            t.end();
+          });
+      })
+      .catch(function (err) {
+        t.fail('teardown failed with ' + JSON.stringify(err));
+        t.end();
+      });
   }
 });
 
@@ -150,10 +165,11 @@ function trivialEndToEndTestScaffold(t, pskIdtoSecret, pskIdentity, pskKey,
   });
 
   var end = function (peerId, fail) {
+    peerIdsToBeClosed.push(peerId);
     return callback ? callback(peerId, fail) : t.end();
   };
 
-  testUtils.getSamePeerWithRetry(testPath, pskIdentity, pskKey)
+  thaliMobileNativeTestUtils.getSamePeerWithRetry(testPath, pskIdentity, pskKey)
     .then(function (response) {
       t.equal(response.httpResponseBody, testData,
         'response body should match testData');
@@ -995,7 +1011,7 @@ test('We provide notification when a listener dies and we recreate it',
         }*/
       }
 
-      testUtils.getSamePeerWithRetry(testPath, pskIdentity, pskKey, peerId)
+      thaliMobileNativeTestUtils.getSamePeerWithRetry(testPath, pskIdentity, pskKey, peerId)
         .then(function (response) {
           t.equal(response.httpResponseBody, testData,
             'recreate - response body should match testData');

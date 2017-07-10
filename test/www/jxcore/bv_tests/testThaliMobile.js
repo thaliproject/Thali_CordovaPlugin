@@ -3,6 +3,7 @@
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
 var ThaliMobileNativeWrapper = require('thali/NextGeneration/thaliMobileNativeWrapper');
 var ThaliMobileNative = require('thali/NextGeneration/thaliMobileNative');
+var thaliMobileNativeTestUtils = require('../lib/thaliMobileNativeTestUtils.js');
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 var tape = require('../lib/thaliTape');
 var testUtils = require('../lib/testUtils.js');
@@ -288,7 +289,7 @@ test('does not send duplicate availability changes', tape.sinonTest(function (t)
   });
 }));
 
-test('can get the network status', function () { return true}, function (t) {
+test('can get the network status', function (t) {
   ThaliMobile.getNetworkStatus()
   .then(function (networkChangedValue) {
     t.doesNotThrow(function () {
@@ -307,7 +308,6 @@ test('can get the network status', function () { return true}, function (t) {
     t.end();
   });
 });
-
 
 test('peerAvailabilityChanged - peer added/removed to/from cache (native)',
   function (t) {
@@ -1484,7 +1484,9 @@ test('#disconnect fails on wifi peers', function (t) {
           'Got specific error message');
         return null;
       })
-      .then(t.end);
+      .then(function () {
+        t.end();
+      });
   };
 
   ThaliMobile.emitter.on('peerAvailabilityChanged', availabilityHandler);
@@ -2262,39 +2264,46 @@ test('can get data from all participants',
       }
 
       ThaliMobile.getPeerHostInfo(peer.peerIdentifier, peer.connectionType)
-      .then(function (peerHostInfo) {
-        return testUtils.get(
-          peerHostInfo.hostAddress, peerHostInfo.portNumber,
-          uuidPath, pskIdentity, pskKey
-        ).catch(function () {
-          // Ignore request failures. After peer listener recreating we are
-          // getting new peerAvailabilityChanged event and retrying this request
+        .catch(function () {
+          // Connection failure, probably due to zombie issue.
           return null;
-        });
-      })
-      .then(function (uuid) {
-        if (uuid === null) {
-          return;
-        }
-        if (remainingParticipants[uuid] !== participantState.notRunning) {
-          return Promise.resolve(true);
-        }
-        remainingParticipants[uuid] = participantState.finished;
-        var areWeDone = Object.getOwnPropertyNames(remainingParticipants)
-          .every(
-            function (participant) {
-              return remainingParticipants[participant] ===
-                participantState.finished;
-            });
-        if (areWeDone) {
-          t.pass('received all uuids');
+        })
+        .then(function (peerHostInfo) {
+          if (!peerHostInfo) {
+            return;
+          }
+          return testUtils.get(
+            peerHostInfo.hostAddress, peerHostInfo.portNumber,
+            uuidPath, pskIdentity, pskKey
+          ).catch(function () {
+            // Ignore request failures. After peer listener recreating we are
+            // getting new peerAvailabilityChanged event and retrying this request
+            return null;
+          });
+        })
+        .then(function (uuid) {
+          if (uuid === null) {
+            return;
+          }
+          if (remainingParticipants[uuid] !== participantState.notRunning) {
+            return Promise.resolve(true);
+          }
+          remainingParticipants[uuid] = participantState.finished;
+          var areWeDone = Object.getOwnPropertyNames(remainingParticipants)
+            .every(
+              function (participant) {
+                return remainingParticipants[participant] ===
+                  participantState.finished;
+              });
+          if (areWeDone) {
+            t.pass('received all uuids');
+            done();
+          }
+        })
+        .catch(function (error) {
+          t.fail(error);
           done();
-        }
-      })
-      .catch(function (error) {
-        t.fail(error);
-        done();
-      });
+        });
     });
   }
 );

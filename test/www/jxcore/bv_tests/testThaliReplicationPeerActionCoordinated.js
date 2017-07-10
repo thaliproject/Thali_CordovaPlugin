@@ -362,6 +362,7 @@ test('Coordinated replication action test - should throw error when wrong remote
     peerPool, devicePublicPrivateKey
   );
   var peerActions = [];
+  var areWeDone = false;
 
   localPouchDB = new TestPouchDB(LOCAL_DB_NAME);
 
@@ -394,11 +395,16 @@ test('Coordinated replication action test - should throw error when wrong remote
             // This should be rejected since we provided non existing remote db
             thaliReplicationPeerAction.start(httpAgentPool, wrongRemoteDbName)
               .then(function() {
-                var error = 'we should not be able to replicate with db that doesn\'t exist';
-                t.fail(error);
-                reject(new Error(error));
+                // It is possible that we will resolve even when the proper error occurred.
+                // This is when we call _complete on already killed action.
+                if (!areWeDone) {
+                  var error = 'we should not be able to replicate with db that doesn\'t exist';
+                  t.fail(error);
+                  reject(new Error(error));
+                }
               })
               .catch(function (error) {
+                areWeDone = true;
                 t.equals(error.reason, ERROR_NO_DB_FILE, 'error should be \'no_db_file\'');
                 resolve(true);
               });
