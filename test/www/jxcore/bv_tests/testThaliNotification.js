@@ -262,7 +262,7 @@ test('Client to server request coordinated', function (t) {
           .then(function (connection) {
             logger.info('Established new connection with port ', connection.listeningPort);
 
-            res.portNumber = connection.listeningPort;
+            peer.portNumber = connection.listeningPort;
             runTest(peer, publicKeyHash)
               .then(function () {
                 resolve();
