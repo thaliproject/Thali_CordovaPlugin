@@ -328,7 +328,7 @@ function getSamePeerWithRetry(path, pskIdentity, pskKey,
               removeFromAvailablePeers(availablePeers, peer);
 
               // Don't try to connect if we previously failed with this peer
-              // with `Peer is unavailable`.
+              // with error other than `Connection could not be established`.
               if (err.message === 'Connection could not be established') {
                 availablePeers.push({
                   peer: peer
@@ -448,9 +448,8 @@ function executeZombieProofTest (t, server, testFunction) {
             runningTest = false;
 
             removeFromAvailablePeers(availablePeers, peer);
-
             // Don't try to connect if we previously failed with this peer
-            // with `Peer is unavailable`.
+            // with error other than `Connection could not be established`.
             if (err.message === 'Connection could not be established') {
               availablePeers.push({
                 peer: peer
@@ -522,10 +521,10 @@ function executeZombieProofTestCoordinated (t, server, testFunction) {
           })
           .catch(function (err) {
             record.runningTest = false;
-
             removeFromAvailablePeers(availablePeersAndTestingFlags, peer);
+
             // Don't try to connect if we previously failed with this peer
-            // with `Peer is unavailable`.
+            // with error other than `Connection could not be established`.
             if (err.message === 'Connection could not be established') {
               availablePeersAndTestingFlags.push(record);
             }
