@@ -2393,7 +2393,7 @@ function setUpRouter() {
   return router;
 }
 
-test('test for data corruption',
+test.skip('test for data corruption',
   function () {
     return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
       !platform.isAndroid;
