@@ -97,8 +97,10 @@ var test = tape({
   teardown: function (t) {
     thaliMobile.stop();
     // Clears timeout
-    notificationClient.stop();
-    notificationServer.stop();
+    if (notificationClient && notificationServer) {
+      notificationClient.stop();
+      notificationServer.stop();
+    }
 
     var summary =
       'Participants:' + globals.numberOfParticipants +
