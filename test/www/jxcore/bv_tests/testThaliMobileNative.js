@@ -32,7 +32,6 @@ var peerIdsToBeClosed = [];
 
 var test = tape({
   setup: function (t) {
-    thaliMobileNativeWrapper._registerToNative();
     serverToBeClosed = {
       closeAll: function (callback) {
         callback();
@@ -64,6 +63,7 @@ var test = tape({
             })
             .then(function () {
               peerIdsToBeClosed = [];
+              thaliMobileNativeWrapper._registerToNative();
               t.end();
             });
         });

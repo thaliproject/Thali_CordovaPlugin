@@ -1781,8 +1781,8 @@ function(t) {
 test('We properly fire peer unavailable and then available when ' +
 'connection fails on iOS',
 function () {
-  return !(platform.isIOS &&
-    global.NETWORK_TYPE === ThaliMobile.networkTypes.NATIVE);
+  // Skip for now, see #1924
+  return true;
 },
 function(t) {
 
@@ -2517,10 +2517,13 @@ test('test for data corruption',
             }
 
             var serversManager = ThaliMobileNativeWrapper._getServersManager();
-            serversManager.terminateOutgoingConnection(
-              peer.peerIdentifier,
-              peer.portNumber
-            );
+
+            if (serversManager !== null) {
+              serversManager.terminateOutgoingConnection(
+                peer.peerIdentifier,
+                peer.portNumber
+              );
+            }
 
             // We have to give Android enough time to notice the killed
             // connection and recycle everything

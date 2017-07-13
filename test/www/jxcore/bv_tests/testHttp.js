@@ -18,6 +18,7 @@ var peerIdsToBeClosed = [];
 var test = tape({
   setup: function (t) {
     httpServer = makeIntoCloseAllServer(http.createServer(), true);
+    ThaliMobileNativeWrapper._registerToNative();
     t.end();
   },
   teardown: function (t) {

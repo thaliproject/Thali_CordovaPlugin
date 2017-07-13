@@ -29,7 +29,6 @@ var serverToBeClosed = null;
 
 var test = tape({
   setup: function (t) {
-    thaliMobileNativeWrapper._registerToNative();
     serverToBeClosed = {
       closeAll: function (callback) {
         callback();
@@ -61,6 +60,7 @@ var test = tape({
             })
             .then(function () {
               peerIdsToBeClosed = [];
+              thaliMobileNativeWrapper._registerToNative();
               t.end();
             });
         });
@@ -113,6 +113,10 @@ test('cannot call multiConnect with illegal peerID', function (t) {
 });
 
 test('multiConnect properly fails on legal but non-existent peerID',
+  function () {
+    // Skip for now, see #1924
+    return true;
+  },
   function (t) {
     var connectReturned = false;
     var originalSyncValue = randomString.generate();
