@@ -48,7 +48,7 @@ var test = tape({
   }
 });
 
-test('Coordinated replication action test - each device has the same local db name', function (t) {
+test.skip('Coordinated replication action test - each device has the same local db name', function (t) {
   var router = express.Router();
   router.use(
     '/db',
