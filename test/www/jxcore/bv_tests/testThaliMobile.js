@@ -1778,7 +1778,7 @@ function(t) {
     });
 });
 
-test('We properly fire peer unavailable and then available when ' +
+test.skip('We properly fire peer unavailable and then available when ' +
 'connection fails on iOS',
 function () {
   return !(platform.isIOS &&

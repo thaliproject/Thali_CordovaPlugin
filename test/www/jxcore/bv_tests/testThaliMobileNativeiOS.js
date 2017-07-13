@@ -112,7 +112,7 @@ test('cannot call multiConnect with illegal peerID', function (t) {
   });
 });
 
-test('multiConnect properly fails on legal but non-existent peerID',
+test.skip('multiConnect properly fails on legal but non-existent peerID',
   function (t) {
     var connectReturned = false;
     var originalSyncValue = randomString.generate();
