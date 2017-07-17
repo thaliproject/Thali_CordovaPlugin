@@ -167,23 +167,24 @@ test('Single coordinated request ios native',
       global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI;
   },
   function (t) {
-    var total = t.participants.length - 1;
-    var counter = 0;
+    var numberOfParticipants = t.participants.length - 1;
 
     httpServer.on('request', function (req, res) {
       var reply = req.method + ' ' + req.url;
       res.end(reply);
     });
 
-    thaliMobileNativeTestUtils.executeZombieProofTestCoordinated(t, httpServer, function (connection, peer) {
-      makeRequest('127.0.0.1', httpServer.address().port, 'GET', '/path')
-        .then(function (response) {
-          peerIdsToBeClosed.push(peer.peerIdentifier);
-          t.equal(response.toString(), 'GET /path');
+    thaliMobileNativeTestUtils.executeZombieProofTest(t, httpServer, numberOfParticipants, function (connection, peer) {
+      return new Promise(function (resolve, reject) {
+        makeRequest('127.0.0.1', httpServer.address().port, 'GET', '/path')
+          .then(function (response) {
+            peerIdsToBeClosed.push(peer.peerIdentifier);
+            t.equal(response.toString(), 'GET /path');
 
-          ++counter === total ? t.end() : t.pass();
-        })
-        .catch(t.fail)
+            resolve();
+          })
+          .catch(t.fail)
+      });
     });
   });
 
@@ -223,11 +224,9 @@ test('Multiple coordinated request ios native',
     var firstReply = 'firstReply';
     var secondReply = 'secondReply';
     var thirdReply = 'thirdReply';
-    var expectedReplies = [ firstReply, secondReply, thirdReply ];
 
     var reply;
-    var total = t.participants.length - 1;
-    var counter = 0;
+    var numberOfParticipants = t.participants.length - 1;
 
     httpServer.on('request', function (req, res) {
       switch (req.url) {
@@ -246,16 +245,20 @@ test('Multiple coordinated request ios native',
       res.end(reply);
     });
 
-    thaliMobileNativeTestUtils.executeZombieProofTestCoordinated(t, httpServer, function (connection, peer) {
-      var localCounter = counter;
+    thaliMobileNativeTestUtils.executeZombieProofTest(t, httpServer, numberOfParticipants,
+      function (connection, peer) {
+        return Promise.all([
+          makeRequest('127.0.0.1', httpServer.address().port, 'GET', '/path0'),
+          makeRequest('127.0.0.1', httpServer.address().port, 'GET', '/path1'),
+          makeRequest('127.0.0.1', httpServer.address().port, 'GET', '/path2')
+        ])
+          .then(function (responses) {
+            peerIdsToBeClosed.push(peer.peerIdentifier);
 
-      makeRequest('127.0.0.1', httpServer.address().port, 'GET', '/path' + localCounter)
-        .then(function (response) {
-          peerIdsToBeClosed.push(peer.peerIdentifier);
-          t.equal(response.toString(), expectedReplies[localCounter]);
-
-          ++counter === total ? t.end() : t.pass();
-        })
-        .catch(t.fail);
+            t.equal(responses[0].toString(), firstReply);
+            t.equal(responses[1].toString(), secondReply);
+            t.equal(responses[2].toString(), thirdReply);
+          })
+          .catch(t.fail);
+      });
     });
-  });
