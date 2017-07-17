@@ -1779,8 +1779,8 @@ function(t) {
 test('We properly fire peer unavailable and then available when ' +
 'connection fails on iOS',
 function () {
-  return !(platform.isIOS &&
-    global.NETWORK_TYPE === ThaliMobile.networkTypes.NATIVE);
+  // We no longer do it, see discussion in #1924
+  return true;
 },
 function(t) {
 
