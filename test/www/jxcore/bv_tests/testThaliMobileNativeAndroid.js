@@ -264,7 +264,7 @@ test(
   }
 );
 
-test(
+test.skip(
   '#startUpdateAdvertisingAndListening - destroying remote peers ' +
   'connection kills the local connection',
   function () {
