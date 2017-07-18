@@ -855,7 +855,7 @@ test('can do HTTP requests between peers', function (t) {
   endToEndWithStateCheck(t);
 });
 
-test('can still do HTTP requests between peers with coordinator', function (t) {
+test.skip('can still do HTTP requests between peers with coordinator', function (t) {
   endToEndWithStateCheck(t);
 });
 
