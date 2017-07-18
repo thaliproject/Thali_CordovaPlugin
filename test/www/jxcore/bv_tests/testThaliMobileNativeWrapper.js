@@ -851,7 +851,7 @@ function (t) {
   });
 });
 
-test('can do HTTP requests between peers', function (t) {
+test.skip('can do HTTP requests between peers', function (t) {
   endToEndWithStateCheck(t);
 });
 
@@ -859,7 +859,7 @@ test.skip('can still do HTTP requests between peers with coordinator', function 
   endToEndWithStateCheck(t);
 });
 
-test('calls correct starts when network changes',
+test.skip('calls correct starts when network changes',
   testUtils.skipOnIOS, // uses toggleBluetooth
   tape.sinonTest(function (t) {
     var listeningSpy =
