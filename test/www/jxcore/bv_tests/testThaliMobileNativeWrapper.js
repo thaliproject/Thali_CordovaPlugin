@@ -971,7 +971,7 @@ test('will fail bad PSK connection between peers', function (t) {
   t.end();
 });
 
-test('We provide notification when a listener dies and we recreate it',
+test.skip('We provide notification when a listener dies and we recreate it',
   testUtils.skipOnIOS,
   function (t) {
     var recreatedPort = null;
