@@ -391,15 +391,17 @@ function removeFromAvailablePeers(availablePeers, peerToRemove) {
  * it checks if there are other peers available beside the one already tried.
  * @param {object} t test object.
  * @param {net.Server} server Server object
+ * @param {number} numberOfCoordinatedParticipants amount of test participants that we will try to connect with
  * @param {function} testFunction
  */
-function executeZombieProofTest (t, server, testFunction) {
+function executeZombieProofTest(t, server, numberOfCoordinatedParticipants, testFunction) {
   var availablePeers = [];
   var runningTest = false;
   var peer;
   var testTimeout = null;
   var tryToConnectRetries = 0;
   var areWeDone = false;
+  var donePeers = 0;
 
   function tryToConnect() {
     if (testTimeout) {
@@ -431,16 +433,28 @@ function executeZombieProofTest (t, server, testFunction) {
           .then(function (connection) {
             testFunction(connection, peer)
               .then(function () {
+                runningTest = false;
+
                 clearTimeout(testTimeout);
                 testTimeout = null;
+
+                // When we finish with that peer, remove it from array so when
+                // we call tryToConnect again, we won't try to connect with
+                // that peer again.
+                removeFromAvailablePeers(availablePeers, peer);
 
                 // In case we would fail with timeout with some other peer
                 // we are good if we finished with one. So, we set a flag
                 // and when this function will be called again but we will
                 // be already done with any of peers, return.
-                if (!areWeDone) {
+                // In case we run in coordinated mode, we want to connect
+                // with every peer, so we call tryToConnect again until we will
+                // successfully make request with every one.
+                if (!numberOfCoordinatedParticipants && !areWeDone) {
                   areWeDone = true;
                   t.end();
+                } else {
+                  ++donePeers === numberOfCoordinatedParticipants ? t.end() : tryToConnect();
                 }
               });
           })
@@ -448,6 +462,7 @@ function executeZombieProofTest (t, server, testFunction) {
             runningTest = false;
 
             removeFromAvailablePeers(availablePeers, peer);
+
             // Don't try to connect if we previously failed with this peer
             // with error other than `Connection could not be established`.
             if (err.message === 'Connection could not be established') {
@@ -455,9 +470,10 @@ function executeZombieProofTest (t, server, testFunction) {
                 peer: peer
               });
             }
-
             tryToConnect();
           });
+      } else {
+        logger.debug('Already running test!');
       }
     });
   }
@@ -477,6 +493,7 @@ function executeZombieProofTest (t, server, testFunction) {
     });
 
     logger.debug('We got a peer ' + JSON.stringify(peer));
+
     tryToConnect();
   }
 
@@ -484,83 +501,6 @@ function executeZombieProofTest (t, server, testFunction) {
 }
 
 module.exports.executeZombieProofTest = executeZombieProofTest;
-
-function checkIfPeerIsAlreadyPresent(peersArray, peer) {
-  var isPeerPresentInArray = false;
-
-  peersArray.forEach(function (record) {
-    if (record.peer.peerIdentifier === peer.peerIdentifier) {
-      isPeerPresentInArray = true;
-    }
-  });
-
-  return isPeerPresentInArray;
-}
-
-/**
- * Same as above, but every peer is treated individually, so we could exchange data
- * with every available peer, not only one.
- * @param {object} t test object.
- * @param {net.Server} server Server object
- * @param {function} testFunction
- */
-function executeZombieProofTestCoordinated (t, server, testFunction) {
-  var availablePeersAndTestingFlags = [];
-
-  function tryToConnect() {
-    availablePeersAndTestingFlags.forEach(function (record) {
-      var runningTest = record.runningTest;
-      var peer = record.peer;
-
-      if (!runningTest) {
-        record.runningTest = true;
-
-        connectToPeer(peer)
-          .then(function (connection) {
-            testFunction(connection, peer);
-          })
-          .catch(function (err) {
-            record.runningTest = false;
-            removeFromAvailablePeers(availablePeersAndTestingFlags, peer);
-
-            // Don't try to connect if we previously failed with this peer
-            // with error other than `Connection could not be established`.
-            if (err.message === 'Connection could not be established') {
-              availablePeersAndTestingFlags.push(record);
-            }
-
-            tryToConnect();
-          });
-      }
-    });
-  }
-
-  // The peer we got here is in fact an one element array, so we
-  // have to treat it like array.
-  function peerAvailabilityChangedHandler(peerAsArray) {
-    var peer = peerAsArray[0];
-
-    if (!peer.peerAvailable) {
-      removeFromAvailablePeers(availablePeersAndTestingFlags, peer);
-      return;
-    }
-
-    // Don't add same peers but with different generations.
-    if (!checkIfPeerIsAlreadyPresent(availablePeersAndTestingFlags, peer)) {
-      availablePeersAndTestingFlags.push({
-        peer: peer,
-        runningTest: false
-      });
-    }
-
-    logger.debug('We got a peer ' + JSON.stringify(peer));
-    tryToConnect();
-  }
-
-  startAndListen(t, server, peerAvailabilityChangedHandler);
-}
-
-module.exports.executeZombieProofTestCoordinated = executeZombieProofTestCoordinated;
 
 function getConnectionToOnePeerAndTest(t, connectTest) {
   var echoServer = net.createServer(function (socket) {

@@ -32,7 +32,6 @@ var peerIdsToBeClosed = [];
 
 var test = tape({
   setup: function (t) {
-    thaliMobileNativeWrapper._registerToNative();
     serverToBeClosed = {
       closeAll: function (callback) {
         callback();
@@ -64,6 +63,7 @@ var test = tape({
             })
             .then(function () {
               peerIdsToBeClosed = [];
+              thaliMobileNativeWrapper._registerToNative();
               t.end();
             });
         });
@@ -261,7 +261,7 @@ test('Can connect to a remote peer', function (t) {
   server = makeIntoCloseAllServer(server);
   serverToBeClosed = server;
 
-  thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
+  thaliMobileNativeTestUtils.executeZombieProofTest(t, server, null,
     function (connection, peer) {
       return new Promise(function (resolve, reject) {
         logger.info(connection);
@@ -358,7 +358,7 @@ test('Can shift data', function (t) {
   server = makeIntoCloseAllServer(server);
   serverToBeClosed = server;
 
-  thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
+  thaliMobileNativeTestUtils.executeZombieProofTest(t, server, null,
     function (connection, peer) {
       return new Promise(function (resolve, reject) {
         peerIdsToBeClosed.push(peer.peerIdentifier);
@@ -387,7 +387,7 @@ test('Can shift data via parallel connections',
     server = makeIntoCloseAllServer(server);
     serverToBeClosed = server;
 
-    thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
+    thaliMobileNativeTestUtils.executeZombieProofTest(t, server, null,
       function (connection, peer) {
         return new Promise(function (resolve, reject) {
           peerIdsToBeClosed.push(peer.peerIdentifier);
@@ -460,7 +460,7 @@ test('Can shift data securely', function (t) {
   server = makeIntoCloseAllServer(server);
   serverToBeClosed = server;
 
-  thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
+  thaliMobileNativeTestUtils.executeZombieProofTest(t, server, null,
     function (connection, peer) {
       return new Promise(function (resolve, reject) {
         peerIdsToBeClosed.push(peer.peerIdentifier);
@@ -491,7 +491,7 @@ test('Can shift large amounts of data', function (t) {
   server = makeIntoCloseAllServer(server);
   serverToBeClosed = server;
 
-  thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
+  thaliMobileNativeTestUtils.executeZombieProofTest(t, server, null,
     function (connection, peer) {
       return new Promise(function (resolve, reject) {
         peerIdsToBeClosed.push(peer.peerIdentifier);

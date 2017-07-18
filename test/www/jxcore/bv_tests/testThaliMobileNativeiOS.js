@@ -29,7 +29,6 @@ var serverToBeClosed = null;
 
 var test = tape({
   setup: function (t) {
-    thaliMobileNativeWrapper._registerToNative();
     serverToBeClosed = {
       closeAll: function (callback) {
         callback();
@@ -61,6 +60,7 @@ var test = tape({
             })
             .then(function () {
               peerIdsToBeClosed = [];
+              thaliMobileNativeWrapper._registerToNative();
               t.end();
             });
         });
@@ -112,7 +112,11 @@ test('cannot call multiConnect with illegal peerID', function (t) {
   });
 });
 
-test.skip('multiConnect properly fails on legal but non-existent peerID',
+test('multiConnect properly fails on legal but non-existent peerID',
+  function () {
+    // Skip for now, see #1924
+    return true;
+  },
   function (t) {
     var connectReturned = false;
     var originalSyncValue = randomString.generate();
@@ -198,7 +202,7 @@ function reConnect(t, peerIdentifier, originalListeningPort) {
   });
 }
 
-test('Get same port when trying to connect multiple times on iOS', function () { return true},
+test('Get same port when trying to connect multiple times on iOS',
   function (t) {
     var server = net.createServer(function (socket) {
       socket.pipe(socket);
@@ -206,7 +210,7 @@ test('Get same port when trying to connect multiple times on iOS', function () {
     server = makeIntoCloseAllServer(server);
     serverToBeClosed = server;
 
-    thaliMobileNativeTestUtils.executeZombieProofTest(t, server,
+    thaliMobileNativeTestUtils.executeZombieProofTest(t, server, null,
       function (currentConnection, currentTestPeer) {
         return new Promise(function (resolve, reject) {
           peerIdsToBeClosed.push(currentTestPeer.peerIdentifier);

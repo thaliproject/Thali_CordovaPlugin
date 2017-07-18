@@ -26,9 +26,6 @@ var peerIdsToBeClosed = [];
 
 var test = tape({
   setup: function (t) {
-    // Make sure right handlers are registered in case
-    // some other test has overwritten them.
-    thaliMobileNativeWrapper._registerToNative();
     t.end();
   },
   teardown: function (t) {
@@ -47,6 +44,7 @@ var test = tape({
           })
           .then(function () {
             peerIdsToBeClosed = [];
+            thaliMobileNativeWrapper._registerToNative();
             t.end();
           });
       })
