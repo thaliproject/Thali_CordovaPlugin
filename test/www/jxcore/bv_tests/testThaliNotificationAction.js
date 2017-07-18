@@ -187,7 +187,7 @@ test('Test BEACONS_RETRIEVED_AND_PARSED locally', tape.sinonTest(function (t) {
     });
 }));
 
-test('Test HTTP_BAD_RESPONSE locally', tape.sinonTest(function (t) {
+test.skip('Test HTTP_BAD_RESPONSE locally', tape.sinonTest(function (t) {
   t.plan(2);
 
   httpTester.runServer(globals.expressRouter,
