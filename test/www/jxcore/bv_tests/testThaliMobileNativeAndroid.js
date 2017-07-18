@@ -64,7 +64,7 @@ if (!tape.coordinated) {
   return;
 }
 
-test('Get error when trying to double connect to a peer on Android',
+test.skip('Get error when trying to double connect to a peer on Android',
   function () {
     return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
       !platform.isAndroid;
