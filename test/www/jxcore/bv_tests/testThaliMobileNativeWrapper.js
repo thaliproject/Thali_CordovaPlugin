@@ -33,7 +33,7 @@ var test = tape({
       .then(function () {
         t.equals(thaliMobileNativeWrapper._isStarted(), false,
           'must be stopped');
-        Promise.resolve()
+        thaliMobileNativeTestUtils.stopListeningAndAdvertising()
           .then(function () {
             if (!platform.isAndroid) {
               return thaliMobileNativeTestUtils.killAllMultiConnectConnections(peerIdsToBeClosed);
