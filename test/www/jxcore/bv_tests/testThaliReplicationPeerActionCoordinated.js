@@ -30,6 +30,12 @@ var LOCAL_DB_NAME          = 'repActionTest';
 var EXPIRATION_TIMEOUT     = 60 * 60 * 1000;
 var ERROR_NO_DB_FILE       = 'no_db_file';
 
+var platform = require('thali/NextGeneration/utils/platform');
+//Temporarily switch off whole file for Android devices
+if (platform._isRealAndroid) {
+  return;
+}
+
 if (!tape.coordinated) {
   return;
 }
