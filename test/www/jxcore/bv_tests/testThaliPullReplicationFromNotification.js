@@ -22,6 +22,11 @@ var testCloseAllServer = null;
 var thaliReplicationPeerAction = null;
 var LevelDownPouchDB = testUtils.getLevelDownPouchDb();
 
+var platform = require('thali/NextGeneration/utils/platform');
+//Temporarily switch off whole file for Android devices
+if (platform._isRealAndroid) {
+  return;
+}
 var test = tape({
   setup: function (t) {
     t.end();
