@@ -28,9 +28,16 @@ var NotificationBeacons =
 var thaliConfig =
   require('thali/NextGeneration/thaliConfig');
 
+var platform = require('thali/NextGeneration/utils/platform');
+
 var pskIdToSecret = function (id) {
   return id === thaliConfig.BEACON_PSK_IDENTITY ? thaliConfig.BEACON_KEY : null;
 };
+
+//Temporarily switch off whole file for Android devices
+if (platform._isRealAndroid) {
+  return;
+}
 
 var globals = {};
 
@@ -317,7 +324,7 @@ test('Received beacons with no values for us', tape.sinonTest(function (t) {
   notificationClient._peerAvailabilityChanged(globals.TCPEvent);
 }));
 
-test('Notification action killed with a superseded', 
+test('Notification action killed with a superseded',
   tape.sinonTest(function (t) {
     var notificationClient =
       new ThaliNotificationClient(globals.peerPoolInterface,
