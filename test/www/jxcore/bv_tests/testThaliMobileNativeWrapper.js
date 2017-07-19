@@ -1,3 +1,4 @@
+
 'use strict';
 
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
@@ -546,7 +547,8 @@ test('We fire failedNativeConnection event when we get failedConnection from ' +
 test('We fire nonTCPPeerAvailabilityChangedEvent event when we get ' +
   'failedConnection from multiConnectConnection',
   function() {
-    return platform._isRealMobile;
+    // We no longer do it, see discussion in #1924
+    return true;
   },
   function (t) {
     thaliMobileNativeWrapper.start(express.Router())
