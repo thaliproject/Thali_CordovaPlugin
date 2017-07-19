@@ -564,3 +564,17 @@ function killAllMultiConnectConnections(peerIdsToBeClosed) {
 }
 
 module.exports.killAllMultiConnectConnections = killAllMultiConnectConnections;
+
+function stopListeningAndAdvertising() {
+  return new Promise(function (resolve, reject) {
+    Mobile('stopListeningForAdvertisements').callNative(function (err) {
+      if (err) reject('Should be able to call stopListeningForAdvertisements');
+      
+      Mobile('stopAdvertisingAndListening').callNative(function (err) {
+        !err ? resolve() : reject('Should be able to call stopAdvertisingAndListening');
+      });
+    });
+  });
+}
+
+module.exports.stopListeningAndAdvertising = stopListeningAndAdvertising;

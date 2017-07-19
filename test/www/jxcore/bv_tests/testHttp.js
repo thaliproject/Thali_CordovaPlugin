@@ -18,11 +18,10 @@ var peerIdsToBeClosed = [];
 var test = tape({
   setup: function (t) {
     httpServer = makeIntoCloseAllServer(http.createServer(), true);
-    ThaliMobileNativeWrapper._registerToNative();
     t.end();
   },
   teardown: function (t) {
-    Promise.resolve()
+    thaliMobileNativeTestUtils.stopListeningAndAdvertising()
       .then(function () {
         if (!platform.isAndroid) {
           return thaliMobileNativeTestUtils.killAllMultiConnectConnections(peerIdsToBeClosed);
@@ -39,6 +38,7 @@ var test = tape({
           })
           .then(function () {
             peerIdsToBeClosed = [];
+            ThaliMobileNativeWrapper._registerToNative();
             t.end();
           });
       });

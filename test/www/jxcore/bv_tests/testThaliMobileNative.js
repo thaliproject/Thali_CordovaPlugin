@@ -42,32 +42,20 @@ var test = tape({
   teardown: function (t) {
     thaliMobileNativeTestUtils.multiConnectEmitter.removeAllListeners();
     serverToBeClosed.closeAll(function () {
-      Mobile('stopListeningForAdvertisements').callNative(function (err) {
-        t.notOk(
-          err,
-          'Should be able to call stopListeningForAdvertisements in teardown'
-        );
-        Mobile('stopAdvertisingAndListening').callNative(function (err) {
-          t.notOk(
-            err,
-            'Should be able to call stopAdvertisingAndListening in teardown'
-          );
-          Promise.resolve()
-            .then(function () {
-              if (!platform.isAndroid) {
-                return thaliMobileNativeTestUtils.killAllMultiConnectConnections(peerIdsToBeClosed);
-              }
-            })
-            .catch(function (err) {
-              t.fail(err);
-            })
-            .then(function () {
-              peerIdsToBeClosed = [];
-              thaliMobileNativeWrapper._registerToNative();
-              t.end();
-            });
+      thaliMobileNativeTestUtils.stopListeningAndAdvertising()
+        .then(function () {
+          if (!platform.isAndroid) {
+            return thaliMobileNativeTestUtils.killAllMultiConnectConnections(peerIdsToBeClosed);
+          }
+        })
+        .catch(function (err) {
+          t.fail(err);
+        })
+        .then(function () {
+          peerIdsToBeClosed = [];
+          thaliMobileNativeWrapper._registerToNative();
+          t.end();
         });
-      });
     });
   }
 });
