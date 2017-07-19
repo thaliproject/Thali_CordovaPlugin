@@ -18,6 +18,11 @@ var ThaliHttpTester = require('../lib/httpTester');
 
 var globalVariables = {};
 
+var platform = require('thali/NextGeneration/utils/platform');
+//Temporarily switch off whole file for Android devices
+if (platform._isRealAndroid) {
+  return;
+}
 /**
  * @classdesc This class is a container for all variables and
  * functionality that are common to most of the ThaliNoficationServer
