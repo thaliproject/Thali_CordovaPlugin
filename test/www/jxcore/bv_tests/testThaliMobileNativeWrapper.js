@@ -24,6 +24,11 @@ var uuid = require('node-uuid');
 
 var peerIdsToBeClosed = [];
 
+//Temporarily switch off whole file for Android devices
+if (platform._isRealAndroid) {
+  return;
+}
+
 var test = tape({
   setup: function (t) {
     t.end();
