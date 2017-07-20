@@ -5,6 +5,12 @@ if (!tape.coordinated) {
   return;
 }
 
+var platform = require('thali/NextGeneration/utils/platform');
+//Temporarily switch off whole file for Android devices
+if (platform._isRealAndroid) {
+  return;
+}
+
 var testUtils = require('../lib/testUtils.js');
 var logger = require('../lib/testLogger.js')('testThaliManagerCoordinated');
 
