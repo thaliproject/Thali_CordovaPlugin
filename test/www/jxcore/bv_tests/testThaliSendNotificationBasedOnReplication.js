@@ -16,6 +16,11 @@ var RefreshTimerManager =
   require('thali/NextGeneration/replication/utilities').RefreshTimerManager;
 var thaliConfig = require('thali/NextGeneration/thaliConfig');
 
+var platform = require('thali/NextGeneration/utils/platform');
+//Temporarily switch off whole file for Android devices
+if (platform._isRealAndroid) {
+  return;
+}
 var test = tape({
   setup: function (t) {
     t.end();
@@ -312,7 +317,7 @@ test('Three peers, one not in DB, one behind and one ahead', tape.sinonTest(func
   var startArg = [ partnerNotInDbPublicKey, partnerBehindInDbPublicKey,
                   partnerAheadInDbPublicKey];
   testStartAndStop.call(
-    this, 
+    this,
     t,
     startArg,
     function (pouchDB) {
