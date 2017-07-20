@@ -18,6 +18,11 @@ var localSeqManager = null;
 var pskId = 'yo ho ho';
 var pskKey = new Buffer('Nothing going on here');
 
+var platform = require('thali/NextGeneration/utils/platform');
+//Temporarily switch off whole file for Android devices
+if (platform._isRealAndroid) {
+  return;
+}
 
 var test = tape({
   setup: function (t) {
