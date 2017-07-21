@@ -307,7 +307,7 @@ function killLocal(t, end) {
     });
 }
 
-test(
+test.skip(
   '#startUpdateAdvertisingAndListening - destroying the local connection ' +
   'kills the connection to the remote peer',
   function () {
