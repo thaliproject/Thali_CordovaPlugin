@@ -7,7 +7,7 @@ if (!tape.coordinated) {
 
 var platform = require('thali/NextGeneration/utils/platform');
 //Temporarily switch off whole file for Android devices
-if (platform._isRealAndroid) {
+if (platform._isRealAndroid || platform._isRealIOS) {
   return;
 }
 
