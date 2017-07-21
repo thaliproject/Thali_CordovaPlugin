@@ -103,7 +103,7 @@ test('#startUpdateAdvertisingAndListening should fail if start not called',
   }
 );
 
-test('should be able to call #stopListeningForAdvertisements many times',
+test.skip('should be able to call #stopListeningForAdvertisements many times',
   function (t) {
     testIdempotentFunction(t, 'stopListeningForAdvertisements');
   }
