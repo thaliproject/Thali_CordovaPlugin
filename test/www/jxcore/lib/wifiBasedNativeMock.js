@@ -818,6 +818,10 @@ MobileCallInstance.prototype.disconnect = function(peerIdentifier, callback) {
     return callback('Platform does not support multiConnect');
   }
 
+  if (!uuidValidator(peerIdentifier)) {
+    return callback('Bad parameters');
+  }
+
   this._disconnect(peerIdentifier, callback);
 };
 
