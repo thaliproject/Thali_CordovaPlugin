@@ -22,6 +22,7 @@ module.exports = {
     'testCreateNativeListener.js',
     'testCreatePeerListener.js',
     'testThaliTcpServersManager.js',
+    'testHttp.js',
     'testThaliMobileNativeWrapper.js',
     'testThaliWifiInfrastructure.js',
     'testThaliMobile.js',

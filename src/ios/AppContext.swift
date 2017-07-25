@@ -401,8 +401,10 @@ extension PeerAvailability {
     guard let identifierString = parameters.first as? String else {
       throw AppContextError.badParameters
     }
-    if let _ = try? Peer(stringValue: identifierString) {
+    if let _ = try? Peer(uuidIdentifier: identifierString, generation: 0) {
       browserManager.disconnect(identifierString)
+    } else {
+      throw AppContextError.badParameters
     }
   }
 

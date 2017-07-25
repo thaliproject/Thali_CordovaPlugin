@@ -343,6 +343,7 @@ test('Notification action killed with a superseded',
             notificationClient.Events.PeerAdvertisesDataForUs,
             notificationHandler
           );
+          notificationClient.stop();
           t.end();
         });
       });
@@ -520,6 +521,7 @@ test('Resolves an action locally using ThaliPeerPoolDefault', tape.sinonTest(fun
         res.peerId,
         globals.TCPEvent.peerIdentifier,
         'peerIds must match');
+      notificationClient.stop();
       t.end();
     }
   );
@@ -751,6 +753,7 @@ test('notificationClient does not retry action with BAD_PEER resolution',
           'peer state should be RESOLVED');
       })
       .then(function () {
+        notificationClient.stop();
         t.end();
       });
     };
