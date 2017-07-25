@@ -13,13 +13,13 @@ const assert = require('assert');
 
 const versions =
 {
-  xcode: '8.2.1',
+  xcode: '8.3.3',
   xcodeCommandLineTools: ' ',
-  macOS: '10.12.3',
-  node: '6.9.1',
-  npm: '3.10.8',
-  brew: '1.1.',
-  ruby: '2.3.0p0',
+  macOS: '10.12.6',
+  node: '6.11.1',
+  npm: '3.10.10',
+  brew: '1.2.4',
+  ruby: '2.4.1p111',
   wget: '1.18',
   jxcore: '0.3.1.12',
   androidHome: ' ',
@@ -28,13 +28,13 @@ const versions =
   // We don't have an easy way to identify the version of the support libraries
   // we have but if they were installed recently enough then they will have
   // what we need.
-  androidSupportLibraries: '41.0.0',
+  androidSupportLibraries: '47.0.0',
   python: '2.7.10',
-  cordova: '6.4.0',
-  java: '1.8.0_102',
-  git: '2.10.0',
-  swiftlint: '0.17.0',
-  carthage: '0.20.0',
+  cordova: '6.5.0',
+  java: '1.8.0_141',
+  git: '2.13.1',
+  swiftlint: '0.20.1',
+  carthage: '0.24.0',
   sinopiaNode: ' ',
   sinopiaJxCore: ' '
 };
