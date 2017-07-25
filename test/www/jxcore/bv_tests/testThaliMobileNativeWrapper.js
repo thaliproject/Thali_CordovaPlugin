@@ -1,4 +1,3 @@
-
 'use strict';
 
 var ThaliMobile = require('thali/NextGeneration/thaliMobile');
