@@ -18,7 +18,7 @@ const versions =
   macOS: '10.12.6',
   node: '6.11.1',
   npm: '3.10.10',
-  brew: '1.2.4',
+  brew: '1.2.',
   ruby: '2.4.1p111',
   wget: '1.18',
   jxcore: '0.3.1.12',
