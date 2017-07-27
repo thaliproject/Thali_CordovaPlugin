@@ -701,10 +701,6 @@ module.exports._multiConnect = function (peerIdentifier) {
 
           if (error) {
             reject(new Error(error));
-            if (error === 'Connection could not be established') {
-              recreatePeer(peerIdentifier);
-            }
-
           }
 
           resolve(portNumber);
@@ -1118,29 +1114,6 @@ function getPeerPort(peer) {
     Promise.resolve(null);
 }
 
-function recreatePeer(peerIdentifier) {
-  var peerUnavailable = {
-    peerIdentifier: peerIdentifier,
-    peerAvailable: false,
-    portNumber: null,
-    recreated: true
-  };
-
-  handlePeerAvailabilityChanged(peerUnavailable);
-
-  var generation = peerGenerations[peerIdentifier];
-
-  var peerAvailable = {
-    peerIdentifier: peerIdentifier,
-    peerAvailable: true,
-    generation: generation,
-    portNumber: null,
-    recreated: true
-  };
-
-  handlePeerAvailabilityChanged(peerAvailable);
-}
-
 /**
  * This is used whenever discovery or advertising starts or stops. Since it's
  * possible for these to be stopped (in particular) due to events outside of
@@ -1312,9 +1285,6 @@ module.exports._registerToNative = function () {
         connectionType: connectionTypes.MULTI_PEER_CONNECTIVITY_FRAMEWORK
       };
       module.exports.emitter.emit('failedNativeConnection', event);
-      if (failedConnection.error) {
-        recreatePeer(failedConnection.peerIdentifier);
-      }
     }
   );
 

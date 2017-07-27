@@ -1140,9 +1140,8 @@ test('multiconnect failure - new peer is ignored (MPCF)',
 
 test('multiconnect failure - cached peer fires peerAvailabilityChanged (MPCF)',
   function () {
-    return platform._isRealMobile ||
-           global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
-           platform.isAndroid;
+    // We no longer do it, see discussion in #1924
+    return true;
   },
   function (t) {
     var nativePeer = generateLowerLevelPeers().nativePeer;
@@ -1781,7 +1780,7 @@ function(t) {
 test.skip('We properly fire peer unavailable and then available when ' +
 'connection fails on iOS',
 function () {
-  // Skip for now, see #1924
+  // We no longer do it, see discussion in #1924
   return true;
 },
 function(t) {
