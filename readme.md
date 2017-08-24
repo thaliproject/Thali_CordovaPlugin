@@ -298,7 +298,7 @@ set PATH=%PATH%;%ANDROID_HOME%\tools;%ANDROID_HOME%\platform-tools
 ```
 
 
-`<installation location>` can vary on different platforms but it's something that containes `android` in path and with folders inside like `etc`, `platforms`,`samples`,`tools` and so on.
+`<installation location>` can vary on different platforms but it's something that contains `android` in path and with folders inside like `etc`, `platforms`,`samples`,`tools` and so on.
 
 Real life Mac OS `~/.bash_profile` example:
 ```
@@ -311,29 +311,29 @@ Current API target level is `android-21`
 
 ### iOS
 
-Download [Xcode 6](https://developer.apple.com/xcode/), or later.
+Download [Xcode 8](https://developer.apple.com/xcode/), or later.
 
 ## Getting Started
 
 ### Install latest JXCore
 
-The installation guide for JXCore 3.1.10 on Mac OS and Windows can be found [here](https://github.com/thaliproject/jxbuild/blob/master/distribute.md).
+The installation guide for JXCore 3.1.14 on Mac OS and Windows can be found [here](https://github.com/thaliproject/jxbuild/blob/master/distribute.md).
 
-The latest version of JXCore 3.1.10 only for Mac OS can be downloaded from [here](https://jxcore.blob.core.windows.net/jxcore-release/jxcore/03110/release/jx_osx64v8.zip)
+The latest version of JXCore 3.1.14 only for Mac OS can be downloaded from [here](https://jxcore.blob.core.windows.net/jxcore-release/jxcore/03114/release/jx_osx64v8.zip)
 
 To check the version of the current JXCore installation run:
 ```
 $ jx -jxv
-v 0.3.1.10
+v 0.3.1.14
 ```
 
 ### Install Cordova
 
-(Check the [Android Platform Guide](https://cordova.apache.org/docs/en/4.0.0/guide_platforms_android_index.md.html#Android%20Platform%20Guide)
-and [iOS Platform Guide](https://cordova.apache.org/docs/en/4.0.0/guide_platforms_ios_index.md.html#iOS%20Platform%20Guide) for detailed instructions.)
+(Check the [Android Platform Guide](https://cordova.apache.org/docs/en/6.x/guide/platforms/android/index.html)
+and [iOS Platform Guide](https://cordova.apache.org/docs/en/6.x/guide/platforms/ios/index.html) for detailed instructions.)
 
 ```
-$ npm install -g cordova@6.4.0
+$ npm install -g cordova@6.5.0
 ```
 
 ### Create a Cordova project
