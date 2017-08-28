@@ -21,7 +21,7 @@ const versions =
   brew: '1.2.',
   ruby: '2.4.1p111',
   wget: '1.18',
-  jxcore: '0.3.1.12',
+  jxcore: '0.3.1.14',
   androidHome: ' ',
   androidBuildTools: thaliConfig.thaliInstall.androidConfig.buildToolsVersion,
   androidPlatform: thaliConfig.thaliInstall.androidConfig.compileSdkVersion,
