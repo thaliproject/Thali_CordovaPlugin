@@ -470,10 +470,10 @@ test('Replication timer should use custom timeout value when its provided when c
                 devicePublicKey);
 
         setTimeout(function () {
-          if (!replicationActionEnd) {
+          if (replicationActionEnd) {
             t.fail('Replication timer should use custom timeout value');
           }
-        }, 4);
+        }, 4 * 1000);
 
         thaliReplicationPeerAction.start(httpAgentPool, randomDBName, customTimeout)
             .then(function () {
@@ -522,10 +522,10 @@ test('Replication timer should use default timeout value when its not provided w
                 devicePublicKey);
 
         setTimeout(function () {
-          if (!replicationActionEnd) {
+          if (replicationActionEnd) {
             t.fail('Replication timer should use custom timeout value');
           }
-        }, ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS - 2);
+        }, 2 * 1000);
 
         thaliReplicationPeerAction.start(httpAgentPool)
             .then(function () {
