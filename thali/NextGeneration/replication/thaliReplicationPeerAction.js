@@ -129,7 +129,7 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function (maxIdlePeriod
     self._refreshTimerManager.stop();
   }
   self._refreshTimerManager = new RefreshTimerManager(
-    !!maxIdlePeriodSeconds ? maxIdlePeriodSeconds * 1000 : ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS * 1000,
+      (!!maxIdlePeriodSeconds ? maxIdlePeriodSeconds : ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS) * 1000,
     function() {
       self._complete([new Error('No activity time out')]);
     });
