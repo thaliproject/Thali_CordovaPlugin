@@ -56,9 +56,9 @@ SimpleThaliTape.prototype.defaults = {
   teardown: function (t) {
     t.end();
   },
-  setupTimeout:     1 * 60 * 1000,
+  setupTimeout:     5 * 60 * 1000,
   testTimeout:      10 * 60 * 1000,
-  teardownTimeout:  1 * 60 * 1000
+  teardownTimeout:  5 * 60 * 1000
 };
 
 SimpleThaliTape.states = {

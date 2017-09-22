@@ -1777,7 +1777,7 @@ function(t) {
     });
 });
 
-test('We properly fire peer unavailable and then available when ' +
+test.skip('We properly fire peer unavailable and then available when ' +
 'connection fails on iOS',
 function () {
   // We no longer do it, see discussion in #1924
@@ -2392,7 +2392,7 @@ function setUpRouter() {
   return router;
 }
 
-test('test for data corruption',
+test.skip('test for data corruption',
   function () {
     return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
       !platform.isAndroid;

@@ -79,6 +79,7 @@ function CoordinatedClient(tests, uuid, platform, version, hasRequiredHardware,
       reconnectionDelay:    2000,
       reconnectionDelayMax: 10000,
       randomizationFactor:  0,
+      timeout: 50000,
 
       transports: ['websocket'],
       rejectUnauthorized: null

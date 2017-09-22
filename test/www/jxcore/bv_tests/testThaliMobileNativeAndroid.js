@@ -64,7 +64,7 @@ if (!tape.coordinated) {
   return;
 }
 
-test('Get error when trying to double connect to a peer on Android',
+test.skip('Get error when trying to double connect to a peer on Android',
   function () {
     return global.NETWORK_TYPE === ThaliMobile.networkTypes.WIFI ||
       !platform.isAndroid;
@@ -264,7 +264,7 @@ test(
   }
 );
 
-test(
+test.skip(
   '#startUpdateAdvertisingAndListening - destroying remote peers ' +
   'connection kills the local connection',
   function () {
@@ -307,7 +307,7 @@ function killLocal(t, end) {
     });
 }
 
-test(
+test.skip(
   '#startUpdateAdvertisingAndListening - destroying the local connection ' +
   'kills the connection to the remote peer',
   function () {

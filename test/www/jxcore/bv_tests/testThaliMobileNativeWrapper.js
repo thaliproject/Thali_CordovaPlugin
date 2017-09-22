@@ -24,6 +24,11 @@ var uuid = require('node-uuid');
 
 var peerIdsToBeClosed = [];
 
+//Temporarily switch off whole file for Android devices
+if (platform._isRealAndroid) {
+  return;
+}
+
 var test = tape({
   setup: function (t) {
     t.end();
@@ -98,7 +103,7 @@ test('#startUpdateAdvertisingAndListening should fail if start not called',
   }
 );
 
-test('should be able to call #stopListeningForAdvertisements many times',
+test.skip('should be able to call #stopListeningForAdvertisements many times',
   function (t) {
     testIdempotentFunction(t, 'stopListeningForAdvertisements');
   }
@@ -852,15 +857,15 @@ function (t) {
   });
 });
 
-test('can do HTTP requests between peers', function (t) {
+test.skip('can do HTTP requests between peers', function (t) {
   endToEndWithStateCheck(t);
 });
 
-test('can still do HTTP requests between peers with coordinator', function (t) {
+test.skip('can still do HTTP requests between peers with coordinator', function (t) {
   endToEndWithStateCheck(t);
 });
 
-test('calls correct starts when network changes',
+test.skip('calls correct starts when network changes',
   testUtils.skipOnIOS, // uses toggleBluetooth
   tape.sinonTest(function (t) {
     var listeningSpy =
@@ -972,7 +977,7 @@ test('will fail bad PSK connection between peers', function (t) {
   t.end();
 });
 
-test('We provide notification when a listener dies and we recreate it',
+test.skip('We provide notification when a listener dies and we recreate it',
   testUtils.skipOnIOS,
   function (t) {
     var recreatedPort = null;

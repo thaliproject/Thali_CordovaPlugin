@@ -335,7 +335,7 @@ test('#parseBeacons addressBookCallback fails decrypt', function (t) {
   t.end();
 });
 
-test('#parseBeacons addressBookCallback returns no matches', function (t) {
+test.skip('#parseBeacons addressBookCallback returns no matches', function (t) {
   // We recognize the sender but they are not on our approved list so
   // we return null
   var publicKeys = [];
