@@ -118,15 +118,18 @@ ThaliReplicationPeerAction.prototype.clone = function () {
  * actually doing useful work. This timer however is connected directly to the
  * changes feed and so can see if 'useful' work is happening and time out if it
  * is not.
+ * @param {Number} maxIdlePeriodSeconds Number of seconds of no activity that we
+ * will wait before killing the action. Be default we wait 3s, but because of #1961,
+ * we provide optional parameter that can be used by policy manager.
  * @private
  */
-ThaliReplicationPeerAction.prototype._replicationTimer = function () {
+ThaliReplicationPeerAction.prototype._replicationTimer = function (maxIdlePeriodSeconds) {
   var self = this;
   if (self._refreshTimerManager) {
     self._refreshTimerManager.stop();
   }
   self._refreshTimerManager = new RefreshTimerManager(
-    ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS * 1000,
+      (!!maxIdlePeriodSeconds ? maxIdlePeriodSeconds : ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS) * 1000,
     function() {
       self._complete([new Error('No activity time out')]);
     });
@@ -193,13 +196,16 @@ ThaliReplicationPeerAction.prototype._replicationTimer = function () {
  * @param {string} [remoteDbName] Optional parameter that specifies name of remote
  * DB that we will try to replicate with. This parameter is used to create a proper
  * url to remote database. If it is not provided, for example by
+ * @param {Number} maxIdlePeriodSeconds Number of seconds of no activity that we
+ * will wait before killing the action. Be default we wait 3s, but because of #1961,
+ * we provide optional parameter that can be used by policy manager.
  * {@link module:thaliPeerPoolInterface~ThaliPeerPoolInterface} custom implementation,
  * we assume that the remote DB name is the same as our local one. The reason why it is
  * not provided in constructor is that at the time of creating instance of this object,
  * we simply don't know such information.
  * @returns {Promise<?Error>}
  */
-ThaliReplicationPeerAction.prototype.start = function (httpAgentPool, remoteDbName) {
+ThaliReplicationPeerAction.prototype.start = function (httpAgentPool, remoteDbName, maxIdlePeriodSeconds) {
   var self = this;
   this._completed = false;
 
@@ -223,7 +229,7 @@ ThaliReplicationPeerAction.prototype.start = function (httpAgentPool, remoteDbNa
       self._replicationPromise = new Promise(function (resolve, reject) {
         self._resolve = resolve;
         self._reject = reject;
-        self._replicationTimer();
+        self._replicationTimer(maxIdlePeriodSeconds);
         self._cancelReplication = remoteDB.replicate.to(self._localDbName, {
           live: true
         })

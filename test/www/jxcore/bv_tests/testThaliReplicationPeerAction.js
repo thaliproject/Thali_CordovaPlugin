@@ -442,6 +442,111 @@ test('Do something and make sure we time out',
   }
 );
 
+test('Replication timer should use custom timeout value when its provided when calling start',
+    function (t) {
+      function onServerSetUp (serverPort, randomDBName) {
+        var thaliReplicationPeerAction = null;
+        var notificationForUs = {
+          keyId: new Buffer('abcdefg'),
+          portNumber: serverPort,
+          hostAddress: '127.0.0.1',
+          pskIdentifyField: pskId,
+          psk: pskKey,
+          suggestedTCPTimeout: 10000,
+          connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
+        };
+        // Using a different directory really shouldn't make any difference
+        // to this particular test but I'm being paranoid
+        var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
+        // Change default value to 2, so we will be sure that timer is using our value
+        var originalTimeout = ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS;
+        ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 2;
+        var customTimeout = 6;
+        var replicationActionEnd = false;
+
+        thaliReplicationPeerAction =
+            new ThaliReplicationPeerAction(notificationForUs,
+                DifferentDirectoryPouch, randomDBName,
+                devicePublicKey);
+
+        setTimeout(function () {
+          if (replicationActionEnd) {
+            t.fail('Replication timer should use custom timeout value');
+          }
+        }, 4 * 1000);
+
+        thaliReplicationPeerAction.start(httpAgentPool, randomDBName, customTimeout)
+            .then(function () {
+              t.fail('We should have failed with time out.');
+            })
+            .catch(function (err) {
+              replicationActionEnd = true;
+              t.equal(thaliReplicationPeerAction.getActionState(),
+                  PeerAction.actionState.KILLED,
+                  'action should be killed');
+              t.equal(err.message, 'No activity time out', 'Error should be timed ' +
+                  'out');
+
+              ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = originalTimeout;
+              t.end();
+            });
+      }
+      testCloseAllServer = testUtils.setUpServer(onServerSetUp);
+    }
+);
+
+test('Replication timer should use default timeout value when its not provided when calling start',
+    function (t) {
+      function onServerSetUp (serverPort, randomDBName) {
+        var thaliReplicationPeerAction = null;
+        var notificationForUs = {
+          keyId: new Buffer('abcdefg'),
+          portNumber: serverPort,
+          hostAddress: '127.0.0.1',
+          pskIdentifyField: pskId,
+          psk: pskKey,
+          suggestedTCPTimeout: 10000,
+          connectionType: thaliMobileNativeWrapper.connectionTypes.TCP_NATIVE
+        };
+        // Using a different directory really shouldn't make any difference
+        // to this particular test but I'm being paranoid
+        var DifferentDirectoryPouch = testUtils.getLevelDownPouchDb();
+        // Change default value to 2, so we will be sure that timer is using our value
+        var originalTimeout = ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS;
+        ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = 4;
+        var replicationActionEnd = false;
+
+        thaliReplicationPeerAction =
+            new ThaliReplicationPeerAction(notificationForUs,
+                DifferentDirectoryPouch, randomDBName,
+                devicePublicKey);
+
+        setTimeout(function () {
+          if (replicationActionEnd) {
+            t.fail('Replication timer should use custom timeout value');
+          }
+        }, 2 * 1000);
+
+        thaliReplicationPeerAction.start(httpAgentPool)
+            .then(function () {
+              t.fail('We should have failed with time out.');
+            })
+            .catch(function (err) {
+              replicationActionEnd = true;
+              t.equal(thaliReplicationPeerAction.getActionState(),
+                  PeerAction.actionState.KILLED,
+                  'action should be killed');
+              t.equal(err.message, 'No activity time out', 'Error should be timed ' +
+                  'out');
+
+              ThaliReplicationPeerAction.MAX_IDLE_PERIOD_SECONDS = originalTimeout;
+              t.end();
+            });
+      }
+      testCloseAllServer = testUtils.setUpServer(onServerSetUp);
+    }
+);
+
 test('Start replicating and then catch error when server goes', function (t) {
   var requestCount = 0;
   function killServer(app) {
